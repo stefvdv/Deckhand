@@ -1126,18 +1126,19 @@ async function loadFormatFile(){
 function loadAutoSets(){
   try{
     const raw = localStorage.getItem(LS_PREFIX+'autoSets');
-    const v = raw ? JSON.parse(raw) : {codes:[], names:{}, ubCodes:[], previewCodes:[], previewMeta:{}, lastCheck:0};
+    const v = raw ? JSON.parse(raw) : {codes:[], names:{}, ubCodes:[], previewCodes:[], previewMeta:{}, previewSeen:{}, lastCheck:0};
     if(!Array.isArray(v.ubCodes)) v.ubCodes = [];
     if(!Array.isArray(v.previewCodes)) v.previewCodes = [];
     if(!v.previewMeta || typeof v.previewMeta !== 'object') v.previewMeta = {};
+    if(!v.previewSeen || typeof v.previewSeen !== 'object') v.previewSeen = {};
     return v;
-  }catch(e){ return {codes:[], names:{}, ubCodes:[], previewCodes:[], previewMeta:{}, lastCheck:0}; }
+  }catch(e){ return {codes:[], names:{}, ubCodes:[], previewCodes:[], previewMeta:{}, previewSeen:{}, lastCheck:0}; }
 }
 const autoSets = loadAutoSets();
 function saveAutoSets(){ try{ localStorage.setItem(LS_PREFIX+'autoSets', JSON.stringify(autoSets)); }catch(e){} }
-async function checkForNewSets(){
+async function checkForNewSets(force){
   try{
-    if(Date.now() - (autoSets.lastCheck||0) < 20*3600*1000) return;
+    if(!force && Date.now() - (autoSets.lastCheck||0) < 20*3600*1000) return;
     await resolveLegalSets();
     const all = state.allSetsRaw || [];
     if(!all.length) return;
@@ -1193,21 +1194,38 @@ async function checkForNewSets(){
     // the set answers the question definitively.
     const probeSet = async (code)=>{
       try{
-        const r = await sfFetch(`${SF_BASE}/cards/random?q=${encodeURIComponent('set:'+code+' game:paper')}`);
+        const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent('set:'+code+' game:paper')}`);
         if(r.status === 404) return {cards:false};
         if(!r.ok) return null;   // transient — decide nothing
-        const c = await r.json();
-        return {cards:true, standard: c && c.legalities && c.legalities.standard === 'legal'};
+        const d = await r.json();
+        const first = (d.data||[])[0];
+        return {
+          cards: !!first,
+          standard: !!(first && first.legalities && first.legalities.standard === 'legal'),
+          total: d.total_cards || (d.data||[]).length
+        };
       }catch(e){ return null; }
+    };
+    const newSpoilerNotes = [];
+    const trackSpoilerCount = (code, total)=>{
+      const seen = autoSets.previewSeen[code];
+      if(typeof seen === 'number' && total > seen){
+        newSpoilerNotes.push(`${autoSets.names[code]||code.toUpperCase()} +${total-seen}`);
+        state._spoilerCache = {};
+      }
+      autoSets.previewSeen[code] = total;
+      saveAutoSets();
     };
     // Daily self-heal: any preview entry whose cards are NOT Standard-legal
     // was admitted in error (or misclassified) — purge it; it can re-enter
     // the moment Scryfall's data says otherwise.
     for(const code of Object.keys(autoSets.previewMeta)){
       if(autoSets.previewMeta[code] <= today) continue;               // release handled below
-      if((state.legalSetCodesUB||[]).includes(code)) continue;        // curated seeds are trusted
+      const seedUB0 = (state.legalSetCodesUB||[]).includes(code);
       const probe = await probeSet(code);
       if(!probe) continue;
+      if(seedUB0){ if(probe.cards) trackSpoilerCount(code, probe.total); continue; }  // curated seeds are trusted
+      if(probe.cards) trackSpoilerCount(code, probe.total);
       if(!probe.cards || !probe.standard){
         autoSets.previewCodes = autoSets.previewCodes.filter(c=>c!==code);
         autoSets.ubCodes = autoSets.ubCodes.filter(c=>c!==code);
@@ -1248,6 +1266,8 @@ async function checkForNewSets(){
       autoSets.previewMeta[u.code] = u.released_at;
       autoSets.names[u.code] = u.name;
       if(state.legalSetsMeta) state.legalSetsMeta[u.code] = u.name;
+      const alreadyAnnounced = typeof autoSets.previewSeen[u.code] === 'number';
+      autoSets.previewSeen[u.code] = probe.total || 0;
       if(!seedUB){
         const r2 = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent('set:'+u.code+' is:universesbeyond')}`);
         let isUB = false;
@@ -1256,9 +1276,10 @@ async function checkForNewSets(){
         else { autoSets.previewCodes.push(u.code); }
       }
       state.inspireCache = {}; state.browseCache = {};
-      toast(`🔮 Spoiler season: ${u.name} previews are in the pool.`);
+      if(!alreadyAnnounced) toast(`🔮 Spoiler season: ${u.name} previews are in the pool.`);
       saveAutoSets();
     }
+    if(newSpoilerNotes.length) toast(`🔮 New spoilers: ${newSpoilerNotes.join(', ')}`);
     // ---- Release day: preview sets graduate to full members ----
     (autoSets.previewCodes||[]).slice().forEach(code=>{
       const rel = autoSets.previewMeta[code];
@@ -1960,9 +1981,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.39.3';
+const APP_VERSION = '2.40.0';
 const CHANGELOG_NOTES = [
-  'The Spoilers page is now a regular page: the standard top navigation stays visible, and the little back arrow is gone — the hardware back button returns you to Search as everywhere else'
+  '🔮 Pull the Spoilers page down to refresh — it re-checks Scryfall for new previews on the spot',
+  'Startup notices got smarter: a set is announced once, and after that you only hear about it when there are actually new spoilers ("New spoilers: The Hobbit +12")'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3260,8 +3282,9 @@ async function fetchWholeSet(code){
 function spoilersPageHtml(){
   const sets = currentPreviewSets();
   const fmtDate = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined, {month:'short', day:'numeric'}); }catch(e){ return d; } };
-  return `<main>
-    <p class="hint" style="margin:2px 0 8px;">Cards previewed from upcoming sets — this page fills up by itself through spoiler season.</p>
+  return `<main id="spMainPage" style="overscroll-behavior-y:contain;">
+    <div id="spPull" style="height:0;overflow:hidden;text-align:center;color:var(--sub-text-2);font-size:12px;line-height:34px;">⟳ Pull to refresh</div>
+    <p class="hint" style="margin:2px 0 8px;">Cards previewed from upcoming sets — pull down to check for new spoilers.</p>
     ${sets.length ? sets.map(x=>`
       <div class="chip-label" style="margin-top:12px;">${escapeHtml(x.name)}${x.ub?' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>':''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>
       ${x.ub?'<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>':''}
@@ -3270,11 +3293,45 @@ function spoilersPageHtml(){
   </main>`;
 }
 async function wireSpoilersPage(){
+  // Pull-to-refresh: drag down from the top, release past the threshold, and
+  // the page re-checks Scryfall for new spoilers (and newly-started sets).
+  const pull = document.getElementById('spPull');
+  if(pull){
+    let startY = null, armed = false;
+    const reset = ()=>{ startY = null; armed = false; if(pull){ pull.style.height = '0'; } };
+    document.addEventListener('touchstart', e=>{
+      if(state.screen !== 'spoilers') return;
+      if(window.scrollY <= 0) startY = e.touches[0].clientY;
+    }, {passive:true});
+    document.addEventListener('touchmove', e=>{
+      if(state.screen !== 'spoilers' || startY === null) return;
+      const dy = e.touches[0].clientY - startY;
+      if(dy <= 0){ reset(); return; }
+      if(window.scrollY > 0) return;
+      e.preventDefault();
+      const h = Math.min(64, dy * 0.45);
+      pull.style.height = h + 'px';
+      armed = h >= 56;
+      pull.textContent = armed ? '⟳ Release to refresh' : '⟳ Pull to refresh';
+    }, {passive:false});
+    document.addEventListener('touchend', async ()=>{
+      if(state.screen !== 'spoilers' || startY === null) return;
+      const go = armed;
+      reset();
+      if(!go) return;
+      pull.style.height = '34px';
+      pull.textContent = '⟳ Checking for new spoilers…';
+      state._spoilerCache = {};
+      try{ await checkForNewSets(true); }catch(e){}
+      render();   // sets may have been added, purged, or reclassified
+    }, {passive:true});
+  }
   for(const x of currentPreviewSets()){
     const cards = await fetchWholeSet(x.code);
     const box = document.getElementById('spSet-' + x.code);
     if(!box) return;   // user navigated away mid-load
     if(!cards.length){ box.innerHTML = '<p class="hint">Nothing spoiled yet — check back soon.</p>'; continue; }
+    if(cards.length > (autoSets.previewSeen[x.code]||0)){ autoSets.previewSeen[x.code] = cards.length; saveAutoSets(); }
     box.innerHTML = `<div class="sc-grid">${cards.map(c=>`<button class="sc-tile" data-spn="${escapeHtml(c.name)}"><img loading="lazy" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${ubMarkHtml(c)}${pvMarkHtml(c)}</button>`).join('')}</div>
       <p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed so far.</p>`;
     box.querySelectorAll('.sc-tile').forEach(b=>{
@@ -5957,7 +6014,7 @@ function settingsPageHtml(){
     <div class="settings-section">
       <div class="settings-row" id="shareAppRow"><div><div class="l1">⚓ Share Admiral with a friend</div><div class="l2">Sends the app link with a short intro to the format</div></div></div>
     </div>
-    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admiral Deck Log v2.39.3 · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
+    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admiral Deck Log v2.40 · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
   </main>`;
 }
 function quickRulesHtml(){
