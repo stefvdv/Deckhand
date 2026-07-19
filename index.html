@@ -1013,11 +1013,11 @@ document.addEventListener('click', ()=>{
 function manaIconSvg(c, px){
   px = px || 20;
   const defs = {
-    W: {bg:'#F5EDD3', fg:'#8A6D1F', glyph:'<circle cx="12" cy="12" r="3.4" fill="FG"/><g stroke="FG" stroke-width="1.7" stroke-linecap="round">'+[0,45,90,135,180,225,270,315].map(a=>{const r=a*Math.PI/180;const x1=12+6*Math.cos(r),y1=12+6*Math.sin(r),x2=12+8.6*Math.cos(r),y2=12+8.6*Math.sin(r);return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;}).join('')+'</g>'},
+    W: {bg:'#F5EDD3', fg:'#8A6D1F', glyph:'<circle cx="12" cy="12" r="4.3" fill="FG"/>'+[0,45,90,135,180,225,270,315].map(a=>{const r=a*Math.PI/180;const tx=12+9.7*Math.cos(r),ty=12+9.7*Math.sin(r);const bx=12+5.3*Math.cos(r),by=12+5.3*Math.sin(r);const px=Math.cos(r+Math.PI/2),py=Math.sin(r+Math.PI/2);return `<polygon fill="FG" points="${tx.toFixed(1)},${ty.toFixed(1)} ${(bx+1.5*px).toFixed(1)},${(by+1.5*py).toFixed(1)} ${(bx-1.5*px).toFixed(1)},${(by-1.5*py).toFixed(1)}"/>`;}).join('')},
     U: {bg:'#BEE3F4', fg:'#1B5E82', glyph:'<path fill="FG" d="M12 3.6c3.1 4.4 5.6 7.3 5.6 10.4a5.6 5.6 0 1 1-11.2 0C6.4 10.9 8.9 8 12 3.6z"/><circle cx="10.3" cy="14.6" r="1.5" fill="BG" opacity="0.55"/>'},
-    B: {bg:'#CBC2D6', fg:'#2E2438', glyph:'<path fill="FG" d="M12 4.4c-3.6 0-6.2 2.6-6.2 6 0 2 .9 3.5 2.2 4.5v2.3c0 .7.5 1.2 1.2 1.2h5.6c.7 0 1.2-.5 1.2-1.2v-2.3c1.3-1 2.2-2.5 2.2-4.5 0-3.4-2.6-6-6.2-6z"/><circle cx="9.6" cy="10.6" r="1.7" fill="BG"/><circle cx="14.4" cy="10.6" r="1.7" fill="BG"/><rect x="10.9" y="14.6" width="2.2" height="2.6" rx="0.7" fill="BG"/>'},
+    B: {bg:'#CBC2D6', fg:'#2E2438', glyph:'<path fill="FG" d="M12 4c-3.8 0-6.5 2.7-6.5 6.1 0 2 .9 3.6 2.3 4.6v2.6c0 .7.5 1.2 1.2 1.2h6c.7 0 1.2-.5 1.2-1.2v-2.6c1.4-1 2.3-2.6 2.3-4.6 0-3.4-2.7-6.1-6.5-6.1z"/><circle cx="9.4" cy="10.5" r="1.9" fill="BG"/><circle cx="14.6" cy="10.5" r="1.9" fill="BG"/><path fill="BG" d="M12 12.3l1.1 2.1h-2.2z"/><g stroke="BG" stroke-width="0.9">'+[10.2,12,13.8].map(x=>`<line x1="${x}" y1="15.7" x2="${x}" y2="18.3"/>`).join('')+'</g>'},
     R: {bg:'#F3C1A6', fg:'#B23A1E', glyph:'<path fill="FG" d="M12 3.8c.6 2.8-.8 4.2-1.9 5.6-1.2 1.5-2.5 3-2.5 5.2A6.4 6.4 0 0 0 12 20.9a6.4 6.4 0 0 0 6.4-6.3c0-2.8-1.7-4.5-3-6.1-1-1.3-2-2.6-1.7-4.7-1.1.6-1.6 1.3-1.7 2.4-.1-.9-.1-1.6 0-2.4z"/><path fill="BG" opacity="0.5" d="M12 12.4c1.7 1.3 2.4 2.6 2.1 4.2-.3 1.4-1.3 2.3-2.5 2.4-1.3.1-2.5-.9-2.7-2.3-.2-1.8 1.2-3 3.1-4.3z"/>'},
-    G: {bg:'#BFD9B8', fg:'#2F5E33', glyph:'<path fill="FG" d="M12 3.6c2.2 2 5.4 5.3 5.4 8.9 0 2.9-2.2 5.2-4.6 5.6v2.6h-1.6v-2.6c-2.4-.4-4.6-2.7-4.6-5.6 0-3.6 3.2-6.9 5.4-8.9z"/><path stroke="BG" stroke-width="1" fill="none" opacity="0.6" d="M12 6.5v10M12 9l-2 2M12 11.5l2.2 2.2"/>'},
+    G: {bg:'#BFD9B8', fg:'#2F5E33', glyph:'<path fill="FG" d="M12 3.2c-2.1 0-3.8 1.3-4.1 3.1-1.7.2-3 1.6-3 3.3 0 .5.1 1 .3 1.4-.9.6-1.5 1.7-1.5 2.9 0 1.9 1.5 3.4 3.4 3.4.6 0 1.2-.1 1.7-.4.6.9 1.6 1.5 2.6 1.7v1.7c-.9.9-2.1 1.4-3.5 1.5v1.3h8.2v-1.3c-1.4-.1-2.6-.6-3.5-1.5v-1.7c1-.2 2-.8 2.6-1.7.5.3 1.1.4 1.7.4 1.9 0 3.4-1.5 3.4-3.4 0-1.2-.6-2.3-1.5-2.9.2-.4.3-.9.3-1.4 0-1.7-1.3-3.1-3-3.3-.3-1.8-2-3.1-4.1-3.1z"/><path stroke="BG" stroke-width="0.9" fill="none" opacity="0.55" d="M12 8.5v7.5M12 11l-1.9 1.7M12 12.8l2 1.8"/>'},
     C: {bg:'#D8D4CC', fg:'#5C574D', glyph:'<path fill="FG" d="M12 4.6 18 12l-6 7.4L6 12z"/><path fill="BG" opacity="0.4" d="M12 7.6 15.5 12 12 16.4 8.5 12z"/>'}
   };
   const d = defs[(c||'').toUpperCase()];
@@ -1849,10 +1849,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.38.2';
+const APP_VERSION = '2.38.3';
 const CHANGELOG_NOTES = [
-  '🔎 Search stability: stray quotes can no longer break a query, the Set filter only offers sets in your card pool, disabled-set selections get a clear explanation, and error messages now say what actually went wrong',
-  'The two card-name fields stay perfectly in step while typing and deleting'
+  '🌳 Mana symbols redrawn closer to the originals across the whole app: green is now a proper tree (canopy, trunk and roots), white gets the sun with tapered rays, and black a truer skull with nasal and teeth'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -5785,7 +5784,7 @@ function settingsPageHtml(){
     <div class="settings-section">
       <div class="settings-row" id="shareAppRow"><div><div class="l1">⚓ Share Admiral with a friend</div><div class="l2">Sends the app link with a short intro to the format</div></div></div>
     </div>
-    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admiral Deck Log v2.38.2 · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
+    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admiral Deck Log v2.38.3 · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
   </main>`;
 }
 function quickRulesHtml(){
