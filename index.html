@@ -1565,6 +1565,9 @@ function landOk(card, d){ return (d ? deckFormat(d)==='commander' : isCmdrMode()
 function hasPowerToughness(card){ const f=frontFace(card); return f.power !== undefined && f.power !== null; }
 function isLegendary(card){ return (card.type_line||'').includes('Legendary'); }
 function allowsDuplicates(card){
+  // Basic lands may always repeat (rule 903.5c) — their text doesn't say so.
+  const tl = (card.type_line || (card.card_faces && card.card_faces[0] ? card.card_faces[0].type_line : '') || '');
+  if(/\bBasic\b/i.test(tl)) return true;
   const text = (card.oracle_text || (card.card_faces? card.card_faces.map(f=>f.oracle_text||'').join(' ') : '')) || '';
   return /a deck can have any number of cards named/i.test(text);
 }
@@ -2309,19 +2312,32 @@ async function resolveManyByName(names, onProgress){
   const bump = (n)=>{ done += n; if(onProgress) onProgress(Math.min(done, names.length), names.length); };
 
   const unmatched = [];
-  const batches = chunkArr(uniqueNames, 10);
+  // Commander mode resolves from a single printing (legality and price ride on
+  // the card itself), skipping the all-printings pagination — basics alone
+  // have hundreds of prints and were the bulk of long import waits. Admiral
+  // mode still walks printings to test set-pool membership.
+  const wantPrints = !isCmdrMode();
+  const batches = chunkArr(uniqueNames, wantPrints ? 10 : 20);
   await runLimited(batches, async (chunk)=>{
     const q = '(' + chunk.map(n=>exactNameClause(n)).join(' or ') + ') game:paper -is:digital';
-    let url = `${SF_BASE}/cards/search?unique=prints&q=${encodeURIComponent(q)}`;
+    let url = `${SF_BASE}/cards/search?unique=${wantPrints?'prints':'cards'}&q=${encodeURIComponent(q)}`;
     const hits = {};   // lowercased name -> { card, legal, minEur }
-    for(let page=0; page<6 && url; page++){
+    for(let page=0; page<(wantPrints?6:2) && url; page++){
       try{
         const res = await sfFetch(url);
         if(!res.ok){ if(res.status===404) break; throw new Error('status '+res.status); }
         const data = await res.json();
         (data.data||[]).forEach(p=>{
-          const key = (p.name||'').toLowerCase();
-          if(!byLower[key]) return;
+          let key = (p.name||'').toLowerCase();
+          if(!byLower[key]){
+            // Double-faced and adventure cards: decklists carry the front
+            // face's name while Scryfall answers "Front // Back" — match on
+            // the front so these stop falling into the slow one-by-one lane.
+            const cut = key.indexOf(' // ');
+            const front = cut > 0 ? key.slice(0, cut) : null;
+            if(front && byLower[front]) key = front;
+            else return;
+          }
           if(!hits[key]) hits[key] = { card: p, legal: false, minEur: null };
           const h = hits[key];
           if(isCmdrMode()){
@@ -2415,28 +2431,13 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.9';
+const APP_VERSION = '2.51.10';
 const CHANGELOG_NOTES = [
-  'Two leaders can now share command: Partner, Partner with, Friends forever, Choose a Background + Backgrounds, and Time Lord Doctors + Doctor\'s companion are all supported. When your appointed leader has one of these abilities, a big + appears on its card — tap it to pick a legal pairing.',
-  'The Inspiration browse page in Commander mode now also assembles two-commander pairs for any chosen color combination — pick a four-color combo and every legal pairing that totals exactly those colors appears alongside single commanders. Tap a pair to start a deck with both in command.',
-  'The + button on the deck list now offers "Paste in decklist": appoint your leader (and partner) first, then paste the list — any pasted copies of your chosen leaders are kept in command instead of duplicated in the deck.',
-  'Deck legality, color identity, imports, exports, bulk edit (PARTNER: line), and share links all understand the second seat.',
-  'Commander mode now plays lands everywhere: importing, searching, Inspiration, and recommendations all accept land cards (Admiral keeps its no-lands rule). Commander decks also say COMMANDER: in Bulk Edit and Import, and their tiles count toward 100.',
-  'Switching a Commander from the deck page now truly switches: on the browse page that opens, tapping any leader — its art or its buttons — swaps command directly and returns to the deck. A still-compatible second Commander keeps its seat.',
-  'Two-seat command zones are compact now: the second card overlaps the first diagonally on the deck page, and two-commander pairs on the Inspiration page render overlapped in the same two-column grid as other results, at the bottom of each color combination\'s page — tap either card for its full details.',
-  'Every Commander and Admiral now gets its OWN recommendations: the build-around page reads the leader\'s actual abilities — its Scryfall function tags and detected themes — and surfaces true synergy pieces first, with colour staples filling in behind. No more identical lists for every leader.',
-  'The home page wears the redesigned Admiral crest: a naval officer\'s peaked cap above a classic anchor, in the same gold line work as the Commander crown-and-swords.',
-  'The launch screen now splits diagonally into Admiral navy and Commander dark red — the same split as the app icon — with the gold crest centred and two sonar pulses rippling out behind it.',
-  'Per-leader recommendations are now instant again: the leader\'s abilities are detected locally from its own card text instead of asking Scryfall fifteen separate questions, and the synergy and staples searches run in parallel.',
-  'Recommendations now read each leader\'s card text in fine detail — the tribes it names and the exact mechanics it triggers on (Spirits, Treasures, +1/+1 counters, sacrifice, landfall, spell-copying and some thirty more) — so Kykar\'s page fills with Spirit and spellslinger payoffs while a counters leader gets counters. Generic colour staples are now only a short tail at the end, not half the page.',
-  'Recommendations now come from real play data: each leader\'s page shows the cards actually most played with that exact Commander (via EDHREC), in true play-rate order, filtered through your format\'s own legality rules — with the card-text synergy engine as automatic fallback for leaders EDHREC doesn\'t know.',
-  'Fixed the ordering bug that grouped results by colour (all white, then blue, then red) — lists now follow most-played order throughout.',
-  'EDHREC play data now flows through the site\'s own Netlify proxy (the new _redirects file), so the browser cross-origin block that stopped earlier attempts no longer applies.',
-  'Play-data recommendations now appear progressively: the very most-played cards render the moment the first lookup lands, and the rest stream in behind — first paint is as fast as the old engine.',
-  'The recommendations page is cleaner: the leader\'s name and type line under its card are gone (the card is right there) — "tap cards to select" sits there instead — and the top bar now shows only the leader\'s name, in two smaller static lines so long names always fit.',
-  'Deck and card titles in the top bar no longer shrink in visible steps: one fixed two-line size fits every name, including single long words like "Aikidon\'t".',
-  'Each leader\'s recommendation page now shows its OWN community themes straight from EDHREC — Aikido, Storm, whatever that leader is actually built around — as tappable chips: tap one for that theme\'s most-played cards with this leader, tap again to return to the main list.',
-  'The Inspiration page\'s theme list now extends itself with EDHREC\'s full community catalog — every theme players actually build, Aikido included — refreshed weekly. Picking a play-data theme lists that theme\'s real top commanders, filtered to your chosen colors and your format\'s legality, in true play order. Arriving on a leader\'s page from such a theme pre-selects the matching theme chip there too.'
+  'What\'s-new now shows only the latest update instead of the whole history.',
+  'Importing a decklist is far faster (seconds, not a minute): Commander-mode cards resolve from a single printing, and double-faced cards match on their front name instead of falling into the slow one-by-one lane.',
+  'Basic lands can repeat again: "4 Forest" imports as four Forests instead of three of them being rejected as duplicates — that was the missing-cards mystery on Commander imports.',
+  'Sideboard cards that can\'t be found are now reported instead of silently skipped, and the retry report explains that earlier rejections still stand.',
+  'The Inspiration theme list\'s EDHREC catalog reader is far more tolerant of page-shape differences and quietly retries if the first fetch fails.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -6150,6 +6151,8 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
       if(r && r.found && r.card){
         if(!collected.some(x=>x.name===r.card.name)) collected.push(r.card);
         report.push({name:r.card.name,status:'ok',msg:'To Maybeboard'});
+      } else {
+        report.push({name:(r && r.input) ? r.input : '?', status:'notfound', msg:'Maybeboard: not found'});
       }
     });
     newMaybe = collected;
@@ -6198,7 +6201,7 @@ async function retryFailedCards(d, names, reportElId, admiralForColorCheck){
   scheduleSave(d);
   const added = report.filter(r=>r.status==='ok').length;
   const stillRetryable = report.filter(r=>r.status!=='ok' && /network|try again/i.test(r.msg));
-  document.getElementById(reportElId).innerHTML = `<p class="hint" style="margin:10px 0 6px;">${added}/${report.length} resolved on retry.</p><div class="report-list">${report.map(r=>`<div class="report-row ${r.status}"><span>${r.name}</span><span>${r.msg}</span></div>`).join('')}</div>${stillRetryable.length ? `<button class="ghost-btn" id="retryFailedBtn" style="width:100%;margin-top:10px;">↻ Retry ${stillRetryable.length} failed card${stillRetryable.length>1?'s':''}</button>` : ''}`;
+  document.getElementById(reportElId).innerHTML = `<p class="hint" style="margin:10px 0 6px;">${added}/${report.length} resolved on retry. Anything not listed here was already settled in the first report — including duplicate or off-color rejections.</p><div class="report-list">${report.map(r=>`<div class="report-row ${r.status}"><span>${r.name}</span><span>${r.msg}</span></div>`).join('')}</div>${stillRetryable.length ? `<button class="ghost-btn" id="retryFailedBtn" style="width:100%;margin-top:10px;">↻ Retry ${stillRetryable.length} failed card${stillRetryable.length>1?'s':''}</button>` : ''}`;
   toast(`${added} more card${added!==1?'s':''} added.`);
   const box = document.getElementById('decklistBox');
   if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
@@ -7199,27 +7202,32 @@ function browseReady(){
    EDHREC entries extend the list with everything the community actually
    builds (Aikido and friends). */
 function edhrecTagCatalogFrom(data){
+  // The tags hub's exact shape is undocumented, so walk the whole document
+  // and harvest anything that looks like a theme link, wherever it lives.
   const out = [], seen = new Set();
   const push = (label, slug, count)=>{
-    label = String(label||'').trim(); slug = String(slug||'').trim();
-    if(!label || !slug || seen.has(slug)) return;
+    label = String(label||'').trim(); slug = String(slug||'').trim().toLowerCase();
+    if(!label || !slug || slug==='tags' || seen.has(slug)) return;
     seen.add(slug); out.push({ label, slug, count: count||0 });
   };
-  try{
-    const dict = (((data||{}).container||{}).json_dict||{});
-    (dict.cardlists||[]).forEach(L=>(L.cardviews||[]).forEach(cv=>{
-      const u = (cv && cv.url) || '';
-      const m = u.match(/^\/tags\/([a-z0-9-]+)/);
-      if(m) push(cv.name, m[1], cv.num_decks || cv.count || 0);
-    }));
-    const tl = ((data||{}).panels||{}).taglinks || (dict.panels||{}).taglinks || [];
-    (Array.isArray(tl)?tl:[]).forEach(t=> push(t.value || t.tag, t.slug || edhrecSlug(t.value || t.tag || ''), t.count || 0));
-  }catch(e){}
+  const walk = (node, depth)=>{
+    if(!node || depth > 7) return;
+    if(Array.isArray(node)){ node.forEach(x=>walk(x, depth+1)); return; }
+    if(typeof node !== 'object') return;
+    const u = typeof node.url === 'string' ? node.url : '';
+    const m = u.match(/^\/tags\/([a-z0-9%+-]+)\/?$/i);
+    if(m) push(node.name || node.value || node.label || m[1].replace(/-/g,' '), m[1], node.num_decks || node.count || 0);
+    if(typeof node.slug === 'string' && (node.value || node.tag)) push(node.value || node.tag, node.slug, node.count || 0);
+    for(const k in node){ if(k !== 'cardviews' || m || true) walk(node[k], depth+1); }
+  };
+  try{ walk(data, 0); }catch(e){}
   out.sort((a,b)=>(b.count||0)-(a.count||0));
   return out.slice(0, 80);
 }
 async function ensureEdhrecTags(){
-  if(state.edhrecTags) return;
+  if(state.edhrecTags && state.edhrecTags.length) return;
+  if(state._edtagsAt && (Date.now() - state._edtagsAt) < 60000) return;   // retry at most once a minute
+  state._edtagsAt = Date.now();
   try{
     const raw = localStorage.getItem('admiral_app:edhrecTags');
     if(raw){
@@ -7229,7 +7237,6 @@ async function ensureEdhrecTags(){
       }
     }
   }catch(e){}
-  state.edhrecTags = [];   // marks the fetch as attempted
   const data = await edhrecFetchJson('/pages/tags.json');
   const tags = edhrecTagCatalogFrom(data);
   if(tags.length){
