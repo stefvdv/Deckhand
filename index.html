@@ -33,7 +33,7 @@ html[data-mode="commander"]{ --pop-bg:#0F2739; --pop-line:#2C5070; --field:#1028
 html[data-theme="light"]{ --pop-bg:#F6E9E7; --pop-line:#D9BDB9; --field:#F7ECEA; --field-line:#DCC4C0; --hl:rgba(170,62,70,0.10); }
 html[data-mode="commander"][data-theme="light"]{ --pop-bg:#E8F0F7; --pop-line:#B9CEDF; --field:#EAF1F8; --field-line:#BFD2E2; --hl:rgba(64,118,168,0.12);  --panel:#EDF3F9; --panel-2:#E3EDF6;}
 html[data-mode="commander"]{
-  --ink:#2A1014; --ink-2:#33141A; --line:#4A2328;
+  --ink:#38141A; --ink-2:#431821; --line:#4A2328;
   --ink-text:#F2E6E4; --sub-text:#C9A8A6; --sub-text-2:#8F6B6B;
   --brass:#D9A441; --brass-glow:rgba(217,164,65,0.12);
 }
@@ -62,6 +62,12 @@ body{
     var(--ink);
   min-height:100vh; overscroll-behavior-y:contain;
   transition:background 0.2s;
+}
+html[data-mode="commander"] body{
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(217,164,65,0.09), transparent 45%),
+    radial-gradient(ellipse at 100% 0%, rgba(170,62,70,0.13), transparent 40%),
+    var(--ink);
 }
 .app{max-width:900px;margin:0 auto;width:100%;min-height:100vh;display:flex;flex-direction:column;}
 button{font-family:'Inter';}
@@ -438,6 +444,9 @@ main.has-dock{padding-bottom:84px;}
 .searchbar input:focus{outline:none;border-color:var(--brass);}
 .searchbar button{background:var(--brass);color:#1a1204;border:none;border-radius:8px;padding:0 16px;font-weight:700;font-size:13px;cursor:pointer;}
 .sp-jump{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 8px;}
+/* Spoilers page only: bigger card art with the tiles touching, reclaiming the
+   gutters so each image is as large as possible (see mythicspoiler-style grid). */
+#spMainPage .sc-grid{gap:2px;}
 .sp-jump-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:56px;height:56px;background:var(--field);border:1px solid var(--field-line);border-radius:10px;cursor:pointer;padding:6px 4px;}
 .sp-jump-btn:active{background:var(--hl);}
 .sp-jump-btn .set-ico{height:20px !important;max-width:30px !important;}
@@ -1338,7 +1347,7 @@ function saveAutoSets(){ try{ localStorage.setItem(LS_PREFIX+'autoSets', JSON.st
 async function checkForNewSets(force){
   try{
     if(!force && Date.now() - (autoSets.lastCheck||0) < 20*3600*1000) return;
-    await resolveLegalSets();
+    await resolveLegalSets(force);
     const all = state.allSetsRaw || [];
     if(!all.length) return;
     const active = new Set(activeLegalSetCodes());
@@ -1854,8 +1863,8 @@ function backoffMs(attempt){
   return Math.min(6000, 450 * Math.pow(1.8, attempt)) + Math.random()*250;
 }
 
-async function resolveLegalSets(){
-  if(state.setsResolved) return;
+async function resolveLegalSets(force){
+  if(state.setsResolved && !force) return;
   try{
     const res = await sfFetch(SF_BASE + '/sets');
     const data = await res.json();
@@ -2266,9 +2275,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.48.8';
+const APP_VERSION = '2.49.1';
 const CHANGELOG_NOTES = [
-  'Folders are now specific to each mode — a folder made in Admiral stays in Admiral, one made in Commander stays in Commander (existing folders live in Admiral). The other fleet\'s decks still appear in their own dashed folder at the bottom of My Stuff.'
+  'Both formats now say plainly that they\'re four-player free-for-alls — on the home page and in the quick and full rules.',
+  'Clearer legality wording: Commander notes that joke/Un-set cards aren\'t in the pool, and Admiral spells out that almost anything ever legal in Standard (or old Type 2) is playable.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -2908,7 +2918,7 @@ function homePageHtml(){
     <div class="home-rule"><span class="home-rule-line"></span><span class="home-rule-star">⚔</span><span class="home-rule-line"></span></div>
     <p class="home-kicker">Magic's grandest multiplayer battlefield</p>
     <p class="home-tagline">Choose your <strong>Commander</strong> — a legendary creature whose color identity defines your deck — then assemble a 100-card singleton army from <strong>every set ever printed</strong>. Cast your Commander from the command zone again and again as the table's politics unfold.</p>
-    <p class="home-tagline home-tagline-2">Official legality and the live banned list, always current. <button class="inline-link" id="homeReadRules">Read the rules →</button></p>
+    <p class="home-tagline home-tagline-2">A four-player free-for-all. Official legality and a live banned list, always current. <button class="inline-link" id="homeReadRules">Read the rules →</button></p>
     <div class="home-facts">
       ${cfacts.map(f=>`<div class="home-fact"><div class="hf-n">${f.n}</div><div class="hf-l">${f.l}</div><div class="hf-s">${f.s}</div></div>`).join('')}
     </div>
@@ -2937,7 +2947,7 @@ function homePageHtml(){
 
     <p class="home-kicker">Set sail on a bold new Magic adventure</p>
     <p class="home-tagline">An immersive challenge where the legends of Magic's <strong>own universes</strong> take center stage. Choose your Admiral — a legendary character whose colors define your deck — then chart a 60-card course with <strong>no expensive lands</strong>, drawing instead from a shared Landing Zone stocked with basics.</p>
-    <p class="home-tagline home-tagline-2">Faster games. Strategic depth. A format far less prone to <strong>power creep</strong>, and steeped in the story of Magic itself. <button class="inline-link" id="homeReadRules">Read the full rules →</button></p>
+    <p class="home-tagline home-tagline-2">A four-player free-for-all. Faster games, strategic depth, and far less prone to <strong>power creep</strong> — steeped in the story of Magic itself. <button class="inline-link" id="homeReadRules">Read the full rules →</button></p>
 
     <div class="home-facts">
       ${facts.map(f=>`<div class="home-fact"><div class="hf-n">${f.n}</div><div class="hf-l">${f.l}</div><div class="hf-s">${f.s}</div></div>`).join('')}
@@ -3059,12 +3069,13 @@ function homeHtml(){
     <button class="deck-fab" id="deckFab" title="New">＋</button>
     ${crumb}
     ${ !state.homeLoaded ? `<div class="status"><div class="spinner"></div>Loading your fleets…</div>` :
-       (favTiles||folderTiles||deckTiles||collected.length) ? `
+       (favTiles||folderTiles||deckTiles||collected.length || (!searching && !nav && otherMode.length)) ? `
          ${favs.length ? `<div class="section-label">★ Favorites</div><div class="deck-grid">${favTiles}</div>` : ''}
          ${shownFolders.length ? `<div class="section-label">Folders</div><div class="deck-grid">${folderTiles}</div>` : ''}
          ${shownDecks.length ? `${(favs.length||shownFolders.length)?`<div class="section-label">${searching?'Results':'Decks'}</div>`:''}<div class="deck-grid">${deckTiles}</div>` : ''}
          ${collected.length ? `<div class="section-label">♥ Collected</div><div class="deck-grid">${collected.map(deckTileHtml).join('')}</div>` : ''}
          ${(!favTiles&&!folderTiles&&!deckTiles&&nav)?`<div class="empty-note">This folder is empty.</div>`:''}
+         ${(!favTiles&&!folderTiles&&!deckTiles&&!collected.length&&!nav&&otherMode.length)?`<div class="empty-note">No ${isCmdrMode()?'Commander':'Admiral'} decks yet — start a new fleet above. Your ${isCmdrMode()?'Admiral':'Commander'} decks are waiting below.</div>`:''}
          ${(!searching && !nav && otherMode.length) ? `<div class="section-label" style="margin-top:20px;">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid">${otherFmtTileHtml(otherMode.length)}</div>` : ''}
        ` :
        searching ? `<div class="empty-note">No decks match “${escapeHtml(state.deckFilter)}”.</div>` :
@@ -3205,7 +3216,7 @@ function openFolderMenu(id, anchorEl){
     {label:'✎ Rename', fn:()=>openInAppPrompt('Rename folder','Folder name',f.name,(v)=>{ if(v&&v.trim()){ f.name=v.trim(); saveFolders(); render(); } })},
     {label: modeGlyph()+' Change icon', fn:()=>openFolderIconPicker(f)},
     {label:'📁 New subfolder', fn:()=>openNewFolderPrompt(f.id)},
-    {label:'🗑 Delete folder', danger:true, fn:()=>{ deleteFolder(f.id); toast('Folder deleted — its decks moved up a level.'); render(); }}
+    {label:'🗑 Delete folder', danger:true, fn:()=>{ openModal('deleteFolder', {folderId:f.id}); }}
   ]);
 }
 function openFolderIconPicker(f){
@@ -6999,17 +7010,18 @@ function settingsPageHtml(){
     <div class="settings-section">
       <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} Share this app with a friend</div><div class="l2">Sends the app link with a short intro</div></div></div>
     </div>
-    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admirals & Commanders MTG v2.48.8 · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
+    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admirals & Commanders MTG v2.49.1 · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
   </main>`;
 }
 function commanderQuickRulesHtml(){
   return `<div class="rules-text">
     <ul>
+      <li><strong>A four-player format</strong> — free-for-all multiplayer is the default.</li>
       <li><strong>Your Commander</strong> — a legendary creature. Every card in your deck must fit within its color identity.</li>
       <li><strong>Exactly 100 cards</strong> including the Commander, singleton — except basic lands, which are unlimited.</li>
       <li><strong>The Commander starts in the command zone</strong> — cast it from there for {2} more per previous cast, and it may return there instead of other zones.</li>
       <li><strong>Start at 40 life.</strong> Free first mulligan is customary. 21 combat damage from one Commander defeats a player.</li>
-      <li><strong>Legality:</strong> every card ever printed is welcome unless it appears on the official Commander banned list (see the Banned tab — always current).</li>
+      <li><strong>Legality:</strong> Commander has a wide card pool — almost every standard black-bordered card is legal (joke sets like Unhinged aren't), minus the official Commander banned list (see the Banned tab — always current).</li>
     </ul>
   </div>`;
 }
@@ -7018,20 +7030,22 @@ function quickRulesHtml(){
   if(RULES_OVERRIDE.quick) return quickRulesFromLines(RULES_OVERRIDE.quick);
   return `<div class="rules-text">
     <ul>
+      <li><strong>A four-player format</strong> — free-for-all multiplayer is the default.</li>
       <li><strong>Your Admiral</strong> — a legendary card with power and toughness on its front side. Every card in your deck must fit within its color identity.</li>
       <li><strong>Exactly ${DECK_TOTAL} cards</strong> including the Admiral, singleton (no repeated names), and only cards that have ever been Standard-legal, from Magic's own multiverse, with a nonland front side.</li>
       <li><strong>No lands in decks.</strong> To play a "land", exile a card instead and take a matching basic from the shared Landing Zone.</li>
       <li><strong>The Admiral starts in the command zone</strong> — cast it from there for {2} more per previous cast, and it can return there instead of other zones.</li>
       <li><strong>Start at ${START_LIFE} life.</strong> Mulligans as in Commander. 18 combat damage from one Admiral defeats a player.</li>
+      <li><strong>Legality:</strong> Admiral has a big card pool — almost every card that's ever been Standard-legal (or legal in its predecessor, Type 2) is playable, minus the Admiral banned list (see the Banned tab).</li>
     </ul>
   </div>`;
 }
 function commanderFullRulesHtml(){
   return `<div class="rules-text">
-    <p><strong>Commander</strong> is Magic's definitive multiplayer format: free-for-all games, typically four players, built around a legendary leader.</p>
+    <p><strong>Commander</strong> is a four-player multiplayer format: free-for-all games built around a legendary leader.</p>
     <p><strong>Your Commander.</strong> A legendary creature. It begins the game in the command zone, and you may cast it from there — paying {2} more for each time it was previously cast from the command zone this game. If your Commander would leave the battlefield or change zones, you may return it to the command zone instead.</p>
     <p><strong>Deckbuilding.</strong> Exactly 100 cards including your Commander. Apart from basic lands, no two cards may share a name. Every card's color identity — mana symbols in its cost and rules text — must fall within your Commander's color identity.</p>
-    <p><strong>Legality.</strong> Every Magic card ever printed in paper is legal, except cards on the official Commander banned list — see the Banned List tab, which is fetched live and always current.</p>
+    <p><strong>Legality.</strong> Commander has a very wide card pool — almost every standard black-bordered card ever printed in paper is legal. Silver-bordered joke cards (Un-sets such as Unhinged) and playtest cards are not, and neither are the cards on the official Commander banned list — see the Banned List tab, which is fetched live and always current.</p>
     <p><strong>Playing.</strong> Players begin at 40 life. The customary free first mulligan applies. All normal ways to win and lose apply — and in addition, a player who has been dealt 21 or more combat damage by the same Commander over the course of the game loses.</p>
     <p><strong>The spirit of the format.</strong> Commander is a social format: talk with your table about power level before the game, and aim for games everyone enjoys.</p>
   </div>`;
@@ -7040,7 +7054,7 @@ function rulesTextHtml(){
   if(isCmdrMode()) return commanderFullRulesHtml();
   if(RULES_OVERRIDE.full) return fullRulesFromLines(RULES_OVERRIDE.full);
   return `<div class="rules-text">
-    <p style="margin-top:0;">Admiral is a singleton format for the cards of Standard's whole history, led by a legendary Admiral and built on a shared Landing Zone that replaces lands in decks entirely. These are the full rules.</p>
+    <p style="margin-top:0;">Admiral is a four-player singleton format for the cards of Standard's whole history, led by a legendary Admiral and built on a shared Landing Zone that replaces lands in decks entirely. These are the full rules.</p>
 
     <h4>Your Admiral</h4>
     <p>Choose a legendary card with power and toughness printed on its front side as the Admiral of your deck. That means legendary creatures — and other legendary cards with printed power and toughness, such as Vehicles — while planeswalkers and battles don't qualify.</p>
@@ -7799,7 +7813,7 @@ function wireLifeGrid(){
 
 /* ---------------- MODALS ---------------- */
 
-function openModal(type){ state.modal={type}; renderModal(); }
+function openModal(type, extra){ state.modal=Object.assign({type}, extra||{}); renderModal(); }
 function closeModal(){ state.modal=null; renderModal(); }
 function renderModal(){
   let el = document.getElementById('modalRoot');
@@ -7860,6 +7874,25 @@ function renderModal(){
       if(state.inspireDeckId===d.id) state.inspireDeckId=null;
       closeModal(); toast('Deck deleted.');
       switchPage('decks');
+    });
+  } else if(m.type==='deleteFolder'){
+    const f = (state.folders||[]).find(x=>x.id===m.folderId);
+    if(!f){ closeModal(); return; }
+    const deckN = decksInFolder(f.id).length;
+    const subN = (state.folders||[]).filter(x=>(x.parentId||null)===f.id).length;
+    const parts = [];
+    if(deckN) parts.push(`${deckN} deck${deckN===1?'':'s'}`);
+    if(subN) parts.push(`${subN} subfolder${subN===1?'':'s'}`);
+    const inside = parts.join(' and ');
+    const body = inside
+      ? `The ${inside} inside will be moved up a level — nothing is deleted.`
+      : `This folder is empty.`;
+    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>Delete folder “${escapeHtml(f.name)}”?</h3><p style="font-size:13px;color:var(--sub-text);margin:0 0 14px;">${body}</p><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm danger" id="delFolderBtn">Delete folder</button></div></div></div>`;
+    document.getElementById('delFolderBtn').addEventListener('click', ()=>{
+      deleteFolder(f.id);
+      closeModal();
+      toast(inside ? 'Folder deleted — its contents moved up a level.' : 'Folder deleted.');
+      render();
     });
   } else if(m.type==='resetAll'){
     el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>Reset all app data?</h3><p style="font-size:13px;color:var(--sub-text);margin:0 0 14px;">This deletes every saved deck on this device. This can't be undone.</p><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm danger" id="resetBtn">Delete Everything</button></div></div></div>`;
