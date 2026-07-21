@@ -2415,7 +2415,7 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.8';
+const APP_VERSION = '2.51.9';
 const CHANGELOG_NOTES = [
   'Two leaders can now share command: Partner, Partner with, Friends forever, Choose a Background + Backgrounds, and Time Lord Doctors + Doctor\'s companion are all supported. When your appointed leader has one of these abilities, a big + appears on its card — tap it to pick a legal pairing.',
   'The Inspiration browse page in Commander mode now also assembles two-commander pairs for any chosen color combination — pick a four-color combo and every legal pairing that totals exactly those colors appears alongside single commanders. Tap a pair to start a deck with both in command.',
@@ -2435,7 +2435,8 @@ const CHANGELOG_NOTES = [
   'Play-data recommendations now appear progressively: the very most-played cards render the moment the first lookup lands, and the rest stream in behind — first paint is as fast as the old engine.',
   'The recommendations page is cleaner: the leader\'s name and type line under its card are gone (the card is right there) — "tap cards to select" sits there instead — and the top bar now shows only the leader\'s name, in two smaller static lines so long names always fit.',
   'Deck and card titles in the top bar no longer shrink in visible steps: one fixed two-line size fits every name, including single long words like "Aikidon\'t".',
-  'Each leader\'s recommendation page now shows its OWN community themes straight from EDHREC — Aikido, Storm, whatever that leader is actually built around — as tappable chips: tap one for that theme\'s most-played cards with this leader, tap again to return to the main list.'
+  'Each leader\'s recommendation page now shows its OWN community themes straight from EDHREC — Aikido, Storm, whatever that leader is actually built around — as tappable chips: tap one for that theme\'s most-played cards with this leader, tap again to return to the main list.',
+  'The Inspiration page\'s theme list now extends itself with EDHREC\'s full community catalog — every theme players actually build, Aikido included — refreshed weekly. Picking a play-data theme lists that theme\'s real top commanders, filtered to your chosen colors and your format\'s legality, in true play order. Arriving on a leader\'s page from such a theme pre-selects the matching theme chip there too.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7190,6 +7191,95 @@ function browseReady(){
   const sel = state.browseSel;
   return !!(sel.combo || sel.theme || sel.type);
 }
+/* ---- EDHREC play-data themes for the Inspiration browse page ----
+   The catalog comes from /pages/tags.json (cached a week); picking one loads
+   that theme's top commanders from its /pages/tags/<slug>.json page, resolved
+   through the app's own legality engine and filtered to the chosen colors
+   client-side. The built-in Scryfall-clause themes stay as the backbone —
+   EDHREC entries extend the list with everything the community actually
+   builds (Aikido and friends). */
+function edhrecTagCatalogFrom(data){
+  const out = [], seen = new Set();
+  const push = (label, slug, count)=>{
+    label = String(label||'').trim(); slug = String(slug||'').trim();
+    if(!label || !slug || seen.has(slug)) return;
+    seen.add(slug); out.push({ label, slug, count: count||0 });
+  };
+  try{
+    const dict = (((data||{}).container||{}).json_dict||{});
+    (dict.cardlists||[]).forEach(L=>(L.cardviews||[]).forEach(cv=>{
+      const u = (cv && cv.url) || '';
+      const m = u.match(/^\/tags\/([a-z0-9-]+)/);
+      if(m) push(cv.name, m[1], cv.num_decks || cv.count || 0);
+    }));
+    const tl = ((data||{}).panels||{}).taglinks || (dict.panels||{}).taglinks || [];
+    (Array.isArray(tl)?tl:[]).forEach(t=> push(t.value || t.tag, t.slug || edhrecSlug(t.value || t.tag || ''), t.count || 0));
+  }catch(e){}
+  out.sort((a,b)=>(b.count||0)-(a.count||0));
+  return out.slice(0, 80);
+}
+async function ensureEdhrecTags(){
+  if(state.edhrecTags) return;
+  try{
+    const raw = localStorage.getItem('admiral_app:edhrecTags');
+    if(raw){
+      const j = JSON.parse(raw);
+      if(j && Array.isArray(j.v) && j.v.length && (Date.now() - (j.t||0)) < 7*24*3600*1000){
+        state.edhrecTags = j.v; return;
+      }
+    }
+  }catch(e){}
+  state.edhrecTags = [];   // marks the fetch as attempted
+  const data = await edhrecFetchJson('/pages/tags.json');
+  const tags = edhrecTagCatalogFrom(data);
+  if(tags.length){
+    state.edhrecTags = tags;
+    try{ localStorage.setItem('admiral_app:edhrecTags', JSON.stringify({ t: Date.now(), v: tags })); }catch(e){}
+    if(state.screen==='browse') render();
+  }
+}
+function browseThemeOptions(){
+  const opts = BROWSE_THEMES.map(c=>({v:c.key, l:c.label}));
+  const have = new Set(BROWSE_THEMES.map(c=>String(c.label||'').toLowerCase()));
+  (state.edhrecTags||[]).forEach(t=>{
+    if(!have.has(t.label.toLowerCase())) opts.push({ v: 'ed:'+t.slug, l: t.label });
+  });
+  return opts;
+}
+function edhrecCommanderNamesFrom(data){
+  const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
+  const cmd = lists.filter(L=>/commander/i.test(L.header||''));
+  const use = cmd.length ? cmd : lists;
+  const seen = new Set(), out = [];
+  for(const L of use){
+    for(const cv of (L.cardviews||[])){
+      if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); }
+    }
+  }
+  return out;
+}
+async function loadEdhrecThemeBrowse(box, key, slug){
+  const data = await edhrecFetchJson('/pages/tags/' + slug + '.json');
+  if(key !== JSON.stringify(state.browseSel)) return;
+  const names = data ? edhrecCommanderNamesFrom(data).slice(0, 100) : [];
+  if(!names.length){
+    box.innerHTML = `<div class="empty-note">No play data for this theme right now — check your connection, or try another theme.</div>`;
+    return;
+  }
+  const rank = new Map(names.map((n,i)=>[n,i]));
+  const cards = await namesToLegalCards(names);
+  if(key !== JSON.stringify(state.browseSel)) return;
+  let list = (cards||[]).filter(c=> isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c) && colorSelectionAllows(c));
+  list.sort((a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999));
+  if(!list.length){
+    box.innerHTML = `<div class="empty-note">No ${isCmdrMode()?'Commanders':'Admirals'} with play data for this theme in these colors — try another combination.</div>`;
+    return;
+  }
+  const filtered = list;
+  filtered._complete = true;
+  state.browseCache[key] = filtered;
+  renderBrowseResults(key);
+}
 function browsePageHtml(){
   const sel = state.browseSel;
   const combos = COLOR_COMBOS[sel.count] || null;
@@ -7208,12 +7298,13 @@ function browsePageHtml(){
       <div class="bs-row">${cselectHtml('bsCombo',
         combos ? [{v:'', l:'Any combination'}].concat(combos.map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18)}))) : [],
         sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos})}</div>
-      <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none'}].concat(BROWSE_THEMES.map(c=>({v:c.key, l:c.label}))), sel.theme, 'Theme — none')}</div>
+      <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none'}].concat(browseThemeOptions()), sel.theme, 'Theme — none')}</div>
     </div>
     <div id="browseResults"></div>
   </main>`;
 }
 function wireBrowsePage(){
+  ensureEdhrecTags();
   _csHandlers.bsCount = v=>{
     state.browseSel.count = v;
     state.browseSel.combo = '';       // combos belong to a color count
@@ -7303,12 +7394,13 @@ async function loadBrowse(){
     return;
   }
   const key = JSON.stringify(state.browseSel);
-  if(isCmdrMode() && browseAdmiralMode() && state.browseSel.combo) loadLeaderPairs(key, state.browseSel.combo, state.browseSel.theme||'');
+  if(isCmdrMode() && browseAdmiralMode() && state.browseSel.combo) loadLeaderPairs(key, state.browseSel.combo, (state.browseSel.theme && state.browseSel.theme.indexOf('ed:')!==0) ? state.browseSel.theme : '');
   if(state.browseCache[key]){ renderBrowseResults(key); return; }
   box.innerHTML = `<div class="status"><div class="spinner"></div>Consulting the fleet registry…</div>`;
   const admiralMode = browseAdmiralMode();
   const sel = state.browseSel;
   if(admiralMode && sel.theme==='typal'){ await loadTypal(box, key); return; }
+  if(admiralMode && sel.theme && sel.theme.indexOf('ed:')===0){ await loadEdhrecThemeBrowse(box, key, sel.theme.slice(3)); return; }
   // Scryfall-native engine. Every theme maps to a bundle of Scryfall queries
   // (community function tags + oracle patterns); results sort by Scryfall's
   // popularity rank so recognisable Admirals lead. No external data source.
@@ -7977,6 +8069,13 @@ async function loadRecoPool(){
           R.pool = pool.slice(0, 180);
           R._mainPool = R.pool;
           renderRecoBody();
+          // Arrived here from a play-data theme on the browse page? Follow
+          // through: pre-select that same theme chip for this leader.
+          const bs = state.browseSel && state.browseSel.theme;
+          if(bs && bs.indexOf('ed:')===0){
+            const slug = bs.slice(3);
+            if((R.themes||[]).some(t=>t.slug===slug)) loadRecoTheme(slug);
+          }
           return;
         }
       }
