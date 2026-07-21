@@ -2410,7 +2410,7 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.4';
+const APP_VERSION = '2.51.7';
 const CHANGELOG_NOTES = [
   'Two leaders can now share command: Partner, Partner with, Friends forever, Choose a Background + Backgrounds, and Time Lord Doctors + Doctor\'s companion are all supported. When your appointed leader has one of these abilities, a big + appears on its card — tap it to pick a legal pairing.',
   'The Inspiration browse page in Commander mode now also assembles two-commander pairs for any chosen color combination — pick a four-color combo and every legal pairing that totals exactly those colors appears alongside single commanders. Tap a pair to start a deck with both in command.',
@@ -2423,7 +2423,11 @@ const CHANGELOG_NOTES = [
   'The home page wears the redesigned Admiral crest: a naval officer\'s peaked cap above a classic anchor, in the same gold line work as the Commander crown-and-swords.',
   'The launch screen now splits diagonally into Admiral navy and Commander dark red — the same split as the app icon — with the gold crest centred and two sonar pulses rippling out behind it.',
   'Per-leader recommendations are now instant again: the leader\'s abilities are detected locally from its own card text instead of asking Scryfall fifteen separate questions, and the synergy and staples searches run in parallel.',
-  'Recommendations now read each leader\'s card text in fine detail — the tribes it names and the exact mechanics it triggers on (Spirits, Treasures, +1/+1 counters, sacrifice, landfall, spell-copying and some thirty more) — so Kykar\'s page fills with Spirit and spellslinger payoffs while a counters leader gets counters. Generic colour staples are now only a short tail at the end, not half the page.'
+  'Recommendations now read each leader\'s card text in fine detail — the tribes it names and the exact mechanics it triggers on (Spirits, Treasures, +1/+1 counters, sacrifice, landfall, spell-copying and some thirty more) — so Kykar\'s page fills with Spirit and spellslinger payoffs while a counters leader gets counters. Generic colour staples are now only a short tail at the end, not half the page.',
+  'Recommendations now come from real play data: each leader\'s page shows the cards actually most played with that exact Commander (via EDHREC), in true play-rate order, filtered through your format\'s own legality rules — with the card-text synergy engine as automatic fallback for leaders EDHREC doesn\'t know.',
+  'Fixed the ordering bug that grouped results by colour (all white, then blue, then red) — lists now follow most-played order throughout.',
+  'EDHREC play data now flows through the site\'s own Netlify proxy (the new _redirects file), so the browser cross-origin block that stopped earlier attempts no longer applies.',
+  'Play-data recommendations now appear progressively: the very most-played cards render the moment the first lookup lands, and the rest stream in behind — first paint is as fast as the old engine.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7808,6 +7812,45 @@ function renderRecoOverlay(){
   document.getElementById('recoCreate').addEventListener('click', openRecoDeckChooser);
   if(!R.loading) renderRecoBody();
 }
+/* EDHREC integration: the cards ACTUALLY most played with this exact leader,
+   in true play-rate order. Names are resolved through searchAndVerifyLegal so
+   every format rule (Admiral set pool, bans, no-lands / Commander legality)
+   still applies. Falls back to the local synergy engine when EDHREC has no
+   page for a leader or can't be reached. */
+function edhrecSlug(name){
+  return String(name).split('//')[0].trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/['\u2019]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+async function edhrecMostPlayed(card){
+  const path = '/pages/commanders/' + edhrecSlug(card.name) + '.json';
+  // Same-origin first: on the deployed site, Netlify's _redirects proxy
+  // fetches EDHREC server-side, so the browser's CORS wall never applies.
+  // The direct URL is a second chance; both failing means the local synergy
+  // engine takes over.
+  const urls = ['/edhrec' + path, 'https://json.edhrec.com' + path];
+  for(const u of urls){
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), 6000);
+    try{
+      const res = await fetch(u, { signal: ctrl.signal });
+      if(res.ok){
+        const data = await res.json();
+        const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
+        const seen = new Set(), out = [];
+        for(const L of lists){
+          for(const cv of (L.cardviews||[])){
+            if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); }
+          }
+        }
+        if(out.length) return out;
+      }
+    }catch(e){}
+    finally{ clearTimeout(timer); }
+  }
+  return [];
+}
 /* Reads a leader's OWN oracle text for its specific hooks — the tribes it
    names, the mechanics it triggers on — and turns each into a precise search
    clause. Entirely local: no network. This is what separates two "token
@@ -7870,6 +7913,47 @@ async function loadRecoPool(){
   // text and type line (no extra network round-trips) — those theme clauses
   // form the synergy signal, and colour staples only fill in behind. Both
   // searches run in parallel, so this is as fast as a single lookup.
+  // 1) EDHREC first: the cards most played with THIS leader, in play-rate
+  //    order. Skipped when a browse theme filter is active (theme wins then).
+  if(!theme){
+    try{
+      const names = (await edhrecMostPlayed(R.admiral)).slice(0, 90);
+      if(!state.reco || state.reco !== R) return;
+      if(names.length >= 20){
+        const rank = new Map(names.map((n,i)=>[n,i]));
+        const byRank = (a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999);
+        // The Scryfall queue is strictly serial, so fewer, larger name chunks
+        // matter — and the page renders the moment the FIRST chunk (the very
+        // most-played cards) resolves, with the rest streaming in behind.
+        const chunks = chunkArr(names, 30);
+        const proms = chunks.map(ch =>
+          searchAndVerifyLegal('(' + ch.map(n=>exactNameClause(n)).join(' or ') + ')', 'name', ch.length)
+            .catch(()=>({results:[]}))
+        );
+        const seenN = new Set(); const got = [];
+        const absorb = (r)=>(r.results||[]).forEach(c=>{ if(!seenN.has(c.name)){ seenN.add(c.name); got.push(c); } });
+        absorb(await proms[0]);
+        if(!state.reco || state.reco !== R) return;
+        let pool = got.filter(keep).sort(byRank);
+        if(pool.length >= 10){
+          R.loading = false; R.edhrecSourced = true;
+          R.pool = pool.slice(0, 180);
+          renderRecoBody();
+        }
+        (await Promise.all(proms.slice(1))).forEach(absorb);
+        if(!state.reco || state.reco !== R) return;
+        pool = got.filter(keep).sort(byRank);
+        if(pool.length >= 10){
+          R.loading = false; R.edhrecSourced = true;
+          R.pool = pool.slice(0, 180);
+          renderRecoBody();
+          return;
+        }
+      }
+    }catch(e){}
+    if(!state.reco || state.reco !== R) return;
+  }
+  // 2) Fallback: this leader's own hooks, detected locally from its card text.
   const parts = new Set();
   leaderSignals(R.admiral).forEach(cl=>parts.add(cl));               // this leader's OWN hooks first
   detectCardThemes(R.admiral).forEach(t=>{ if(t.clause) parts.add(t.clause); });
@@ -7887,7 +7971,9 @@ async function loadRecoPool(){
   // of the page — that sameness was exactly what made every page feel alike.
   const stapleRoom = Math.max(30, 180 - synergy.length);
   const staples = (r2.results||[]).filter(c=> keep(c) && !seen.has(c.name)).slice(0, Math.min(stapleRoom, 60));
-  R.pool = sortColorCmcName(synergy).slice(0, 180 - staples.length).concat(sortColorCmcName(staples));
+  // Both lists arrive from Scryfall already in play-popularity order — keep it.
+  // (The old colour/cost re-sort is what made pages read white-then-blue-then-red.)
+  R.pool = synergy.slice(0, 180 - staples.length).concat(staples);
   renderRecoBody();
 }
 function renderRecoBody(){
@@ -7896,6 +7982,7 @@ function renderRecoBody(){
   if(!box || !R) return;
   if(R.error){ box.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
   if(!R.pool.length){ box.innerHTML = `<div class="empty-note">No recommendations found for this combination.</div>`; return; }
+  box.innerHTML = R.edhrecSourced ? `<p class="hint" style="text-align:center;margin:0 0 8px;">Most-played cards with this leader, by real play data.</p>` : '';
   const recoTile = (c)=>{
     const sel = R.selected.has(c.name);
     return `<div class="sr-tile selectable ${sel?'selected':''}" data-name="${encodeURIComponent(c.name)}">
@@ -7911,7 +7998,6 @@ function renderRecoBody(){
       </div>
     </div>`;
   };
-  box.innerHTML = '';
   pagedGrid(box, R.pool, recoTile, (chunk)=>{ wireRecoChunk(); loadTilePrices(chunk); });
   function wireRecoChunk(){
     box.querySelectorAll('.tile-info').forEach(b=>{
