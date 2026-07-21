@@ -82,6 +82,11 @@ button{font-family:'Inter';}
 }
 .tb-titles{display:flex;flex-direction:column;line-height:1.15;min-width:0;flex:1;}
 .tb-titles .t1{font-family:'Cinzel',serif;font-size:15.5px;color:var(--ink-text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tb-titles .t1.name2{font-size:13px;line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;overflow-wrap:anywhere;}
+.reco-admiral .ra-hint{font-size:11.5px;color:var(--sub-text);margin-top:8px;letter-spacing:0.3px;}
+.reco-themes{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 0 10px;}
+.rt-chip{background:rgba(255,255,255,0.06);border:1px solid rgba(201,162,75,0.35);color:var(--ink-text);border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;}
+.rt-chip.on{background:var(--brass);border-color:var(--brass);color:#1a1208;font-weight:700;}
 .tb-titles .t2{font-size:10.5px;color:var(--sub-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .icon-btn{
   background:none;border:1px solid var(--line);color:var(--sub-text);
@@ -94,8 +99,8 @@ button{font-family:'Inter';}
 .compass svg{width:100%;height:100%;animation:spin 60s linear infinite;}
 @media (prefers-reduced-motion:reduce){ .compass svg{animation:none;} }
 @keyframes spin{ to{ transform:rotate(360deg); } }
-.brand-txt{pointer-events:none;font-family:'Cinzel Decorative','Cinzel',serif;font-size:16px;letter-spacing:0.8px;color:var(--brass);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto;cursor:default;}
-.brand-txt.two-line{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15;align-self:center;max-height:calc(var(--nav-h) - 10px);}
+.brand-txt{pointer-events:none;font-family:'Cinzel Decorative','Cinzel',serif;font-size:14px;letter-spacing:0.6px;color:var(--brass);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto;cursor:default;}
+.brand-txt.two-line{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2;align-self:center;max-height:calc(var(--nav-h) - 10px);word-break:break-word;overflow-wrap:anywhere;}
 .brand-txt.editable{pointer-events:auto;cursor:pointer;text-decoration:underline dotted rgba(201,162,75,0.4);text-underline-offset:4px;}
 .brand-banner .brand-txt.swap{animation:brandSwap 0.3s ease;}
 @keyframes brandSwap{from{opacity:0;transform:translateY(4px) scale(0.92);}to{opacity:1;transform:none;}}
@@ -2410,7 +2415,7 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.7';
+const APP_VERSION = '2.51.8';
 const CHANGELOG_NOTES = [
   'Two leaders can now share command: Partner, Partner with, Friends forever, Choose a Background + Backgrounds, and Time Lord Doctors + Doctor\'s companion are all supported. When your appointed leader has one of these abilities, a big + appears on its card — tap it to pick a legal pairing.',
   'The Inspiration browse page in Commander mode now also assembles two-commander pairs for any chosen color combination — pick a four-color combo and every legal pairing that totals exactly those colors appears alongside single commanders. Tap a pair to start a deck with both in command.',
@@ -2427,7 +2432,10 @@ const CHANGELOG_NOTES = [
   'Recommendations now come from real play data: each leader\'s page shows the cards actually most played with that exact Commander (via EDHREC), in true play-rate order, filtered through your format\'s own legality rules — with the card-text synergy engine as automatic fallback for leaders EDHREC doesn\'t know.',
   'Fixed the ordering bug that grouped results by colour (all white, then blue, then red) — lists now follow most-played order throughout.',
   'EDHREC play data now flows through the site\'s own Netlify proxy (the new _redirects file), so the browser cross-origin block that stopped earlier attempts no longer applies.',
-  'Play-data recommendations now appear progressively: the very most-played cards render the moment the first lookup lands, and the rest stream in behind — first paint is as fast as the old engine.'
+  'Play-data recommendations now appear progressively: the very most-played cards render the moment the first lookup lands, and the rest stream in behind — first paint is as fast as the old engine.',
+  'The recommendations page is cleaner: the leader\'s name and type line under its card are gone (the card is right there) — "tap cards to select" sits there instead — and the top bar now shows only the leader\'s name, in two smaller static lines so long names always fit.',
+  'Deck and card titles in the top bar no longer shrink in visible steps: one fixed two-line size fits every name, including single long words like "Aikidon\'t".',
+  'Each leader\'s recommendation page now shows its OWN community themes straight from EDHREC — Aikido, Storm, whatever that leader is actually built around — as tappable chips: tap one for that theme\'s most-played cards with this leader, tap again to return to the main list.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3007,27 +3015,12 @@ function navHtml(){
    measuring with the fallback font, which is narrower than Cinzel Decorative,
    so "fits" flipped to overflow once the real font arrived. */
 function fitBrandTitle(){
+  // Static sizing: the title always renders at one fixed size, wraps onto two
+  // lines (breaking long single words like "Aikidon't"), and ellipsizes past
+  // that. No measuring, no visible shrink-steps — the CSS does all the work.
   const el = document.getElementById('brandTitle');
-  const inner = document.getElementById('brandTitleInner');
-  if(!el || !inner) return;
-  const avail = el.getBoundingClientRect().width;
-  if(!avail){ setTimeout(fitBrandTitle, 150); return; }   // layout not settled yet
-  let size = 16;
-  el.style.fontSize = size + 'px';
-  if(el.classList.contains('two-line')){
-    // Decklist names may wrap onto a second row: shrink only until the text
-    // fits within two lines' height (so most names keep the full size).
-    const fits = ()=> inner.getBoundingClientRect().height <= size * 1.15 * 2 + 2;
-    while(!fits() && size > 9){ size -= 0.5; el.style.fontSize = size + 'px'; }
-  } else {
-    // The inner span's rect reports its TRUE width even while overflowing the
-    // ellipsized container — unlike scrollWidth, which Safari clamps.
-    while(inner.getBoundingClientRect().width > avail - 1 && size > 9){
-      size -= 0.5;
-      el.style.fontSize = size + 'px';
-    }
-  }
-  state._brandSize = size + 'px';
+  if(el) el.style.fontSize = '';
+  state._brandSize = null;
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>fitBrandTitle());
 window.addEventListener('resize', fitBrandTitle);
@@ -7795,14 +7788,13 @@ function renderRecoOverlay(){
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar" style="position:relative;">
       <button class="icon-btn" id="recoBack">${ICONS.back}</button>
-      <div class="tb-titles"><div class="t1">${escapeHtml(R.admiral.name)}</div><div class="t2">${theme?escapeHtml(theme.label)+' · ':''}tap cards to select</div></div>
+      <div class="tb-titles"><div class="t1 name2">${escapeHtml(R.admiral.name)}</div></div>
       <button class="reco-create" id="recoCreate" ${n?'':'disabled'}>＋ Add to deck${n?` (${n})`:''}</button>
     </div>
     <main>
       <div class="reco-admiral">
         <img class="${wbClass(R.admiral)}" src="${cardImageLarge(R.admiral)}" id="recoAdmImg" alt="${escapeHtml(R.admiral.name)}">
-        <div class="ra-nm">${escapeHtml(R.admiral.name)}</div>
-        <div class="ra-sub">${escapeHtml(frontFace(R.admiral).type_line||'')}</div>
+        <div class="ra-hint">tap cards to select</div>
       </div>
       <div id="recoBody">${R.loading ? `<div class="status"><div class="spinner"></div>Charting recommendations…</div>` : ''}</div>
     </main>
@@ -7823,33 +7815,68 @@ function edhrecSlug(name){
     .replace(/['\u2019]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
-async function edhrecMostPlayed(card){
-  const path = '/pages/commanders/' + edhrecSlug(card.name) + '.json';
+async function edhrecFetchJson(path){
   // Same-origin first: on the deployed site, Netlify's _redirects proxy
   // fetches EDHREC server-side, so the browser's CORS wall never applies.
-  // The direct URL is a second chance; both failing means the local synergy
-  // engine takes over.
   const urls = ['/edhrec' + path, 'https://json.edhrec.com' + path];
   for(const u of urls){
     const ctrl = new AbortController();
     const timer = setTimeout(()=>ctrl.abort(), 6000);
     try{
       const res = await fetch(u, { signal: ctrl.signal });
-      if(res.ok){
-        const data = await res.json();
-        const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
-        const seen = new Set(), out = [];
-        for(const L of lists){
-          for(const cv of (L.cardviews||[])){
-            if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); }
-          }
-        }
-        if(out.length) return out;
-      }
+      if(res.ok){ const data = await res.json(); if(data) return data; }
     }catch(e){}
     finally{ clearTimeout(timer); }
   }
-  return [];
+  return null;
+}
+function edhrecNamesFrom(data){
+  const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
+  const seen = new Set(), out = [];
+  for(const L of lists){
+    for(const cv of (L.cardviews||[])){
+      if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); }
+    }
+  }
+  return out;
+}
+function edhrecThemesFrom(data){
+  // The leader's page carries its own community theme list (Aikido, Storm,
+  // Spellslinger, …). Shapes vary a little between pages, so read both known
+  // homes for it and normalise to {label, slug, count}.
+  try{
+    const dict = (((data||{}).container||{}).json_dict||{});
+    const tl = ((data||{}).panels||{}).taglinks || (dict.panels||{}).taglinks || [];
+    let out = [];
+    if(Array.isArray(tl) && tl.length){
+      out = tl.map(t=>({ label: t.value || t.tag || '', slug: t.slug || edhrecSlug(t.value || t.tag || ''), count: t.count || 0 })).filter(t=>t.label);
+    } else {
+      const tc = dict.tag_counts || (data||{}).tag_counts || {};
+      out = Object.keys(tc).map(k=>({ label: k, slug: edhrecSlug(k), count: tc[k] || 0 }));
+    }
+    out.sort((a,b)=>(b.count||0)-(a.count||0));
+    return out.slice(0, 10);
+  }catch(e){ return []; }
+}
+async function edhrecCommanderPage(card){
+  const data = await edhrecFetchJson('/pages/commanders/' + edhrecSlug(card.name) + '.json');
+  if(!data) return { names: [], themes: [] };
+  return { names: edhrecNamesFrom(data), themes: edhrecThemesFrom(data) };
+}
+async function edhrecThemeNames(card, themeSlug){
+  const data = await edhrecFetchJson('/pages/commanders/' + edhrecSlug(card.name) + '/' + themeSlug + '.json');
+  return data ? edhrecNamesFrom(data) : [];
+}
+async function resolveEdhrecNames(names, keep){
+  const rank = new Map(names.map((n,i)=>[n,i]));
+  const chunks = chunkArr(names, 30);
+  const settled = await Promise.all(chunks.map(ch =>
+    searchAndVerifyLegal('(' + ch.map(n=>exactNameClause(n)).join(' or ') + ')', 'name', ch.length)
+      .catch(()=>({results:[]}))
+  ));
+  const seenN = new Set(); const got = [];
+  settled.forEach(r=>(r.results||[]).forEach(c=>{ if(!seenN.has(c.name)){ seenN.add(c.name); got.push(c); } }));
+  return got.filter(keep).sort((a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999));
 }
 /* Reads a leader's OWN oracle text for its specific hooks — the tribes it
    names, the mechanics it triggers on — and turns each into a precise search
@@ -7917,8 +7944,10 @@ async function loadRecoPool(){
   //    order. Skipped when a browse theme filter is active (theme wins then).
   if(!theme){
     try{
-      const names = (await edhrecMostPlayed(R.admiral)).slice(0, 90);
+      const page = await edhrecCommanderPage(R.admiral);
       if(!state.reco || state.reco !== R) return;
+      R.themes = page.themes || [];
+      const names = (page.names || []).slice(0, 90);
       if(names.length >= 20){
         const rank = new Map(names.map((n,i)=>[n,i]));
         const byRank = (a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999);
@@ -7946,6 +7975,7 @@ async function loadRecoPool(){
         if(pool.length >= 10){
           R.loading = false; R.edhrecSourced = true;
           R.pool = pool.slice(0, 180);
+          R._mainPool = R.pool;
           renderRecoBody();
           return;
         }
@@ -7976,13 +8006,53 @@ async function loadRecoPool(){
   R.pool = synergy.slice(0, 180 - staples.length).concat(staples);
   renderRecoBody();
 }
+async function loadRecoTheme(slug){
+  const R = state.reco;
+  if(!R || R.loading) return;
+  if(R.activeThemeSlug === slug){
+    // Tapping the active theme again returns to the leader's main list.
+    R.activeThemeSlug = null;
+    if(R._mainPool){ R.pool = R._mainPool; }
+    renderRecoBody();
+    return;
+  }
+  if(!R._mainPool) R._mainPool = (R.pool || []).slice();
+  R.activeThemeSlug = slug;
+  const box = document.getElementById('recoBody');
+  if(box) box.innerHTML = `<div class="status"><div class="spinner"></div>Charting themed recommendations…</div>`;
+  try{
+    const names = (await edhrecThemeNames(R.admiral, slug)).slice(0, 60);
+    if(!state.reco || state.reco !== R || R.activeThemeSlug !== slug) return;
+    const keep = (c)=> landOk(c) && !isBanned(c) && c.name !== R.admiral.name;
+    const pool = names.length ? await resolveEdhrecNames(names, keep) : [];
+    if(!state.reco || state.reco !== R || R.activeThemeSlug !== slug) return;
+    if(pool.length >= 8){
+      R.pool = pool.slice(0, 180);
+    } else {
+      toast('No themed play data for this leader.');
+      R.activeThemeSlug = null;
+      R.pool = R._mainPool || R.pool;
+    }
+  }catch(e){
+    R.activeThemeSlug = null;
+    R.pool = R._mainPool || R.pool;
+  }
+  renderRecoBody();
+}
 function renderRecoBody(){
   const box = document.getElementById('recoBody');
   const R = state.reco;
   if(!box || !R) return;
   if(R.error){ box.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
   if(!R.pool.length){ box.innerHTML = `<div class="empty-note">No recommendations found for this combination.</div>`; return; }
-  box.innerHTML = R.edhrecSourced ? `<p class="hint" style="text-align:center;margin:0 0 8px;">Most-played cards with this leader, by real play data.</p>` : '';
+  const activeTheme = R.activeThemeSlug ? (R.themes||[]).find(t=>t.slug===R.activeThemeSlug) : null;
+  const hint = R.edhrecSourced
+    ? `<p class="hint" style="text-align:center;margin:0 0 8px;">${activeTheme ? 'Most-played <b>'+escapeHtml(activeTheme.label)+'</b> cards with this leader.' : 'Most-played cards with this leader, by real play data.'}</p>`
+    : '';
+  const chips = (R.themes && R.themes.length)
+    ? `<div class="reco-themes">${R.themes.map(t=>`<button class="rt-chip ${R.activeThemeSlug===t.slug?'on':''}" data-rtheme="${escapeHtml(t.slug)}">${escapeHtml(t.label)}</button>`).join('')}</div>`
+    : '';
+  box.innerHTML = hint + chips;
   const recoTile = (c)=>{
     const sel = R.selected.has(c.name);
     return `<div class="sr-tile selectable ${sel?'selected':''}" data-name="${encodeURIComponent(c.name)}">
@@ -7999,6 +8069,9 @@ function renderRecoBody(){
     </div>`;
   };
   pagedGrid(box, R.pool, recoTile, (chunk)=>{ wireRecoChunk(); loadTilePrices(chunk); });
+  box.querySelectorAll('[data-rtheme]').forEach(b=>{
+    b.addEventListener('click', ()=> loadRecoTheme(b.getAttribute('data-rtheme')));
+  });
   function wireRecoChunk(){
     box.querySelectorAll('.tile-info').forEach(b=>{
       if(b.dataset.w) return; b.dataset.w='1';
