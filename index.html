@@ -2465,10 +2465,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.33';
+const APP_VERSION = '2.51.34';
 const CHANGELOG_NOTES = [
-  'Pick a colour combination and the Theme and Kindred dropdowns re-sort by what THAT colour actually plays, straight from EDHREC\'s colour pages — mono-black leads with Aristocrats and Reanimator, its Kindred with Zombies and Rats. No colour chosen keeps the usual order.',
-  'The SPOILER badge now appears on every unreleased card anywhere in the app — recommendations, search results, decklists — not just the Spoilers page.'
+  'Fixed the per-colour Theme and Kindred re-sorting on the Inspiration page: EDHREC\'s colour pages link their tags with two-part addresses (like /tags/zombies/mono-black), which the app\'s reader previously skipped — so the colour-specific rankings always came back empty. Those links are now recognised and the dropdowns re-sort correctly.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7445,7 +7444,7 @@ function edhrecTagCatalogFrom(data){
     if(Array.isArray(node)){ node.forEach(x=>walk(x, depth+1)); return; }
     if(typeof node !== 'object') return;
     const u = typeof node.url === 'string' ? node.url : '';
-    const m = u.match(/^\/tags\/(?:themes\/|typal\/)?([a-z0-9%+-]+)\/?$/i);
+    const m = u.match(/^\/tags\/(?:themes\/|typal\/)?([a-z0-9%+-]+)(?:\/[a-z0-9%+-]+)?\/?$/i);
     if(m) push(node.name || node.value || node.label || m[1].replace(/-/g,' '), m[1], node.num_decks || node.count || 0);
     if(typeof node.slug === 'string' && (node.value || node.tag)) push(node.value || node.tag, node.slug, node.count || 0);
     for(const k in node){ if(k !== 'cardviews' || m || true) walk(node[k], depth+1); }
