@@ -928,8 +928,15 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
    own (auto-fill rules above), while forms and text keep readable widths.
    Purely automatic by screen size — phones never see any of this. */
 @media (min-width: 760px){
-  html{background:#08090c;}
-  body{max-width:1200px;margin:0 auto;box-shadow:0 0 90px rgba(0,0,0,0.6);}
+  /* Moxfield-style seamlessness: the rails beyond the 1200px content column
+     wear the SAME mode colour as the app itself (navy on the Admiral side,
+     dark red on the Commander side, live via the CSS variables), and the
+     shell casts no shadow — one continuous field, no visible edges. */
+  html{background:
+    radial-gradient(ellipse at 20% -10%, rgba(201,162,75,0.09), transparent 45%),
+    radial-gradient(ellipse at 100% 0%, rgba(92,139,158,0.10), transparent 40%),
+    var(--ink);}
+  body{max-width:1200px;margin:0 auto;background:transparent;}
   main{padding-left:24px;padding-right:24px;}
   .brand-banner{width:100%;margin-left:0;padding:0 20px;}   /* undo the full-bleed 100vw trick */
   .deck-dock{left:50%;right:auto;transform:translateX(-50%);width:100%;max-width:1200px;padding-left:20px;padding-right:20px;}
@@ -2458,9 +2465,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.29';
+const APP_VERSION = '2.51.30';
 const CHANGELOG_NOTES = [
-  'THE BIG ONE: decks were silently failing to save once browser storage filled — full card data weighs up to half a megabyte per deck against the browser\'s ~5 MB. Saved cards are now slimmed to just the fields the app uses (3–4× more room), every existing deck is compacted automatically on first launch, and if storage ever fills again the app compacts everything and RETRIES the save instead of losing your deck — with an unmissable warning only if truly nothing fits.'
+  'On wide screens the space beside the content column now wears the app\'s own colour — navy on the Admiral side, dark red on the Commander side, switching live with the mode — one seamless field with no visible edges, Moxfield-style. Card sizes and proportions are untouched.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
