@@ -2465,9 +2465,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.31';
+const APP_VERSION = '2.51.32';
 const CHANGELOG_NOTES = [
-  'Spoilers keep pace with Scryfall: previews refresh themselves every three hours (no button needed), every fetch skips stale browser caches, and cards now list NEWEST-FIRST like Scryfall\'s own preview page — the latest reveal sits at the top instead of buried by collector number.'
+  'Swipe through cards: on any card\'s detail view, swipe left or right to step through the list you came from — decklists (duplicate copies skipped), spoilers, search and browse results, and recommendations.',
+  'Deleting a deck no longer throws you back to the My Stuff root: delete from inside a folder and you stay in that folder; delete the deck you\'re viewing and you land in its home folder.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -5143,7 +5144,7 @@ async function wireSpoilersPage(){
     box.querySelectorAll('.sc-tile').forEach(b=>{
       b.addEventListener('click', ()=>{
         const card = cards.find(c=>c.name===b.dataset.spn);
-        if(card) openCardInfo(card);
+        if(card) openCardInfo(card, { pool: cards });
       });
     });
   }
@@ -5303,7 +5304,7 @@ async function renderShowcaseCards(payload, admiralCard){
       b.dataset.w = '1';
       b.addEventListener('click', ()=>{
         const card = list.find(c=>c.name===b.dataset.scn);
-        if(card) openCardInfo(card);
+        if(card) openCardInfo(card, { pool: list });
       });
     });
   };
@@ -6127,6 +6128,17 @@ function renderCardSheet(d, card, loc, idx){
   });
   loadRulings(card);
   loadCardPrice(card);
+  const swPool = (loc === 'maybe') ? d.maybeboard : (loc === 'main' ? d.cards : null);
+  if(swPool && swPool.length > 1){
+    const go = (dir)=>{
+      let n = idx + dir;
+      while(n >= 0 && n < swPool.length && swPool[n].name === card.name) n += dir;
+      if(n < 0 || n >= swPool.length) return;
+      try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
+      renderCardSheet(d, swPool[n], loc, n);
+    };
+    attachSwipeNav(el, ()=>go(1), ()=>go(-1));
+  }
 }
 async function loadCardPrice(card){
   const el = document.getElementById('csPrice');
@@ -6858,10 +6870,26 @@ function closeDeckPickPopup(){ document.getElementById('deckPickScrim')?.remove(
    Same details as the decklist card sheet (printing, price, Oracle text,
    rulings) for cards tapped anywhere outside a deck — search results, browse,
    inspiration. Offers an add button instead of deck-editing actions. */
+function attachSwipeNav(el, onNext, onPrev){
+  // Horizontal swipe on a card sheet moves through the list it came from.
+  let sx = 0, sy = 0, armed = false;
+  el.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1) return;
+    armed = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, {passive:true});
+  el.addEventListener('touchend', (e)=>{
+    if(!armed) return; armed = false;
+    const t = e.changedTouches && e.changedTouches[0]; if(!t) return;
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if(Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.4){
+      if(dx < 0) onNext(); else onPrev();
+    }
+  }, {passive:true});
+}
 function openCardInfo(card, opts){
   opts = opts || {};
   const colIdx = (opts.colIdx != null) ? opts.colIdx : null;
-  pushOverlay('cardInfo', ()=>{ document.getElementById('cardSheetOverlay')?.remove(); });
+  if(!opts._replace) pushOverlay('cardInfo', ()=>{ document.getElementById('cardSheetOverlay')?.remove(); });
   let el = document.getElementById('cardSheetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; document.body.appendChild(el); }
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
@@ -6898,6 +6926,19 @@ function openCardInfo(card, opts){
   });
   loadRulings(card);
   loadCardPrice(card);
+  const pool = Array.isArray(opts.pool) ? opts.pool : null;
+  if(pool && pool.length > 1){
+    let pi = (opts.poolIdx != null && pool[opts.poolIdx] && pool[opts.poolIdx].name === card.name)
+      ? opts.poolIdx : pool.findIndex(x=>x && x.name === card.name);
+    const go = (dir)=>{
+      let n = pi + dir;
+      while(n >= 0 && n < pool.length && pool[n].name === card.name) n += dir;   // skip duplicate copies
+      if(n < 0 || n >= pool.length) return;
+      try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
+      openCardInfo(pool[n], Object.assign({}, opts, { poolIdx: n, _replace: true }));
+    };
+    attachSwipeNav(el, ()=>go(1), ()=>go(-1));
+  }
 }
 
 /* ---------------- PROGRESSIVE RESULTS ----------------
@@ -7004,7 +7045,7 @@ function wireResultButtons(list, d, refreshFn, opts){
     const c = tile && list.find(x=>x.name===decodeURIComponent(tile.dataset.name));
     if(swd && c && leaderReady(c)){ doSwitch(c); return; }
     if(opts.onCardTap && c){ opts.onCardTap(c); return; }
-    if(c){ openCardInfo(c); return; }   // full details: price, Oracle text, rulings
+    if(c){ openCardInfo(c, { pool: list }); return; }   // full details: price, Oracle text, rulings
     showPreview(img.dataset.preview, img.dataset.wb === '1');
   }));
 }
@@ -8498,7 +8539,7 @@ function renderRecoBody(){
       b.addEventListener('click', (e)=>{
         e.stopPropagation();
         const c = R.pool.find(x=>x.name===decodeURIComponent(b.dataset.info));
-        if(c) openCardInfo(c);
+        if(c) openCardInfo(c, { pool: R.pool });
       });
     });
     box.querySelectorAll('.sr-tile.selectable').forEach(tile=>{
@@ -9531,7 +9572,14 @@ function renderModal(){
       if(state.searchPinnedDeckId===d.id) state.searchPinnedDeckId=null;
       if(state.inspireDeckId===d.id) state.inspireDeckId=null;
       closeModal(); toast('Deck deleted.');
-      switchPage('decks');
+      if(state.screen === 'decks'){
+        render();                               // stay put — same folder, same view
+      } else {
+        const home = d.folderId || null;        // deleted the open deck: land in its folder
+        switchPage('decks');
+        state.folderNav = home;
+        render();
+      }
     });
   } else if(m.type==='deleteFolder'){
     const f = (state.folders||[]).find(x=>x.id===m.folderId);
