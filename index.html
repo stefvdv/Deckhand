@@ -1432,7 +1432,7 @@ async function checkForNewSets(force){
     });
     const probeSet = async (code)=>{
       try{
-        const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent('set:'+code+' game:paper')}`, 0, true);
+        const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent('set:'+code)}`, 0, true);   // previews lack game flags
         if(r.status === 404) return {cards:false};
         if(!r.ok) return null;   // transient — decide nothing
         const d = await r.json();
@@ -2431,9 +2431,11 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.16';
+const APP_VERSION = '2.51.17';
 const CHANGELOG_NOTES = [
-  'Long-pressing the compass now switches fleet on the spot — you stay on the page you were on, re-dressed in the other side\'s colours, instead of being sent home.'
+  'The Spoilers page works again: preview cards were being filtered out by a paper-only check they can\'t pass until release, and a single failed request could freeze every section\'s spinner. Both fixed — sets now load independently and say so plainly when nothing is previewed yet.',
+  'Budget Alternatives now offers two stand-ins per pricey card instead of four — a tighter, faster page.',
+  'Long-pressing the compass from a decklist or the deck folder now lands on the other side\'s My Stuff, instead of leaving you aboard the wrong fleet\'s deck.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3049,10 +3051,14 @@ function wireNav(){
       lpFired = true;
       try{ navigator.vibrate && navigator.vibrate(18); }catch(e){}
       setAppMode(isCmdrMode() ? 'admiral' : 'commander');
-      // Stay exactly where you are — same page, other fleet. Browse results
-      // are mode-specific, so that cache restarts fresh.
-      state.browseCache = {};
-      render();
+      state.browseCache = {};   // browse results are mode-specific
+      if(state.screen === 'decklist' || state.screen === 'decks'){
+        // Deck views belong to the fleet you were in — cross over to the
+        // other side's My Stuff instead of staring at the wrong fleet's deck.
+        switchPage('decks');
+      } else {
+        render();   // stay on the page, re-dressed in the other side's colours
+      }
     }, 550); };
     const lpCancel = ()=>{ if(lpT){ clearTimeout(lpT); lpT = null; } };
     hb.addEventListener('touchstart', lpStart, {passive:true});
@@ -4946,13 +4952,17 @@ async function fetchWholeSet(code, fresh){
   state._spoilerCache = state._spoilerCache || {};
   if(!fresh && state._spoilerCache[code]) return state._spoilerCache[code];
   const out = [];
-  let url = `${SF_BASE}/cards/search?unique=cards&order=set&q=${encodeURIComponent('set:'+code+' game:paper')}`;
+  // No game:paper here — preview cards often carry empty game flags until
+  // release, and that filter was silently hiding entire spoiler seasons.
+  let url = `${SF_BASE}/cards/search?unique=cards&order=set&q=${encodeURIComponent('set:'+code)}`;
   for(let i=0; i<3 && url; i++){
-    const r = await sfFetch(url, 0, false, !!fresh);
-    if(!r.ok) break;
-    const d = await r.json();
-    (d.data||[]).forEach(c=>out.push(c));
-    url = d.has_more ? d.next_page : null;
+    try{
+      const r = await sfFetch(url, 0, false, !!fresh);
+      if(!r.ok) break;
+      const d = await r.json();
+      (d.data||[]).forEach(c=>out.push(c));
+      url = d.has_more ? d.next_page : null;
+    }catch(e){ break; }   // keep whatever pages arrived
   }
   state._spoilerCache[code] = out;
   return out;
@@ -5012,9 +5022,12 @@ async function wireSpoilersPage(){
   const freshPull = !!state._spoilerFresh;
   state._spoilerFresh = false;
   for(const x of currentPreviewSets()){
-    const cards = await fetchWholeSet(x.code, freshPull);
+    let cards;
+    try{ cards = await fetchWholeSet(x.code, freshPull); }
+    catch(e){ cards = null; }   // one bad set must never strand the others
     const box = document.getElementById('spSet-' + x.code);
     if(!box){ if(state.screen !== 'spoilers') return; else continue; }
+    if(cards === null){ box.innerHTML = '<p class="hint">Couldn\'t reach the archive for this set — tap “Check for new spoilers” to retry.</p>'; continue; }
     if(!cards.length){ box.innerHTML = '<p class="hint">Nothing spoiled yet — check back soon.</p>'; continue; }
     if(cards.length > (autoSets.previewSeen[x.code]||0)){ autoSets.previewSeen[x.code] = cards.length; saveAutoSets(); }
     box.innerHTML = `<div class="sc-grid">${cards.map(c=>`<button class="sc-tile" data-spn="${escapeHtml(c.name)}"><img loading="lazy" class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${ubMarkHtml(c)}${pvMarkHtml(c)}</button>`).join('')}</div>
@@ -7923,7 +7936,7 @@ async function loadBudgetAlternatives(d){
   const box = document.getElementById('bgBody');
   if(!box) return;
   if(!priced.length){ box.innerHTML = `<div class="empty-note">No cards at €5 or more in this deck — ${isCmdrMode()?'it\'s already built thrifty.':'this crew is already sailing cheap. ⚓'}</div>`; return; }
-  box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €5 or more, each with four thriftier stand-ins for the same job. Tap + to swap one in.</p>`;
+  box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €5 or more, each with two thriftier stand-ins for the same job. Tap + to swap one in.</p>`;
   // Build ONE shared candidate pool up front — EDHREC's dedicated budget page
   // for this commander (real play data) plus the most-played cheap cards in
   // identity, fetched in parallel — then match every pricey card against it
@@ -7998,7 +8011,7 @@ async function loadBudgetAlternatives(d){
       scored.push([sc, x]);
     }
     scored.sort((a,b)=>b[0]-a[0]);
-    const subs = scored.slice(0, 4).map(sx=>sx[1]);
+    const subs = scored.slice(0, 2).map(sx=>sx[1]);
     const subsBox = trio.querySelector('.budget-subs');
     if(!subsBox || !subsBox.isConnected) return;
     if(!subs.length){ subsBox.innerHTML = `<div class="empty-note" style="grid-column:1/-1;padding:6px 0;">No cheap stand-ins found for this one.</div>`; continue; }
