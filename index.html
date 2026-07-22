@@ -2458,9 +2458,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.28';
+const APP_VERSION = '2.51.29';
 const CHANGELOG_NOTES = [
-  'Decklist cards grew: the scans\' own printed black border is cropped away and the grid gaps tightened, so the art and frame fill the space between cards — each tile keeps its gold rim and rounded corners.'
+  'THE BIG ONE: decks were silently failing to save once browser storage filled — full card data weighs up to half a megabyte per deck against the browser\'s ~5 MB. Saved cards are now slimmed to just the fields the app uses (3–4× more room), every existing deck is compacted automatically on first launch, and if storage ever fills again the app compacts everything and RETRIES the save instead of losing your deck — with an unmissable warning only if truly nothing fits.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -2677,18 +2677,79 @@ async function loadDecksIndex(){
   migrateTagsToGlobal();
   state.homeLoaded = true;
 }
+/* ---- Storage slimming ----
+   Full Scryfall card objects weigh 2–4 KB each (eighty formats of legality,
+   purchase links, every image size…). A 100-card deck stored raw eats up to
+   half a megabyte of the ~5 MB the browser grants — which is how saves
+   started silently failing. Stored cards now keep only the fields the app
+   actually reads (~1 KB each): three-to-four-fold more room. */
+const SLIM_KEYS = ['id','oracle_id','name','mana_cost','cmc','type_line','oracle_text','colors','color_identity',
+  'power','toughness','loyalty','rarity','set','set_name','set_type','collector_number','border_color',
+  'layout','keywords','artist','produced_mana','edhrec_rank'];
+const SLIM_FACE_KEYS = ['name','mana_cost','type_line','oracle_text','power','toughness','loyalty','colors'];
+function slimImageUris(iu){
+  if(!iu) return undefined;
+  const out = {};
+  if(iu.normal) out.normal = iu.normal;
+  if(iu.large) out.large = iu.large;
+  if(iu.art_crop) out.art_crop = iu.art_crop;
+  return out;
+}
+function slimCard(c){
+  if(!c || typeof c !== 'object') return c;
+  const out = {};
+  SLIM_KEYS.forEach(k=>{ if(c[k] !== undefined) out[k] = c[k]; });
+  if(c.image_uris) out.image_uris = slimImageUris(c.image_uris);
+  if(Array.isArray(c.card_faces)) out.card_faces = c.card_faces.map(f=>{
+    const ff = {}; SLIM_FACE_KEYS.forEach(k=>{ if(f[k] !== undefined) ff[k] = f[k]; });
+    if(f.image_uris) ff.image_uris = slimImageUris(f.image_uris);
+    return ff;
+  });
+  if(c.legalities) out.legalities = { commander: c.legalities.commander };
+  if(c.prices) out.prices = { eur: c.prices.eur, eur_foil: c.prices.eur_foil };
+  return out;
+}
+function slimDeckForSave(clean){
+  const s = {}; Object.keys(clean).forEach(k=>{ s[k] = clean[k]; });
+  if(Array.isArray(s.cards)) s.cards = s.cards.map(slimCard);
+  if(Array.isArray(s.maybeboard)) s.maybeboard = s.maybeboard.map(slimCard);
+  if(s.admiral) s.admiral = slimCard(s.admiral);
+  if(s.partner) s.partner = slimCard(s.partner);
+  return s;
+}
+function compactAllDecks(skipId){
+  (state.decksIndex||[]).forEach(dd=>{
+    if(!dd || dd.id === skipId) return;
+    try{
+      const clean = {}; Object.keys(dd).forEach(k=>{ if(k!=='_saveStatus') clean[k]=dd[k]; });
+      localStorage.setItem(LS_PREFIX+'deck:'+dd.id, JSON.stringify(slimDeckForSave(clean)));
+    }catch(e){}
+  });
+}
 async function persistDeck(d){
   const clean = {}; Object.keys(d).forEach(k=>{ if(k!=='_saveStatus') clean[k]=d[k]; });
+  const payload = JSON.stringify(slimDeckForSave(clean));
   try{
-    localStorage.setItem(LS_PREFIX+'deck:'+d.id, JSON.stringify(clean));
+    localStorage.setItem(LS_PREFIX+'deck:'+d.id, payload);
   }catch(e){
-    console.error('Save failed', e);
-    if(e && e.name==='QuotaExceededError'){
-      try{ if(typeof qdbPrune==='function') qdbPrune(); }catch(_e){}
+    if(e && e.name === 'QuotaExceededError'){
+      // Emergency: compact every other deck (older saves may still be fat),
+      // drop rebuildable catalogs, then RETRY this save — never lose a deck
+      // to a full disk without a fight.
+      try{ compactAllDecks(d.id); }catch(_e){}
       try{ localStorage.removeItem('admiral_app:edhrecTags2'); }catch(_e){}
-      toast('Browser storage is full — cached search data was cleared to make room. If this keeps happening, delete an old deck.');
+      try{ localStorage.removeItem('admiral_app:edhrecTypal2'); }catch(_e){}
+      try{
+        localStorage.setItem(LS_PREFIX+'deck:'+d.id, payload);
+        toast('Storage was full — everything was compacted and this deck IS saved.');
+        return;
+      }catch(e2){
+        toast('⚠ Storage is completely full — this deck could NOT be saved. Delete an old deck, then edit this one again.');
+        return;
+      }
     }
-    else warnStorageOnce();
+    console.error('Save failed', e);
+    warnStorageOnce();
   }
 }
 async function deleteDeckStorage(id){
@@ -9601,6 +9662,12 @@ function hideSplash(){
   setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(), 500); }, wait);
 }
 setTimeout(hideSplash, pendingShareToken() ? 9000 : 4000);   // safety: never trap the user behind it
+setTimeout(()=>{ try{
+  if(!localStorage.getItem(LS_PREFIX+'slimmed1')){
+    compactAllDecks(null);                                // shrink legacy fat saves once
+    localStorage.setItem(LS_PREFIX+'slimmed1','1');
+  }
+}catch(e){} }, 2500);
 
 qdbPrune();
 loadFormatFile().then(()=>resolveLegalSets()).then(()=>checkForNewSets()).then(()=>{ maybeShowFormatChanges(); classifyUBBans(); });
