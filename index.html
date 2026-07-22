@@ -2456,12 +2456,12 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.26';
+const APP_VERSION = '2.51.27';
 const CHANGELOG_NOTES = [
-  'Multiple copies show as one card with a ×4-style count on its image, Moxfield-style, in every decklist view — and exports write "4 Forest" instead of four lines.',
-  'The card view gains an Add one button beside Remove one: add another copy where the rules allow it (basics and any-number cards), take copies away one at a time.',
-  'Importing or bulk-editing updates the deck count and card list immediately — no more stale 96/100 until reopening.',
-  'The Maybeboard starts collapsed; tap its header to unfold it.'
+  'The stubborn 1/100 after importing is truly fixed: the list refresher had a twin that forgot to update the bottom bar — every refresh now updates the Main and Maybe counts too.',
+  'Add one and Remove one sit in the same two columns as the other card-view buttons.',
+  'Tapping Maybe in the bottom bar jumps to the Maybeboard and unfolds it.',
+  'Verified: no total anywhere includes the Maybeboard — the price beside its header is that section\'s own subtotal, like every other section.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -4133,7 +4133,7 @@ function deckMeterHtml(d){
   const set = state.dockSet || 0;
   let mid = '';
   if(set === 0){
-    mid = `<button class="dk-count ${over||errors?'bad':''}" id="dockMainCount" title="Tap for deck check">Main ${total}/${deckTotal(d)}${issues.length?' ⚠':''}</button><span>·</span><span>Maybe ${d.maybeboard.length}</span>`;
+    mid = `<button class="dk-count ${over||errors?'bad':''}" id="dockMainCount" title="Tap for deck check">Main ${total}/${deckTotal(d)}${issues.length?' ⚠':''}</button><span>·</span><button class="dk-count" id="dockMaybeBtn">Maybe ${d.maybeboard.length}</button>`;
   } else if(set === 1){
     const m = dockCachedSum(deckLeaders(d).concat(d.cards));
     const b = dockCachedSum(d.maybeboard);
@@ -5768,6 +5768,7 @@ async function ensureDeckPriced(d){
 function refreshDecklistBox(d){
   const box = document.getElementById('decklistBox');
   if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
+  updateDeckMeter(d);   // the dock's Main x/y and Maybe counts follow every refresh
   updateDeckMeter(d);
 }
 /* The command zone in the deck header: first leader, then either the second
@@ -5901,6 +5902,12 @@ function refreshLegality(d){
 function wireMeterRow(d){
   document.getElementById('menuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); state.menuOpen=!state.menuOpen; updateDeckMeter(d); });
   document.getElementById('dockPrev')?.addEventListener('click', ()=>{ state.dockSet = ((state.dockSet||0) + 2) % 3; updateDeckMeter(d); });
+  document.getElementById('dockMaybeBtn')?.addEventListener('click', ()=>{
+    if(!d.maybeboard.length){ toast('The Maybeboard is empty.'); return; }
+    state.collapsed['Maybeboard'] = false;
+    refreshDecklistBox(d);
+    document.querySelector('.cat-head[data-cat="Maybeboard"]')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
   document.getElementById('dockNext')?.addEventListener('click', ()=>{ state.dockSet = ((state.dockSet||0) + 1) % 3; updateDeckMeter(d); });
   document.getElementById('dockMainCount')?.addEventListener('click', ()=>{
     state.legalityOpen = !state.legalityOpen;
@@ -5956,7 +5963,8 @@ function renderCardSheet(d, card, loc, idx){
     actions.push(`<button class="ghost-btn" id="csChangePrinting" style="width:100%;">Change Printing</button>`);
     actions.push(`<button class="ghost-btn" id="csCollSheet" style="width:100%;"><span class="ib">${ICONS.collection}</span>Add to collection</button>`);
     if(admiralEligible) actions.push(`<button class="ghost-btn" id="csMakeAdmiral" style="width:100%;color:var(--brass);border-color:var(--brass);">${deckFormat(d)==="commander"?"⚔":"⚓"} Set as ${fmtName(d)}</button>`);
-    actions.push(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><button class="ghost-btn" id="csAddOne" style="width:100%;">Add one</button><button class="ghost-btn" id="csRemove" style="width:100%;color:var(--danger);border-color:var(--danger);">Remove one</button></div>`);
+    actions.push(`<button class="ghost-btn" id="csAddOne" style="width:100%;">Add one</button>`);
+    actions.push(`<button class="ghost-btn" id="csRemove" style="width:100%;color:var(--danger);border-color:var(--danger);">Remove one</button>`);
   }
 
   el.innerHTML = `<div class="overlay-inner">
