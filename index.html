@@ -4,11 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Admirals & Commanders MTG</title>
-<meta name="description" content="Deck builder, card search, and life tracker for the Admiral format — a curated Magic: The Gathering format.">
+<meta name="description" content="Deck builder, card search, play-data recommendations, and a life tracker for the Commander and Admiral Magic: The Gathering formats — two fleets, one app.">
 <meta name="theme-color" content="#0A1A28">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Admiral">
+<meta name="apple-mobile-web-app-title" content="A&C MTG">
 <link rel="manifest" href="manifest.json" id="manifestLink">
 <link rel="icon" href="icon-192.png" id="favLink">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -2444,9 +2444,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.20';
+const APP_VERSION = '2.51.22';
 const CHANGELOG_NOTES = [
-  'Backup went from decks-only to EVERYTHING: one file now carries all decks, folders, your collection, settings, mode, and the learned theme catalogs. Restore replaces the device\'s app data wholesale and reloads clean — your ticket to a new web address, a new phone, or plain disaster insurance. Old deck-only backup files still restore fine.'
+  'The last single-fleet leftovers are gone: shared decklists now say Commander or Admiral according to the deck itself, link previews of the app describe both formats, the iPhone home-screen label reads A&C MTG, and the settings footer finally shows the real version number.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -4792,7 +4792,7 @@ async function shareDeck(d){
   // link to point at, so share the decklist as text instead of a dead link.
   const hosted = /^https?:/i.test(location.href);
   if(!hosted){
-    const lines = [`${d.name} — Admiral deck`];
+    const lines = [`${d.name} — ${deckFormat(d)==='commander'?'Commander':'Admiral'} deck`];
     if(d.admiral) lines.push(`${fmtName(d)}: ${d.admiral.name}`);
     if(d.partner) lines.push(`Partner: ${d.partner.name}`);
     lines.push('', ...d.cards.map(c=>'1 '+c.name));
@@ -4818,7 +4818,7 @@ async function shareDeck(d){
   try{ url = await buildShareUrl(d); }
   catch(e){ console.error('share encode failed', e); toast('Could not build a share link for this deck.'); return; }
   const isLocalFile = location.protocol === 'file:' || location.protocol === 'content:';
-  const text = `${d.name} — Admiral format decklist`;
+  const text = `${d.name} — ${deckFormat(d)==='commander'?'Commander':'Admiral'} format decklist`;
   if(navigator.share){
     try{ await navigator.share({ title: d.name, text, url }); return; }
     catch(e){ if(e && e.name==='AbortError') return; /* fall through to clipboard */ }
@@ -8516,7 +8516,7 @@ function settingsPageHtml(){
     <div class="settings-section">
       <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} Share this app with a friend</div><div class="l2">Sends the app link with a short intro</div></div></div>
     </div>
-    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admirals & Commanders MTG v2.50.12 · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
+    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admirals & Commanders MTG v${APP_VERSION} · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
   </main>`;
 }
 function commanderQuickRulesHtml(){
@@ -8827,9 +8827,7 @@ function wireSettingsPage(){
   document.getElementById('shareAppRow')?.addEventListener('click', async ()=>{
     const hosted = /^https?:/.test(location.protocol);
     const url = hosted ? (location.origin + location.pathname) : '';
-    const text = isCmdrMode()
-      ? `⚔ Commanders MTG — a free Commander companion app: 100-card deck builder with official legality and the live banned list, card search, recommendations, spoilers, and a life tracker for game night. Open the link in Chrome (Android) or Safari (iPhone) and use "Add to Home Screen" to install it${hosted ? ':' : '.'}`
-      : `⚓ Admiral — a curated Magic: The Gathering format. Build 60-card singleton decks led by an Admiral, using cards from Standard sets only. This free app has the deck builder, card search, format rules, and a life tracker for game night. Open the link in Chrome (Android) or Safari (iPhone) and use "Add to Home Screen" to install it${hosted ? ':' : '.'}`;
+    const text = `⚓⚔ Admirals & Commanders MTG — one free app, two four-player singleton formats: classic 100-card Commander with official legality and the live banned list, and Admiral, a curated 60-card format where mana comes from a shared Landing Zone instead of lands in the deck. Deck builder, card search, real play-data recommendations, spoilers, and a life tracker for game night. Open the link in Chrome (Android) or Safari (iPhone) and use "Add to Home Screen" to install it${hosted ? ':' : '.'}`;
     if(navigator.share){
       try{ await navigator.share(hosted ? {title: brandTitle(), text, url} : {title: brandTitle(), text}); return; }
       catch(e){ if(e && e.name==='AbortError') return; }
