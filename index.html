@@ -361,7 +361,7 @@ main{flex:1;padding:16px 16px 28px;}
 .cat-head .car{transition:transform 0.2s;color:var(--sub-text);font-size:10px;}
 .cat-head.collapsed .car{transform:rotate(-90deg);}
 .cat-body.collapsed{display:none;}
-.visual-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.visual-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;}
 /* Decklist bridge: admiral tile left, command buttons right */
 /* Collection */
 .col-filter-input{flex:1;min-width:0;background:var(--field);border:1px solid var(--field-line);border-radius:8px;padding:8px 10px;color:var(--ink-text);font-size:13px;}
@@ -441,9 +441,11 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .deck-dock .menu-pop{position:absolute;bottom:56px;right:8px;top:auto;}
 main.has-dock{padding-bottom:84px;}
 .admiral-tile{max-width:118px;}
-.vg-card{position:relative;cursor:pointer;}
+.vg-card{position:relative;cursor:pointer;overflow:hidden;border-radius:4.75% / 3.5%;border:1px solid var(--line);background:#0a0a0c;}
 .vg-qty{position:absolute;top:10px;right:8px;background:rgba(10,10,12,0.85);color:#fff;font-weight:800;font-size:13px;padding:3px 8px;border-radius:7px;border:1px solid rgba(255,255,255,0.25);z-index:2;pointer-events:none;}
-.vg-card img{width:100%;border-radius:4.75% / 3.5%;display:block;border:1px solid var(--line);}
+/* The scans carry Magic's printed border (~4% per side); zoom-crop it away so
+   the art and frame fill the tile — the gold rim lives on the tile itself. */
+.vg-card img{width:108.5%;max-width:none;margin:-4.25% 0 0 -4.25%;display:block;border:none;border-radius:0;}
 
 .empty-note{color:var(--sub-text);font-size:13px;text-align:center;padding:12px 10px;}
 .status{text-align:center;color:var(--sub-text);font-size:13px;padding:16px;}
@@ -2456,12 +2458,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.27';
+const APP_VERSION = '2.51.28';
 const CHANGELOG_NOTES = [
-  'The stubborn 1/100 after importing is truly fixed: the list refresher had a twin that forgot to update the bottom bar — every refresh now updates the Main and Maybe counts too.',
-  'Add one and Remove one sit in the same two columns as the other card-view buttons.',
-  'Tapping Maybe in the bottom bar jumps to the Maybeboard and unfolds it.',
-  'Verified: no total anywhere includes the Maybeboard — the price beside its header is that section\'s own subtotal, like every other section.'
+  'Decklist cards grew: the scans\' own printed black border is cropped away and the grid gaps tightened, so the art and frame fill the space between cards — each tile keeps its gold rim and rounded corners.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
