@@ -613,6 +613,10 @@ main.has-dock{padding-bottom:84px;}
 .cselect-btn .cs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cselect-btn .cs-car{font-size:10px;color:var(--sub-text);flex:0 0 auto;}
 .cselect-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:10px;max-height:280px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,0.5);}
+.cselect-search{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:7px;padding:8px;background:var(--pop-bg);border-bottom:1px solid var(--pop-line);}
+.cselect-search .cs-mag{flex:0 0 auto;font-size:13px;opacity:0.7;}
+.cselect-search input{flex:1;min-width:0;background:var(--field);border:1px solid var(--field-line);border-radius:6px;color:var(--ink-text);padding:6px 9px;font-size:13px;font-family:'Inter';}
+.cs-noresults{padding:12px;font-size:13px;color:var(--sub-text);text-align:center;}
 .cselect-opt{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;border-bottom:1px solid var(--line);color:var(--ink-text);padding:10px 12px;font-size:13px;cursor:pointer;font-family:'Inter';text-align:left;}
 .cselect-opt:last-child{border-bottom:none;}
 .cselect-opt:hover{background:var(--hl);}
@@ -1204,7 +1208,7 @@ function cselectHtml(id, options, value, placeholder, o){
       <span class="cs-label">${label}</span>
       <span class="cs-car">▾</span>
     </button>
-    ${open ? `<div class="cselect-panel">${options.map(x=>`<button class="cselect-opt ${String(x.v)===String(value ?? '')?'sel':''} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`).join('')}</div>` : ''}
+    ${open ? `<div class="cselect-panel">${o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:''}${options.map(x=>`<button class="cselect-opt ${String(x.v)===String(value ?? '')?'sel':''} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`).join('')}${o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:''}</div>` : ''}
   </div>`;
 }
 function csRerender(){
@@ -1227,6 +1231,29 @@ function wireCSelects(){
     const h = _csHandlers[id];
     if(h) h(val); else csRerender();
   }));
+  // Searchable panels (long lists like Theme / Kindred): filter rows in place
+  // — no re-render, so the keyboard stays up and the panel stays open.
+  document.querySelectorAll('.cselect-search').forEach(row=>{
+    row.addEventListener('click', e=>e.stopPropagation());
+    const inp = row.querySelector('input');
+    const panel = row.closest('.cselect-panel');
+    if(!inp || !panel) return;
+    const visibleOpts = ()=>Array.from(panel.querySelectorAll('.cselect-opt')).filter(b=>b.style.display!=='none');
+    inp.addEventListener('input', ()=>{
+      const q = inp.value.trim().toLowerCase();
+      panel.querySelectorAll('.cselect-opt').forEach(b=>{
+        b.style.display = (!q || b.textContent.toLowerCase().includes(q)) ? '' : 'none';
+      });
+      const nr = panel.querySelector('.cs-noresults');
+      if(nr) nr.style.display = visibleOpts().length ? 'none' : '';
+    });
+    inp.addEventListener('keydown', e=>{
+      if(e.key !== 'Enter') return;
+      e.preventDefault();
+      const first = visibleOpts().find(b=>!b.classList.contains('opt-disabled'));
+      if(first) first.click();
+    });
+  });
 }
 document.addEventListener('click', (e)=>{
   if(state.openCSelect){ state.openCSelect = null; csRerender(); return; }
@@ -2465,9 +2492,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.35';
+const APP_VERSION = '2.51.36';
 const CHANGELOG_NOTES = [
-  'Two-commander pairs on the Inspiration page are now sorted by popularity, just like the single-commander results: each pairing is ranked by both cards\' combined EDHREC play data, so the most-played partnerships lead instead of one popular card monopolising the top with every partner it has.'
+  'The Theme and Kindred dropdowns on the Inspiration page now have a search box at the top: tap it, type a few letters, and the list filters as you go — no more endless scrolling to find Zombies or Spellslinger. Pressing Enter picks the first match.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7068,7 +7095,7 @@ function inspirationPageHtml(){
     <p class="hint">The most-played cards in ${escapeHtml(d.admiral.name)}'s colors, filtered to what's legal in Admiral. Tap <strong>+</strong> to add straight to ${escapeHtml(d.name)}, or <strong>☆</strong> for the Maybeboard.</p>
     <div class="browse-selects">
       <div class="bs-row">${cselectHtml('inspType', TYPE_CHIPS.map(c=>({v:c.key, l:c.key==='top'?'Card type — top cards':c.label})), sel.type, 'Card type — top cards')}</div>
-      <div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:'Theme — none'}].concat(BROWSE_THEMES.map(c=>({v:c.key, l:c.label}))), sel.theme, 'Theme — none')}</div>
+      <div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:'Theme — none'}].concat(BROWSE_THEMES.map(c=>({v:c.key, l:c.label}))), sel.theme, 'Theme — none', {search:true})}</div>
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -7668,8 +7695,8 @@ function browsePageHtml(){
       <div class="bs-row">${cselectHtml('bsCombo',
         combos ? [{v:'', l:'Any combination'}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18)}))) : [],
         sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos})}</div>
-      <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none'}].concat(browseThemeOptions()), sel.theme, 'Theme — none')}</div>
-      ${browseKindredOptions().length ? `<div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label}))), sel.tribe||'', 'Kindred — none')}</div>` : ''}
+      <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none'}].concat(browseThemeOptions()), sel.theme, 'Theme — none', {search:true})}</div>
+      ${browseKindredOptions().length ? `<div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label}))), sel.tribe||'', 'Kindred — none', {search:true})}</div>` : ''}
     </div>
     <div id="browseResults"></div>
   </main>`;
