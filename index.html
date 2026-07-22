@@ -2465,9 +2465,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.30';
+const APP_VERSION = '2.51.31';
 const CHANGELOG_NOTES = [
-  'On wide screens the space beside the content column now wears the app\'s own colour — navy on the Admiral side, dark red on the Commander side, switching live with the mode — one seamless field with no visible edges, Moxfield-style. Card sizes and proportions are untouched.'
+  'Spoilers keep pace with Scryfall: previews refresh themselves every three hours (no button needed), every fetch skips stale browser caches, and cards now list NEWEST-FIRST like Scryfall\'s own preview page — the latest reveal sits at the top instead of buried by collector number.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -5050,22 +5050,29 @@ function currentPreviewSets(){
   return Array.from(map.values()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0, cmdr ? 24 : 16);
 }
 async function fetchWholeSet(code, fresh){
+  // Spoiler season moves hourly: cached previews go stale after 3 hours on
+  // their own, every fetch bypasses the browser's HTTP cache, and cards come
+  // NEWEST-FIRST (order=spoiled) — the same ordering as Scryfall's preview
+  // page, so the latest reveal sits at the top instead of buried by number.
   state._spoilerCache = state._spoilerCache || {};
-  if(!fresh && state._spoilerCache[code]) return state._spoilerCache[code];
+  const hit = state._spoilerCache[code];
+  const MAXAGE = 3 * 3600 * 1000;
+  if(!fresh && hit && Array.isArray(hit.cards) && (Date.now() - hit.t) < MAXAGE) return hit.cards;
   const out = [];
   // No game:paper here — preview cards often carry empty game flags until
   // release, and that filter was silently hiding entire spoiler seasons.
-  let url = `${SF_BASE}/cards/search?unique=cards&order=set&q=${encodeURIComponent('set:'+code)}`;
+  let url = `${SF_BASE}/cards/search?unique=cards&order=spoiled&q=${encodeURIComponent('set:'+code)}`;
   for(let i=0; i<3 && url; i++){
     try{
-      const r = await sfFetch(url, 0, false, !!fresh);
+      const r = await sfFetch(url, 0, false, true);
       if(!r.ok) break;
       const d = await r.json();
       (d.data||[]).forEach(c=>out.push(c));
       url = d.has_more ? d.next_page : null;
     }catch(e){ break; }   // keep whatever pages arrived
   }
-  state._spoilerCache[code] = out;
+  if(!out.length && hit && Array.isArray(hit.cards)) return hit.cards;   // network hiccup: keep showing what we had
+  state._spoilerCache[code] = { t: Date.now(), cards: out };
   return out;
 }
 function spoilersPageHtml(){
