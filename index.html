@@ -2444,9 +2444,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.19';
+const APP_VERSION = '2.51.20';
 const CHANGELOG_NOTES = [
-  'The app now adapts itself to any screen: on tablets and PCs it becomes an elegant centred column with card grids widening to three or more columns automatically, while phones keep their familiar layout. Nothing to configure — the browser chooses by screen size.'
+  'Backup went from decks-only to EVERYTHING: one file now carries all decks, folders, your collection, settings, mode, and the learned theme catalogs. Restore replaces the device\'s app data wholesale and reloads clean — your ticket to a new web address, a new phone, or plain disaster insurance. Old deck-only backup files still restore fine.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -8489,7 +8489,7 @@ function settingsPageHtml(){
       </div>`:''}
     </div>`}
     <div class="settings-section">
-      <div class="settings-row"><div><div class="l1">Backup &amp; Restore</div></div>
+      <div class="settings-row"><div><div class="l1">Backup &amp; Restore</div><div class="l2">Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.</div></div>
         <div style="display:flex;gap:8px;flex:0 0 auto;margin-left:auto;">
           <button class="ghost-btn" id="backupBtn" style="padding:7px 12px;font-size:12px;">⬇ Back Up</button>
           <button class="ghost-btn" id="restoreBtn" style="padding:7px 12px;font-size:12px;">⬆ Restore</button>
@@ -8610,25 +8610,60 @@ function banPillarsHtml(){
   </div>`;
 }
 function backupAllDecks(){
-  if(!state.decksIndex.length){ toast('No decks to back up yet.'); return; }
+  // FULL backup: every piece of app data on this device — decks, folders,
+  // collection, settings, mode, learned catalogs — captured as the complete
+  // set of admiral_app:* storage keys. The old decks/folders fields ride
+  // along so files stay readable by earlier versions.
+  const ls = {};
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf(LS_PREFIX) === 0) ls[k] = localStorage.getItem(k);
+    }
+  }catch(e){}
   const payload = {
-    app: 'admiral-deck-builder', v: 1, exportedAt: new Date().toISOString(),
+    app: 'admiral-deck-builder', v: 2, exportedAt: new Date().toISOString(),
     decks: state.decksIndex.map(d=>{ const c={}; Object.keys(d).forEach(k=>{ if(k!=='_saveStatus') c[k]=d[k]; }); return c; }),
     folders: state.folders||[],
-    globalTags: (state.globalTags = state.globalTags || loadGlobalTags())
+    globalTags: (state.globalTags = state.globalTags || loadGlobalTags()),
+    ls
   };
   const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const stamp = new Date().toISOString().slice(0,10);
-  a.href = url; a.download = `admiral-decks-${stamp}.json`;
+  a.href = url; a.download = `admirals-commanders-backup-${stamp}.json`;
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  toast(`Backed up ${payload.decks.length} deck${payload.decks.length>1?'s':''}.`);
+  toast(`Full backup saved — ${payload.decks.length} deck${payload.decks.length===1?'':'s'}, collection and settings, one file.`);
 }
 async function restoreFromFile(file){
   let payload;
   try{ payload = JSON.parse(await file.text()); }
   catch(e){ toast("That file isn't valid JSON."); return; }
+  if(payload && payload.ls && typeof payload.ls === 'object' && !Array.isArray(payload.ls)){
+    // Full backup: replace this device's app data wholesale, then reboot the
+    // app so every screen rebuilds from the restored storage.
+    const keys = Object.keys(payload.ls).filter(k=>k.indexOf(LS_PREFIX)===0);
+    if(!keys.length){ toast('That backup file looks empty.'); return; }
+    const when = payload.exportedAt ? new Date(payload.exportedAt).toLocaleString() : 'an unknown date';
+    const nDecks = keys.filter(k=>k.indexOf(LS_PREFIX+'deck:')===0).length;
+    if(!confirm(`Full backup from ${when} — ${nDecks} deck${nDecks===1?'':'s'} plus collection and settings.\n\nRestoring REPLACES everything currently in this app on this device. Continue?`)) return;
+    try{
+      const drop = [];
+      for(let i = 0; i < localStorage.length; i++){
+        const k = localStorage.key(i);
+        if(k && k.indexOf(LS_PREFIX) === 0) drop.push(k);
+      }
+      drop.forEach(k=>localStorage.removeItem(k));
+      keys.forEach(k=>localStorage.setItem(k, payload.ls[k]));
+    }catch(e){
+      toast('Restore hit a storage error — free some space and try again.');
+      return;
+    }
+    toast('Everything restored — reloading…');
+    setTimeout(()=>{ try{ location.reload(); }catch(e){} }, 700);
+    return;
+  }
   const decks = Array.isArray(payload) ? payload : payload.decks;
   if(!Array.isArray(decks) || !decks.length){ toast("No decks found in that file."); return; }
   const importedFolders = (!Array.isArray(payload) && Array.isArray(payload.folders)) ? payload.folders : [];
