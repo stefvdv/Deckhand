@@ -919,6 +919,19 @@ img[src*="scryfall.io"]{border-radius:4.75% / 3.43%;background:#0b0b0c;}
 img[src*="cards.scryfall.io"]{border-radius:4.75% / 3.5%;}
 img.wb-card{border-radius:0 !important;background:#fff !important;}
 *:has(> .ub-mark){position:relative;}
+
+/* ---------- Large screens (tablet / desktop): the app becomes a centred
+   column instead of stretching across the monitor. Purely automatic — the
+   browser picks it by width; phones never see any of this. Card grids
+   already multiply their columns on their own (auto-fill rules above). */
+@media (min-width: 760px){
+  html{background:#08090c;}
+  body{max-width:640px;margin:0 auto;box-shadow:0 0 90px rgba(0,0,0,0.6);}
+  .brand-banner{width:100%;margin-left:0;}          /* undo the full-bleed 100vw trick */
+  .deck-dock{left:50%;right:auto;transform:translateX(-50%);width:100%;max-width:640px;}
+  .deck-fab{right:calc(50vw - 320px + 16px);}
+  #fabMenu{right:calc(50vw - 320px + 16px);}
+}
 </style>
 </head>
 <body>
@@ -2431,11 +2444,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.18';
+const APP_VERSION = '2.51.19';
 const CHANGELOG_NOTES = [
-  'Commander\'s random card now rolls across every Commander-legal card ever printed — it was quietly drawing from the Admiral set pool.',
-  'Tighter pages: both home pages, the search page, and the Advanced-filters panel shed their empty space, all six colour pips sit on one line, and the random card no longer repeats its own name and type below itself.',
-  'My Stuff\'s filter box now reads "Filter by folder or Commander/Admiral".'
+  'The app now adapts itself to any screen: on tablets and PCs it becomes an elegant centred column with card grids widening to three or more columns automatically, while phones keep their familiar layout. Nothing to configure — the browser chooses by screen size.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
