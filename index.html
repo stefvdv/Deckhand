@@ -2465,9 +2465,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.34';
+const APP_VERSION = '2.51.35';
 const CHANGELOG_NOTES = [
-  'Fixed the per-colour Theme and Kindred re-sorting on the Inspiration page: EDHREC\'s colour pages link their tags with two-part addresses (like /tags/zombies/mono-black), which the app\'s reader previously skipped — so the colour-specific rankings always came back empty. Those links are now recognised and the dropdowns re-sort correctly.'
+  'Two-commander pairs on the Inspiration page are now sorted by popularity, just like the single-commander results: each pairing is ranked by both cards\' combined EDHREC play data, so the most-played partnerships lead instead of one popular card monopolising the top with every partner it has.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7920,8 +7920,8 @@ function computeLeaderPairs(cands, combo){
   cands = cands.slice().sort((a,b)=>(a.edhrec_rank||99999)-(b.edhrec_rank||99999));
   const abil = new Map(cands.map(c=>[c.id||c.name, pairAbility(c)]));
   const pairs = [];
-  for(let i=0;i<cands.length && pairs.length<120;i++){
-    for(let j=i+1;j<cands.length && pairs.length<120;j++){
+  for(let i=0;i<cands.length;i++){
+    for(let j=i+1;j<cands.length;j++){
       const a=cands[i], b=cands[j];
       if(!abil.get(a.id||a.name) || !abil.get(b.id||b.name)) continue;
       if(!canPair(a,b)) continue;
@@ -7930,7 +7930,11 @@ function computeLeaderPairs(cands, combo){
       pairs.push(orderPair(a,b));
     }
   }
-  return pairs;
+  // Most-played pairings first: rank each pair by both cards' combined EDHREC
+  // popularity — the same play-data ordering the single-commander results use —
+  // so two well-played partners outrank one superstar tied to an obscure card.
+  pairs.sort((p,q)=>((p[0].edhrec_rank||99999)+(p[1].edhrec_rank||99999))-((q[0].edhrec_rank||99999)+(q[1].edhrec_rank||99999)));
+  return pairs.slice(0, 120);
 }
 /* First seat goes to the "chooser" of the pairing (Doctor, Choose-a-Background
    card); the enabler (companion, Background) sits second. */
