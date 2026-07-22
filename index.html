@@ -442,6 +442,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 main.has-dock{padding-bottom:84px;}
 .admiral-tile{max-width:118px;}
 .vg-card{position:relative;cursor:pointer;}
+.vg-qty{position:absolute;top:10px;right:8px;background:rgba(10,10,12,0.85);color:#fff;font-weight:800;font-size:13px;padding:3px 8px;border-radius:7px;border:1px solid rgba(255,255,255,0.25);z-index:2;pointer-events:none;}
 .vg-card img{width:100%;border-radius:4.75% / 3.5%;display:block;border:1px solid var(--line);}
 
 .empty-note{color:var(--sub-text);font-size:13px;text-align:center;padding:12px 10px;}
@@ -2455,9 +2456,12 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.25';
+const APP_VERSION = '2.51.26';
 const CHANGELOG_NOTES = [
-  'On wide screens every card list — decklists, search, spoilers, collection, Inspiration, recommendations — now keeps cards at their normal size and simply shows more of them side by side, up to six columns. No more three giant cards across a monitor.'
+  'Multiple copies show as one card with a ×4-style count on its image, Moxfield-style, in every decklist view — and exports write "4 Forest" instead of four lines.',
+  'The card view gains an Add one button beside Remove one: add another copy where the rules allow it (basics and any-number cards), take copies away one at a time.',
+  'Importing or bulk-editing updates the deck count and card list immediately — no more stale 96/100 until reopening.',
+  'The Maybeboard starts collapsed; tap its header to unfold it.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -4810,7 +4814,11 @@ async function shareDeck(d){
     const lines = [`${d.name} — ${deckFormat(d)==='commander'?'Commander':'Admiral'} deck`];
     if(d.admiral) lines.push(`${fmtName(d)}: ${d.admiral.name}`);
     if(d.partner) lines.push(`Partner: ${d.partner.name}`);
-    lines.push('', ...d.cards.map(c=>'1 '+c.name));
+    {
+      const m = new Map();
+      d.cards.forEach(c=>m.set(c.name, (m.get(c.name)||0)+1));
+      lines.push('', ...Array.from(m, ([n,q])=>q+' '+n));
+    }
     const text = lines.join('\n');
     if(navigator.share){
       try{ await navigator.share({ title: d.name, text }); return; }
@@ -5360,7 +5368,7 @@ function listTabHtml(d){
 }
 function dlPanelHtml(d){
   if(state.dlPanel==='bulk'){
-    const lines=[]; if(d.admiral) lines.push(leaderLineLabel(d)+': '+d.admiral.name); if(d.partner) lines.push('PARTNER: '+d.partner.name); d.cards.forEach(c=>lines.push(c.name));
+    const lines=[]; if(d.admiral) lines.push(leaderLineLabel(d)+': '+d.admiral.name); if(d.partner) lines.push('PARTNER: '+d.partner.name); { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); }
     return `<div class="panel-card">
       <div class="panel-h">Bulk Edit</div>
       <p class="hint">Your whole decklist as text. Edit freely, then save to rebuild the deck. First lines can be <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">${leaderLineLabel(d)}: Card Name</span> and <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">PARTNER: Card Name</span>.</p>
@@ -5437,13 +5445,13 @@ function buildExport(d, fmt){
     const lines = [];
     if(d.admiral) lines.push(d.admiral.name);
     if(d.partner) lines.push(d.partner.name);
-    d.cards.forEach(c=>lines.push(c.name));
+    { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); }
     return lines.join('\n');
   }
   const lines = [];
   if(d.admiral) lines.push(leaderLineLabel(d)+': ' + d.admiral.name);
   if(d.partner) lines.push('PARTNER: ' + d.partner.name);
-  d.cards.forEach(c=>lines.push(c.name));
+  { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); }
   return lines.join('\n');
 }
 function exportExt(fmt){ return fmt==='cockatrice' ? 'cod' : 'txt'; }
@@ -5494,7 +5502,7 @@ function categorizedListHtml(d){
       const collapsed = !!state.collapsed[key];
       html += `<div class="cat-group">
         <div class="cat-head ${collapsed?'collapsed':''}" data-cat="${escapeHtml(key)}"><span class="t">${escapeHtml(tag)}</span><span class="cat-price">${groupPriceLabel(sorted.map(i=>d.cards[i]))}</span><span class="n">${sorted.length}</span><span class="car">▾</span></div>
-        <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${sorted.map(i=>cardTileHtml(d.cards[i],i,'main')).join('')}</div></div>
+        <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${dedupeIdxs(sorted, d.cards).map(g=>cardTileHtml(d.cards[g.i],g.i,'main',g.qty)).join('')}</div></div>
       </div>`;
     });
   } else if(grouped){
@@ -5507,7 +5515,7 @@ function categorizedListHtml(d){
       const collapsed = !!state.collapsed[cat];
       html += `<div class="cat-group">
         <div class="cat-head ${collapsed?'collapsed':''}" data-cat="${cat}"><span class="t">${cat}</span><span class="cat-price">${groupPriceLabel(idxs.map(i=>d.cards[i]))}</span><span class="n">${idxs.length}</span><span class="car">▾</span></div>
-        <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${idxs.map(i=>cardTileHtml(d.cards[i],i,'main')).join('')}</div></div>
+        <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${dedupeIdxs(idxs, d.cards).map(g=>cardTileHtml(d.cards[g.i],g.i,'main',g.qty)).join('')}</div></div>
       </div>`;
     });
   } else if(d.cards.length){
@@ -5515,24 +5523,36 @@ function categorizedListHtml(d){
     const collapsed = !!state.collapsed['AllCards'];
     html += `<div class="cat-group">
       <div class="cat-head ${collapsed?'collapsed':''}" data-cat="AllCards"><span class="t">All Cards</span><span class="cat-price">${groupPriceLabel(idxs.map(i=>d.cards[i]))}</span><span class="n">${idxs.length}</span><span class="car">▾</span></div>
-      <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${idxs.map(i=>cardTileHtml(d.cards[i],i,'main')).join('')}</div></div>
+      <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${dedupeIdxs(idxs, d.cards).map(g=>cardTileHtml(d.cards[g.i],g.i,'main',g.qty)).join('')}</div></div>
     </div>`;
   }
 
   if(d.maybeboard.length){
     const mIdxs = d.maybeboard.map((_,i)=>i).sort((a,b)=>d.maybeboard[a].name.localeCompare(d.maybeboard[b].name));
+    if(!('Maybeboard' in state.collapsed)) state.collapsed['Maybeboard'] = true;   // closed until opened
     const collapsed = !!state.collapsed['Maybeboard'];
     html += `<div class="cat-group">
       <div class="cat-head ${collapsed?'collapsed':''}" data-cat="Maybeboard"><span class="t">Maybeboard</span><span class="cat-price">${groupPriceLabel(d.maybeboard)}</span><span class="n">${d.maybeboard.length}</span><span class="car">▾</span></div>
-      <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${mIdxs.map(i=>cardTileHtml(d.maybeboard[i],i,'maybe')).join('')}</div></div>
+      <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${dedupeIdxs(mIdxs, d.maybeboard).map(g=>cardTileHtml(d.maybeboard[g.i],g.i,'maybe',g.qty)).join('')}</div></div>
     </div>`;
   }
   return html;
 }
-function cardTileHtml(card, idx, loc){
+function dedupeIdxs(idxs, arr){
+  // Collapse identical names into one tile carrying a quantity — basics and
+  // any-number cards render Moxfield-style instead of as a wall of twins.
+  const seen = new Map(); const out = [];
+  idxs.forEach(i=>{
+    const n = arr[i].name;
+    if(seen.has(n)) out[seen.get(n)].qty++;
+    else { seen.set(n, out.length); out.push({ i, qty: 1 }); }
+  });
+  return out;
+}
+function cardTileHtml(card, idx, loc, qty){
   // No quick-remove cross on tiles: it was too easy to hit by accident.
   // Removing a card is a deliberate act — tap the card, then Remove.
-  return `<div class="vg-card" data-idx="${idx}" data-loc="${loc}"><img class="${wbClass(card)}" src="${cardImageMed(card)}" alt="${escapeHtml(card.name)}">${ubMarkHtml(card)}${pvMarkHtml(card)}${colMarkHtml(card)}</div>`;
+  return `<div class="vg-card" data-idx="${idx}" data-loc="${loc}"><img class="${wbClass(card)}" src="${cardImageMed(card)}" alt="${escapeHtml(card.name)}">${(qty&&qty>1)?`<span class="vg-qty">×${qty}</span>`:''}${ubMarkHtml(card)}${pvMarkHtml(card)}${colMarkHtml(card)}</div>`;
 }
 function statsTabHtml(d){
   const curve=[0,0,0,0,0,0,0]; const curveCards={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
@@ -5936,7 +5956,7 @@ function renderCardSheet(d, card, loc, idx){
     actions.push(`<button class="ghost-btn" id="csChangePrinting" style="width:100%;">Change Printing</button>`);
     actions.push(`<button class="ghost-btn" id="csCollSheet" style="width:100%;"><span class="ib">${ICONS.collection}</span>Add to collection</button>`);
     if(admiralEligible) actions.push(`<button class="ghost-btn" id="csMakeAdmiral" style="width:100%;color:var(--brass);border-color:var(--brass);">${deckFormat(d)==="commander"?"⚔":"⚓"} Set as ${fmtName(d)}</button>`);
-    actions.push(`<button class="ghost-btn" id="csRemove" style="width:100%;color:var(--danger);border-color:var(--danger);">Remove</button>`);
+    actions.push(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><button class="ghost-btn" id="csAddOne" style="width:100%;">Add one</button><button class="ghost-btn" id="csRemove" style="width:100%;color:var(--danger);border-color:var(--danger);">Remove one</button></div>`);
   }
 
   el.innerHTML = `<div class="overlay-inner">
@@ -5980,6 +6000,14 @@ function renderCardSheet(d, card, loc, idx){
     closeTopOverlay(); refreshDecklistBox(d);
   });
   document.getElementById('csCollSheet')?.addEventListener('click', ()=>openAddToCollection(card));
+  document.getElementById('csAddOne')?.addEventListener('click', ()=>{
+    if(loc==='maybe'){ toast('The Maybeboard keeps one of each — move it into the deck first.'); return; }
+    if(!allowsDuplicates(card)){ toast('Singleton rules: only basic lands (and cards that say otherwise) may repeat.'); return; }
+    d.cards.push(JSON.parse(JSON.stringify(card)));
+    logDeckChange(d, {type:'add', name:card.name, card});
+    scheduleSave(d); toast(`Another ${card.name} added.`);
+    closeTopOverlay(); refreshDecklistBox(d);
+  });
   document.getElementById('csRemove')?.addEventListener('click', ()=>{
     const arr = loc==='maybe' ? d.maybeboard : d.cards;
     arr.splice(idx,1);
@@ -6241,6 +6269,7 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     return;
   }
   // Something needs attention: keep the panel open with the full report.
+  refreshDecklistBox(d);   // list, sections and the Main x/y dock all update NOW, not on reopen
   document.getElementById(reportElId).innerHTML = `<p class="hint" style="margin:10px 0 6px;"><strong>${added}/${report.length} resolved — ${failures} not added, listed below:</strong></p><div class="report-list">${report.map(r=>`<div class="report-row ${r.status}"><span>${r.name}</span><span>${r.msg}</span></div>`).join('')}</div>${retryable.length ? `<button class="ghost-btn" id="retryFailedBtn" style="width:100%;margin-top:10px;">↻ Retry ${retryable.length} failed card${retryable.length>1?'s':''}</button>` : ''}`;
   toast(isImport ? 'Deck imported.' : 'Deck updated.');
   const box = document.getElementById('decklistBox');
