@@ -2431,13 +2431,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.11';
+const APP_VERSION = '2.51.14';
 const CHANGELOG_NOTES = [
-  'Budget Alternatives works again — and better: it now draws from EDHREC\'s dedicated budget page for your Commander plus the most-played cheap cards in your colors, matched to each pricey card locally. The old engine ran over a hundred slow lookups and looked frozen; this one paints in seconds.',
-  'Commander mode\'s theme list is now purely the community catalog, alphabetical (plus the Typal browser). The built-in themes remain in Admiral mode, whose smaller card pool needs them.',
-  'Remaining navy wording no longer appears in Commander mode: New Deck instead of New Fleet, the commander registry, cards added instead of aboard, and leaders return to the deck rather than joining the crew.',
-  'When browser storage fills up, the app now clears its own search caches to make room and says so clearly, instead of a vanishing warning.',
-  'The import report now headlines how many cards were not added, with every one named below.'
+  'The Kindred dropdown now draws straight from the same catalog as themes — EDHREC files creature types among its tags, so Ninjas, Frogs, Myr and the rest split out into their own list, most-played first, with the theme list keeping everything else.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -2662,7 +2658,7 @@ async function persistDeck(d){
     console.error('Save failed', e);
     if(e && e.name==='QuotaExceededError'){
       try{ if(typeof qdbPrune==='function') qdbPrune(); }catch(_e){}
-      try{ localStorage.removeItem('admiral_app:edhrecTags'); }catch(_e){}
+      try{ localStorage.removeItem('admiral_app:edhrecTags2'); }catch(_e){}
       toast('Browser storage is full — cached search data was cleared to make room. If this keeps happening, delete an old deck.');
     }
     else warnStorageOnce();
@@ -6072,9 +6068,12 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     if(/^(\/\/\s*)?(side ?board|maybe ?board|considering)\s*:?\s*$/i.test(l)){ inSide=true; return; }
     // A "Deck"/"Commander"/"Mainboard" header flips back to the main list
     if(/^(\/\/\s*)?(deck|main ?board|commander|creatures?|lands?)\s*:?\s*$/i.test(l) && !/\d/.test(l)){ inSide=false; return; }
-    const q = l.match(/^\d+x?\s+(.+)$/i);
-    const nm = q?q[1].trim():l;
-    (inSide?maybeNames:cardNames).push(nm);
+    const q = l.match(/^(\d+)x?\s+(.+)$/i);
+    const nm = q ? q[2].trim() : l;
+    // "4 Forest" means four Forests: push the name once per copy. The
+    // duplicate rules downstream decide what's allowed to repeat.
+    const qty = q ? Math.max(1, Math.min(99, parseInt(q[1], 10) || 1)) : 1;
+    for(let i = 0; i < qty; i++) (inSide?maybeNames:cardNames).push(nm);
   });
   document.getElementById(reportElId).innerHTML = `<div class="status"><div class="spinner"></div>Resolving ${cardNames.length+(admiralName?1:0)} cards…</div>`;
   await resolveLegalSets();
@@ -7196,7 +7195,7 @@ function browseAdmiralMode(){
    colors") waits for more. */
 function browseReady(){
   const sel = state.browseSel;
-  return !!(sel.combo || sel.theme || sel.type);
+  return !!(sel.combo || sel.theme || sel.tribe || sel.type);
 }
 /* ---- EDHREC play-data themes for the Inspiration browse page ----
    The catalog comes from /pages/tags.json (cached a week); picking one loads
@@ -7226,14 +7225,14 @@ function edhrecTagCatalogFrom(data){
   };
   try{ walk(data, 0); }catch(e){}
   out.sort((a,b)=>(b.count||0)-(a.count||0));
-  return out.slice(0, 80);
+  return out.slice(0, 500);
 }
 async function ensureEdhrecTags(){
   if(state.edhrecTags && state.edhrecTags.length) return;
   if(state._edtagsAt && (Date.now() - state._edtagsAt) < 60000) return;   // retry at most once a minute
   state._edtagsAt = Date.now();
   try{
-    const raw = localStorage.getItem('admiral_app:edhrecTags');
+    const raw = localStorage.getItem('admiral_app:edhrecTags2');
     if(raw){
       const j = JSON.parse(raw);
       if(j && Array.isArray(j.v) && j.v.length && (Date.now() - (j.t||0)) < 7*24*3600*1000){
@@ -7245,25 +7244,79 @@ async function ensureEdhrecTags(){
   const tags = edhrecTagCatalogFrom(data);
   if(tags.length){
     state.edhrecTags = tags;
-    try{ localStorage.setItem('admiral_app:edhrecTags', JSON.stringify({ t: Date.now(), v: tags })); }catch(e){}
+    try{ localStorage.setItem('admiral_app:edhrecTags2', JSON.stringify({ t: Date.now(), v: tags })); }catch(e){}
     if(state.screen==='browse') render();
   }
 }
 function browseThemeOptions(){
   const ed = state.edhrecTags || [];
-  if(isCmdrMode() && ed.length){
-    // Commander mode runs on real play data: the community catalog IS the
-    // theme list, alphabetical, with only the Typal browser kept from the
-    // built-ins (it's its own feature). Admiral mode keeps the built-in
-    // pattern themes — its small card pool needs them.
-    const opts = BROWSE_THEMES.filter(c=>c.key==='typal').map(c=>({v:c.key, l:c.label}));
-    ed.slice().sort((a,b)=>a.label.localeCompare(b.label)).forEach(t=>opts.push({ v: 'ed:'+t.slug, l: t.label }));
-    return opts;
+  if(ed.length){
+    // Play data drives both modes now: the community catalog IS the theme
+    // list, alphabetical. (Kindred lives in its own dropdown.) Admiral mode
+    // filters everything through its own legality afterwards.
+    const ks = kindredNameSet();
+    return ed.filter(t=>!ks.has(String(t.label||'').toLowerCase()))
+             .sort((a,b)=>a.label.localeCompare(b.label)).map(t=>({ v: 'ed:'+t.slug, l: t.label }));
   }
-  const opts = BROWSE_THEMES.map(c=>({v:c.key, l:c.label}));
-  const have = new Set(BROWSE_THEMES.map(c=>String(c.label||'').toLowerCase()));
-  ed.forEach(t=>{ if(!have.has(t.label.toLowerCase())) opts.push({ v: 'ed:'+t.slug, l: t.label }); });
-  return opts;
+  return BROWSE_THEMES.map(c=>({v:c.key, l:c.label}));
+}
+function mergeEdhrecTags(list){
+  // Commander pages carry themes the hub's top-list omits (Aikido and other
+  // niche builds) — fold every theme we meet into the stored catalog so the
+  // dropdown keeps growing with use.
+  if(!Array.isArray(list) || !list.length) return;
+  const cur = state.edhrecTags || [];
+  const have = new Set(cur.map(t=>t.slug));
+  let grew = false;
+  list.forEach(t=>{
+    if(t && t.slug && !have.has(t.slug)){ cur.push({ label: t.label, slug: t.slug, count: t.count||0 }); have.add(t.slug); grew = true; }
+  });
+  if(grew){
+    state.edhrecTags = cur;
+    try{ localStorage.setItem('admiral_app:edhrecTags2', JSON.stringify({ t: Date.now(), v: cur })); }catch(e){}
+  }
+}
+const KINDRED_PLURAL_IRREGULAR = { Elf:'Elves', Wolf:'Wolves', Werewolf:'Werewolves', Dwarf:'Dwarves', Mouse:'Mice', Fox:'Foxes', Sphinx:'Sphinxes', Phoenix:'Phoenixes', Ox:'Oxen', Octopus:'Octopuses' };
+function kindredNameSet(){
+  // EDHREC folds Kindred into the tags catalog ("Ninjas", "Frogs", "Myr"…).
+  // Recognise creature-type entries by name so they can live in their own
+  // dropdown, split out of the theme list.
+  if(state._kindredSet) return state._kindredSet;
+  const set = new Set();
+  TYPAL_TRIBES.forEach(t=>{
+    set.add(t.toLowerCase());
+    set.add((KINDRED_PLURAL_IRREGULAR[t] || (t + 's')).toLowerCase());
+  });
+  state._kindredSet = set;
+  return set;
+}
+function browseKindredOptions(){
+  const ks = kindredNameSet();
+  return (state.edhrecTags || [])
+    .filter(t=>ks.has(String(t.label||'').toLowerCase()))
+    .sort((a,b)=>(b.count||0)-(a.count||0));   // most-played tribes first
+}
+async function loadEdhrecTypalBrowse(box, key, slug){
+  const data = await edhrecFetchJson('/pages/tags/' + slug + '.json');
+  if(key !== JSON.stringify(state.browseSel)) return;
+  const names = data ? edhrecCommanderNamesFrom(data).slice(0, 100) : [];
+  if(!names.length){
+    box.innerHTML = `<div class="empty-note">No play data for this creature type right now — check your connection, or try another.</div>`;
+    return;
+  }
+  const rank = new Map(names.map((n,i)=>[n,i]));
+  const cards = await namesToLegalCards(names);
+  if(key !== JSON.stringify(state.browseSel)) return;
+  let list = (cards||[]).filter(c=> isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c) && colorSelectionAllows(c));
+  list.sort((a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999));
+  if(!list.length){
+    box.innerHTML = `<div class="empty-note">No ${isCmdrMode()?'Commanders':'Admirals'} with play data for this creature type in these colors — try another combination.</div>`;
+    return;
+  }
+  const filtered = list;
+  filtered._complete = true;
+  state.browseCache[key] = filtered;
+  renderBrowseResults(key);
 }
 function edhrecCommanderNamesFrom(data){
   const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
@@ -7318,6 +7371,7 @@ function browsePageHtml(){
         combos ? [{v:'', l:'Any combination'}].concat(combos.map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18)}))) : [],
         sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos})}</div>
       <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none'}].concat(browseThemeOptions()), sel.theme, 'Theme — none')}</div>
+      ${browseKindredOptions().length ? `<div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label}))), sel.tribe||'', 'Kindred — none')}</div>` : ''}
     </div>
     <div id="browseResults"></div>
   </main>`;
@@ -7337,6 +7391,13 @@ function wireBrowsePage(){
   };
   _csHandlers.bsTheme = v=>{
     state.browseSel.theme = v;
+    if(v) state.browseSel.tribe = '';
+    state.browseTypal = null;
+    render();
+  };
+  _csHandlers.bsTribe = v=>{
+    state.browseSel.tribe = v;
+    if(v) state.browseSel.theme = '';
     state.browseTypal = null;
     render();
   };
@@ -7413,12 +7474,13 @@ async function loadBrowse(){
     return;
   }
   const key = JSON.stringify(state.browseSel);
-  if(isCmdrMode() && browseAdmiralMode() && state.browseSel.combo) loadLeaderPairs(key, state.browseSel.combo, (state.browseSel.theme && state.browseSel.theme.indexOf('ed:')!==0) ? state.browseSel.theme : '');
+  if(isCmdrMode() && browseAdmiralMode() && state.browseSel.combo) loadLeaderPairs(key, state.browseSel.combo, (!state.browseSel.tribe && state.browseSel.theme && state.browseSel.theme.indexOf('ed:')!==0) ? state.browseSel.theme : '');
   if(state.browseCache[key]){ renderBrowseResults(key); return; }
   box.innerHTML = `<div class="status"><div class="spinner"></div>${isCmdrMode()?'Consulting the commander registry…':'Consulting the fleet registry…'}</div>`;
   const admiralMode = browseAdmiralMode();
   const sel = state.browseSel;
   if(admiralMode && sel.theme==='typal'){ await loadTypal(box, key); return; }
+  if(admiralMode && sel.tribe){ await loadEdhrecTypalBrowse(box, key, sel.tribe); return; }
   if(admiralMode && sel.theme && sel.theme.indexOf('ed:')===0){ await loadEdhrecThemeBrowse(box, key, sel.theme.slice(3)); return; }
   // Scryfall-native engine. Every theme maps to a bundle of Scryfall queries
   // (community function tags + oracle patterns); results sort by Scryfall's
@@ -8075,6 +8137,7 @@ async function loadRecoPool(){
       const page = await edhrecCommanderPage(R.admiral);
       if(!state.reco || state.reco !== R) return;
       R.themes = page.themes || [];
+      mergeEdhrecTags(R.themes);
       const names = (page.names || []).slice(0, 90);
       if(names.length >= 20){
         const rank = new Map(names.map((n,i)=>[n,i]));
@@ -8107,10 +8170,14 @@ async function loadRecoPool(){
           renderRecoBody();
           // Arrived here from a play-data theme on the browse page? Follow
           // through: pre-select that same theme chip for this leader.
+          const tr = state.browseSel && state.browseSel.tribe;
           const bs = state.browseSel && state.browseSel.theme;
-          if(bs && bs.indexOf('ed:')===0){
-            const slug = bs.slice(3);
-            if((R.themes||[]).some(t=>t.slug===slug)) loadRecoTheme(slug);
+          if(tr){
+            // Arrived from a Kindred browse: focus this leader's list on that
+            // creature type (its own theme page carries the tribal build).
+            loadRecoTheme(tr);
+          } else if(bs && bs.indexOf('ed:')===0){
+            loadRecoTheme(bs.slice(3));
           }
           return;
         }
@@ -8180,12 +8247,16 @@ function renderRecoBody(){
   if(!box || !R) return;
   if(R.error){ box.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
   if(!R.pool.length){ box.innerHTML = `<div class="empty-note">No recommendations found for this combination.</div>`; return; }
-  const activeTheme = R.activeThemeSlug ? (R.themes||[]).find(t=>t.slug===R.activeThemeSlug) : null;
+  const chipList = (R.themes||[]).slice();
+  if(R.activeThemeSlug && !chipList.some(t=>t.slug===R.activeThemeSlug)){
+    chipList.unshift({ label: R.activeThemeSlug.replace(/-/g,' ').replace(/(^|\s)\w/g, ch=>ch.toUpperCase()), slug: R.activeThemeSlug, count: 0 });
+  }
+  const activeTheme = R.activeThemeSlug ? chipList.find(t=>t.slug===R.activeThemeSlug) : null;
   const hint = R.edhrecSourced
     ? `<p class="hint" style="text-align:center;margin:0 0 8px;">${activeTheme ? 'Most-played <b>'+escapeHtml(activeTheme.label)+'</b> cards with this leader.' : 'Most-played cards with this leader, by real play data.'}</p>`
     : '';
-  const chips = (R.themes && R.themes.length)
-    ? `<div class="reco-themes">${R.themes.map(t=>`<button class="rt-chip ${R.activeThemeSlug===t.slug?'on':''}" data-rtheme="${escapeHtml(t.slug)}">${escapeHtml(t.label)}</button>`).join('')}</div>`
+  const chips = chipList.length
+    ? `<div class="reco-themes">${chipList.map(t=>`<button class="rt-chip ${R.activeThemeSlug===t.slug?'on':''}" data-rtheme="${escapeHtml(t.slug)}">${escapeHtml(t.label)}</button>`).join('')}</div>`
     : '';
   box.innerHTML = hint + chips;
   const recoTile = (c)=>{
