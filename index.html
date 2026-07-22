@@ -2492,9 +2492,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.36';
+const APP_VERSION = '2.51.37';
 const CHANGELOG_NOTES = [
-  'The Theme and Kindred dropdowns on the Inspiration page now have a search box at the top: tap it, type a few letters, and the list filters as you go — no more endless scrolling to find Zombies or Spellslinger. Pressing Enter picks the first match.'
+  'Two-commander pairs are now treated like any other eligible commander on the Inspiration page: instead of a separate section at the bottom, each pairing slots directly into the main popularity ranking by its two cards\' play data, so the most-played partnerships appear right among the top single commanders.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7884,43 +7884,52 @@ function renderBrowseResults(key){
   const box = document.getElementById('browseResults');
   if(!box) return;
   const pool = state.browseCache[key] || [];   // live array — background waves keep growing it
-  // Two-commander pairs render BELOW the single-commander results: a color
-  // combination's page ends with every pairing that totals those colors.
-  const appendPairs = ()=>{
-    const html = leaderPairsSectionHtml(key);
-    if(!html) return;
-    const sec = document.createElement('div');
-    sec.id = 'pairSection';
-    sec.innerHTML = html;
-    box.appendChild(sec);
-    wirePairTiles(key);
+  const admiralMode = browseAdmiralMode();
+  const pairsApply = isCmdrMode() && admiralMode && state.browseSel.combo;
+  const pairs = pairsApply ? state.browseCache[pairsCacheKey(key)] : undefined;
+  const pairsReady = Array.isArray(pairs);
+  const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
+  const wireOpts = admiralMode ? {onCardTap:(c)=>openAdmiralReco(c)} : undefined;
+  // Pairs status note — shown only while they can't be blended in yet.
+  const pairNote = ()=>{
+    if(!pairsApply) return;
+    if(!pairsReady) box.insertAdjacentHTML('beforeend', `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div>Assembling two-commander pairs…</div>`);
+    else if(!pool._complete && pairs.length) box.insertAdjacentHTML('beforeend', `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div>Blending two-commander pairs into the rankings…</div>`);
   };
-  if(!pool.length){
-    box.innerHTML = `<div class="empty-note">No ${browseAdmiralMode()?'single '+(isCmdrMode()?'Commanders':'Admirals'):'cards'} found for this combination — try loosening the theme or colors.</div>`;
-    appendPairs();
+  if(!pool.length && !(pairsReady && pairs.length)){
+    box.innerHTML = `<div class="empty-note">No ${admiralMode?'single '+(isCmdrMode()?'Commanders':'Admirals'):'cards'} found for this combination — try loosening the theme or colors.</div>`;
+    pairNote();
     return;
   }
-  const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
-  const boundary = -1;
-  const note = (browseAdmiralMode() && state.browseSel.theme)
+  const note = (admiralMode && state.browseSel.theme)
     ? `<p class="hint" style="margin:8px 0 0;">Admirals for this theme, most-played first.</p>`
     : '';
   box.innerHTML = note;
-  const admiralMode = browseAdmiralMode();
-  const wireOpts = admiralMode ? {onCardTap:(c)=>openAdmiralReco(c)} : undefined;
+  // Two-commander pairs are treated like any other eligible commander: once
+  // both lists are final, each pairing slots into the single ranking by its
+  // two cards' average EDHREC rank. The merge compares against the singles'
+  // suffix-minimum rank, so curated seeds keep their place and a pair lands
+  // exactly where everything below it is less played.
+  if(pairsApply && pairsReady && pairs.length && pool._complete){
+    const R = c=>(c.edhrec_rank||99999);
+    const prank = pr=>((R(pr[0])+R(pr[1]))/2);
+    const sufMin = new Array(pool.length);
+    for(let i=pool.length-1;i>=0;i--) sufMin[i] = Math.min(R(pool[i]), i+1<pool.length?sufMin[i+1]:Infinity);
+    const merged = [];
+    let i=0, j=0;
+    while(i<pool.length || j<pairs.length){
+      const s = i<pool.length ? sufMin[i] : Infinity;
+      const p = j<pairs.length ? prank(pairs[j]) : Infinity;
+      if(s <= p) merged.push(pool[i++]); else merged.push({_pair: pairs[j++]});
+    }
+    const after = (chunk)=>{ wireResultButtons(pool, pinned, ()=>renderBrowseResults(key), wireOpts); wireMergedPairTiles(merged); loadTilePrices(chunk.filter(x=>!x._pair)); };
+    pagedGrid(box, merged, (it, idx)=> it._pair ? pairTileHtml(it._pair, idx) : searchRowHtml(it, pinned, {showAdmiralBtn:true}), after);
+    return;
+  }
   const after = (chunk)=>{ wireResultButtons(pool, pinned, ()=>renderBrowseResults(key), wireOpts); loadTilePrices(chunk); };
   const streaming = !pool._complete;
-  if(boundary > 0 && boundary < pool.length){
-    // Two independently-paged tiers: play data first, text matches below
-    pagedGrid(box, pool.slice(0, boundary), (c)=>searchRowHtml(c, pinned, {showAdmiralBtn:true}), after);
-    box.insertAdjacentHTML('beforeend', `<div class="chip-label" style="margin-top:16px;">More Admirals matching this theme</div>`);
-    const t2box = document.createElement('div');
-    box.appendChild(t2box);
-    pagedGrid(t2box, pool.slice(boundary), (c)=>searchRowHtml(c, pinned, {showAdmiralBtn:true}), after);
-  } else {
-    pagedGrid(box, pool, (c)=>searchRowHtml(c, pinned, {showAdmiralBtn:true}), after, {stream: streaming});
-  }
-  appendPairs();
+  pagedGrid(box, pool, (c)=>searchRowHtml(c, pinned, {showAdmiralBtn:true}), after, {stream: streaming});
+  pairNote();
 }
 
 /* ---- Two-commander pairings for a chosen color combination ---- */
@@ -7970,36 +7979,36 @@ function orderPair(a,b){
   if(ka==='background' || ka==='companion') return [b,a];
   return [a,b];
 }
-function leaderPairsSectionHtml(key){
-  if(!(isCmdrMode() && browseAdmiralMode() && state.browseSel.combo)) return '';
-  const pairs = state.browseCache[pairsCacheKey(key)];
-  if(pairs === null || pairs === undefined) return `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div>Assembling two-commander pairs…</div>`;
-  if(!pairs.length) return '';
-  const shown = pairs.slice(0, 60);
-  return `<div class="chip-label" style="margin-top:16px;">Two-commander pairs — ${pairs.length}${pairs.length>shown.length?` (showing ${shown.length})`:''}</div>
-    <p class="hint" style="margin:2px 0 8px;">Pairings whose combined color identity totals exactly this combination. Tap either card for its details, or start a deck with both in command.</p>
-    <div class="pair-grid">${shown.map((pr,i)=>`
-      <div class="pair-cell">
+/* A pairing rendered as a tile inside the main results grid — same footprint
+   as a single-commander tile, with the overlapped two-card art and a
+   "Start a deck" button. idx addresses the merged results array. */
+function pairTileHtml(pr, idx){
+  return `<div class="pair-cell">
         <div class="pair-imgs">
-          <img loading="lazy" class="${wbClass(pr[0])}" src="${cardImageMed(pr[0])}" data-pcard="${i}:0" alt="${escapeHtml(pr[0].name)}">
-          <img loading="lazy" class="${wbClass(pr[1])}" src="${cardImageMed(pr[1])}" data-pcard="${i}:1" alt="${escapeHtml(pr[1].name)}">
+          <img loading="lazy" class="${wbClass(pr[0])}" src="${cardImageMed(pr[0])}" data-mpcard="${idx}:0" alt="${escapeHtml(pr[0].name)}">
+          <img loading="lazy" class="${wbClass(pr[1])}" src="${cardImageMed(pr[1])}" data-mpcard="${idx}:1" alt="${escapeHtml(pr[1].name)}">
         </div>
         <div class="pair-cap">${escapeHtml(pr[0].name.split(',')[0])} &amp; ${escapeHtml(pr[1].name.split(',')[0])}</div>
-        <button class="ghost-btn pair-use" data-pairuse="${i}">${modeGlyph()} Start a deck</button>
-      </div>`).join('')}</div>`;
+        <button class="ghost-btn pair-use" data-mpairuse="${idx}">${modeGlyph()} Start a deck</button>
+      </div>`;
 }
-function wirePairTiles(key){
-  const pairs = state.browseCache[pairsCacheKey(key)] || [];
+function wireMergedPairTiles(merged){
   // Each card opens its normal detailed view (price, Oracle text, rulings).
-  document.querySelectorAll('.pair-imgs img[data-pcard]').forEach(img=>img.addEventListener('click', ()=>{
-    const [i,j] = img.dataset.pcard.split(':').map(Number);
-    const c = pairs[i] && pairs[i][j];
-    if(c) openCardInfo(c);
-  }));
-  document.querySelectorAll('.pair-use[data-pairuse]').forEach(btn=>btn.addEventListener('click', ()=>{
-    const pr = pairs[+btn.dataset.pairuse];
-    if(pr) startPairDeck(pr[0], pr[1]);
-  }));
+  document.querySelectorAll('img[data-mpcard]').forEach(img=>{
+    if(img.dataset.w) return; img.dataset.w='1';
+    img.addEventListener('click', ()=>{
+      const [i,j] = img.dataset.mpcard.split(':').map(Number);
+      const pr = merged[i] && merged[i]._pair;
+      if(pr && pr[j]) openCardInfo(pr[j]);
+    });
+  });
+  document.querySelectorAll('.pair-use[data-mpairuse]').forEach(btn=>{
+    if(btn.dataset.w) return; btn.dataset.w='1';
+    btn.addEventListener('click', ()=>{
+      const it = merged[+btn.dataset.mpairuse];
+      if(it && it._pair) startPairDeck(it._pair[0], it._pair[1]);
+    });
+  });
 }
 function startPairDeck(a, b){
   const nm = a.name.split(',')[0] + ' & ' + b.name.split(',')[0];
