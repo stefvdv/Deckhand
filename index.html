@@ -2431,13 +2431,13 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.10';
+const APP_VERSION = '2.51.11';
 const CHANGELOG_NOTES = [
-  'What\'s-new now shows only the latest update instead of the whole history.',
-  'Importing a decklist is far faster (seconds, not a minute): Commander-mode cards resolve from a single printing, and double-faced cards match on their front name instead of falling into the slow one-by-one lane.',
-  'Basic lands can repeat again: "4 Forest" imports as four Forests instead of three of them being rejected as duplicates — that was the missing-cards mystery on Commander imports.',
-  'Sideboard cards that can\'t be found are now reported instead of silently skipped, and the retry report explains that earlier rejections still stand.',
-  'The Inspiration theme list\'s EDHREC catalog reader is far more tolerant of page-shape differences and quietly retries if the first fetch fails.'
+  'Budget Alternatives works again — and better: it now draws from EDHREC\'s dedicated budget page for your Commander plus the most-played cheap cards in your colors, matched to each pricey card locally. The old engine ran over a hundred slow lookups and looked frozen; this one paints in seconds.',
+  'Commander mode\'s theme list is now purely the community catalog, alphabetical (plus the Typal browser). The built-in themes remain in Admiral mode, whose smaller card pool needs them.',
+  'Remaining navy wording no longer appears in Commander mode: New Deck instead of New Fleet, the commander registry, cards added instead of aboard, and leaders return to the deck rather than joining the crew.',
+  'When browser storage fills up, the app now clears its own search caches to make room and says so clearly, instead of a vanishing warning.',
+  'The import report now headlines how many cards were not added, with every one named below.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -2660,7 +2660,11 @@ async function persistDeck(d){
     localStorage.setItem(LS_PREFIX+'deck:'+d.id, JSON.stringify(clean));
   }catch(e){
     console.error('Save failed', e);
-    if(e && e.name==='QuotaExceededError') toast('Browser storage is full — try deleting an old deck.');
+    if(e && e.name==='QuotaExceededError'){
+      try{ if(typeof qdbPrune==='function') qdbPrune(); }catch(_e){}
+      try{ localStorage.removeItem('admiral_app:edhrecTags'); }catch(_e){}
+      toast('Browser storage is full — cached search data was cleared to make room. If this keeps happening, delete an old deck.');
+    }
     else warnStorageOnce();
   }
 }
@@ -5717,7 +5721,7 @@ function removePartner(d){
   if(!d.cards.some(x=>x.name===p.name) || allowsDuplicates(p)){
     d.cards.push(p);
     logDeckChange(d, {type:'add', name:p.name, card:p});
-    toast(`${p.name} steps down and joins the crew.`);
+    toast(`${p.name} steps down ${isCmdrMode()?'into the deck':'and joins the crew'}.`);
   } else {
     logDeckChange(d, {type:'remove', name:p.name, card:p});
     toast(`${p.name} steps down — a copy was already in the deck.`);
@@ -6169,12 +6173,12 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   if(!failures){
     // Clean run: close the panel and land back on the decklist.
     state.dlPanel = null;
-    toast(isImport ? `Deck imported — ${added} cards aboard.` : `Deck updated — ${added} cards.`);
+    toast(isImport ? `Deck imported — ${added} cards ${isCmdrMode()?'added':'aboard'}.` : `Deck updated — ${added} cards.`);
     renderBuilderBody(d);
     return;
   }
   // Something needs attention: keep the panel open with the full report.
-  document.getElementById(reportElId).innerHTML = `<p class="hint" style="margin:10px 0 6px;">${added}/${report.length} resolved.</p><div class="report-list">${report.map(r=>`<div class="report-row ${r.status}"><span>${r.name}</span><span>${r.msg}</span></div>`).join('')}</div>${retryable.length ? `<button class="ghost-btn" id="retryFailedBtn" style="width:100%;margin-top:10px;">↻ Retry ${retryable.length} failed card${retryable.length>1?'s':''}</button>` : ''}`;
+  document.getElementById(reportElId).innerHTML = `<p class="hint" style="margin:10px 0 6px;"><strong>${added}/${report.length} resolved — ${failures} not added, listed below:</strong></p><div class="report-list">${report.map(r=>`<div class="report-row ${r.status}"><span>${r.name}</span><span>${r.msg}</span></div>`).join('')}</div>${retryable.length ? `<button class="ghost-btn" id="retryFailedBtn" style="width:100%;margin-top:10px;">↻ Retry ${retryable.length} failed card${retryable.length>1?'s':''}</button>` : ''}`;
   toast(isImport ? 'Deck imported.' : 'Deck updated.');
   const box = document.getElementById('decklistBox');
   if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
@@ -6610,7 +6614,7 @@ function promoteToAdmiral(d, c){
   logDeckChange(d, {type:'admiral', name:c.name, card:c, prev, prevKept:true});
   state.inspireCache = {};
   scheduleSave(d);
-  toast(`${c.name} takes command of ${d.name}${prev?` — ${prev.name} joins the crew`:''}.`);
+  toast(`${c.name} takes command of ${d.name}${prev?` — ${prev.name} ${isCmdrMode()?'returns to the deck':'joins the crew'}`:''}.`);
 }
 
 /* ---- "Add to…" deck picker popup (used whenever no deck is pinned) ---- */
@@ -6870,7 +6874,7 @@ async function loadInspiration(d){
   const box = document.getElementById('inspireResults');
   const cacheKey = inspireCacheKey(d);
   if(state.inspireCache[cacheKey]){ renderInspireFromCache(cacheKey, d); return; }
-  box.innerHTML = `<div class="status"><div class="spinner"></div>Consulting the fleet registry…</div>`;
+  box.innerHTML = `<div class="status"><div class="spinner"></div>${isCmdrMode()?'Consulting the commander registry…':'Consulting the fleet registry…'}</div>`;
   const clause = inspireClause(d);
   // Fetch a larger pool than we display: when a card gets added to the deck
   // we filter it out and reveal the next one from this same pool instantly,
@@ -7246,11 +7250,19 @@ async function ensureEdhrecTags(){
   }
 }
 function browseThemeOptions(){
+  const ed = state.edhrecTags || [];
+  if(isCmdrMode() && ed.length){
+    // Commander mode runs on real play data: the community catalog IS the
+    // theme list, alphabetical, with only the Typal browser kept from the
+    // built-ins (it's its own feature). Admiral mode keeps the built-in
+    // pattern themes — its small card pool needs them.
+    const opts = BROWSE_THEMES.filter(c=>c.key==='typal').map(c=>({v:c.key, l:c.label}));
+    ed.slice().sort((a,b)=>a.label.localeCompare(b.label)).forEach(t=>opts.push({ v: 'ed:'+t.slug, l: t.label }));
+    return opts;
+  }
   const opts = BROWSE_THEMES.map(c=>({v:c.key, l:c.label}));
   const have = new Set(BROWSE_THEMES.map(c=>String(c.label||'').toLowerCase()));
-  (state.edhrecTags||[]).forEach(t=>{
-    if(!have.has(t.label.toLowerCase())) opts.push({ v: 'ed:'+t.slug, l: t.label });
-  });
+  ed.forEach(t=>{ if(!have.has(t.label.toLowerCase())) opts.push({ v: 'ed:'+t.slug, l: t.label }); });
   return opts;
 }
 function edhrecCommanderNamesFrom(data){
@@ -7293,7 +7305,7 @@ function browsePageHtml(){
   const swd = state.switchSeat ? getDeck(state.switchSeat) : null;
   return `
   <main>
-    ${swd ? `<div class="panel-card" style="margin-bottom:10px;border-color:var(--brass);"><div class="panel-h">${modeGlyph()} Switching ${fmtName(swd)}</div><p class="hint" style="margin:4px 0 0;">Tap any leader below to make it the new ${fmtName(swd)} of <strong style="color:var(--brass);">${escapeHtml(swd.name)}</strong> — the current one joins the crew${swd.partner?', and a still-compatible second seat stays':''}.</p></div>` : ''}
+    ${swd ? `<div class="panel-card" style="margin-bottom:10px;border-color:var(--brass);"><div class="panel-h">${modeGlyph()} Switching ${fmtName(swd)}</div><p class="hint" style="margin:4px 0 0;">Tap any leader below to make it the new ${fmtName(swd)} of <strong style="color:var(--brass);">${escapeHtml(swd.name)}</strong> — the current one ${isCmdrMode()?'returns to the deck':'joins the crew'}${swd.partner?', and a still-compatible second seat stays':''}.</p></div>` : ''}
     <div class="browse-hero">
       <h2>Chart Your Course</h2>
       <p>Pick colors and a theme to find Admirals for that style. Tap an Admiral's <strong>card art</strong> to see its recommended cards and build a deck around it.</p>
@@ -7403,7 +7415,7 @@ async function loadBrowse(){
   const key = JSON.stringify(state.browseSel);
   if(isCmdrMode() && browseAdmiralMode() && state.browseSel.combo) loadLeaderPairs(key, state.browseSel.combo, (state.browseSel.theme && state.browseSel.theme.indexOf('ed:')!==0) ? state.browseSel.theme : '');
   if(state.browseCache[key]){ renderBrowseResults(key); return; }
-  box.innerHTML = `<div class="status"><div class="spinner"></div>Consulting the fleet registry…</div>`;
+  box.innerHTML = `<div class="status"><div class="spinner"></div>${isCmdrMode()?'Consulting the commander registry…':'Consulting the fleet registry…'}</div>`;
   const admiralMode = browseAdmiralMode();
   const sel = state.browseSel;
   if(admiralMode && sel.theme==='typal'){ await loadTypal(box, key); return; }
@@ -7688,7 +7700,7 @@ function openCardReco(card, forDeck){
         <div class="ra-nm">${escapeHtml(card.name)}</div>
         <div class="ra-sub">${escapeHtml(frontFace(card).type_line||'')}</div>
       </div>
-      <div id="crBody"><div class="status"><div class="spinner"></div>Consulting the fleet registry…</div></div>
+      <div id="crBody"><div class="status"><div class="spinner"></div>${isCmdrMode()?'Consulting the commander registry…':'Consulting the fleet registry…'}</div></div>
     </main>
   </div>`;
   document.getElementById('crBack').addEventListener('click', closeTopOverlay);
@@ -7795,66 +7807,83 @@ async function loadBudgetAlternatives(d){
     .sort((a,b)=>b.v-a.v);
   const box = document.getElementById('bgBody');
   if(!box) return;
-  if(!priced.length){ box.innerHTML = `<div class="empty-note">No cards at €5 or more in this deck — this crew is already sailing cheap. ⚓</div>`; return; }
+  if(!priced.length){ box.innerHTML = `<div class="empty-note">No cards at €5 or more in this deck — ${isCmdrMode()?'it\'s already built thrifty.':'this crew is already sailing cheap. ⚓'}</div>`; return; }
   box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €5 or more, each with four thriftier stand-ins for the same job. Tap + to swap one in.</p>`;
-  // What role does each pricey card play? Ask Scryfall's Tagger data.
-  const otags = await detectOtagsForCards(priced.map(x=>x.c));
-  if(!document.getElementById('bgBody')) return;
+  // Build ONE shared candidate pool up front — EDHREC's dedicated budget page
+  // for this commander (real play data) plus the most-played cheap cards in
+  // identity, fetched in parallel — then match every pricey card against it
+  // LOCALLY. The old engine ran a hundred-plus serial searches and looked
+  // frozen; this one paints in seconds.
+  box.insertAdjacentHTML('beforeend', `<div class="status" id="bgPoolStatus"><div class="spinner"></div>Gathering thrifty candidates…</div>`);
+  const idClause = d.admiral ? idClauseForDeck(d) : '';
   const inDeck = new Set(all.map(c=>c.name));
+  const priceOf = (x)=>{
+    const hit = state.priceCache[x.name];
+    if(hit && typeof hit.v==='number') return hit.v;
+    const raw = x.prices && x.prices.eur; const e = raw ? parseFloat(raw) : NaN;
+    return isNaN(e) ? null : e;
+  };
+  let pool = [];
+  try{
+    const lead = deckLeaders(d)[0];
+    const budgetNamesP = (isCmdrMode() && lead)
+      ? edhrecFetchJson('/pages/commanders/' + edhrecSlug(lead.name) + '/budget.json').then(j=> j ? edhrecNamesFrom(j).slice(0, 80) : []).catch(()=>[])
+      : Promise.resolve([]);
+    const staplesP = searchAndVerifyLegal((idClause + ' eur<=5').trim(), 'edhrec', 250).catch(()=>({results:[]}));
+    const [bn, st] = await Promise.all([budgetNamesP, staplesP]);
+    let bCards = [];
+    if(bn.length){
+      bCards = await resolveEdhrecNames(bn, (x)=> isNonlandFront(x) && !isBanned(x));
+    }
+    const seen = new Set();
+    bCards.concat((st && st.results) || []).forEach(x=>{
+      if(seen.has(x.name)) return; seen.add(x.name);
+      if(!isNonlandFront(x) || isBanned(x) || inDeck.has(x.name)) return;
+      pool.push(x);
+    });
+  }catch(e){}
+  document.getElementById('bgPoolStatus')?.remove();
+  if(!document.getElementById('bgBody')) return;
+  if(!pool.length){
+    box.insertAdjacentHTML('beforeend', `<div class="empty-note">Couldn't gather budget candidates — check your connection and reopen this page.</div>`);
+    return;
+  }
+  const fp = new Map();
+  const themesOf = (x)=>{ if(!fp.has(x.name)) fp.set(x.name, new Set(detectCardThemes(x).map(t=>t.key))); return fp.get(x.name); };
   for(const {c, v} of priced){
     if(!document.getElementById('bgBody')) return;   // overlay closed
     const trio = document.createElement('div');
     trio.className = 'budget-trio';
-    const tags = otags[c.name] || [];
+    const myThemes = detectCardThemes(c);
     trio.innerHTML = `
       <div class="budget-star">
         <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">
         <div class="bs-nm">${escapeHtml(c.name)}</div>
-        <div class="bs-pr">${fmtEur(v)}${tags.length?` · ${tags.map(escapeHtml).join(', ')}`:''}</div>
+        <div class="bs-pr">${fmtEur(v)}${myThemes.length?` · ${myThemes.map(t=>escapeHtml(t.label)).join(', ')}`:''}</div>
       </div>
-      <div class="sr-grid budget-subs"><div class="status" style="grid-column:1/-1;"><div class="spinner"></div></div></div>`;
+      <div class="sr-grid budget-subs"></div>`;
     box.appendChild(trio);
     trio.querySelector('.budget-star img').addEventListener('click', ()=>openCardInfo(c));
     const ptype = primaryTypeOf(c);
-    const idClause = d.admiral ? idClauseForDeck(d) : '';
-    const ceiling = Math.max(1.5, Math.min(5, v * 0.35)).toFixed(2);
-    const budgetClause = `${idClause} eur<=${ceiling}`;
-    const subs = [];
-    const WANT = 4;
-    // Candidates within a pass are ranked for functional fit before picking:
-    // same primary type beats a different one, and closer mana value beats
-    // farther — an expensive 2-mana instant wants a cheap 2-mana instant.
-    const harvest = (results)=>{
-      if(subs.length>=WANT) return;
-      const cand = (results||[]).filter(x=>
-        isNonlandFront(x) && !isBanned(x) && x.name!==c.name && !inDeck.has(x.name) && !subs.some(y=>y.name===x.name));
-      cand.sort((a,b)=>{
-        const ta = primaryTypeOf(a)===ptype?0:1, tb = primaryTypeOf(b)===ptype?0:1;
-        if(ta!==tb) return ta-tb;
-        const da = Math.abs((a.cmc||0)-(c.cmc||0)), db = Math.abs((b.cmc||0)-(c.cmc||0));
-        return da-db;
-      });
-      cand.slice(0, WANT-subs.length).forEach(x=>subs.push(x));
-    };
-    // Pass 1 — ALL tags at once, same type: the tightest functional match
-    if(tags.length >= 2){
-      harvest((await searchAndVerifyLegal(tags.map(t=>'otag:'+t).join(' ') + (ptype?' t:'+ptype:'') + ' ' + budgetClause, 'edhrec', 40)).results);
+    const ceiling = Math.max(1.5, Math.min(5, v * 0.35));
+    const mine = new Set(myThemes.map(t=>t.key));
+    const scored = [];
+    for(let i=0; i<pool.length; i++){
+      const x = pool[i];
+      if(inDeck.has(x.name)) continue;
+      const pv = priceOf(x);
+      if(pv===null || pv > ceiling) continue;
+      let sc = 0;
+      if(primaryTypeOf(x)===ptype) sc += 3;                       // same job shape
+      const tx = themesOf(x);
+      let shared = 0; mine.forEach(k=>{ if(tx.has(k)) shared++; });
+      sc += Math.min(3, shared * 1.5);                            // shared themes
+      sc += Math.max(0, 2 - Math.abs((x.cmc||0)-(c.cmc||0))) * 0.5;  // similar cost
+      sc -= i * 0.004;                                            // earlier in pool = more played
+      scored.push([sc, x]);
     }
-    // Pass 2 — any of the tags, still ranked by fit
-    if(subs.length < WANT && tags.length){
-      harvest((await searchAndVerifyLegal('(' + tags.map(t=>'otag:'+t).join(' or ') + ') ' + budgetClause, 'edhrec', 60)).results);
-    }
-    // Pass 3 — shared themes + same primary type (text-match)
-    if(subs.length < WANT){
-      const themes = detectCardThemes(c);
-      if(themes.length || ptype){
-        harvest((await searchAndVerifyLegal([ptype?'t:'+ptype:'', themes.length?'('+themes.map(t=>t.clause).join(' or ')+')':'', budgetClause].filter(Boolean).join(' '), 'edhrec', 60)).results);
-      }
-    }
-    // Pass 4 — never come up empty: most-played cheap cards of that type
-    if(subs.length < WANT && ptype){
-      harvest((await searchAndVerifyLegal(`t:${ptype} ${budgetClause}`, 'edhrec', 60)).results);
-    }
+    scored.sort((a,b)=>b[0]-a[0]);
+    const subs = scored.slice(0, 4).map(sx=>sx[1]);
     const subsBox = trio.querySelector('.budget-subs');
     if(!subsBox || !subsBox.isConnected) return;
     if(!subs.length){ subsBox.innerHTML = `<div class="empty-note" style="grid-column:1/-1;padding:6px 0;">No cheap stand-ins found for this one.</div>`; continue; }
@@ -9168,7 +9197,7 @@ function renderModal(){
       });
     });
   } else if(m.type==='newdeck'){
-    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>New Fleet</h3><input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
+    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>${isCmdrMode()?'New Deck':'New Fleet'}</h3><input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
     document.getElementById('createBtn').addEventListener('click', ()=>{
       const name = document.getElementById('newDeckName').value.trim() || 'Untitled Fleet';
       closeModal(); createNewDeck(name);
