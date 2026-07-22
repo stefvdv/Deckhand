@@ -2139,7 +2139,7 @@ function isPreviewSet(code){
   const d = (autoSets.previewMeta||{})[(code||'').toLowerCase()];
   return !!d && d > new Date().toISOString().slice(0,10);
 }
-function isPreviewCard(c){ return !!c && isPreviewSet(c.set); }
+function isPreviewCard(c){ return !!c && (isPreviewSet(c.set) || (c.released_at && c.released_at > new Date().toISOString().slice(0,10))); }
 function pvMarkHtml(c){ return isPreviewCard(c) ? '<span class="pv-mark">SPOILER</span>' : ''; }
 function activeLegalSetCodes(){
   const core = (state.legalSetCodesCore || []).concat(autoSets.previewCodes||[]);
@@ -2465,10 +2465,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.32';
+const APP_VERSION = '2.51.33';
 const CHANGELOG_NOTES = [
-  'Swipe through cards: on any card\'s detail view, swipe left or right to step through the list you came from — decklists (duplicate copies skipped), spoilers, search and browse results, and recommendations.',
-  'Deleting a deck no longer throws you back to the My Stuff root: delete from inside a folder and you stay in that folder; delete the deck you\'re viewing and you land in its home folder.'
+  'Pick a colour combination and the Theme and Kindred dropdowns re-sort by what THAT colour actually plays, straight from EDHREC\'s colour pages — mono-black leads with Aristocrats and Reanimator, its Kindred with Zombies and Rats. No colour chosen keeps the usual order.',
+  'The SPOILER badge now appears on every unreleased card anywhere in the app — recommendations, search results, decklists — not just the Spoilers page.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -2693,7 +2693,7 @@ async function loadDecksIndex(){
    actually reads (~1 KB each): three-to-four-fold more room. */
 const SLIM_KEYS = ['id','oracle_id','name','mana_cost','cmc','type_line','oracle_text','colors','color_identity',
   'power','toughness','loyalty','rarity','set','set_name','set_type','collector_number','border_color',
-  'layout','keywords','artist','produced_mana','edhrec_rank'];
+  'layout','keywords','artist','produced_mana','edhrec_rank','released_at'];
 const SLIM_FACE_KEYS = ['name','mana_cost','type_line','oracle_text','power','toughness','loyalty','colors'];
 function slimImageUris(iu){
   if(!iu) return undefined;
@@ -7445,7 +7445,7 @@ function edhrecTagCatalogFrom(data){
     if(Array.isArray(node)){ node.forEach(x=>walk(x, depth+1)); return; }
     if(typeof node !== 'object') return;
     const u = typeof node.url === 'string' ? node.url : '';
-    const m = u.match(/^\/tags\/([a-z0-9%+-]+)\/?$/i);
+    const m = u.match(/^\/tags\/(?:themes\/|typal\/)?([a-z0-9%+-]+)\/?$/i);
     if(m) push(node.name || node.value || node.label || m[1].replace(/-/g,' '), m[1], node.num_decks || node.count || 0);
     if(typeof node.slug === 'string' && (node.value || node.tag)) push(node.value || node.tag, node.slug, node.count || 0);
     for(const k in node){ if(k !== 'cardviews' || m || true) walk(node[k], depth+1); }
@@ -7503,6 +7503,43 @@ function sortCombosByPlay(list){
   };
   return list.slice().sort((a,b)=>countFor(b)-countFor(a));
 }
+const EDHREC_COMBO_SLUGS = {
+  w:['mono-white'], u:['mono-blue'], b:['mono-black'], r:['mono-red'], g:['mono-green'], c:['colorless'],
+  wu:['azorius'], ub:['dimir'], br:['rakdos'], rg:['gruul'], gw:['selesnya'],
+  wb:['orzhov'], ur:['izzet'], bg:['golgari'], rw:['boros'], gu:['simic'],
+  wub:['esper'], ubr:['grixis'], brg:['jund'], rgw:['naya'], gwu:['bant'],
+  wbg:['abzan'], urw:['jeskai'], bgu:['sultai'], rwb:['mardu'], gur:['temur'],
+  wubr:['sans-green','yore-tiller'], ubrg:['sans-white','glint-eye'], brgw:['sans-blue','dune-brood'],
+  rgwu:['sans-black','ink-treader'], gwub:['sans-red','witch-maw'], wubrg:['five-color']
+};
+async function ensureComboTagRanks(comboKey){
+  // EDHREC publishes colour-scoped theme and Kindred rankings (the pages the
+  // user browses as /tags/themes/mono-black etc). Fetch this combo's pair
+  // once, cache six hours, and the dropdowns re-sort by what that colour
+  // actually plays.
+  if(!comboKey) return;
+  state._comboRanks = state._comboRanks || {};
+  const slot = state._comboRanks[comboKey];
+  if(slot && (slot.loading || (Date.now() - slot.t) < 6*3600*1000)) return;
+  state._comboRanks[comboKey] = { loading:true, t:Date.now(), themes:null, typal:null };
+  const cands = EDHREC_COMBO_SLUGS[comboKey] || [];
+  const grab = async (kind)=>{
+    for(const cs of cands){
+      const data = await edhrecFetchJson('/pages/tags/' + kind + '/' + cs + '.json');
+      const list = data ? edhrecTagCatalogFrom(data) : [];
+      if(list.length){ const m = {}; list.forEach(t=>{ m[t.slug] = t.count||0; }); return m; }
+    }
+    return null;
+  };
+  const [th, ty] = await Promise.all([grab('themes'), grab('typal')]);
+  state._comboRanks[comboKey] = { loading:false, t:Date.now(), themes:th, typal:ty };
+  if(state.screen === 'browse' && (th || ty)) render();
+}
+function comboRankMap(kind){
+  const ck = state.browseSel && state.browseSel.combo;
+  const slot = ck && state._comboRanks && state._comboRanks[ck];
+  return (slot && !slot.loading && slot[kind]) || null;
+}
 function browseThemeOptions(){
   const ed = state.edhrecTags || [];
   if(ed.length){
@@ -7510,8 +7547,12 @@ function browseThemeOptions(){
     // list, alphabetical. (Kindred lives in its own dropdown.) Admiral mode
     // filters everything through its own legality afterwards.
     const ks = kindredNameSet();
+    const rm = comboRankMap('themes');
     return ed.filter(t=>!ks.has(String(t.label||'').toLowerCase()) && !isColorComboTag(t))
-             .sort((a,b)=>a.label.localeCompare(b.label)).map(t=>({ v: 'ed:'+t.slug, l: t.label }));
+             .sort((a,b)=> rm
+               ? (((rm[b.slug]||0) - (rm[a.slug]||0)) || a.label.localeCompare(b.label))
+               : a.label.localeCompare(b.label))
+             .map(t=>({ v: 'ed:'+t.slug, l: t.label }));
   }
   return BROWSE_THEMES.map(c=>({v:c.key, l:c.label}));
 }
@@ -7547,9 +7588,12 @@ function kindredNameSet(){
 }
 function browseKindredOptions(){
   const ks = kindredNameSet();
+  const rm = comboRankMap('typal');
   return (state.edhrecTags || [])
     .filter(t=>ks.has(String(t.label||'').toLowerCase()) && !isColorComboTag(t))
-    .sort((a,b)=>(b.count||0)-(a.count||0));   // most-played tribes first
+    .sort((a,b)=> rm
+      ? (((rm[b.slug]||0) - (rm[a.slug]||0)) || ((b.count||0) - (a.count||0)))
+      : ((b.count||0) - (a.count||0)));   // most-played tribes for THIS colour first
 }
 async function loadEdhrecTypalBrowse(box, key, slug){
   const data = await edhrecFetchJson('/pages/tags/' + slug + '.json');
@@ -7633,6 +7677,7 @@ function browsePageHtml(){
 }
 function wireBrowsePage(){
   ensureEdhrecTags();
+  if(state.browseSel && state.browseSel.combo) ensureComboTagRanks(state.browseSel.combo);
   _csHandlers.bsCount = v=>{
     state.browseSel.count = v;
     state.browseSel.combo = '';       // combos belong to a color count
@@ -7642,6 +7687,7 @@ function wireBrowsePage(){
   _csHandlers.bsCombo = v=>{
     state.browseSel.combo = v;
     state.browseTypal = null;
+    if(v) ensureComboTagRanks(v);
     render();
   };
   _csHandlers.bsTheme = v=>{
