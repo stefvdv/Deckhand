@@ -2431,10 +2431,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.15';
+const APP_VERSION = '2.51.16';
 const CHANGELOG_NOTES = [
-  'Colour-combination names (abzan, azorius…) no longer clutter the theme and Kindred lists — their deck counts now order the colour dropdown itself by what people actually play.',
-  'Long-press the compass in the top-left, anywhere in the app, to cross between the Admiral and Commander sides. Both home pages now say how to switch.'
+  'Long-pressing the compass now switches fleet on the spot — you stay on the page you were on, re-dressed in the other side\'s colours, instead of being sent home.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3050,7 +3049,10 @@ function wireNav(){
       lpFired = true;
       try{ navigator.vibrate && navigator.vibrate(18); }catch(e){}
       setAppMode(isCmdrMode() ? 'admiral' : 'commander');
-      switchPage('home');
+      // Stay exactly where you are — same page, other fleet. Browse results
+      // are mode-specific, so that cache restarts fresh.
+      state.browseCache = {};
+      render();
     }, 550); };
     const lpCancel = ()=>{ if(lpT){ clearTimeout(lpT); lpT = null; } };
     hb.addEventListener('touchstart', lpStart, {passive:true});
