@@ -2444,9 +2444,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.22';
+const APP_VERSION = '2.51.23';
 const CHANGELOG_NOTES = [
-  'The last single-fleet leftovers are gone: shared decklists now say Commander or Admiral according to the deck itself, link previews of the app describe both formats, the iPhone home-screen label reads A&C MTG, and the settings footer finally shows the real version number.'
+  'The collection import window now points the way from paper to pixels: store links to ManaBox (Android & iPhone) and Delver Lens (Android) — free apps that scan your physical cards with the camera and export a CSV this importer reads directly. The right store is chosen for your device automatically.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -4510,6 +4510,10 @@ function openCollectionImport(){
       </div>
       <button class="ghost-btn" id="ciPick" style="width:100%;margin-bottom:8px;">📄 Choose a CSV file to import</button>
       <div id="ciReport" class="hint" style="margin:4px 0;min-height:18px;"></div>
+      <div class="hint" style="margin:6px 0 8px;text-align:center;">No CSV yet? These free apps scan your paper cards with the camera and export one this importer understands:</div>
+      <a class="ghost-btn" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;margin-bottom:8px;" target="_blank" rel="noopener"
+         href="${/iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'https://apps.apple.com/app/manabox-mtg/id1460407674' : 'https://play.google.com/store/apps/details?id=skilldevs.com.manabox'}">📷 ManaBox — scan cards, export CSV</a>
+      ${/iPhone|iPad|iPod/i.test(navigator.userAgent) ? '' : `<a class="ghost-btn" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;" target="_blank" rel="noopener" href="https://play.google.com/store/apps/details?id=delverlab.delverlens">🔍 Delver Lens — power scanner (Android)</a>`}
       <hr style="border:none;border-top:1px solid var(--line);margin:12px 0;">
       <button class="ghost-btn" id="ciExport" style="width:100%;">⬇ Export my collection as CSV</button>
     </div>`;
