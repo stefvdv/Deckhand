@@ -2431,9 +2431,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.14';
+const APP_VERSION = '2.51.15';
 const CHANGELOG_NOTES = [
-  'The Kindred dropdown now draws straight from the same catalog as themes — EDHREC files creature types among its tags, so Ninjas, Frogs, Myr and the rest split out into their own list, most-played first, with the theme list keeping everything else.'
+  'Colour-combination names (abzan, azorius…) no longer clutter the theme and Kindred lists — their deck counts now order the colour dropdown itself by what people actually play.',
+  'Long-press the compass in the top-left, anywhere in the app, to cross between the Admiral and Commander sides. Both home pages now say how to switch.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3041,7 +3042,27 @@ function wireNav(){
   setTimeout(fitBrandTitle, 250);
   setTimeout(fitBrandTitle, 700);   // late settle (fonts, async deck load)
   document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click', ()=>switchPage(b.dataset.page)));
-  document.getElementById('homeBtn')?.addEventListener('click', ()=>switchPage('home'));
+  const hb = document.getElementById('homeBtn');
+  if(hb){
+    // Tap: home. Long-press (~½s): switch between Admiral and Commander.
+    let lpT = null, lpFired = false;
+    const lpStart = ()=>{ lpFired = false; lpT = setTimeout(()=>{
+      lpFired = true;
+      try{ navigator.vibrate && navigator.vibrate(18); }catch(e){}
+      setAppMode(isCmdrMode() ? 'admiral' : 'commander');
+      switchPage('home');
+    }, 550); };
+    const lpCancel = ()=>{ if(lpT){ clearTimeout(lpT); lpT = null; } };
+    hb.addEventListener('touchstart', lpStart, {passive:true});
+    hb.addEventListener('touchend', lpCancel);
+    hb.addEventListener('touchmove', lpCancel);
+    hb.addEventListener('touchcancel', lpCancel);
+    hb.addEventListener('mousedown', lpStart);
+    hb.addEventListener('mouseup', lpCancel);
+    hb.addEventListener('mouseleave', lpCancel);
+    hb.addEventListener('contextmenu', e=>e.preventDefault());
+    hb.addEventListener('click', ()=>{ if(lpFired){ lpFired = false; return; } switchPage('home'); });
+  }
   // The page word is plain text — only on the decklist is it tappable, to rename the deck.
   if(state.screen === 'decklist'){
     document.getElementById('brandTitle')?.addEventListener('click', ()=>{
@@ -3089,6 +3110,7 @@ function homePageHtml(){
       Take Command
     </button>
     <p class="home-sub">Explore Commanders &amp; deck inspiration</p>
+    <p class="hint" style="text-align:center;margin:14px 18px 0;">Crossing fleets: tap the crest above to sail to the Admiral side — or long-press the compass in the top-left from anywhere in the app.</p>
   </main>`;
   }
   const facts = [
@@ -3121,6 +3143,7 @@ function homePageHtml(){
       Weigh Anchor
     </button>
     <p class="home-sub">Explore Admirals &amp; deck inspiration</p>
+    <p class="hint" style="text-align:center;margin:14px 18px 0;">Crossing fleets: tap the crest above to sail to the Commander side — or long-press the compass in the top-left from anywhere in the app.</p>
   </main>`;
 }
 function setAppMode(want, opts){
@@ -7248,6 +7271,34 @@ async function ensureEdhrecTags(){
     if(state.screen==='browse') render();
   }
 }
+const COLOR_TAG_NAMES = new Set(['azorius','dimir','rakdos','gruul','selesnya','orzhov','izzet','golgari','boros','simic',
+  'bant','esper','grixis','jund','naya','abzan','jeskai','sultai','mardu','temur',
+  'yore-tiller','glint-eye','dune-brood','ink-treader','witch-maw','five-color','five color','wubrg','colorless']);
+function isColorComboTag(t){
+  const l = String(t.label||'').toLowerCase().trim();
+  const sl = String(t.slug||'').toLowerCase();
+  if(COLOR_TAG_NAMES.has(l) || COLOR_TAG_NAMES.has(sl)) return true;
+  return /^(mono[- ]|sans[- ]|four[- ]color)/.test(l) || /^(mono-|sans-|four-color)/.test(sl);
+}
+function edhrecComboCounts(){
+  const map = {};
+  (state.edhrecTags||[]).forEach(t=>{
+    if(isColorComboTag(t)) map[String(t.slug||t.label).toLowerCase()] = t.count || 0;
+  });
+  return map;
+}
+function sortCombosByPlay(list){
+  // EDHREC's colour-combination tags carry deck counts — use them to order
+  // the colour dropdown by what people actually play. Falls back to the
+  // built-in order until the catalog has loaded.
+  const cc = edhrecComboCounts();
+  if(!Object.keys(cc).length) return list;
+  const countFor = (c)=>{
+    const l = String(c.label||'').toLowerCase();
+    return cc[l] ?? cc['mono-'+l] ?? 0;
+  };
+  return list.slice().sort((a,b)=>countFor(b)-countFor(a));
+}
 function browseThemeOptions(){
   const ed = state.edhrecTags || [];
   if(ed.length){
@@ -7255,7 +7306,7 @@ function browseThemeOptions(){
     // list, alphabetical. (Kindred lives in its own dropdown.) Admiral mode
     // filters everything through its own legality afterwards.
     const ks = kindredNameSet();
-    return ed.filter(t=>!ks.has(String(t.label||'').toLowerCase()))
+    return ed.filter(t=>!ks.has(String(t.label||'').toLowerCase()) && !isColorComboTag(t))
              .sort((a,b)=>a.label.localeCompare(b.label)).map(t=>({ v: 'ed:'+t.slug, l: t.label }));
   }
   return BROWSE_THEMES.map(c=>({v:c.key, l:c.label}));
@@ -7293,7 +7344,7 @@ function kindredNameSet(){
 function browseKindredOptions(){
   const ks = kindredNameSet();
   return (state.edhrecTags || [])
-    .filter(t=>ks.has(String(t.label||'').toLowerCase()))
+    .filter(t=>ks.has(String(t.label||'').toLowerCase()) && !isColorComboTag(t))
     .sort((a,b)=>(b.count||0)-(a.count||0));   // most-played tribes first
 }
 async function loadEdhrecTypalBrowse(box, key, slug){
@@ -7368,7 +7419,7 @@ function browsePageHtml(){
         [{v:'', l:modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors'}].concat(COLOR_COUNTS.filter(c=>c.key).map(c=>({v:c.key, l:c.label}))),
         sel.count, modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors')}</div>
       <div class="bs-row">${cselectHtml('bsCombo',
-        combos ? [{v:'', l:'Any combination'}].concat(combos.map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18)}))) : [],
+        combos ? [{v:'', l:'Any combination'}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18)}))) : [],
         sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos})}</div>
       <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none'}].concat(browseThemeOptions()), sel.theme, 'Theme — none')}</div>
       ${browseKindredOptions().length ? `<div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label}))), sel.tribe||'', 'Kindred — none')}</div>` : ''}
