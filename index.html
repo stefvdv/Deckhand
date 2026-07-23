@@ -450,7 +450,7 @@ main.has-dock{padding-bottom:84px;}
 .empty-note{color:var(--sub-text);font-size:13px;text-align:center;padding:12px 10px;}
 .status{text-align:center;color:var(--sub-text);font-size:13px;padding:16px;}
 .spinner{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--brass);border-bottom-color:var(--brass-dim);border-radius:50%;animation:sp 0.7s cubic-bezier(0.45,0.15,0.55,0.85) infinite;margin:0 auto 8px;}
-.status-flavor{font-size:11px;color:var(--sub-text-2);font-style:italic;margin-top:5px;animation:flavorIn 0.45s ease;}
+.status-flavor{font-size:13.5px;color:var(--ink-text);font-style:italic;margin-top:6px;animation:flavorIn 0.45s ease;}
 @keyframes flavorIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
 @keyframes sp{to{transform:rotate(360deg);}}
 .error-note{color:var(--danger);font-size:12.5px;text-align:center;padding:16px;border:1px solid var(--danger);border-radius:8px;background:rgba(165,58,63,0.08);}
@@ -558,7 +558,7 @@ main.has-dock{padding-bottom:84px;}
 .sr-tile .st-tl{font-size:10px;color:var(--sub-text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .st-pd-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
 .pair-cell .ppr{display:flex;align-items:baseline;gap:8px;}
-.pair-cell .ppr.top{justify-content:flex-end;margin-top:-2px;}
+.pair-cell .ppr.top{justify-content:flex-start;padding-left:35%;margin-top:-2px;}
 .pair-cell .ppr.top .st-price{margin-top:0;}
 .pair-cell .ppr.bot .st-price{margin-top:0;}
 .reco-pair-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:0 0 6px;}
@@ -2537,9 +2537,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.47';
+const APP_VERSION = '2.51.49';
 const CHANGELOG_NOTES = [
-  'Loading rings now deal you a little Magic patter while you wait: a short quip beneath the spinner — "Shuffling up…", "Holding priority…", "Praying to topdeck…" — cycling to a fresh one every two seconds. Thirty-one of them, starting at a random point each time.'
+  'The little Magic quips under loading rings are now bigger and brighter — easier to read at a glance.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -8039,7 +8039,6 @@ function renderBrowseResults(key){
   const pairNote = ()=>{
     if(!pairsApply) return;
     if(!pairsReady) box.insertAdjacentHTML('beforeend', `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div>Assembling two-commander pairs…</div>`);
-    else if(!pool._complete && pairs.length) box.insertAdjacentHTML('beforeend', `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div>Blending two-commander pairs into the rankings…</div>`);
   };
   if(!pool.length && !(pairsReady && pairs.length)){
     box.innerHTML = `<div class="empty-note">No ${admiralMode?'single '+(isCmdrMode()?'Commanders':'Admirals'):'cards'} found for this combination — try loosening the theme or colors.</div>`;
