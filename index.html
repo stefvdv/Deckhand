@@ -2541,10 +2541,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.52';
+const APP_VERSION = '2.51.53';
 const CHANGELOG_NOTES = [
-  'Picking a colour count on the Inspiration page now opens the combination menu for you, and that menu shows every option at once — no scrolling through the guilds.',
-  'Advanced search filters: the top and bottom buttons are now a side-by-side pair, "Use filters" and "Reset filters", so resetting is one tap from either end of the panel. The header was also hardened so the long-press mode switch can never be knocked out by a page hiccup.'
+  'Budget Alternatives now runs on real data: each pricey card\'s job is read from Scryfall Tagger\'s curated oracle tags (Removal, Ramp, Card Draw…) instead of keyword guesswork — no more "Flying Matters, Theft" on a lifegain cleric — and stand-ins must genuinely share those tags. Expensive lands now always get cheap LANDS as replacements, favouring ones that make the same colours.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -8446,6 +8445,7 @@ async function openBudgetOverlay(d){
    identifies which of the deck's pricey cards carry it — then budget picks
    must share those very tags (removal begets removal). */
 const BUDGET_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate'];
+const BUDGET_TAG_LABELS = { removal:'Removal', boardwipe:'Board Wipe', counterspell:'Counterspell', ramp:'Ramp', tutor:'Tutor', burn:'Burn', lifegain:'Lifegain', mill:'Mill', discard:'Discard', draw:'Card Draw', reanimate:'Reanimation', protection:'Protection', 'token-generator':'Tokens', 'sacrifice-outlet':'Sac Outlet', 'graveyard-hate':'Grave Hate' };
 async function detectOtagsForCards(cards){
   const byName = {}; cards.forEach(c=>{ byName[c.name] = []; });
   // Chunked so the query URL stays well inside Scryfall's length limit even
@@ -8514,9 +8514,34 @@ async function loadBudgetAlternatives(d){
       pool.push(x);
     });
   }catch(e){}
+  // Real function data, not keyword guesses: Scryfall Tagger's curated oracle
+  // tags for every pricey nonland card, one budget pool per detected tag
+  // (removal begets removal), and a dedicated cheap-LAND pool so pricey lands
+  // are always answered with lands.
+  const isLandC = (x)=>/\bLand\b/.test(frontFace(x).type_line||'');
+  const landPriced = priced.filter(p=>isLandC(p.c));
+  const nonLandPriced = priced.filter(p=>!isLandC(p.c));
+  const otagByName = nonLandPriced.length ? await detectOtagsForCards(nonLandPriced.map(p=>p.c)) : {};
+  const tagUnion = new Set(); Object.values(otagByName).forEach(a=>a.forEach(t=>tagUnion.add(t)));
+  const tagPools = {}, candTags = {};
+  await runLimited(Array.from(tagUnion), async (tag)=>{
+    try{
+      const r = await searchAndVerifyLegal((idClause + ' eur<=5 otag:' + tag).trim(), 'edhrec', 60);
+      tagPools[tag] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !isBanned(x));
+      tagPools[tag].forEach(x=>{ (candTags[x.name] = candTags[x.name] || new Set()).add(tag); });
+    }catch(e){ tagPools[tag] = []; }
+  }, 4);
+  let landPool = [];
+  if(landPriced.length){
+    try{
+      const r = await searchAndVerifyLegal((idClause + ' t:land eur<=5').trim(), 'edhrec', 120);
+      landPool = ((r && r.results) || []).filter(x=>!isBanned(x));
+    }catch(e){}
+  }
   document.getElementById('bgPoolStatus')?.remove();
   if(!document.getElementById('bgBody')) return;
-  if(!pool.length){
+  const anyTagged = Object.values(tagPools).some(a=>a.length);
+  if(!pool.length && !anyTagged && !landPool.length){
     box.insertAdjacentHTML('beforeend', `<div class="empty-note">Couldn't gather budget candidates — check your connection and reopen this page.</div>`);
     return;
   }
@@ -8524,35 +8549,71 @@ async function loadBudgetAlternatives(d){
   const themesOf = (x)=>{ if(!fp.has(x.name)) fp.set(x.name, new Set(detectCardThemes(x).map(t=>t.key))); return fp.get(x.name); };
   for(const {c, v} of priced){
     if(!document.getElementById('bgBody')) return;   // overlay closed
+    const land = isLandC(c);
+    const myTags = land ? [] : (otagByName[c.name] || []);
+    const roleLabel = land ? 'Land' : myTags.map(t=>BUDGET_TAG_LABELS[t]||t).join(', ');
     const trio = document.createElement('div');
     trio.className = 'budget-trio';
-    const myThemes = detectCardThemes(c);
     trio.innerHTML = `
       <div class="budget-star">
         <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">
         <div class="bs-nm">${escapeHtml(c.name)}</div>
-        <div class="bs-pr">${fmtEur(v)}${myThemes.length?` · ${myThemes.map(t=>escapeHtml(t.label)).join(', ')}`:''}</div>
+        <div class="bs-pr">${fmtEur(v)}${roleLabel?` · ${escapeHtml(roleLabel)}`:''}</div>
       </div>
       <div class="sr-grid budget-subs"></div>`;
     box.appendChild(trio);
     trio.querySelector('.budget-star img').addEventListener('click', ()=>openCardInfo(c));
     const ptype = primaryTypeOf(c);
     const ceiling = Math.max(1.5, Math.min(5, v * 0.35));
-    const mine = new Set(myThemes.map(t=>t.key));
     const scored = [];
-    for(let i=0; i<pool.length; i++){
-      const x = pool[i];
-      if(inDeck.has(x.name)) continue;
-      const pv = priceOf(x);
-      if(pv===null || pv > ceiling) continue;
-      let sc = 0;
-      if(primaryTypeOf(x)===ptype) sc += 3;                       // same job shape
-      const tx = themesOf(x);
-      let shared = 0; mine.forEach(k=>{ if(tx.has(k)) shared++; });
-      sc += Math.min(3, shared * 1.5);                            // shared themes
-      sc += Math.max(0, 2 - Math.abs((x.cmc||0)-(c.cmc||0))) * 0.5;  // similar cost
-      sc -= i * 0.004;                                            // earlier in pool = more played
-      scored.push([sc, x]);
+    if(land){
+      // Lands answer lands: same identity, cheapest, most played — with a nudge
+      // toward lands that make the same colours this one did.
+      const myProd = new Set(c.produced_mana || []);
+      for(let i=0; i<landPool.length; i++){
+        const x = landPool[i];
+        if(inDeck.has(x.name)) continue;
+        const pv = priceOf(x);
+        if(pv!==null && pv > Math.max(ceiling, 2)) continue;
+        let sc = 0;
+        (x.produced_mana||[]).forEach(m=>{ if(myProd.has(m)) sc += 1; });
+        sc -= i * 0.01;                                           // earlier = more played
+        scored.push([sc, x]);
+      }
+    } else if(myTags.length){
+      // Curated-tag matching: candidates come from the pricey card's own tags.
+      const seenC = new Set();
+      const cands = [];
+      myTags.forEach(t=>(tagPools[t]||[]).forEach(x=>{ if(!seenC.has(x.name)){ seenC.add(x.name); cands.push(x); } }));
+      for(const x of cands){
+        if(inDeck.has(x.name)) continue;
+        const pv = priceOf(x);
+        if(pv===null || pv > ceiling) continue;
+        let sc = 0;
+        const tx = candTags[x.name] || new Set();
+        myTags.forEach(t=>{ if(tx.has(t)) sc += 2; });             // same curated job
+        if(primaryTypeOf(x)===ptype) sc += 2;                     // same job shape
+        sc += Math.max(0, 2 - Math.abs((x.cmc||0)-(c.cmc||0))) * 0.5;
+        scored.push([sc, x]);
+      }
+    } else {
+      // No curated tags found for this card: fall back to the played-staples
+      // pool with the old theme heuristic (labels stay hidden either way).
+      const mine = themesOf(c);
+      for(let i=0; i<pool.length; i++){
+        const x = pool[i];
+        if(inDeck.has(x.name)) continue;
+        const pv = priceOf(x);
+        if(pv===null || pv > ceiling) continue;
+        let sc = 0;
+        if(primaryTypeOf(x)===ptype) sc += 3;
+        const tx = themesOf(x);
+        let shared = 0; mine.forEach(k=>{ if(tx.has(k)) shared++; });
+        sc += Math.min(3, shared * 1.5);
+        sc += Math.max(0, 2 - Math.abs((x.cmc||0)-(c.cmc||0))) * 0.5;
+        sc -= i * 0.004;
+        scored.push([sc, x]);
+      }
     }
     scored.sort((a,b)=>b[0]-a[0]);
     const subs = scored.slice(0, 2).map(sx=>sx[1]);
