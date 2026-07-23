@@ -554,7 +554,8 @@ main.has-dock{padding-bottom:84px;}
 .sr-tile .st-body{padding:8px 9px 4px;}
 .sr-tile .st-nm{font-size:12.5px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .sr-tile .st-tl{font-size:10px;color:var(--sub-text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.st-decks{font-size:10.5px;color:var(--brass-dim);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.st-pd-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.st-decks{font-size:10.5px;color:var(--ink-text);font-family:'JetBrains Mono',monospace;margin-left:auto;white-space:nowrap;}
 .sr-tile .st-meta{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
 .sr-tile .st-price{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--brass);margin-top:4px;min-height:13px;}
 /* selectable tiles (admiral recommendation picker) */
@@ -2496,10 +2497,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.41';
+const APP_VERSION = '2.51.42';
 const CHANGELOG_NOTES = [
-  'The Spoilers page opens as one feed of every previewed card across all sets, newest reveals first — no more per-set sections. The set-symbol buttons are now filters: tap one to see just that set, sorted by colour (white, blue, black, red, green, colourless, multicolour, lands); tap it again for the full feed.',
-  'Commanders and pairings on the Inspiration page now show their play data right on the tile — a small "x decks" line straight from EDHREC\'s counts.'
+  'The Spoilers feed now ranks strictly by real preview dates: bulk-loaded cards without one no longer jump the queue, tokens are filtered out (along with their phantom set buttons), and long-pressing a set symbol shows the full set name without activating the filter.',
+  'Inspiration tiles put the deck count on the same row as the price, in a clearer colour. Pair tiles show both cards\' prices, and tapping either card now opens recommendations for the PAIRING — EDHREC\'s page for that exact duo — with both commanders seated when you build the deck from there.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -5067,12 +5068,13 @@ function currentPreviewSets(){
     const t = rawType || (rawByCode.get(code)||{}).set_type;
     return cmdr || (t && STANDARD_TYPES.has(t));
   };
+  const SKIP_TYPES = new Set(['token','memorabilia','minigame']);
   const map = new Map();
   Object.entries(autoSets.previewMeta||{}).forEach(([c,dte])=>{
+    if(SKIP_TYPES.has((rawByCode.get(c)||{}).set_type)) return;   // token sets carry no spoilers of their own
     if(dte > today && admiralOk(c))
       map.set(c, { code:c, name: autoSets.names[c]||c.toUpperCase(), date:dte, ub:(autoSets.ubCodes||[]).includes(c) || (state.legalSetCodesUB||[]).includes(c) });
   });
-  const SKIP_TYPES = new Set(['token','memorabilia','minigame']);
   (state.allSetsRaw||[]).forEach(x=>{
     if(x.digital || !x.released_at || x.released_at <= today || map.has(x.code)) return;
     if(SKIP_TYPES.has(x.set_type)) return;
@@ -5134,8 +5136,13 @@ function spoilerColorBucket(c){
   return {W:0,U:1,B:2,R:3,G:4}[cols[0]] ?? 5;
 }
 function spoilerDateKey(c){
-  return (c.preview && c.preview.previewed_at) || c.released_at || '';
+  // Only a real preview date counts as a spoiler date. released_at is NOT a
+  // substitute: for unreleased sets it lies in the future, so undated bulk
+  // loads (reprint dumps, tokens) would hijack the top of the feed.
+  return (c.preview && c.preview.previewed_at) || '';
 }
+const SPOILER_SKIP_LAYOUTS = new Set(['token','double_faced_token','emblem','art_series']);
+function spoilerPlayable(c){ return !SPOILER_SKIP_LAYOUTS.has(c.layout); }
 function renderSpoilerBody(loaded, failed){
   const box = document.getElementById('spBody');
   if(!box) return;
@@ -5153,12 +5160,20 @@ function renderSpoilerBody(loaded, failed){
     if(failed.has(active)){ box.innerHTML = headHtml + '<p class="hint">Couldn\'t reach the archive for this set — tap “Check for new spoilers” to retry.</p>'; return; }
     // Colour-sorted set view; collector number orders within each colour.
     const cn = c => { const n = parseInt(String(c.collector_number||'').replace(/\D/g,''),10); return isNaN(n) ? 1e9 : n; };
-    cards = got.slice().sort((a,b)=> (spoilerColorBucket(a)-spoilerColorBucket(b)) || (cn(a)-cn(b)));
+    cards = got.filter(spoilerPlayable).sort((a,b)=> (spoilerColorBucket(a)-spoilerColorBucket(b)) || (cn(a)-cn(b)));
     footHtml = `<p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed so far.</p>`;
   } else {
-    // All sets, one feed, newest spoilers first — no set grouping.
+    // All sets, one feed, newest spoilers first — no set grouping. Cards
+    // without a preview date inherit their set's OLDEST known preview date
+    // (they were part of some earlier batch, not today's reveal); a set with
+    // no preview dates at all sinks to the end rather than claiming recency.
     const withKeys = [];
-    sets.forEach((x, si)=>{ (loaded[x.code]||[]).forEach((c, ci)=> withKeys.push({c, k: spoilerDateKey(c), si, ci})); });
+    sets.forEach((x, si)=>{
+      const cs = (loaded[x.code]||[]).filter(spoilerPlayable);
+      let setMin = '';
+      cs.forEach(c=>{ const k = spoilerDateKey(c); if(k && (!setMin || k < setMin)) setMin = k; });
+      cs.forEach((c, ci)=> withKeys.push({c, k: spoilerDateKey(c) || setMin, si, ci}));
+    });
     withKeys.sort((a,b)=> (a.k<b.k?1:a.k>b.k?-1:0) || (a.si-b.si) || (a.ci-b.ci));
     cards = withKeys.map(w=>w.c);
     const pending = sets.filter(x=>loaded[x.code]===undefined && !failed.has(x.code)).length;
@@ -5192,7 +5207,16 @@ async function wireSpoilersPage(){
   // Set-symbol buttons filter to one set (colour-sorted); tapping the active
   // one again clears back to the all-sets, newest-first feed.
   document.querySelectorAll('[data-spjump]').forEach(b=>{
-    b.addEventListener('click', ()=>{
+    // Long-press names the set (a brief toast) without activating the filter;
+    // a normal tap toggles it.
+    let lpTimer = null, lpFired = false;
+    const arm = ()=>{ lpFired = false; clearTimeout(lpTimer); lpTimer = setTimeout(()=>{ lpFired = true; toast(b.title || b.dataset.spjump.toUpperCase()); }, 450); };
+    const disarm = ()=> clearTimeout(lpTimer);
+    b.addEventListener('pointerdown', arm);
+    ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev, disarm));
+    b.addEventListener('contextmenu', e=>e.preventDefault());
+    b.addEventListener('click', (e)=>{
+      if(lpFired){ lpFired = false; e.preventDefault(); return; }
       state.spoilerSetFilter = (state.spoilerSetFilter === b.dataset.spjump) ? null : b.dataset.spjump;
       render();
     });
@@ -6830,9 +6854,8 @@ function searchRowHtml(c, d, opts){
     <div class="st-body">
       <div class="st-nm">${escapeHtml(c.name)}</div>
       <div class="st-tl">${frontFace(c).type_line||''}</div>
-      ${decksNoteHtml(opts.decks)}
       ${tag!=='ok' ? `<div class="st-meta"><span class="tag ${tag}">${tagTxt}</span></div>` : ''}
-      <div class="st-price" data-pricecard="${encodeURIComponent(c.name)}">…</div>
+      <div class="st-pd-row"><div class="st-price" data-pricecard="${encodeURIComponent(c.name)}">…</div>${decksNoteHtml(opts.decks)}</div>
     </div>
     <div class="st-btns">
       ${canBeAdmiral ? `<button class="add-btn" data-admiral="1" data-name="${encodeURIComponent(c.name)}" title="Set as ${fmtName()}">${modeGlyph()}</button>` : ''}
@@ -7995,7 +8018,7 @@ function renderBrowseResults(key){
     const edecksRaw = state.browseCache[edhrecDeckCountsKey(key)];
     const edecks = (edecksRaw && typeof edecksRaw === 'object') ? edecksRaw : null;
     const merged = orderBrowseMerged(pool, pairs, edecks);
-    const after = (chunk)=>{ wireResultButtons(pool, pinned, ()=>renderBrowseResults(key), wireOpts); wireMergedPairTiles(merged, pinned, ()=>renderBrowseResults(key)); loadTilePrices(chunk.filter(x=>!x._pair)); };
+    const after = (chunk)=>{ wireResultButtons(pool, pinned, ()=>renderBrowseResults(key), wireOpts); wireMergedPairTiles(merged, pinned, ()=>renderBrowseResults(key)); loadTilePrices(chunk.flatMap(x=>x._pair ? x._pair : [x])); };
     pagedGrid(box, merged, (it, idx)=> it._pair
       ? pairTileHtml(it._pair, idx, pairPlayDecks(it._pair, edecks))
       : searchRowHtml(it, pinned, {showAdmiralBtn:true, decks: singlePlayDecks(it, edecks)}), after);
@@ -8148,7 +8171,7 @@ function pairTileHtml(pr, idx, decks){
           <img loading="lazy" class="${wbClass(pr[1])}" src="${cardImageMed(pr[1])}" data-mpcard="${idx}:1" alt="${escapeHtml(pr[1].name)}">
         </div>
         <div class="pair-cap">${escapeHtml(pr[0].name.split(',')[0])} &amp; ${escapeHtml(pr[1].name.split(',')[0])}</div>
-        ${decksNoteHtml(decks)}
+        <div class="st-pd-row"><span class="st-price" data-pricecard="${encodeURIComponent(pr[0].name)}">…</span><span class="st-price" data-pricecard="${encodeURIComponent(pr[1].name)}">…</span>${decksNoteHtml(decks)}</div>
         <div class="pair-btns">
           <button class="add-btn" data-mpairadm="${idx}" title="Set as ${fmtName()}s">${modeGlyph()}</button>
           <button class="add-btn" data-mpairadd="${idx}" title="Add both to Deck">+</button>
@@ -8163,7 +8186,7 @@ function wireMergedPairTiles(merged, pinned, refreshFn){
     img.addEventListener('click', ()=>{
       const [i,j] = img.dataset.mpcard.split(':').map(Number);
       const pr = merged[i] && merged[i]._pair;
-      if(pr && pr[j]) openAdmiralReco(pr[j]);
+      if(pr) openAdmiralReco(pr[0], pr[1]);
     });
   });
   document.querySelectorAll('.add-btn[data-mpairadm]').forEach(btn=>{
@@ -8496,8 +8519,8 @@ async function loadBudgetAlternatives(d){
    EDHREC-ranked recommendations in its colors below (respecting any theme
    chosen in the dropdowns), tap tiles to select, then spawn a ready-made
    deck from the selection. */
-function openAdmiralReco(admiral){
-  state.reco = { admiral, pool: [], selected: new Set(), loading: true, error: false };
+function openAdmiralReco(admiral, partner){
+  state.reco = { admiral, partner: partner || null, pool: [], selected: new Set(), loading: true, error: false };
   let el = document.getElementById('recoOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='recoOverlay'; document.body.appendChild(el); }
   pushOverlay('reco', ()=>{ document.getElementById('recoOverlay')?.remove(); state.reco = null; });
@@ -8513,12 +8536,15 @@ function renderRecoOverlay(){
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar" style="position:relative;">
       <button class="icon-btn" id="recoBack">${ICONS.back}</button>
-      <div class="tb-titles"><div class="t1 name2">${escapeHtml(R.admiral.name)}</div></div>
+      <div class="tb-titles"><div class="t1 name2">${escapeHtml(R.admiral.name)}${R.partner?` & ${escapeHtml(R.partner.name)}`:''}</div></div>
       <button class="reco-create" id="recoCreate" ${n?'':'disabled'}>＋ Add to deck${n?` (${n})`:''}</button>
     </div>
     <main>
       <div class="reco-admiral">
-        <img class="${wbClass(R.admiral)}" src="${cardImageLarge(R.admiral)}" id="recoAdmImg" alt="${escapeHtml(R.admiral.name)}">
+        ${R.partner ? `<div class="pair-imgs" style="max-width:230px;margin:0 auto;">
+          <img class="${wbClass(R.admiral)}" src="${cardImageLarge(R.admiral)}" id="recoAdmImg" alt="${escapeHtml(R.admiral.name)}">
+          <img class="${wbClass(R.partner)}" src="${cardImageLarge(R.partner)}" id="recoAdmImg2" alt="${escapeHtml(R.partner.name)}">
+        </div>` : `<img class="${wbClass(R.admiral)}" src="${cardImageLarge(R.admiral)}" id="recoAdmImg" alt="${escapeHtml(R.admiral.name)}">`}
         <div class="ra-hint">tap cards to select</div>
       </div>
       <div id="recoBody">${R.loading ? `<div class="status"><div class="spinner"></div>Charting recommendations…</div>` : ''}</div>
@@ -8526,6 +8552,8 @@ function renderRecoOverlay(){
   </div>`;
   document.getElementById('recoBack').addEventListener('click', closeTopOverlay);
   document.getElementById('recoAdmImg').addEventListener('click', ()=>showPreview(cardImageLarge(R.admiral), R.admiral.border_color==='white'));
+  const p2 = document.getElementById('recoAdmImg2');
+  if(p2) p2.addEventListener('click', ()=>showPreview(cardImageLarge(R.partner), R.partner.border_color==='white'));
   document.getElementById('recoCreate').addEventListener('click', openRecoDeckChooser);
   if(!R.loading) renderRecoBody();
 }
@@ -8582,6 +8610,19 @@ function edhrecThemesFrom(data){
     out.sort((a,b)=>(b.count||0)-(a.count||0));
     return out.slice(0, 10);
   }catch(e){ return []; }
+}
+async function edhrecPairPage(a, b){
+  // EDHREC's pairing pages live at slug(a)-slug(b) in THEIR canonical order,
+  // which varies (Doctors lead companions; many partners sit alphabetically) —
+  // so both orders are tried, then the lead card's own page as a last resort.
+  for(const sl of [edhrecSlug(a.name)+'-'+edhrecSlug(b.name), edhrecSlug(b.name)+'-'+edhrecSlug(a.name)]){
+    const data = await edhrecFetchJson('/pages/commanders/' + sl + '.json');
+    if(data){
+      const names = edhrecNamesFrom(data);
+      if(names.length) return { names, themes: edhrecThemesFrom(data) };
+    }
+  }
+  return edhrecCommanderPage(a);
 }
 async function edhrecCommanderPage(card){
   const data = await edhrecFetchJson('/pages/commanders/' + edhrecSlug(card.name) + '.json');
@@ -8659,8 +8700,10 @@ async function loadRecoPool(){
   if(!R) return;
   const theme = state.browseSel.theme ? BROWSE_THEMES.find(t=>t.key===state.browseSel.theme) : null;
   const themeClause = theme ? theme.clause + ' ' : '';
-  const idClause = idClauseFor(R.admiral);
-  const keep = (c)=> landOk(c) && !isBanned(c) && c.name !== R.admiral.name;
+  const idClause = R.partner
+    ? idClauseFor({ color_identity: Array.from(new Set([].concat(R.admiral.color_identity||[], R.partner.color_identity||[]))) })
+    : idClauseFor(R.admiral);
+  const keep = (c)=> landOk(c) && !isBanned(c) && c.name !== R.admiral.name && (!R.partner || c.name !== R.partner.name);
   // What does this leader actually DO? Detected LOCALLY from its own oracle
   // text and type line (no extra network round-trips) — those theme clauses
   // form the synergy signal, and colour staples only fill in behind. Both
@@ -8669,7 +8712,7 @@ async function loadRecoPool(){
   //    order. Skipped when a browse theme filter is active (theme wins then).
   if(!theme){
     try{
-      const page = await edhrecCommanderPage(R.admiral);
+      const page = R.partner ? await edhrecPairPage(R.admiral, R.partner) : await edhrecCommanderPage(R.admiral);
       if(!state.reco || state.reco !== R) return;
       R.themes = page.themes || [];
       mergeEdhrecTags(R.themes);
@@ -8846,10 +8889,9 @@ function openRecoDeckChooser(){
   const n = R.selected.size;
   el.innerHTML = `<div class="deckpick">
     <h4>Add ${n} card${n>1?'s':''} to…</h4>
-    <p class="dp-sub">${escapeHtml(R.admiral.name)} recommendations</p>
+    <p class="dp-sub">${escapeHtml(R.admiral.name)}${R.partner?` & ${escapeHtml(R.partner.name)}`:''} recommendations</p>
     <div class="deckpick-list">
-      <button class="dp-row" data-newdeck="1"><div class="dp-txt">⚓ New deck led by ${escapeHtml(R.admiral.name)}<div class="dp-meta">Creates the deck with your ${n} picks aboard</div></div></button>
-      ${mode!=='reco' ? `<button class="dp-row" data-newdeck="1"><div class="dp-txt">＋ New deck<div class="dp-meta">Create a fresh deck and add ${escapeHtml(card.name)} to it</div></div></button>` : ''}
+      <button class="dp-row" data-newdeck="1"><div class="dp-txt">⚓ New deck led by ${escapeHtml(R.admiral.name)}${R.partner?` & ${escapeHtml(R.partner.name.split(',')[0])}`:''}<div class="dp-meta">Creates the deck with your ${n} picks aboard</div></div></button>
       ${state.decksIndex.map(d=>`<button class="dp-row" data-deck="${d.id}">
         <div class="dp-txt">${escapeHtml(d.name)}<div class="dp-meta">${d.cards.length} cards${d.admiral?` · ${escapeHtml(d.admiral.name)}`:' · no Admiral yet'}</div></div>
       </button>`).join('')}
@@ -8872,6 +8914,7 @@ function addRecoPicksToDeck(d){
   let admiralSet = false;
   if(!d.admiral){
     d.admiral = R.admiral;
+    if(R.partner){ d.partner = R.partner; logDeckChange(d, {type:'admiral', name:R.partner.name, card:R.partner, prev:null}); }
     logDeckChange(d, {type:'admiral', name:R.admiral.name, card:R.admiral, prev:null});
     admiralSet = true;
   }
@@ -8897,9 +8940,10 @@ function createDeckFromReco(){
   const name = prompt('Name your new deck:', `${R.admiral.name}'s Fleet`);
   if(name === null) return;   // cancelled
   const picks = R.pool.filter(c=>R.selected.has(c.name));
-  const d = { id: uid(), name: (name.trim() || `${R.admiral.name}'s Fleet`), admiral: R.admiral, cards: [], maybeboard: [], tags: {}, primer: '', createdAt: Date.now(), updatedAt: Date.now() };
+  const d = { id: uid(), name: (name.trim() || `${R.admiral.name}'s Fleet`), admiral: R.admiral, partner: R.partner || null, cards: [], maybeboard: [], tags: {}, primer: '', createdAt: Date.now(), updatedAt: Date.now() };
   state.decksIndex.unshift(d);
   logDeckChange(d, {type:'admiral', name:R.admiral.name, card:R.admiral, prev:null});
+  if(R.partner) logDeckChange(d, {type:'admiral', name:R.partner.name, card:R.partner, prev:null});
   picks.forEach(c=>{ d.cards.push(c); logDeckChange(d, {type:'add', name:c.name, card:c}); });
   persistDeck(d);
   toast(`${d.name} launched with ${picks.length+1} cards.`);
