@@ -449,7 +449,7 @@ main.has-dock{padding-bottom:84px;}
 
 .empty-note{color:var(--sub-text);font-size:13px;text-align:center;padding:12px 10px;}
 .status{text-align:center;color:var(--sub-text);font-size:13px;padding:16px;}
-.spinner{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--brass);border-bottom-color:var(--brass-dim);border-radius:50%;animation:sp 0.7s cubic-bezier(0.45,0.15,0.55,0.85) infinite;margin:0 auto 8px;}
+.spinner{width:40px;height:40px;border:3px solid var(--line);border-top-color:var(--brass);border-bottom-color:var(--brass-dim);border-radius:50%;animation:sp 0.7s cubic-bezier(0.45,0.15,0.55,0.85) infinite;margin:0 auto 10px;}
 .status-flavor{font-size:13.5px;color:var(--ink-text);font-style:italic;margin-top:6px;animation:flavorIn 0.45s ease;}
 @keyframes flavorIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
 @keyframes sp{to{transform:rotate(360deg);}}
@@ -910,7 +910,7 @@ main.has-dock{padding-bottom:84px;}
 #appSplash.out{opacity:0;pointer-events:none;}
 .splash-stage{position:relative;width:176px;height:176px;display:flex;align-items:center;justify-content:center;}
 .splash-icon{position:relative;z-index:2;width:176px;height:176px;image-rendering:auto;filter:drop-shadow(0 10px 26px rgba(0,0,0,0.5));}
-.splash-ring{position:absolute;left:50%;top:50%;width:200px;height:200px;margin:-100px 0 0 -100px;border:2px solid rgba(217,164,65,0.6);border-radius:50%;opacity:0;z-index:1;animation:splashPulse 1.8s ease-out .35s infinite;}
+.splash-ring{position:absolute;left:50%;top:50%;width:200px;height:200px;margin:-100px 0 0 -100px;border:2px solid rgba(217,164,65,0.6);border-radius:50%;opacity:0;z-index:1;animation:splashPulse 1.8s ease-out .35s 1 both;}
 .splash-ring:nth-child(2){animation-delay:1.25s;}
 @keyframes splashPulse{
   0%{transform:scale(0.5);opacity:0;}
@@ -1841,14 +1841,17 @@ const WAIT_QUIPS = [
   'Storm count rising…','Declaring blockers…','Paying ward costs…','Dodging removal…',
   'Assessing threats…','Politicking gently…','Praying to topdeck…','Sideboarding secretly…',
   'Reading the rulings…','Consulting judges…','Fetching basics…','Exiling doubts…',
-  'Flashing in…','Going to combat…','Passing the turn…'
+  'Flashing in…','Going to combat…','Passing the turn…','Resolving triggers…',
+  'Stacking triggers…','Checking legalities…','Counting lands…','Curving out…',
+  'Sculpting a hand…','Digging for lands…','Fixing mana…','Ramping hard…',
+  'Tutoring patiently…','Milling ourselves…','Flipping coins…','Rolling a d20…',
+  'Reading fine print…','Triggering at upkeep…','Swinging with everything…','Bluffing the counterspell…'
 ];
 setInterval(()=>{
   document.querySelectorAll('.status').forEach(el=>{
     if(!el.querySelector('.spinner')) return;   // static notes stay quiet
     if(!el.dataset.since) el.dataset.since = String(Date.now());
     const age = Date.now() - (+el.dataset.since);
-    if(age < 600) return;
     let note = el.querySelector('.status-flavor');
     if(!note){ note = document.createElement('div'); note.className = 'status-flavor'; el.appendChild(note); }
     const off = (+el.dataset.since) % WAIT_QUIPS.length;
@@ -1858,7 +1861,7 @@ setInterval(()=>{
       note.style.animation = 'none'; void note.offsetWidth; note.style.animation = '';
     }
   });
-}, 500);
+}, 250);
 function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -2537,9 +2540,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.50';
+const APP_VERSION = '2.51.51';
 const CHANGELOG_NOTES = [
-  'While two-commander pairings load, the Inspiration page now shows just the quiet spinner and its rotating quip — the loading label that used to sit there is gone.'
+  'Loading screens speak only Magic now: the plain labels (searching, drawing, previews, registry) are gone and the quips take over the moment a spinner appears, from a pool grown to 48. The ring itself is twice as big.',
+  'The launch animation no longer looks like it plays twice — each sonar ring now pulses exactly once — and the "nothing found" note on the Inspiration page waits until loading has genuinely finished instead of appearing over a running search.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3917,7 +3921,7 @@ function wireCollectionPage(){
     const q = (document.getElementById('colAddName')?.value||'').trim();
     const box = document.getElementById('colAddResults');
     if(!q || !box) return;
-    box.innerHTML = '<div class="status"><div class="spinner"></div>Searching…</div>';
+    box.innerHTML = '<div class="status"><div class="spinner"></div></div>';
     try{
       const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent(q+' game:paper')}`);
       if(!r.ok){ box.innerHTML = '<p class="hint">No cards found.</p>'; return; }
@@ -5063,7 +5067,7 @@ function openAppointSearch(d, onPick){
     const mySeq = ++seq;
     const box = ()=>document.getElementById('appointResults');
     if(q.length < 2){ if(box()) box().innerHTML = `<div class="empty-note" style="padding:14px 4px;">Start typing to find a ${escapeHtml(label)}.</div>`; return; }
-    if(box()) box().innerHTML = `<div class="status"><div class="spinner"></div>Searching…</div>`;
+    if(box()) box().innerHTML = `<div class="status"><div class="spinner"></div></div>`;
     const clause = isCmdrMode() ? `is:commander ${q}` : `t:legendary ${q}`;
     let results = [];
     try{ const r = await searchAndVerifyLegal(clause, 'name', 40); results = r.results || []; }catch(e){}
@@ -5160,7 +5164,7 @@ function spoilersPageHtml(){
   return `<main id="spMainPage">
     <button class="ghost-btn" id="spRefreshBtn" style="width:100%;margin:2px 0 10px;">⟳ Check for new spoilers</button>
     ${jumpRow}
-    ${sets.length ? `<div id="spBody"><div class="status"><div class="spinner"></div>Unfurling previews…</div></div>`
+    ${sets.length ? `<div id="spBody"><div class="status"><div class="spinner"></div></div></div>`
       : `<div class="empty-note" style="margin-top:24px;">No sets are previewing right now.<br>Spoiler season returns in the weeks before each release.</div>`}
   </main>`;
 }
@@ -5193,7 +5197,7 @@ function renderSpoilerBody(loaded, failed){
   if(active){
     const x = sets.find(s=>s.code===active);
     const got = loaded[active];
-    if(got === undefined && !failed.has(active)){ box.innerHTML = `<div class="status"><div class="spinner"></div>Unfurling ${escapeHtml(x.name)}…</div>`; return; }
+    if(got === undefined && !failed.has(active)){ box.innerHTML = `<div class="status"><div class="spinner"></div></div>`; return; }
     headHtml = `<div class="chip-label" style="margin:2px 0 6px;">${escapeHtml(x.name)}${x.ub?' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>':''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>`
       + (x.ub?'<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>':'');
     if(failed.has(active)){ box.innerHTML = headHtml + '<p class="hint">Couldn\'t reach the archive for this set — tap “Check for new spoilers” to retry.</p>'; return; }
@@ -5220,7 +5224,7 @@ function renderSpoilerBody(loaded, failed){
       + (failed.size ? `<p class="hint" style="margin:6px 0 2px;">Couldn't reach ${failed.size} set${failed.size===1?'':'s'} — tap “Check for new spoilers” to retry.</p>` : '')
       + (cards.length ? `<p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed across ${sets.length} set${sets.length===1?'':'s'}.</p>` : '');
     if(!cards.length && !pending){ box.innerHTML = '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
-    if(!cards.length){ box.innerHTML = `<div class="status"><div class="spinner"></div>Unfurling previews…</div>`; return; }
+    if(!cards.length){ box.innerHTML = `<div class="status"><div class="spinner"></div></div>`; return; }
   }
   if(active && !cards.length){ box.innerHTML = headHtml + '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
   box.innerHTML = headHtml + `<div class="sc-grid">${cards.map(tile).join('')}</div>` + footHtml;
@@ -6665,7 +6669,7 @@ async function loadCardOfTheDay(force){
   const box = document.getElementById('cotdBox');
   if(!box) return;
   if(state.cotd && state.cotd.card && !force){ renderCotd(state.cotd.card); return; }
-  box.innerHTML = `<div class="status"><div class="spinner"></div>Drawing a card…</div>`;
+  box.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
   let card = null;
   if(isCmdrMode()){
     // Commander's random card rolls across EVERY Commander-legal card ever
@@ -6831,7 +6835,7 @@ function renderSearchResultsBox(){
   if(!box) return;
   const d = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   setCotdVisible(!state.searching && !state.searchRan);
-  if(state.searching){ box.innerHTML = `<div class="status"><div class="spinner"></div>Searching…</div>`; return; }
+  if(state.searching){ box.innerHTML = `<div class="status"><div class="spinner"></div></div>`; return; }
   if(!state.searchRan) return;
   if(state.searchError === 'badquery'){ box.innerHTML = `<div class="error-note">One of the filters contains something Scryfall can't read — most often a stray quote (") or a symbol in Mana Cost. Clear or fix that filter and search again.</div>`; return; }
   if(state.searchError){ box.innerHTML = `<div class="error-note">Scryfall couldn't be reached just now. Check your connection and try again — the search retries on its own, so this only appears after several failed attempts.</div>`; return; }
@@ -7246,7 +7250,7 @@ async function loadInspiration(d){
   const box = document.getElementById('inspireResults');
   const cacheKey = inspireCacheKey(d);
   if(state.inspireCache[cacheKey]){ renderInspireFromCache(cacheKey, d); return; }
-  box.innerHTML = `<div class="status"><div class="spinner"></div>${isCmdrMode()?'Consulting the commander registry…':'Consulting the fleet registry…'}</div>`;
+  box.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
   const clause = inspireClause(d);
   // Fetch a larger pool than we display: when a card gets added to the deck
   // we filter it out and reveal the next one from this same pool instantly,
@@ -7948,7 +7952,7 @@ async function loadBrowse(){
     loadEdhrecDeckCounts(key, state.browseSel.combo, tagSlug);
   }
   if(state.browseCache[key]){ renderBrowseResults(key); return; }
-  box.innerHTML = `<div class="status"><div class="spinner"></div>${isCmdrMode()?'Consulting the commander registry…':'Consulting the fleet registry…'}</div>`;
+  box.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
   const admiralMode = browseAdmiralMode();
   const sel = state.browseSel;
   if(admiralMode && sel.theme==='typal'){ await loadTypal(box, key); return; }
@@ -8041,8 +8045,12 @@ function renderBrowseResults(key){
     if(!pairsReady) box.insertAdjacentHTML('beforeend', `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div></div>`);
   };
   if(!pool.length && !(pairsReady && pairs.length)){
-    box.innerHTML = `<div class="empty-note">No ${admiralMode?'single '+(isCmdrMode()?'Commanders':'Admirals'):'cards'} found for this combination — try loosening the theme or colors.</div>`;
-    pairNote();
+    // While anything is still loading, hold the verdict: just the spinner.
+    // The "nothing found" note only appears once the search truly finished.
+    const stillLoading = !pool._complete || (pairsApply && !pairsReady);
+    box.innerHTML = stillLoading
+      ? `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div></div>`
+      : `<div class="empty-note">No ${admiralMode?'single '+(isCmdrMode()?'Commanders':'Admirals'):'cards'} found for this combination — try loosening the theme or colors.</div>`;
     return;
   }
   const note = (admiralMode && state.browseSel.theme)
@@ -8360,7 +8368,7 @@ function openCardReco(card, forDeck){
         <div class="ra-nm">${escapeHtml(card.name)}</div>
         <div class="ra-sub">${escapeHtml(frontFace(card).type_line||'')}</div>
       </div>
-      <div id="crBody"><div class="status"><div class="spinner"></div>${isCmdrMode()?'Consulting the commander registry…':'Consulting the fleet registry…'}</div></div>
+      <div id="crBody"><div class="status"><div class="spinner"></div></div></div>
     </main>
   </div>`;
   document.getElementById('crBack').addEventListener('click', closeTopOverlay);
