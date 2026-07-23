@@ -2281,6 +2281,7 @@ const _queryCache = new Map();   // session cache — repeating a search is inst
    result. Anything can fail here without consequence — every operation
    degrades silently to a normal network search. */
 const QCACHE_TTL = 24*3600*1000;
+const _qRevalidating = new Set();
 let _qdb = null;
 function qdbOpen(){
   if(_qdb) return _qdb;
@@ -2339,11 +2340,20 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
   // its own cache lane, so mixed selections can never serve each other's data.
   const setsSig = (activeLegalSetCodes()||[]).slice().sort().join('.');
   const qcKey = [appMode(), baseClause||'', sortOrder||'', limit, (opts.dir||''), (opts.restrictSet||''), 's'+setsSig].join('|');
-  if(_queryCache.has(qcKey)) return { results: _queryCache.get(qcKey).slice(), error: false };
-  const disk = await qdbGet(qcKey);
-  if(disk && (Date.now() - (disk.t||0)) < QCACHE_TTL && Array.isArray(disk.v)){
-    _queryCache.set(qcKey, disk.v);
-    return { results: disk.v.slice(), error: false };
+  if(!opts._revalidate){
+    if(_queryCache.has(qcKey)) return { results: _queryCache.get(qcKey).slice(), error: false };
+    const disk = await qdbGet(qcKey);
+    if(disk && (Date.now() - (disk.t||0)) < SWR_SERVE && Array.isArray(disk.v)){
+      if((Date.now() - (disk.t||0)) > QCACHE_TTL && !_qRevalidating.has(qcKey)){
+        // Stale but serviceable: hand it over now, re-run the search quietly in
+        // the background lane so tomorrow's visit is fresh.
+        _qRevalidating.add(qcKey);
+        searchAndVerifyLegal(baseClause, sortOrder, limit, Object.assign({}, opts, {_revalidate:true, bg:true}))
+          .catch(()=>{}).finally(()=>_qRevalidating.delete(qcKey));
+      }
+      _queryCache.set(qcKey, disk.v);
+      return { results: disk.v.slice(), error: false };
+    }
   }
   _searchBusy++;
   try{
@@ -2361,7 +2371,7 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
     let next = url, guard = 0;
     while(next && out.length < limit && guard < 4){
       guard++;
-      const res = await sfFetch(next);
+      const res = await sfFetch(next, 0, !!opts.bg);
       if(!res.ok){ if(res.status===404) break; throw (res.status===400?'BAD_QUERY':res.status); }
       const dd = await res.json();
       (dd.data||[]).forEach(c=>{ if(out.length < limit) out.push(c); });
@@ -2389,13 +2399,13 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
     const setClause = '(' + g.map(c=>'set:'+c).join(' OR ') + ')';
     const q = `${baseClause||''} ${setClause} game:paper -is:digital`.trim();
     const url = `${SF_BASE}/cards/search?unique=cards&order=${orderParam}&dir=${dir}&q=${encodeURIComponent(q)}`;
-    return sfFetch(url).then(res => res.ok ? res.json() : (res.status===404 ? {data:[]} : Promise.reject(res.status===400?'BAD_QUERY':res.status)));
+    return sfFetch(url, 0, !!opts.bg).then(res => res.ok ? res.json() : (res.status===404 ? {data:[]} : Promise.reject(res.status===400?'BAD_QUERY':res.status)));
   });
   const runChunk = (g) => {
     const setClause = '(' + g.map(c=>'set:'+c).join(' OR ') + ')';
     const q = `${baseClause||''} ${setClause} game:paper -is:digital`.trim();
     const url = `${SF_BASE}/cards/search?unique=cards&order=${orderParam}&dir=${dir}&q=${encodeURIComponent(q)}`;
-    return sfFetch(url).then(res => res.ok ? res.json() : (res.status===404 ? {data:[]} : Promise.reject(res.status===400?'BAD_QUERY':res.status)));
+    return sfFetch(url, 0, !!opts.bg).then(res => res.ok ? res.json() : (res.status===404 ? {data:[]} : Promise.reject(res.status===400?'BAD_QUERY':res.status)));
   };
   const settled = await Promise.allSettled(queries);
   const byName = new Map();
@@ -2570,9 +2580,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.60';
+const APP_VERSION = '2.51.62';
 const CHANGELOG_NOTES = [
-  'Loading is restored to the proven fast setup. The background warm-up for Budget Alternatives was accidentally allowed to queue its pricing requests ahead of your taps — it now runs entirely in the low-priority lane and can never stand in front of anything you do.'
+  'Built for daily deck building: everything the app loads — EDHREC rankings and recommendations, search results, prices — now persists for a week and opens instantly from the last visit. Anything older than a day quietly refreshes in the background while you work, so what you see is never more than a day behind and the numbers correct themselves on screen when fresher ones arrive.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -4876,10 +4886,17 @@ async function priceDeck(d, onProgress, bg){
   all.forEach(c=>{ if(!seen.has(c.name)){ seen.add(c.name); unique.push(c); } });
 
   const now = Date.now();
+  // Anything priced within the last week is served immediately; entries past a
+  // day old are re-priced quietly in the background afterwards, so daily deck
+  // sessions open at cache speed with at most day-old numbers.
   const needed = unique.filter(c=>{
     const hit = state.priceCache[c.name];
-    return !(hit && now - hit.t < PRICE_TTL);
+    return !(hit && now - hit.t < SWR_SERVE);
   });
+  const staleNames = unique.filter(c=>{
+    const hit = state.priceCache[c.name];
+    return hit && now - hit.t >= PRICE_TTL && now - hit.t < SWR_SERVE;
+  }).map(c=>c.name);
 
   if(needed.length){
     const batches = chunkArr(needed.map(c=>c.name), PRICE_BATCH);
@@ -4911,7 +4928,17 @@ async function priceDeck(d, onProgress, bg){
     if(v===null || v===undefined) missing++; else total += v;
   });
   if(onProgress) onProgress(unique.length, unique.length);
-  return { total, missing, counted: unique.length - missing };
+  let refreshed = null;
+  if(staleNames.length){
+    refreshed = (async ()=>{
+      for(const batch of chunkArr(staleNames, PRICE_BATCH)){
+        const found = await fetchPricesForBatch(batch, true);   // background lane
+        if(found) batch.forEach(n=>{ state.priceCache[n] = { v: found[n], t: Date.now() }; });
+      }
+      savePriceCache();
+    })().catch(()=>{});
+  }
+  return { total, missing, counted: unique.length - missing, refreshed };
 }
 
 /* ---- share links -------------------------------------------------------
@@ -5899,7 +5926,7 @@ async function loadDeckPrice(d){
   const cardCount = d.cards.length + deckLeaders(d).length;
   if(!cardCount){ const badge0 = document.getElementById('deckTotalBadge'); if(badge0) badge0.textContent = 'Deck total: ' + fmtEur(0); return; }
   const token = ++state._priceRun;   // a later render supersedes this one
-  const { total, missing, counted } = await priceDeck(d, (done, all)=>{
+  const { total, missing, counted, refreshed } = await priceDeck(d, (done, all)=>{
     if(state._priceRun !== token) return;
     const live = document.getElementById('deckPriceVal');
     if(live && done < all) live.textContent = `${done}/${all}…`;
@@ -5917,6 +5944,22 @@ async function loadDeckPrice(d){
   }
   renderTopPriced(d);
   prefetchBudgetData(d);   // pricing is done — quietly warm the budget engine
+  if(refreshed) refreshed.then(()=>{
+    if(state._priceRun !== token) return;   // user moved on
+    let t2 = 0, m2 = 0;
+    const seen2 = new Set();
+    deckLeaders(d).concat(d.cards).forEach(c=>{
+      if(seen2.has(c.name)) return; seen2.add(c.name);
+      const hit = state.priceCache[c.name];
+      const v = hit ? hit.v : null;
+      if(v===null || v===undefined) m2++; else t2 += v;
+    });
+    const live = document.getElementById('deckPriceVal');
+    if(live) live.textContent = fmtEur(t2);
+    const badge = document.getElementById('deckTotalBadge');
+    if(badge) badge.textContent = 'Deck total: ' + fmtEur(t2);
+    renderTopPriced(d);
+  });
 }
 function wireStatsTab(d){
   loadDeckPrice(d);
@@ -8531,8 +8574,27 @@ async function openBudgetOverlay(d){
    must share those very tags (removal begets removal). */
 const BUDGET_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate'];
 const BUDGET_TAG_LABELS = { removal:'Removal', boardwipe:'Board Wipe', counterspell:'Counterspell', ramp:'Ramp', tutor:'Tutor', burn:'Burn', lifegain:'Lifegain', mill:'Mill', discard:'Discard', draw:'Card Draw', reanimate:'Reanimation', protection:'Protection', 'token-generator':'Tokens', 'sacrifice-outlet':'Sac Outlet', 'graveyard-hate':'Grave Hate' };
+/* Oracle tags are near-static (Tagger curates functions, not prices), so the
+   per-card tag map persists for a week. It's a few kilobytes of names and
+   short strings — parsed lazily on first use, written debounced, invisible to
+   boot time and to every other feature. */
+const OTAG_TTL = 7*24*3600*1000;
+let _otagSaveT = null;
+function loadOtagCache(){
+  if(state._otagCache) return state._otagCache;
+  let m = {};
+  try{
+    const raw = JSON.parse(localStorage.getItem(LS_PREFIX+'otags')||'null');
+    if(raw && raw.t && Date.now()-raw.t < OTAG_TTL && raw.map) m = raw.map;
+  }catch(e){}
+  return (state._otagCache = m);
+}
+function saveOtagCache(){
+  clearTimeout(_otagSaveT);
+  _otagSaveT = setTimeout(()=>{ try{ localStorage.setItem(LS_PREFIX+'otags', JSON.stringify({t: Date.now(), map: state._otagCache||{}})); }catch(e){} }, 500);
+}
 async function detectOtagsForCards(cards, bg){
-  const cache = (state._otagCache = state._otagCache || {});
+  const cache = loadOtagCache();
   const byName = {}; cards.forEach(c=>{ byName[c.name] = cache[c.name] ? cache[c.name].slice() : []; });
   const need = cards.filter(c=>!cache[c.name]);
   if(!need.length) return byName;
@@ -8551,6 +8613,7 @@ async function detectOtagsForCards(cards, bg){
     }, 4);
   }
   need.forEach(c=>{ cache[c.name] = (byName[c.name]||[]).slice(); });
+  saveOtagCache();
   return byName;
 }
 async function loadBudgetAlternatives(d){
@@ -8786,7 +8849,10 @@ function edhrecSlug(name){
     .replace(/['\u2019]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
-async function edhrecFetchJson(path){
+const SWR_SERVE = 7*24*3600*1000;    // serve anything younger than a week instantly
+const SWR_FRESH = 24*3600*1000;      // …but past a day, quietly refresh it for next time
+const _edhRevalidating = new Set();
+async function edhrecFetchNetwork(path){
   // Same-origin first: on the deployed site, Netlify's _redirects proxy
   // fetches EDHREC server-side, so the browser's CORS wall never applies.
   const urls = ['/edhrec' + path, 'https://json.edhrec.com' + path];
@@ -8800,6 +8866,24 @@ async function edhrecFetchJson(path){
     finally{ clearTimeout(timer); }
   }
   return null;
+}
+async function edhrecFetchJson(path){
+  // Deck building happens a little every day: EDHREC pages persist for a week
+  // and serve instantly, refreshing in the background once a day old — so
+  // Inspiration, deck counts, and recommendations open at cache speed while
+  // staying at most a day behind the live site.
+  const key = 'edh|' + path;
+  const disk = await qdbGet(key);
+  if(disk && disk.v && (Date.now() - (disk.t||0)) < SWR_SERVE){
+    if((Date.now() - (disk.t||0)) > SWR_FRESH && !_edhRevalidating.has(key)){
+      _edhRevalidating.add(key);
+      edhrecFetchNetwork(path).then(fresh=>{ if(fresh) qdbSet(key, {t: Date.now(), v: fresh}); }).finally(()=>_edhRevalidating.delete(key));
+    }
+    return disk.v;
+  }
+  const data = await edhrecFetchNetwork(path);
+  if(data) qdbSet(key, {t: Date.now(), v: data});   // failures are never stored — a bad day can't poison a week
+  return data;
 }
 function edhrecNamesFrom(data){
   const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
