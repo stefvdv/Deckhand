@@ -2541,9 +2541,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.53';
+const APP_VERSION = '2.51.54';
 const CHANGELOG_NOTES = [
-  'Budget Alternatives now runs on real data: each pricey card\'s job is read from Scryfall Tagger\'s curated oracle tags (Removal, Ramp, Card Draw…) instead of keyword guesswork — no more "Flying Matters, Theft" on a lifegain cleric — and stand-ins must genuinely share those tags. Expensive lands now always get cheap LANDS as replacements, favouring ones that make the same colours.'
+  'Budget Alternatives and the price stats are fast again: the budget page now prices the deck through the same batched lookups the stats tab uses (ten cards per request instead of one), tag detection asks Scryfall in double-size batches and remembers answers for the session, and the price cache no longer rewrites itself to storage after every single card.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -4758,8 +4758,10 @@ function loadPriceCache(){
     return obj;
   }catch(e){ return {}; }
 }
+let _priceSaveT = null;
 function savePriceCache(){
-  try{ localStorage.setItem(LS_PREFIX+'prices', JSON.stringify(state.priceCache)); }catch(e){}
+  clearTimeout(_priceSaveT);
+  _priceSaveT = setTimeout(()=>{ try{ localStorage.setItem(LS_PREFIX+'prices', JSON.stringify(state.priceCache)); }catch(e){} }, 400);
 }
 function fmtEur(v){
   if(v===null || v===undefined || isNaN(v)) return '—';
@@ -8447,10 +8449,13 @@ async function openBudgetOverlay(d){
 const BUDGET_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate'];
 const BUDGET_TAG_LABELS = { removal:'Removal', boardwipe:'Board Wipe', counterspell:'Counterspell', ramp:'Ramp', tutor:'Tutor', burn:'Burn', lifegain:'Lifegain', mill:'Mill', discard:'Discard', draw:'Card Draw', reanimate:'Reanimation', protection:'Protection', 'token-generator':'Tokens', 'sacrifice-outlet':'Sac Outlet', 'graveyard-hate':'Grave Hate' };
 async function detectOtagsForCards(cards){
-  const byName = {}; cards.forEach(c=>{ byName[c.name] = []; });
+  const cache = (state._otagCache = state._otagCache || {});
+  const byName = {}; cards.forEach(c=>{ byName[c.name] = cache[c.name] ? cache[c.name].slice() : []; });
+  const need = cards.filter(c=>!cache[c.name]);
+  if(!need.length) return byName;
   // Chunked so the query URL stays well inside Scryfall's length limit even
   // when a deck has many pricey cards.
-  const groups = chunkArr(cards, 10);
+  const groups = chunkArr(need, 22);
   for(const group of groups){
     const nameClause = '(' + group.map(c=>exactNameClause(c.name)).join(' or ') + ')';
     await runLimited(BUDGET_OTAGS, async (tag)=>{
@@ -8462,15 +8467,16 @@ async function detectOtagsForCards(cards){
       }catch(e){}
     }, 4);
   }
+  need.forEach(c=>{ cache[c.name] = (byName[c.name]||[]).slice(); });
   return byName;
 }
 async function loadBudgetAlternatives(d){
   const all = deckLeaders(d).concat(d.cards||[]);
   if(!all.length){ const b=document.getElementById('bgBody'); if(b) b.innerHTML=`<div class="empty-note">No cards in this deck yet.</div>`; return; }
-  await runLimited(all.filter(c=>{
-    const hit = state.priceCache[c.name];
-    return !(hit && Date.now()-hit.t < PRICE_TTL);
-  }), async (c)=>{ await cheapestEur(c); }, 3);
+  // Same batched pricer the stats tab uses (10 names per request) — the old
+  // per-card loop fired one prints-search PER CARD into the serial queue and
+  // starved every other page of Scryfall access while it ran.
+  await priceDeck(d);
   // Every card at €5 or more, however many that is
   const BUDGET_FLOOR = 5;
   const priced = all
