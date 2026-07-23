@@ -2494,10 +2494,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.38';
+const APP_VERSION = '2.51.39';
 const CHANGELOG_NOTES = [
-  'The Inspiration page now ranks everything by real play data from EDHREC\'s colour pages: single commanders and two-commander pairs share one list, sorted by actual deck counts — so the pairings people genuinely build lead, not just famous cards.',
-  'Pair tiles got the EDHREC look (lead card in front, partner peeking out behind) and now work exactly like single-commander tiles: tap either card for its recommendations, use the two buttons to set the pair in command of a deck or add both cards to one.'
+  'With a Theme or Kindred selected, the Inspiration ranking now uses EDHREC\'s deck counts for that tag in those colours (the /tags/aikido/jeskai page, for example) instead of the colour-wide totals — so the commanders and pairings actually built for that theme lead the list.',
+  'The Kindred dropdown no longer vanishes while the tag catalogue is still loading, and the "Pick colors or a theme" placeholder under the dropdowns is gone.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7701,7 +7701,7 @@ function browsePageHtml(){
         combos ? [{v:'', l:'Any combination'}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18)}))) : [],
         sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos})}</div>
       <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none'}].concat(browseThemeOptions()), sel.theme, 'Theme — none', {search:true})}</div>
-      ${browseKindredOptions().length ? `<div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label}))), sel.tribe||'', 'Kindred — none', {search:true})}</div>` : ''}
+      <div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label}))), sel.tribe||'', 'Kindred — none', {search:true})}</div>
     </div>
     <div id="browseResults"></div>
   </main>`;
@@ -7802,13 +7802,17 @@ async function loadBrowse(){
   const box = document.getElementById('browseResults');
   if(!box) return;
   if(!browseReady()){
-    box.innerHTML = `<div class="empty-note">Pick colors or a theme above — results appear here.</div>`;
+    box.innerHTML = '';
     return;
   }
   const key = JSON.stringify(state.browseSel);
   if(isCmdrMode() && browseAdmiralMode() && state.browseSel.combo){
     loadLeaderPairs(key, state.browseSel.combo, (!state.browseSel.tribe && state.browseSel.theme && state.browseSel.theme.indexOf('ed:')!==0) ? state.browseSel.theme : '');
-    loadEdhrecDeckCounts(key, state.browseSel.combo);
+    const th = state.browseSel.theme;
+    const tagSlug = state.browseSel.tribe ? state.browseSel.tribe
+      : (th && th !== 'typal') ? (th.indexOf('ed:')===0 ? th.slice(3) : th)
+      : '';
+    loadEdhrecDeckCounts(key, state.browseSel.combo, tagSlug);
   }
   if(state.browseCache[key]){ renderBrowseResults(key); return; }
   box.innerHTML = `<div class="status"><div class="spinner"></div>${isCmdrMode()?'Consulting the commander registry…':'Consulting the fleet registry…'}</div>`;
@@ -7937,14 +7941,18 @@ function pairsCacheKey(key){ return key + '::pairs'; }
    AND every partner pairing by real deck counts — the ground truth for
    "most played". One fetch per combination orders the whole results list. */
 function edhrecDeckCountsKey(key){ return key + '::edecks'; }
-async function loadEdhrecDeckCounts(key, combo){
+async function loadEdhrecDeckCounts(key, combo, tagSlug){
   const dk = edhrecDeckCountsKey(key);
   if(state.browseCache[dk] !== undefined) return;
   state.browseCache[dk] = null;   // null = loading
   let map = false;                // false = unavailable
   const slugs = EDHREC_COMBO_SLUGS[(combo||'').toLowerCase()] || [];
   for(const cs of slugs){
-    const data = await edhrecFetchJson('/pages/commanders/' + cs + '.json');
+    // With a theme or Kindred selected, popularity means "within that tag, in
+    // these colours" — EDHREC's /tags/<tag>/<colour> page. Without one, it's
+    // the colour page itself. No cross-fallback: if the tag page is missing,
+    // the pool's own order (already the tag's play order) is the truth.
+    const data = await edhrecFetchJson(tagSlug ? ('/pages/tags/' + tagSlug + '/' + cs + '.json') : ('/pages/commanders/' + cs + '.json'));
     if(!data) continue;
     const m = edhrecDeckCountsFrom(data);
     if(Object.keys(m).length){ map = m; break; }
