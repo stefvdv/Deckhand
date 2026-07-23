@@ -2081,57 +2081,42 @@ function sfFetch(url, attempt, bg, fresh){
     _sfPump();
   });
 }
-let _sfInFlight = 0, _sfCoolUntil = 0;
-const SF_LANES = 2;   // two requests side by side, starts spaced 80ms — still well inside Scryfall's 10/s guidance
 async function _sfPump(){
   if(_sfWorking) return;
   _sfWorking = true;
   const myGen = ++_sfGen;
-  const sleep = (ms)=>new Promise(r=>setTimeout(r, ms));
-  const runJob = async (job)=>{
-    let res = null, err = null;
-    const ctl = new AbortController();
-    const killer = setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 12000);
-    try{
-      // The hard race means even a fetch that ignores its abort signal frees
-      // this lane after 15s — the wedge class is structurally impossible now.
-      res = await Promise.race([
-        fetch(job.url, { signal: ctl.signal, cache: job.fresh ? 'no-store' : 'default' }),
-        new Promise((_, rej)=>setTimeout(()=>rej(new Error('hard timeout')), 15000))
-      ]);
-    }catch(e){ err = e; }
-    clearTimeout(killer);
-    const retryable = err || (res && (res.status === 429 || res.status >= 500));
-    if(res && res.status === 429){
-      // Rate-limited: cool the dispatcher so a burst can't feed its own storm.
-      _sfCoolUntil = Date.now() + 1600;
-    }
-    if(retryable && job.attempt < 6){
-      if(res) console.warn('Scryfall ' + res.status + ', retrying (attempt ' + (job.attempt+1) + ')', job.url);
-      job.attempt++;
-      const lane = job.bg ? _sfQ.lo : _sfQ.hi;
-      setTimeout(()=>{ lane.unshift(job); _sfPump(); }, backoffMs(job.attempt - 1));
-    } else if(err){
-      job.reject(err);
-    } else {
-      job.resolve(res);
-    }
-  };
+  // One request at a time, 80ms apart — measured faster in practice than two
+  // abreast, which tripped rate limits and froze on the cooldowns.
   try{
-    while(_sfQ.hi.length || _sfQ.lo.length || _sfInFlight){
+    while(_sfQ.hi.length || _sfQ.lo.length){
       if(myGen !== _sfGen) return;   // the watchdog started a fresh pump — stand down
       _sfBeat = Date.now();
-      if(_sfInFlight >= SF_LANES || !(_sfQ.hi.length || _sfQ.lo.length) || Date.now() < _sfCoolUntil){
-        await sleep(50);
-        continue;
-      }
       const job = _sfQ.hi.length ? _sfQ.hi.shift() : _sfQ.lo.shift();
-      // A job that sat queued for ages (behind a flood) fails fast instead of
-      // blocking whatever the user is doing right now.
       if(Date.now() - job.born > 90000){ job.reject(new Error('request expired in queue')); continue; }
-      _sfInFlight++;
-      runJob(job).finally(()=>{ _sfInFlight--; });
-      await sleep(80);   // spacing between request STARTS
+      let res = null, err = null;
+      const ctl = new AbortController();
+      const killer = setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 12000);
+      try{
+        // Hard race: even a fetch that ignores its abort signal frees the lane.
+        res = await Promise.race([
+          fetch(job.url, { signal: ctl.signal, cache: job.fresh ? 'no-store' : 'default' }),
+          new Promise((_, rej)=>setTimeout(()=>rej(new Error('hard timeout')), 15000))
+        ]);
+      }catch(e){ err = e; }
+      clearTimeout(killer);
+      const retryable = err || (res && (res.status === 429 || res.status >= 500));
+      if(res && res.status === 429){ await new Promise(r=>setTimeout(r, 1600)); }   // let the limit breathe
+      if(retryable && job.attempt < 6){
+        if(res) console.warn('Scryfall ' + res.status + ', retrying (attempt ' + (job.attempt+1) + ')', job.url);
+        job.attempt++;
+        const lane = job.bg ? _sfQ.lo : _sfQ.hi;
+        setTimeout(()=>{ lane.unshift(job); _sfPump(); }, backoffMs(job.attempt - 1));
+      } else if(err){
+        job.reject(err);
+      } else {
+        job.resolve(res);
+      }
+      await new Promise(r=>setTimeout(r, 80));
     }
   } finally {
     if(myGen === _sfGen) _sfWorking = false;
@@ -2582,9 +2567,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.58';
+const APP_VERSION = '2.51.59';
 const CHANGELOG_NOTES = [
-  'Budget Alternatives is quick now: every pricey card appears with its price within seconds and the stand-ins stream in beneath, Scryfall requests run two abreast app-wide (roughly halving every loading time), and the budget candidate pools are remembered for the session — reopening the page in the same colours is near-instant.'
+  'Loading is back to its quick cadence — the two-at-once request experiment tripped rate limits and made everything slower, so it\'s reverted — and Budget Alternatives now does its heavy lifting quietly in the background while you\'re viewing the deck, so the page usually opens with its data already gathered.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -5596,6 +5581,12 @@ async function importSharedDeck(payload, opts){
   }
 }
 function wireDecklistPage(){
+  // After the page settles, price the deck and warm the budget engine in the
+  // background — by the time Budget is tapped, its data is usually ready.
+  {
+    const d0 = getDeck(state.activeDeckId);
+    if(d0) setTimeout(()=>{ priceDeck(d0).then(()=>prefetchBudgetData(d0)).catch(()=>{}); }, 2500);
+  }
   const d = getDeck(state.activeDeckId);
   if(!d) { wireNeedDeck(); return; }
   document.querySelectorAll('.b-tab').forEach(b=>b.addEventListener('click', ()=>{ state.builderTab=b.dataset.btab; state.dlPanel=null; renderBuilderBody(d); syncTabsUI(); }));
@@ -5921,6 +5912,7 @@ async function loadDeckPrice(d){
       : `Cardmarket trend price, cheapest printing of each card.`;
   }
   renderTopPriced(d);
+  prefetchBudgetData(d);   // pricing is done — quietly warm the budget engine
 }
 function wireStatsTab(d){
   loadDeckPrice(d);
@@ -8479,6 +8471,43 @@ function primaryTypeOf(card){
   }
   return '';
 }
+/* Warm the budget engine quietly while the user reads their deck: oracle tags
+   for every pricey card and the per-tag candidate pools land in the session
+   caches, so tapping "Budget alternatives" finds the work already done. */
+async function prefetchBudgetData(d){
+  try{
+    if(!d) return;
+    state._budgetPrefetched = state._budgetPrefetched || {};
+    if(state._budgetPrefetched[d.id]) return;
+    state._budgetPrefetched[d.id] = true;
+    const all = deckLeaders(d).concat(d.cards||[]);
+    const priced = all.filter(c=>{ const h = state.priceCache[c.name]; return h && typeof h.v==='number' && h.v >= 5; });
+    if(!priced.length) return;
+    const isL = (x)=>/\bLand\b/.test(frontFace(x).type_line||'');
+    const nonLand = priced.filter(c=>!isL(c));
+    const tags = nonLand.length ? await detectOtagsForCards(nonLand, true) : {};
+    const idClause = d.admiral ? idClauseForDeck(d) : '';
+    const poolCache = (state._budgetPoolCache = state._budgetPoolCache || {});
+    const union = new Set(); Object.values(tags).forEach(a=>a.forEach(t=>union.add(t)));
+    await runLimited(Array.from(union), async (tag)=>{
+      const ck = idClause + '|' + tag;
+      if(poolCache[ck]) return;
+      try{
+        const r = await searchAndVerifyLegal((idClause + ' eur<=5 otag:' + tag).trim(), 'edhrec', 60);
+        poolCache[ck] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !isBanned(x));
+      }catch(e){}
+    }, 2);
+    if(priced.some(isL)){
+      const ck = idClause + '|land';
+      if(!poolCache[ck]){
+        try{
+          const r = await searchAndVerifyLegal((idClause + ' t:land eur<=5').trim(), 'edhrec', 120);
+          poolCache[ck] = ((r && r.results) || []).filter(x=>!isBanned(x));
+        }catch(e){}
+      }
+    }
+  }catch(e){}
+}
 async function openBudgetOverlay(d){
   let el = document.getElementById('budgetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='budgetOverlay'; document.body.appendChild(el); }
@@ -8498,7 +8527,7 @@ async function openBudgetOverlay(d){
    must share those very tags (removal begets removal). */
 const BUDGET_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate'];
 const BUDGET_TAG_LABELS = { removal:'Removal', boardwipe:'Board Wipe', counterspell:'Counterspell', ramp:'Ramp', tutor:'Tutor', burn:'Burn', lifegain:'Lifegain', mill:'Mill', discard:'Discard', draw:'Card Draw', reanimate:'Reanimation', protection:'Protection', 'token-generator':'Tokens', 'sacrifice-outlet':'Sac Outlet', 'graveyard-hate':'Grave Hate' };
-async function detectOtagsForCards(cards){
+async function detectOtagsForCards(cards, bg){
   const cache = (state._otagCache = state._otagCache || {});
   const byName = {}; cards.forEach(c=>{ byName[c.name] = cache[c.name] ? cache[c.name].slice() : []; });
   const need = cards.filter(c=>!cache[c.name]);
@@ -8510,7 +8539,7 @@ async function detectOtagsForCards(cards){
     const nameClause = '(' + group.map(c=>exactNameClause(c.name)).join(' or ') + ')';
     await runLimited(BUDGET_OTAGS, async (tag)=>{
       try{
-        const res = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent(nameClause + ' otag:' + tag)}`);
+        const res = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent(nameClause + ' otag:' + tag)}`, 0, !!bg);
         if(!res.ok) return;   // 404 = none of them carry this tag
         const data = await res.json();
         (data.data||[]).forEach(hit=>{ if(byName[hit.name]) byName[hit.name].push(tag); });
