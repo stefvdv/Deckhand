@@ -478,7 +478,7 @@ main.has-dock{padding-bottom:84px;}
 .pair-imgs img:last-child{right:0;top:0;z-index:1;}
 .pair-cap{font-size:11.5px;color:var(--ink-text);line-height:1.3;overflow:hidden;text-overflow:ellipsis;}
 .pair-use{width:100%;font-size:11px;padding:6px 4px;}
-.pair-btns{display:flex;gap:6px;margin-top:auto;}
+.pair-btns{display:flex;gap:6px;margin-top:auto;padding:7px 0 10px;}
 .pair-btns .add-btn{flex:1;height:34px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--ink-text);font-size:15px;cursor:pointer;}
 .ar-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ar-type{font-size:11px;color:var(--sub-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
@@ -555,8 +555,8 @@ main.has-dock{padding-bottom:84px;}
 .sr-tile .st-nm{font-size:12.5px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .sr-tile .st-tl{font-size:10px;color:var(--sub-text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .st-pd-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
-.reco-pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 6px;}
-.reco-pair-grid img{width:100%;border-radius:10px;display:block;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,0.5);}
+.reco-pair-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:0 0 6px;}
+.reco-admiral .reco-pair-grid img{width:100%;border-radius:4.75% / 3.5%;display:block;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,0.5);}
 .st-decks{font-size:10.5px;color:var(--ink-text);font-family:'JetBrains Mono',monospace;margin-left:auto;white-space:nowrap;}
 .sr-tile .st-meta{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
 .sr-tile .st-price, .pair-cell .st-price{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--brass);margin-top:4px;min-height:13px;}
@@ -2499,10 +2499,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.43';
+const APP_VERSION = '2.51.44';
 const CHANGELOG_NOTES = [
-  'Two-commander support now works identically in Admiral and Commander modes: pairings, EDHREC deck-count ordering, and the "x decks" captions all apply to both formats (Admiral pairings additionally require both cards to have power and toughness, per the format).',
-  'Pair polish: prices on pair tiles now match the single-commander styling; the pair recommendations page shows both commanders side by side in the same columns as the recommendation cards; and themed recommendations for a pairing now read the pairing\'s own EDHREC theme page — fixing the "No themed play data" message when arriving from a theme browse.'
+  'Two alignment touches: the set-as-commander and add-to-deck buttons on pair tiles now line up exactly with those on single-commander tiles, and the two commanders atop a pairing\'s recommendations page now fill their columns at the same size as the recommendation cards below.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
