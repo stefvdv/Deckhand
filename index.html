@@ -2073,10 +2073,10 @@ let _nextSfSlot = 0;
       retry instead of an infinite spinner that wedges the whole session.
    3. Retries rejoin the FRONT of their own lane after backoff. */
 const _sfQ = { hi: [], lo: [] };
-let _sfWorking = false;
+let _sfWorking = false, _sfGen = 0, _sfBeat = 0;
 function sfFetch(url, attempt, bg, fresh){
   return new Promise((resolve, reject)=>{
-    const job = { url, attempt: attempt || 0, bg: !!bg, fresh: !!fresh, resolve, reject };
+    const job = { url, attempt: attempt || 0, bg: !!bg, fresh: !!fresh, born: Date.now(), resolve, reject };
     (job.bg ? _sfQ.lo : _sfQ.hi).push(job);
     _sfPump();
   });
@@ -2084,9 +2084,15 @@ function sfFetch(url, attempt, bg, fresh){
 async function _sfPump(){
   if(_sfWorking) return;
   _sfWorking = true;
+  const myGen = ++_sfGen;
   try{
     while(_sfQ.hi.length || _sfQ.lo.length){
+      if(myGen !== _sfGen) return;   // the watchdog started a fresh pump — stand down
+      _sfBeat = Date.now();
       const job = _sfQ.hi.length ? _sfQ.hi.shift() : _sfQ.lo.shift();
+      // A job that sat queued for ages (behind a wedge, a flood, anything)
+      // fails fast instead of blocking whatever the user is doing right now.
+      if(Date.now() - job.born > 90000){ job.reject(new Error('request expired in queue')); continue; }
       let res = null, err = null;
       const ctl = new AbortController();
       const killer = setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 12000);
@@ -2094,6 +2100,11 @@ async function _sfPump(){
       catch(e){ err = e; }
       clearTimeout(killer);
       const retryable = err || (res && (res.status === 429 || res.status >= 500));
+      if(res && res.status === 429){
+        // Rate-limited: give Scryfall a real breather before ANY next request,
+        // so a burst can't feed its own retry storm.
+        await new Promise(r=>setTimeout(r, 1600));
+      }
       if(retryable && job.attempt < 6){
         if(res) console.warn('Scryfall ' + res.status + ', retrying (attempt ' + (job.attempt+1) + ')', job.url);
         job.attempt++;
@@ -2107,10 +2118,22 @@ async function _sfPump(){
       await new Promise(r=>setTimeout(r, 80));
     }
   } finally {
-    _sfWorking = false;
-    if(_sfQ.hi.length || _sfQ.lo.length) _sfPump();
+    if(myGen === _sfGen) _sfWorking = false;
+    if((_sfQ.hi.length || _sfQ.lo.length) && !_sfWorking) _sfPump();
   }
 }
+/* Watchdog: if the pump has queued work but hasn't heartbeat in 20s, its
+   awaited fetch has wedged in a way even the 12s abort didn't catch. Retire
+   that loop (generation bump) and start a fresh one — the whole app's data
+   access rides on this one lane, so it must never stall permanently. */
+setInterval(()=>{
+  if(_sfWorking && (_sfQ.hi.length || _sfQ.lo.length) && Date.now() - _sfBeat > 20000){
+    console.warn('Scryfall queue watchdog: pump wedged for 20s — restarting it. Queue:', _sfQ.hi.length, 'hi /', _sfQ.lo.length, 'lo');
+    _sfGen++;
+    _sfWorking = false;
+    _sfPump();
+  }
+}, 5000);
 function backoffMs(attempt){
   return Math.min(6000, 450 * Math.pow(1.8, attempt)) + Math.random()*250;
 }
@@ -2543,9 +2566,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.56';
+const APP_VERSION = '2.51.57';
 const CHANGELOG_NOTES = [
-  'The double startup is tamed: if anything relaunches the app right after boot (the browser\'s update handoff, typically), the second load skips the splash animation entirely — and the What\'s-New note now counts as read only when you dismiss it, so a relaunch can\'t swallow it mid-read.'
+  'Data access can no longer get stuck: the single lane all Scryfall requests share now has a watchdog that detects a wedged request within twenty seconds and restarts the lane, stale queued requests fail fast instead of blocking new ones, and rate-limit responses trigger a real pause so retry bursts can\'t snowball. The Extras diagnostics panel now also shows the queue\'s health.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -9446,6 +9469,8 @@ function wireSettingsPage(){
     if(!await check('icon-512.png')) probs.push('icon-512.png MISSING from the site');
     if(!await check('sw.js')) probs.push('sw.js MISSING from the site');
     else if(navigator.serviceWorker && !(await navigator.serviceWorker.getRegistration())) probs.push('service worker not registered yet (reload once)');
+    const qDepth = _sfQ.hi.length + _sfQ.lo.length;
+    if(qDepth) probs.push(`Scryfall queue: ${qDepth} request${qDepth===1?'':'s'} waiting${_sfWorking && Date.now()-_sfBeat>10000 ? ', pump quiet '+Math.round((Date.now()-_sfBeat)/1000)+'s (watchdog will clear it)' : ''}`);
     if(l2){
       if(probs.length){
         l2.textContent = '⚠ ' + probs.join(' · ') + ' — re-upload the COMPLETE deploy folder (all files), then reload.';
