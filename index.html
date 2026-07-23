@@ -449,7 +449,9 @@ main.has-dock{padding-bottom:84px;}
 
 .empty-note{color:var(--sub-text);font-size:13px;text-align:center;padding:12px 10px;}
 .status{text-align:center;color:var(--sub-text);font-size:13px;padding:16px;}
-.spinner{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--brass);border-radius:50%;animation:sp 0.8s linear infinite;margin:0 auto 8px;}
+.spinner{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--brass);border-bottom-color:var(--brass-dim);border-radius:50%;animation:sp 0.7s cubic-bezier(0.45,0.15,0.55,0.85) infinite;margin:0 auto 8px;}
+.status-flavor{font-size:11px;color:var(--sub-text-2);font-style:italic;margin-top:5px;animation:flavorIn 0.45s ease;}
+@keyframes flavorIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
 @keyframes sp{to{transform:rotate(360deg);}}
 .error-note{color:var(--danger);font-size:12.5px;text-align:center;padding:16px;border:1px solid var(--danger);border-radius:8px;background:rgba(165,58,63,0.08);}
 
@@ -471,7 +473,7 @@ main.has-dock{padding-bottom:84px;}
 .leader-stack{position:relative;}
 .leader-overlap{margin-top:-92%;position:relative;z-index:2;transform:translateX(4%);filter:drop-shadow(-5px -7px 14px rgba(0,0,0,0.6));}
 .pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 10px;margin:4px 0 14px;}
-.pair-cell{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.pair-cell{display:flex;flex-direction:column;gap:6px;min-width:0;background:var(--ink-2);border:1px solid var(--line);border-radius:10px;padding:9px 9px 0;}
 .pair-imgs{position:relative;width:100%;aspect-ratio:100/142;}
 .pair-imgs img{position:absolute;width:88%;border-radius:6px;display:block;cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,0.5);}
 .pair-imgs img:first-child{left:0;bottom:0;z-index:2;}
@@ -555,6 +557,10 @@ main.has-dock{padding-bottom:84px;}
 .sr-tile .st-nm{font-size:12.5px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .sr-tile .st-tl{font-size:10px;color:var(--sub-text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .st-pd-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.pair-cell .ppr{display:flex;align-items:baseline;gap:8px;}
+.pair-cell .ppr.top{justify-content:flex-end;margin-top:-2px;}
+.pair-cell .ppr.top .st-price{margin-top:0;}
+.pair-cell .ppr.bot .st-price{margin-top:0;}
 .reco-pair-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:0 0 6px;}
 .reco-admiral .reco-pair-grid img{width:100%;border-radius:4.75% / 3.5%;display:block;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,0.5);}
 .st-decks{font-size:10.5px;color:var(--ink-text);font-family:'JetBrains Mono',monospace;margin-left:auto;white-space:nowrap;}
@@ -1821,6 +1827,38 @@ function renderPrimerHtml(md){
   if(inList) html+='</ul>';
   return html;
 }
+/* Perceived-wait reducer. Queue-psychology research (occupied time, the labor
+   illusion, acknowledged waits) says busy waits feel shorter. Every spinner
+   grows a short Magic quip beneath it, cycling every 2 seconds — no call sites
+   change, re-renders reset the clock, and nothing shows in the first ~0.6s so
+   instant loads never flash text. Each spinner starts at a randomised point in
+   the list, so the lead quip varies and parallel spinners aren't in lockstep. */
+const WAIT_QUIPS = [
+  'Shuffling up…','Untapping lands…','Drawing seven…','Mulligan to six…',
+  'Keeping seven…','Tapping mana…','Floating mana…','Holding priority…',
+  'Respecting the stack…','Missing triggers…','Cracking fetches…','Scrying deeply…',
+  'Topdecking answers…','Counting devotion…','Proliferating patience…','Cascading onward…',
+  'Storm count rising…','Declaring blockers…','Paying ward costs…','Dodging removal…',
+  'Assessing threats…','Politicking gently…','Praying to topdeck…','Sideboarding secretly…',
+  'Reading the rulings…','Consulting judges…','Fetching basics…','Exiling doubts…',
+  'Flashing in…','Going to combat…','Passing the turn…'
+];
+setInterval(()=>{
+  document.querySelectorAll('.status').forEach(el=>{
+    if(!el.querySelector('.spinner')) return;   // static notes stay quiet
+    if(!el.dataset.since) el.dataset.since = String(Date.now());
+    const age = Date.now() - (+el.dataset.since);
+    if(age < 600) return;
+    let note = el.querySelector('.status-flavor');
+    if(!note){ note = document.createElement('div'); note.className = 'status-flavor'; el.appendChild(note); }
+    const off = (+el.dataset.since) % WAIT_QUIPS.length;
+    const line = WAIT_QUIPS[(off + Math.floor(age/2000)) % WAIT_QUIPS.length];
+    if(note.textContent !== line){
+      note.textContent = line;
+      note.style.animation = 'none'; void note.offsetWidth; note.style.animation = '';
+    }
+  });
+}, 500);
 function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -2499,9 +2537,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.44';
+const APP_VERSION = '2.51.47';
 const CHANGELOG_NOTES = [
-  'Two alignment touches: the set-as-commander and add-to-deck buttons on pair tiles now line up exactly with those on single-commander tiles, and the two commanders atop a pairing\'s recommendations page now fill their columns at the same size as the recommendation cards below.'
+  'Loading rings now deal you a little Magic patter while you wait: a short quip beneath the spinner — "Shuffling up…", "Holding priority…", "Praying to topdeck…" — cycling to a fresh one every two seconds. Thirty-one of them, starting at a random point each time.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -8173,7 +8211,8 @@ function pairTileHtml(pr, idx, decks){
           <img loading="lazy" class="${wbClass(pr[1])}" src="${cardImageMed(pr[1])}" data-mpcard="${idx}:1" alt="${escapeHtml(pr[1].name)}">
         </div>
         <div class="pair-cap">${escapeHtml(pr[0].name.split(',')[0])} &amp; ${escapeHtml(pr[1].name.split(',')[0])}</div>
-        <div class="st-pd-row"><span class="st-price" data-pricecard="${encodeURIComponent(pr[0].name)}">…</span><span class="st-price" data-pricecard="${encodeURIComponent(pr[1].name)}">…</span>${decksNoteHtml(decks)}</div>
+        <div class="ppr top"><span class="st-price" data-pricecard="${encodeURIComponent(pr[1].name)}">…</span></div>
+        <div class="ppr bot"><span class="st-price" data-pricecard="${encodeURIComponent(pr[0].name)}">…</span>${decksNoteHtml(decks)}</div>
         <div class="pair-btns">
           <button class="add-btn" data-mpairadm="${idx}" title="Set as ${fmtName()}s">${modeGlyph()}</button>
           <button class="add-btn" data-mpairadd="${idx}" title="Add both to Deck">+</button>
