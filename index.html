@@ -490,6 +490,7 @@ main.has-dock{padding-bottom:84px;}
 #spMainPage .sc-grid{gap:2px;}
 .sp-jump-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:56px;height:56px;background:var(--field);border:1px solid var(--field-line);border-radius:10px;cursor:pointer;padding:6px 4px;}
 .sp-jump-btn:active{background:var(--hl);}
+.sp-jump-btn.active{border-color:var(--brass);background:var(--hl);}
 .sp-jump-btn .set-ico{height:20px !important;max-width:30px !important;}
 .sp-jump-code{font-size:8.5px;font-family:'JetBrains Mono',monospace;color:var(--sub-text);letter-spacing:0.4px;}
 .adv-toggle{background:var(--field);border:1px solid var(--field-line);color:var(--sub-text);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;margin-bottom:10px;width:100%;text-align:left;}
@@ -553,6 +554,7 @@ main.has-dock{padding-bottom:84px;}
 .sr-tile .st-body{padding:8px 9px 4px;}
 .sr-tile .st-nm{font-size:12.5px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .sr-tile .st-tl{font-size:10px;color:var(--sub-text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.st-decks{font-size:10.5px;color:var(--brass-dim);margin-top:2px;font-family:'JetBrains Mono',monospace;}
 .sr-tile .st-meta{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
 .sr-tile .st-price{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--brass);margin-top:4px;min-height:13px;}
 /* selectable tiles (admiral recommendation picker) */
@@ -2494,10 +2496,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.39';
+const APP_VERSION = '2.51.41';
 const CHANGELOG_NOTES = [
-  'With a Theme or Kindred selected, the Inspiration ranking now uses EDHREC\'s deck counts for that tag in those colours (the /tags/aikido/jeskai page, for example) instead of the colour-wide totals — so the commanders and pairings actually built for that theme lead the list.',
-  'The Kindred dropdown no longer vanishes while the tag catalogue is still loading, and the "Pick colors or a theme" placeholder under the dropdowns is gone.'
+  'The Spoilers page opens as one feed of every previewed card across all sets, newest reveals first — no more per-set sections. The set-symbol buttons are now filters: tap one to see just that set, sorted by colour (white, blue, black, red, green, colourless, multicolour, lands); tap it again for the full feed.',
+  'Commanders and pairings on the Inspiration page now show their play data right on the tile — a small "x decks" line straight from EDHREC\'s counts.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -5107,22 +5109,73 @@ async function fetchWholeSet(code, fresh){
 }
 function spoilersPageHtml(){
   const sets = currentPreviewSets();
-  const fmtDate = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined, {month:'short', day:'numeric'}); }catch(e){ return d; } };
-  // A row of square set-symbol buttons at the very top; tapping one jumps the
-  // page down to that set's spoiler section. Chrome wears the cross-fleet field
-  // colour so the row matches the rest of the mode's chrome.
+  const active = state.spoilerSetFilter && sets.some(x=>x.code===state.spoilerSetFilter) ? state.spoilerSetFilter : null;
+  // A row of square set-symbol buttons at the very top. Each is a FILTER:
+  // tapping one shows only that set's spoilers (colour-sorted); tapping it
+  // again returns to the all-sets feed, newest spoilers first.
   const jumpRow = sets.length ? `<div class="sp-jump">${sets.map(x=>`
-      <button class="sp-jump-btn" data-spjump="${x.code}" title="${escapeHtml(x.name)}">${setIcoHtml(x.code, 'rare')}<span class="sp-jump-code">${escapeHtml((x.code||'').toUpperCase())}</span></button>
+      <button class="sp-jump-btn ${active===x.code?'active':''}" data-spjump="${x.code}" title="${escapeHtml(x.name)}">${setIcoHtml(x.code, 'rare')}<span class="sp-jump-code">${escapeHtml((x.code||'').toUpperCase())}</span></button>
     `).join('')}</div>` : '';
   return `<main id="spMainPage">
     <button class="ghost-btn" id="spRefreshBtn" style="width:100%;margin:2px 0 10px;">⟳ Check for new spoilers</button>
     ${jumpRow}
-    ${sets.length ? sets.map(x=>`
-      <div class="chip-label sp-set-head" id="spHead-${x.code}" style="margin-top:12px;scroll-margin-top:66px;">${escapeHtml(x.name)}${x.ub?' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>':''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>
-      ${x.ub?'<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>':''}
-      <div id="spSet-${x.code}"><div class="status"><div class="spinner"></div>Unfurling previews…</div></div>
-    `).join('') : `<div class="empty-note" style="margin-top:24px;">No sets are previewing right now.<br>Spoiler season returns in the weeks before each release.</div>`}
+    ${sets.length ? `<div id="spBody"><div class="status"><div class="spinner"></div>Unfurling previews…</div></div>`
+      : `<div class="empty-note" style="margin-top:24px;">No sets are previewing right now.<br>Spoiler season returns in the weeks before each release.</div>`}
   </main>`;
+}
+/* Colour bucket for the single-set view: W, U, B, R, G, colourless,
+   multicolour, lands — front face decides. */
+function spoilerColorBucket(c){
+  const f = frontFace(c);
+  if(/\bLand\b/.test(f.type_line||'')) return 7;
+  const cols = f.colors || c.colors || [];
+  if(cols.length === 0) return 5;
+  if(cols.length > 1) return 6;
+  return {W:0,U:1,B:2,R:3,G:4}[cols[0]] ?? 5;
+}
+function spoilerDateKey(c){
+  return (c.preview && c.preview.previewed_at) || c.released_at || '';
+}
+function renderSpoilerBody(loaded, failed){
+  const box = document.getElementById('spBody');
+  if(!box) return;
+  const sets = currentPreviewSets();
+  const fmtDate = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined, {month:'short', day:'numeric'}); }catch(e){ return d; } };
+  const active = state.spoilerSetFilter && sets.some(x=>x.code===state.spoilerSetFilter) ? state.spoilerSetFilter : null;
+  const tile = c => `<button class="sc-tile" data-spn="${escapeHtml(c.name)}" data-spset="${escapeHtml(c.set||'')}"><img loading="lazy" class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${ubMarkHtml(c)}${pvMarkHtml(c)}</button>`;
+  let cards = [], headHtml = '', footHtml = '';
+  if(active){
+    const x = sets.find(s=>s.code===active);
+    const got = loaded[active];
+    if(got === undefined && !failed.has(active)){ box.innerHTML = `<div class="status"><div class="spinner"></div>Unfurling ${escapeHtml(x.name)}…</div>`; return; }
+    headHtml = `<div class="chip-label" style="margin:2px 0 6px;">${escapeHtml(x.name)}${x.ub?' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>':''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>`
+      + (x.ub?'<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>':'');
+    if(failed.has(active)){ box.innerHTML = headHtml + '<p class="hint">Couldn\'t reach the archive for this set — tap “Check for new spoilers” to retry.</p>'; return; }
+    // Colour-sorted set view; collector number orders within each colour.
+    const cn = c => { const n = parseInt(String(c.collector_number||'').replace(/\D/g,''),10); return isNaN(n) ? 1e9 : n; };
+    cards = got.slice().sort((a,b)=> (spoilerColorBucket(a)-spoilerColorBucket(b)) || (cn(a)-cn(b)));
+    footHtml = `<p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed so far.</p>`;
+  } else {
+    // All sets, one feed, newest spoilers first — no set grouping.
+    const withKeys = [];
+    sets.forEach((x, si)=>{ (loaded[x.code]||[]).forEach((c, ci)=> withKeys.push({c, k: spoilerDateKey(c), si, ci})); });
+    withKeys.sort((a,b)=> (a.k<b.k?1:a.k>b.k?-1:0) || (a.si-b.si) || (a.ci-b.ci));
+    cards = withKeys.map(w=>w.c);
+    const pending = sets.filter(x=>loaded[x.code]===undefined && !failed.has(x.code)).length;
+    footHtml = (pending ? `<div class="status" style="margin:8px 0;"><div class="spinner"></div>More sets unfurling…</div>` : '')
+      + (failed.size ? `<p class="hint" style="margin:6px 0 2px;">Couldn't reach ${failed.size} set${failed.size===1?'':'s'} — tap “Check for new spoilers” to retry.</p>` : '')
+      + (cards.length ? `<p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed across ${sets.length} set${sets.length===1?'':'s'}.</p>` : '');
+    if(!cards.length && !pending){ box.innerHTML = '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
+    if(!cards.length){ box.innerHTML = `<div class="status"><div class="spinner"></div>Unfurling previews…</div>`; return; }
+  }
+  if(active && !cards.length){ box.innerHTML = headHtml + '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
+  box.innerHTML = headHtml + `<div class="sc-grid">${cards.map(tile).join('')}</div>` + footHtml;
+  box.querySelectorAll('.sc-tile').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const card = cards.find(c=>c.name===b.dataset.spn && (c.set||'')===b.dataset.spset) || cards.find(c=>c.name===b.dataset.spn);
+      if(card) openCardInfo(card, { pool: cards });
+    });
+  });
 }
 async function wireSpoilersPage(){
   // First visit of the session: force a fresh pull so the page is never behind
@@ -5136,13 +5189,12 @@ async function wireSpoilersPage(){
       if(state.screen==='spoilers') render();
     })();
   }
-  // Refresh on demand: an explicit button instead of a pull gesture — the
-  // document-level drag interception kept colliding with native scrolling,
-  // so it's gone; the app no longer touches scroll gestures at all here.
+  // Set-symbol buttons filter to one set (colour-sorted); tapping the active
+  // one again clears back to the all-sets, newest-first feed.
   document.querySelectorAll('[data-spjump]').forEach(b=>{
     b.addEventListener('click', ()=>{
-      const head = document.getElementById('spHead-' + b.dataset.spjump);
-      if(head) head.scrollIntoView({behavior:'smooth', block:'start'});
+      state.spoilerSetFilter = (state.spoilerSetFilter === b.dataset.spjump) ? null : b.dataset.spjump;
+      render();
     });
   });
   const rBtn = document.getElementById('spRefreshBtn');
@@ -5159,23 +5211,23 @@ async function wireSpoilersPage(){
   }
   const freshPull = !!state._spoilerFresh;
   state._spoilerFresh = false;
-  for(const x of currentPreviewSets()){
+  const loaded = {}, failed = new Set();
+  const myToken = (state._spoilerRunToken = (state._spoilerRunToken||0) + 1);
+  const sets = currentPreviewSets();
+  // The filtered set loads first so a tap answers immediately; the rest
+  // stream into the all-sets feed as they arrive.
+  const order = state.spoilerSetFilter ? sets.slice().sort((a,b)=>(a.code===state.spoilerSetFilter?-1:0)-(b.code===state.spoilerSetFilter?-1:0)) : sets;
+  for(const x of order){
     let cards;
     try{ cards = await fetchWholeSet(x.code, freshPull); }
     catch(e){ cards = null; }   // one bad set must never strand the others
-    const box = document.getElementById('spSet-' + x.code);
-    if(!box){ if(state.screen !== 'spoilers') return; else continue; }
-    if(cards === null){ box.innerHTML = '<p class="hint">Couldn\'t reach the archive for this set — tap “Check for new spoilers” to retry.</p>'; continue; }
-    if(!cards.length){ box.innerHTML = '<p class="hint">Nothing spoiled yet — check back soon.</p>'; continue; }
-    if(cards.length > (autoSets.previewSeen[x.code]||0)){ autoSets.previewSeen[x.code] = cards.length; saveAutoSets(); }
-    box.innerHTML = `<div class="sc-grid">${cards.map(c=>`<button class="sc-tile" data-spn="${escapeHtml(c.name)}"><img loading="lazy" class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${ubMarkHtml(c)}${pvMarkHtml(c)}</button>`).join('')}</div>
-      <p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed so far.</p>`;
-    box.querySelectorAll('.sc-tile').forEach(b=>{
-      b.addEventListener('click', ()=>{
-        const card = cards.find(c=>c.name===b.dataset.spn);
-        if(card) openCardInfo(card, { pool: cards });
-      });
-    });
+    if(state.screen !== 'spoilers' || myToken !== state._spoilerRunToken) return;
+    if(cards === null){ failed.add(x.code); }
+    else {
+      loaded[x.code] = cards;
+      if(cards.length > (autoSets.previewSeen[x.code]||0)){ autoSets.previewSeen[x.code] = cards.length; saveAutoSets(); }
+    }
+    renderSpoilerBody(loaded, failed);
   }
 }
 async function openShowcase(payload, opts){
@@ -6778,6 +6830,7 @@ function searchRowHtml(c, d, opts){
     <div class="st-body">
       <div class="st-nm">${escapeHtml(c.name)}</div>
       <div class="st-tl">${frontFace(c).type_line||''}</div>
+      ${decksNoteHtml(opts.decks)}
       ${tag!=='ok' ? `<div class="st-meta"><span class="tag ${tag}">${tagTxt}</span></div>` : ''}
       <div class="st-price" data-pricecard="${encodeURIComponent(c.name)}">…</div>
     </div>
@@ -7627,9 +7680,8 @@ function browseKindredOptions(){
       : ((b.count||0) - (a.count||0)));   // most-played tribes for THIS colour first
 }
 async function loadEdhrecTypalBrowse(box, key, slug){
-  const data = await edhrecFetchJson('/pages/tags/' + slug + '.json');
+  const names = await edhrecTagCommanderNames(slug, state.browseSel.combo);
   if(key !== JSON.stringify(state.browseSel)) return;
-  const names = data ? edhrecCommanderNamesFrom(data).slice(0, 100) : [];
   if(!names.length){
     box.innerHTML = `<div class="empty-note">No play data for this creature type right now — check your connection, or try another.</div>`;
     return;
@@ -7660,10 +7712,29 @@ function edhrecCommanderNamesFrom(data){
   }
   return out;
 }
+/* Commander names for a tag, colour-scoped first. The tag+colour page
+   (/tags/aikido/jeskai) lists EVERY commander played in that theme in those
+   colours — the global tag page's top-100 misses most of them, since a small
+   colour's regulars rarely chart against all-colour totals. The global page's
+   remainder is appended for depth beyond the scoped list. */
+async function edhrecTagCommanderNames(slug, combo){
+  let scoped = [];
+  if(combo){
+    for(const cs of (EDHREC_COMBO_SLUGS[(combo||'').toLowerCase()] || [])){
+      const d = await edhrecFetchJson('/pages/tags/' + slug + '/' + cs + '.json');
+      if(!d) continue;
+      scoped = edhrecCommanderNamesFrom(d).slice(0, 100);
+      if(scoped.length) break;
+    }
+  }
+  const g = await edhrecFetchJson('/pages/tags/' + slug + '.json');
+  const global = g ? edhrecCommanderNamesFrom(g).slice(0, 100) : [];
+  const seen = new Set(scoped);
+  return scoped.concat(global.filter(n=>!seen.has(n)));
+}
 async function loadEdhrecThemeBrowse(box, key, slug){
-  const data = await edhrecFetchJson('/pages/tags/' + slug + '.json');
+  const names = await edhrecTagCommanderNames(slug, state.browseSel.combo);
   if(key !== JSON.stringify(state.browseSel)) return;
-  const names = data ? edhrecCommanderNamesFrom(data).slice(0, 100) : [];
   if(!names.length){
     box.innerHTML = `<div class="empty-note">No play data for this theme right now — check your connection, or try another theme.</div>`;
     return;
@@ -7925,7 +7996,9 @@ function renderBrowseResults(key){
     const edecks = (edecksRaw && typeof edecksRaw === 'object') ? edecksRaw : null;
     const merged = orderBrowseMerged(pool, pairs, edecks);
     const after = (chunk)=>{ wireResultButtons(pool, pinned, ()=>renderBrowseResults(key), wireOpts); wireMergedPairTiles(merged, pinned, ()=>renderBrowseResults(key)); loadTilePrices(chunk.filter(x=>!x._pair)); };
-    pagedGrid(box, merged, (it, idx)=> it._pair ? pairTileHtml(it._pair, idx) : searchRowHtml(it, pinned, {showAdmiralBtn:true}), after);
+    pagedGrid(box, merged, (it, idx)=> it._pair
+      ? pairTileHtml(it._pair, idx, pairPlayDecks(it._pair, edecks))
+      : searchRowHtml(it, pinned, {showAdmiralBtn:true, decks: singlePlayDecks(it, edecks)}), after);
     return;
   }
   const after = (chunk)=>{ wireResultButtons(pool, pinned, ()=>renderBrowseResults(key), wireOpts); loadTilePrices(chunk); };
@@ -8028,18 +8101,26 @@ function orderPair(a,b){
    page doesn't carry (it stops where play falls off) goes below, singles in
    their existing order with unlisted pairs interleaved by average card rank
    against the singles' suffix-minimum — so curated seeds keep their place. */
+/* Deck-count lookups against an EDHREC counts map — shared by the ordering
+   and the "x decks" captions on the tiles themselves. */
+function singlePlayDecks(c, edecks){
+  if(!edecks) return undefined;
+  let v = edecks[c.name];
+  if(v === undefined && c.name.includes(' // ')) v = edecks[c.name.split(' // ')[0].trim()];
+  return v;
+}
+function pairPlayDecks(pr, edecks){
+  if(!edecks) return undefined;
+  const k1 = pr[0].name + ' // ' + pr[1].name, k2 = pr[1].name + ' // ' + pr[0].name;
+  return edecks[k1] !== undefined ? edecks[k1] : edecks[k2];
+}
+function decksNoteHtml(n){
+  if(typeof n !== 'number') return '';
+  return `<div class="st-decks">${n.toLocaleString()} deck${n===1?'':'s'}</div>`;
+}
 function orderBrowseMerged(pool, pairs, edecks){
-  const singleDecks = c => {
-    if(!edecks) return undefined;
-    let v = edecks[c.name];
-    if(v === undefined && c.name.includes(' // ')) v = edecks[c.name.split(' // ')[0].trim()];
-    return v;
-  };
-  const pairDecks = pr => {
-    if(!edecks) return undefined;
-    const k1 = pr[0].name + ' // ' + pr[1].name, k2 = pr[1].name + ' // ' + pr[0].name;
-    return edecks[k1] !== undefined ? edecks[k1] : edecks[k2];
-  };
+  const singleDecks = c => singlePlayDecks(c, edecks);
+  const pairDecks = pr => pairPlayDecks(pr, edecks);
   const known = [], unkS = [], unkP = [];
   pool.forEach(c=>{ const d = singleDecks(c); if(d !== undefined) known.push({it:c, d}); else unkS.push(c); });
   pairs.forEach(pr=>{ const d = pairDecks(pr); if(d !== undefined) known.push({it:{_pair:pr}, d}); else unkP.push(pr); });
@@ -8060,13 +8141,14 @@ function orderBrowseMerged(pool, pairs, edecks){
 /* A pairing rendered as a tile inside the main results grid — EDHREC-style
    overlap (lead card in front, partner peeking out behind) and the same two
    actions a single-commander tile offers. idx addresses the merged array. */
-function pairTileHtml(pr, idx){
+function pairTileHtml(pr, idx, decks){
   return `<div class="pair-cell">
         <div class="pair-imgs">
           <img loading="lazy" class="${wbClass(pr[0])}" src="${cardImageMed(pr[0])}" data-mpcard="${idx}:0" alt="${escapeHtml(pr[0].name)}">
           <img loading="lazy" class="${wbClass(pr[1])}" src="${cardImageMed(pr[1])}" data-mpcard="${idx}:1" alt="${escapeHtml(pr[1].name)}">
         </div>
         <div class="pair-cap">${escapeHtml(pr[0].name.split(',')[0])} &amp; ${escapeHtml(pr[1].name.split(',')[0])}</div>
+        ${decksNoteHtml(decks)}
         <div class="pair-btns">
           <button class="add-btn" data-mpairadm="${idx}" title="Set as ${fmtName()}s">${modeGlyph()}</button>
           <button class="add-btn" data-mpairadd="${idx}" title="Add both to Deck">+</button>
