@@ -2537,9 +2537,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.49';
+const APP_VERSION = '2.51.50';
 const CHANGELOG_NOTES = [
-  'The little Magic quips under loading rings are now bigger and brighter — easier to read at a glance.'
+  'While two-commander pairings load, the Inspiration page now shows just the quiet spinner and its rotating quip — the loading label that used to sit there is gone.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -8038,7 +8038,7 @@ function renderBrowseResults(key){
   // Pairs status note — shown only while they can't be blended in yet.
   const pairNote = ()=>{
     if(!pairsApply) return;
-    if(!pairsReady) box.insertAdjacentHTML('beforeend', `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div>Assembling two-commander pairs…</div>`);
+    if(!pairsReady) box.insertAdjacentHTML('beforeend', `<div class="status" style="margin:12px 0 10px;"><div class="spinner"></div></div>`);
   };
   if(!pool.length && !(pairsReady && pairs.length)){
     box.innerHTML = `<div class="empty-note">No ${admiralMode?'single '+(isCmdrMode()?'Commanders':'Admirals'):'cards'} found for this combination — try loosening the theme or colors.</div>`;
