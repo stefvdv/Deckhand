@@ -2085,8 +2085,9 @@ async function _sfPump(){
   if(_sfWorking) return;
   _sfWorking = true;
   const myGen = ++_sfGen;
-  // One request at a time, 80ms apart — measured faster in practice than two
-  // abreast, which tripped rate limits and froze on the cooldowns.
+  // This loop is byte-for-byte the cadence measured as fast in the field —
+  // one request at a time, 80ms apart. Do not add concurrency here again;
+  // it trips rate limits and ends up slower.
   try{
     while(_sfQ.hi.length || _sfQ.lo.length){
       if(myGen !== _sfGen) return;   // the watchdog started a fresh pump — stand down
@@ -2096,14 +2097,16 @@ async function _sfPump(){
       let res = null, err = null;
       const ctl = new AbortController();
       const killer = setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 12000);
+      let hardT = null;
       try{
         // Hard race: even a fetch that ignores its abort signal frees the lane.
         res = await Promise.race([
           fetch(job.url, { signal: ctl.signal, cache: job.fresh ? 'no-store' : 'default' }),
-          new Promise((_, rej)=>setTimeout(()=>rej(new Error('hard timeout')), 15000))
+          new Promise((_, rej)=>{ hardT = setTimeout(()=>rej(new Error('hard timeout')), 15000); })
         ]);
       }catch(e){ err = e; }
       clearTimeout(killer);
+      clearTimeout(hardT);
       const retryable = err || (res && (res.status === 429 || res.status >= 500));
       if(res && res.status === 429){ await new Promise(r=>setTimeout(r, 1600)); }   // let the limit breathe
       if(retryable && job.attempt < 6){
@@ -2567,9 +2570,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.59';
+const APP_VERSION = '2.51.60';
 const CHANGELOG_NOTES = [
-  'Loading is back to its quick cadence — the two-at-once request experiment tripped rate limits and made everything slower, so it\'s reverted — and Budget Alternatives now does its heavy lifting quietly in the background while you\'re viewing the deck, so the page usually opens with its data already gathered.'
+  'Loading is restored to the proven fast setup. The background warm-up for Budget Alternatives was accidentally allowed to queue its pricing requests ahead of your taps — it now runs entirely in the low-priority lane and can never stand in front of anything you do.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -4835,7 +4838,7 @@ function exactNameClause(name){
   // Scryfall's !"..." is an exact-name match; strip stray quotes so we can't break the query
   return '!"' + name.replace(/"/g,'') + '"';
 }
-async function fetchPricesForBatch(names){
+async function fetchPricesForBatch(names, bg){
   const found = {};
   names.forEach(n=>{ found[n] = null; });
   const q = '(' + names.map(exactNameClause).join(' or ') + ') game:paper -is:digital';
@@ -4846,7 +4849,7 @@ async function fetchPricesForBatch(names){
   for(let page=0; page<6 && url; page++){
     let data;
     try{
-      const res = await sfFetch(url);
+      const res = await sfFetch(url, 0, !!bg);
       if(!res.ok){
         if(res.status === 404) break;   // nothing in this batch matched
         throw new Error('status '+res.status);
@@ -4867,7 +4870,7 @@ async function fetchPricesForBatch(names){
   }
   return found;
 }
-async function priceDeck(d, onProgress){
+async function priceDeck(d, onProgress, bg){
   const all = deckLeaders(d).concat(d.cards);
   const seen = new Set(); const unique = [];
   all.forEach(c=>{ if(!seen.has(c.name)){ seen.add(c.name); unique.push(c); } });
@@ -4884,7 +4887,7 @@ async function priceDeck(d, onProgress){
     if(onProgress) onProgress(doneNames, unique.length);
     // A few batches in parallel; sfFetch's queue still paces the actual requests
     await runLimited(batches, async (names)=>{
-      const found = await fetchPricesForBatch(names);
+      const found = await fetchPricesForBatch(names, bg);
       if(found){
         names.forEach(n=>{ state.priceCache[n] = { v: found[n], t: Date.now() }; });
       } else {
@@ -5581,11 +5584,12 @@ async function importSharedDeck(payload, opts){
   }
 }
 function wireDecklistPage(){
-  // After the page settles, price the deck and warm the budget engine in the
-  // background — by the time Budget is tapped, its data is usually ready.
+  // After the page settles, price the deck and warm the budget engine — all
+  // of it in the LOW-priority lane, so it can never queue ahead of anything
+  // the user taps. By the time Budget is opened, its data is usually ready.
   {
     const d0 = getDeck(state.activeDeckId);
-    if(d0) setTimeout(()=>{ priceDeck(d0).then(()=>prefetchBudgetData(d0)).catch(()=>{}); }, 2500);
+    if(d0) setTimeout(()=>{ priceDeck(d0, null, true).then(()=>prefetchBudgetData(d0)).catch(()=>{}); }, 2500);
   }
   const d = getDeck(state.activeDeckId);
   if(!d) { wireNeedDeck(); return; }
