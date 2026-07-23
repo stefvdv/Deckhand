@@ -626,6 +626,7 @@ main.has-dock{padding-bottom:84px;}
 .cselect-btn .cs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cselect-btn .cs-car{font-size:10px;color:var(--sub-text);flex:0 0 auto;}
 .cselect-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:10px;max-height:280px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,0.5);}
+.cselect-panel.tall{max-height:none;}
 .cselect-search{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:7px;padding:8px;background:var(--pop-bg);border-bottom:1px solid var(--pop-line);}
 .cselect-search .cs-mag{flex:0 0 auto;font-size:13px;opacity:0.7;}
 .cselect-search input{flex:1;min-width:0;background:var(--field);border:1px solid var(--field-line);border-radius:6px;color:var(--ink-text);padding:6px 9px;font-size:13px;font-family:'Inter';}
@@ -1221,7 +1222,7 @@ function cselectHtml(id, options, value, placeholder, o){
       <span class="cs-label">${label}</span>
       <span class="cs-car">▾</span>
     </button>
-    ${open ? `<div class="cselect-panel">${o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:''}${options.map(x=>`<button class="cselect-opt ${String(x.v)===String(value ?? '')?'sel':''} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`).join('')}${o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:''}</div>` : ''}
+    ${open ? `<div class="cselect-panel${o.tall?' tall':''}">${o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:''}${options.map(x=>`<button class="cselect-opt ${String(x.v)===String(value ?? '')?'sel':''} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`).join('')}${o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:''}</div>` : ''}
   </div>`;
 }
 function csRerender(){
@@ -2540,10 +2541,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.51';
+const APP_VERSION = '2.51.52';
 const CHANGELOG_NOTES = [
-  'Loading screens speak only Magic now: the plain labels (searching, drawing, previews, registry) are gone and the quips take over the moment a spinner appears, from a pool grown to 48. The ring itself is twice as big.',
-  'The launch animation no longer looks like it plays twice — each sonar ring now pulses exactly once — and the "nothing found" note on the Inspiration page waits until loading has genuinely finished instead of appearing over a running search.'
+  'Picking a colour count on the Inspiration page now opens the combination menu for you, and that menu shows every option at once — no scrolling through the guilds.',
+  'Advanced search filters: the top and bottom buttons are now a side-by-side pair, "Use filters" and "Reset filters", so resetting is one tap from either end of the panel. The header was also hardened so the long-press mode switch can never be knocked out by a page hiccup.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3146,16 +3147,18 @@ function render(){
   else if(state.screen==='collection') body = collectionPageHtml();
   root.innerHTML = `<div class="app">${nav}${body}</div>`;
 
-  if(state.screen==='home') wireHomePage();
-  else if(state.screen==='decks') wireHome();
-  else if(state.screen==='decklist') wireDecklistPage();
-  else if(state.screen==='search') wireSearchPage();
-  else if(state.screen==='inspiration') wireInspirationPage();
-  else if(state.screen==='browse') wireBrowsePage();
-  else if(state.screen==='settings') wireSettingsPage();
-  else if(state.screen==='spoilers') wireSpoilersPage();
-  else if(state.screen==='collection') wireCollectionPage();
-  wireNav();
+  try{
+    if(state.screen==='home') wireHomePage();
+    else if(state.screen==='decks') wireHome();
+    else if(state.screen==='decklist') wireDecklistPage();
+    else if(state.screen==='search') wireSearchPage();
+    else if(state.screen==='inspiration') wireInspirationPage();
+    else if(state.screen==='browse') wireBrowsePage();
+    else if(state.screen==='settings') wireSettingsPage();
+    else if(state.screen==='spoilers') wireSpoilersPage();
+    else if(state.screen==='collection') wireCollectionPage();
+  }catch(e){ console.error('page wiring failed', state.screen, e); }
+  wireNav();   // the header (nav, home, mode long-press) must survive any page's failure
   renderModal();
   renderPreview();
   renderLifeOverlay();
@@ -6574,7 +6577,7 @@ function advancedPanelHtml(){
   const sets = s.legalSetsMeta ? Object.entries(s.legalSetsMeta).filter(([c])=>activePool.has(c)).sort((a,b)=>a[1].localeCompare(b[1])) : [];
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
   return `<div class="adv-panel">
-    <div class="adv-row stacked" style="margin-bottom:12px;"><button class="primary-btn adv-go" >🔍 Search with these filters</button></div>
+    <div class="adv-row" style="margin-bottom:12px;display:flex;gap:8px;"><button class="primary-btn adv-go" style="flex:1;">🔍 Use filters</button><button class="ghost-btn adv-reset" style="flex:1;">Reset filters</button></div>
     <div class="adv-row"><label>Card Name</label><input id="advName" type="text" placeholder="Any words in the name" value="${escapeHtml(s.searchName)}"></div>
     <div class="adv-row"><label>Set / Expansion</label>
       ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name)}))), s.searchSetCode, 'Any Set')}
@@ -6630,9 +6633,9 @@ function advancedPanelHtml(){
       {v:'asc', l:'Ascending'},
       {v:'desc', l:'Descending'}
     ], s.searchSortDir, 'Ascending')}</div>
-    <div class="adv-row stacked" style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-      <button class="primary-btn adv-go">🔍 Search with these filters</button>
-      <button class="ghost-btn" id="advResetBtn" style="width:100%;">Reset filters</button>
+    <div class="adv-row" style="display:flex;gap:8px;margin-top:4px;">
+      <button class="primary-btn adv-go" style="flex:1;">🔍 Use filters</button>
+      <button class="ghost-btn adv-reset" style="flex:1;">Reset filters</button>
     </div>
   </div>`;
 }
@@ -6756,11 +6759,11 @@ function wireAdvancedPanel(){
   document.getElementById('loyVal').addEventListener('input', e=>state.searchLoyVal=e.target.value);
   document.getElementById('typeText').addEventListener('input', e=>state.searchTypeText=e.target.value);
   document.getElementById('oracleText').addEventListener('input', e=>state.searchOracleText=e.target.value);
-  document.getElementById('advResetBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('.adv-reset').forEach(b=>b.addEventListener('click', ()=>{
     resetSearchFilters();
     render();
     toast('Filters reset.');
-  });
+  }));
 }
 function buildAdvancedClause(){
   state.searchName = document.getElementById('searchName')?.value ?? state.searchName;
@@ -7836,7 +7839,7 @@ function browsePageHtml(){
         sel.count, modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors')}</div>
       <div class="bs-row">${cselectHtml('bsCombo',
         combos ? [{v:'', l:'Any combination'}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18)}))) : [],
-        sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos})}</div>
+        sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos, tall:true})}</div>
       <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none'}].concat(browseThemeOptions()), sel.theme, 'Theme — none', {search:true})}</div>
       <div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label}))), sel.tribe||'', 'Kindred — none', {search:true})}</div>
     </div>
@@ -7850,6 +7853,7 @@ function wireBrowsePage(){
     state.browseSel.count = v;
     state.browseSel.combo = '';       // combos belong to a color count
     state.browseTypal = null;
+    state.openCSelect = 'bsCombo';    // flow straight into picking the combination
     render();
   };
   _csHandlers.bsCombo = v=>{
