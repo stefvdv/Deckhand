@@ -2588,9 +2588,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.72';
+const APP_VERSION = '2.51.73';
 const CHANGELOG_NOTES = [
-  'Binder tiles now wear pure card art as their face, and the ⋯ menu lets you choose any card\'s art — from any printing — as a binder\'s cover. The hardware back button inside a binder returns to the binder overview, and My Collection now lives on the My Stuff page as its own labelled folder beside the fleet folder, faced with your collection\'s art, instead of the old top button.'
+  'My Collection, refined: binder covers are art-only and saved for good, long-press a binder to rename it, delete it, or choose any printing\'s art as its cover, the big ＋ button starts a new binder, add-and-import controls sit at the top with the totals beside a half-width Advanced filter, back inside a binder reliably returns to the shelf, and the My Collection folder now stands right beside the fleet folder on My Stuff.',
+  'New under Extras: a Language choice (Nederlands, English, Deutsch, Français, Español, Italiano, Svenska, Dansk, Norsk). Card detail pages already show cards in your language where such printings exist; full interface translation follows as its own careful effort.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3513,8 +3514,10 @@ function homeHtml(){
          ${collected.length ? `<div class="section-label">♥ Collected</div><div class="deck-grid">${collected.map(deckTileHtml).join('')}</div>` : ''}
          ${(!favTiles&&!folderTiles&&!deckTiles&&nav)?`<div class="empty-note">This folder is empty.</div>`:''}
          ${(!favTiles&&!folderTiles&&!deckTiles&&!collected.length&&!nav&&otherMode.length)?`<div class="empty-note">No ${isCmdrMode()?'Commander':'Admiral'} decks yet — start a new fleet above. Your ${isCmdrMode()?'Admiral':'Commander'} decks are waiting below.</div>`:''}
-         ${(!searching && !nav && otherMode.length) ? `<div class="section-label" style="margin-top:20px;">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid">${otherFmtTileHtml(otherMode.length)}</div>` : ''}
-         ${(!searching && !nav) ? `<div class="section-label" style="margin-top:20px;">My Collection</div><div class="deck-grid">${collectionFolderTileHtml()}</div>` : ''}
+         ${(!searching && !nav) ? `<div style="display:grid;grid-template-columns:${otherMode.length?'1fr 1fr':'1fr'};gap:12px;margin-top:20px;">
+           ${otherMode.length ? `<div><div class="section-label">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid" style="grid-template-columns:1fr;">${otherFmtTileHtml(otherMode.length)}</div></div>` : ''}
+           <div><div class="section-label">My Collection</div><div class="deck-grid" style="grid-template-columns:1fr;">${collectionFolderTileHtml()}</div></div>
+         </div>` : ''}
        ` :
        searching ? `<div class="empty-note">No decks match “${escapeHtml(state.deckFilter)}”.</div>` :
        `<div class="empty-home"><div class="seal lg">${formatSealSvg()}</div><p>No decks yet. Start a new fleet, appoint an Admiral, and begin mustering your crew.</p><button id="newDeckBtn2">New Deck</button></div>` }
@@ -3907,14 +3910,12 @@ function collectionPageHtml(){
   const totalQty = wantsMode ? items.length : items.reduce((a,it)=>a+it.qty,0);
   const totalEur = items.reduce((a,it)=>a+(it.eur||0)*(wantsMode?1:it.qty),0);
   return `<main>
-    <div class="action-row" style="margin-bottom:8px;position:relative;">
-      <button class="ghost-btn" id="colBindersBtn" style="flex:1;">${!f.binder ? '🗂' : (f.binder==='__wants__' ? '🔖' : binderGlyphsHtml(binderName(f.binder)||''))} ${escapeHtml(f.binder ? (f.binder==='__wants__' ? 'Wants' : (binderName(f.binder)||'Binder')) : 'All binders')} ⌄</button>
-      <span style="align-self:center;font-size:12.5px;color:var(--sub-text);white-space:nowrap;">${totalQty} cards · <span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">€${totalEur.toFixed(2)}</span></span>
-    </div>
-    ${!f.binder ? collectionBindersGridHtml() : ''}
     <div class="searchbar" style="margin-bottom:8px;"><input id="colAddName" placeholder="Add cards to collection…"><button id="colAddSearch">Search</button><button id="colImportBtn" title="Import a collection or binder from Moxfield / Archidekt">⬆ Import</button></div>
     <div id="colAddResults"></div>
-    <button class="ghost-btn" id="colAdvToggle" style="width:100%;margin-bottom:8px;">Advanced filter ${state.colAdvOpen?'▴':'▾'}</button>
+    <div class="action-row" style="margin-bottom:8px;align-items:center;">
+      <button class="ghost-btn" id="colAdvToggle" style="flex:0 0 50%;">Advanced filter ${state.colAdvOpen?'▴':'▾'}</button>
+      <span style="flex:1;text-align:right;font-size:12.5px;color:var(--sub-text);white-space:nowrap;">${totalQty} cards · <span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">€${totalEur.toFixed(2)}</span></span>
+    </div>
     ${state.colAdvOpen ? (()=>{
       const sets = Array.from(new Map(state.collection.items.map(it=>[it.set, it.set_name||it.set])).entries())
         .sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
@@ -3932,6 +3933,10 @@ function collectionPageHtml(){
         <button class="ghost-btn" id="colClearF" style="width:100%;margin-top:6px;">Clear filters</button>
       </div>`;
     })() : ''}
+    ${f.binder ? `<div class="action-row" style="margin-bottom:8px;align-items:center;">
+      <button class="ghost-btn" id="colBackBtn" style="flex:0 0 auto;padding:0 14px;">‹ All binders</button>
+      <span style="flex:1;font-size:14px;font-weight:700;">${f.binder==='__wants__' ? '🔖 Wants' : `${binderGlyphsHtml(binderName(f.binder)||'')} ${escapeHtml(binderName(f.binder)||'Binder')}`}</span>
+    </div>` : collectionBindersGridHtml()}
     ${items.length ? `<div class="col-grid">${items.map((it)=> wantsMode ? `
       <div class="sr-tile col-tile want-tile" data-wn="${escapeHtml(it.name)}">
         <img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}">
@@ -3959,6 +3964,58 @@ function artCropFrom(img){
   // Scryfall image paths swap format in-place: …/normal/… → …/art_crop/…
   return img ? String(img).replace('/normal/','/art_crop/').replace('/large/','/art_crop/') : img;
 }
+/* ---- App language preference ----
+   The full interface translation is coming as its own staged effort — good
+   translations of hundreds of nautical strings deserve care, not a rush job.
+   Today the choice is remembered and already governs CARD IMAGES: on any
+   card's details page, printings are fetched in the chosen language where
+   Magic is actually printed (German, French, Spanish, Italian); languages
+   without printed cards (Dutch, Swedish, Danish, Norwegian) see English
+   cards, exactly as requested. */
+const APP_LANGS = [
+  {code:'nl', label:'Nederlands', cards:false},
+  {code:'en', label:'English', cards:true},
+  {code:'de', label:'Deutsch', cards:true},
+  {code:'fr', label:'Français', cards:true},
+  {code:'es', label:'Español', cards:true},
+  {code:'it', label:'Italiano', cards:true},
+  {code:'sv', label:'Svenska', cards:false},
+  {code:'da', label:'Dansk', cards:false},
+  {code:'no', label:'Norsk', cards:false}
+];
+function appLang(){ try{ return localStorage.getItem(LS_PREFIX+'lang') || 'en'; }catch(e){ return 'en'; } }
+function setAppLang(code){ try{ localStorage.setItem(LS_PREFIX+'lang', code); }catch(e){} }
+const CARD_LANGS = new Set(['de','fr','es','it']);
+async function localizedCardImage(card){
+  // Resolve this card's image in the chosen language, if such a printing
+  // exists — cached per session, background lane, silent fallback to English.
+  const lang = appLang();
+  if(!CARD_LANGS.has(lang) || !card || !card.name) return null;
+  state._langImgCache = state._langImgCache || {};
+  const key = lang + '|' + card.name;
+  if(key in state._langImgCache) return state._langImgCache[key];
+  let img = null;
+  try{
+    const q = `!"${card.name}" lang:${lang}`;
+    const res = await sfFetch(`${SF_BASE}/cards/search?unique=prints&q=${encodeURIComponent(q)}`, 0, true);
+    if(res.ok){
+      const data = await res.json();
+      const p = (data.data||[])[0];
+      const f = p && (p.image_uris || (p.card_faces && p.card_faces[0] && p.card_faces[0].image_uris));
+      if(f && (f.large || f.normal)) img = f.large || f.normal;
+    }
+  }catch(e){}
+  state._langImgCache[key] = img;
+  return img;
+}
+function applyLocalizedSheetImage(card, imgId){
+  if(!CARD_LANGS.has(appLang())) return;
+  localizedCardImage(card).then(src=>{
+    if(!src) return;
+    const el = document.getElementById(imgId);
+    if(el && el.alt !== undefined) el.src = src;
+  });
+}
 function binderTileHtml(b){
   const items = state.collection.items.filter(it=>it.binder===b.id);
   const first = items.find(it=>it.img);
@@ -3966,7 +4023,6 @@ function binderTileHtml(b){
   const eur = items.reduce((a,it)=>a+((it.eur!=null?it.eur:0)*(it.qty||1)), 0);
   const face = b.face || (first ? artCropFrom(first.img) : null);
   return `<div class="folder-tile binder-tile" data-binderopen="${b.id}">
-      <button class="tile-menu" data-binderedit="${b.id}" title="Binder options">⋯</button>
       <div class="folder-face">${face ? `<img loading="lazy" src="${face}" alt="">` : '<span style="font-size:44px;line-height:1;">🗂</span>'}</div>
       <div class="folder-name">${binderGlyphsHtml(b.name)} ${escapeHtml(b.name)}</div>
       <div class="folder-sub">${qty} card${qty===1?'':'s'}${eur?` · €${eur.toFixed(2)}`:''}</div>
@@ -4018,52 +4074,82 @@ function collectionBindersGridHtml(){
       <div class="folder-name">Wants</div>
       <div class="folder-sub">missing from your decks</div>
     </div>`;
-  const newTile = `<div class="folder-tile binder-tile" data-newbinder="1" style="border-style:dashed;">
-      <div class="folder-face"><span style="font-size:44px;line-height:1;color:var(--brass);">＋</span></div>
-      <div class="folder-name">New binder</div>
-      <div class="folder-sub">file cards your way</div>
-    </div>`;
   return `<div class="section-label">Binders</div>
-    <div class="deck-grid" style="margin-bottom:12px;">${binders.map(binderTileHtml).join('')}${wantsTile}${newTile}</div>`;
+    <div class="deck-grid" style="margin-bottom:12px;">${binders.map(binderTileHtml).join('')}${wantsTile}</div>
+    <button class="deck-fab" id="colFab" title="New binder">＋</button>`;
+}
+function openBinderIn(id){
+  state.colFilter.binder = id;
+  try{ history.pushState({screen:'collection', binder:id}, '', '#collection'); }catch(e){}
+  render();
+}
+/* A binder's cover, once derived, is written down for good — it never shifts
+   when cards move, and it survives until the binder is deleted or its art is
+   changed by hand. */
+function ensureBinderFaces(){
+  let dirty = false;
+  state.collection.binders.forEach(b=>{
+    if(b.face) return;
+    const first = state.collection.items.find(it=>it.binder===b.id && it.img);
+    if(first){ b.face = artCropFrom(first.img); dirty = true; }
+  });
+  if(dirty) saveCollection();
+}
+function openBinderLongMenu(binder, x, y){
+  document.getElementById('binderLongPop')?.remove();
+  const pop = document.createElement('div');
+  pop.id = 'binderLongPop';
+  pop.style.cssText = 'position:fixed;z-index:120;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;min-width:200px;';
+  pop.innerHTML = `<button data-a="art">🖼 Choose cover art</button><button data-a="ren">✎ Rename</button><button data-a="del" style="color:var(--danger);">🗑 Delete binder</button>`;
+  pop.querySelectorAll('button').forEach(b=>b.style.cssText += ';background:none;border:none;color:inherit;padding:12px 16px;font-size:14px;text-align:left;cursor:pointer;border-bottom:1px solid var(--line);');
+  document.body.appendChild(pop);
+  pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, x - pop.offsetWidth/2)) + 'px';
+  pop.style.top = Math.max(8, Math.min(window.innerHeight - pop.offsetHeight - 8, y)) + 'px';
+  pop.querySelector('[data-a="art"]').addEventListener('click', ()=>{ pop.remove(); openBinderArtPicker(binder); });
+  pop.querySelector('[data-a="ren"]').addEventListener('click', ()=>{
+    pop.remove();
+    const name = prompt('Rename binder', binder.name);
+    if(name && name.trim()){ binder.name = name.trim(); saveCollection(); render(); }
+  });
+  pop.querySelector('[data-a="del"]').addEventListener('click', ()=>{
+    pop.remove();
+    if(!confirm(`Delete the binder "${binder.name}"? Its cards stay in your collection, just unfiled.`)) return;
+    state.collection.items.forEach(it=>{ if(it.binder===binder.id) it.binder = null; });
+    state.collection.binders = state.collection.binders.filter(b=>b.id!==binder.id);
+    saveCollection(); render();
+  });
+  setTimeout(()=>document.addEventListener('click', function once(ev){ if(!pop.contains(ev.target)){ pop.remove(); document.removeEventListener('click', once); } }), 0);
 }
 function wireCollectionPage(){
-  document.querySelectorAll('[data-binderopen]').forEach(t=>t.addEventListener('click', (e)=>{
-    if(e.target.closest('[data-binderedit]')) return;
-    state.colFilter.binder = t.dataset.binderopen;
-    render();
-  }));
-  document.querySelectorAll('[data-binderedit]').forEach(b=>b.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    const binder = state.collection.binders.find(x=>x.id===b.dataset.binderedit);
-    if(!binder) return;
-    document.getElementById('tileMenuPop')?.remove();
-    const pop = document.createElement('div');
-    pop.id = 'tileMenuPop';
-    pop.innerHTML = `<button data-a="art">🖼 Choose cover art</button><button data-a="ren">✎ Rename</button>`;
-    document.body.appendChild(pop);
-    const r = b.getBoundingClientRect();
-    pop.style.top = (r.bottom + window.scrollY + 4) + 'px';
-    pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, r.right + window.scrollX - pop.offsetWidth)) + 'px';
-    pop.querySelector('[data-a="art"]').addEventListener('click', ()=>{ pop.remove(); openBinderArtPicker(binder); });
-    pop.querySelector('[data-a="ren"]').addEventListener('click', ()=>{
-      pop.remove();
-      const name = prompt('Rename binder', binder.name);
-      if(name && name.trim()){ binder.name = name.trim(); saveCollection(); render(); }
+  ensureBinderFaces();
+  document.querySelectorAll('[data-binderopen]').forEach(t=>{
+    // Long-press manages the binder (art / rename / delete); a plain tap opens it.
+    let lpT = null, lpFired = false;
+    const binder = state.collection.binders.find(x=>x.id===t.dataset.binderopen);
+    const arm = (e)=>{
+      if(!binder) return;   // the Wants tile has nothing to manage
+      lpFired = false; clearTimeout(lpT);
+      const px = (e.touches&&e.touches[0]) ? e.touches[0].clientX : e.clientX;
+      const py = (e.touches&&e.touches[0]) ? e.touches[0].clientY : e.clientY;
+      lpT = setTimeout(()=>{ lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} openBinderLongMenu(binder, px, py); }, 480);
+    };
+    const disarm = ()=>clearTimeout(lpT);
+    t.addEventListener('pointerdown', arm);
+    ['pointerup','pointercancel','pointerleave'].forEach(ev=>t.addEventListener(ev, disarm));
+    t.addEventListener('contextmenu', e=>e.preventDefault());
+    t.addEventListener('click', (e)=>{
+      if(lpFired){ lpFired = false; e.preventDefault(); return; }
+      openBinderIn(t.dataset.binderopen);
     });
-    setTimeout(()=>document.addEventListener('click', function once(ev){ if(!pop.contains(ev.target)){ pop.remove(); document.removeEventListener('click', once); } }), 0);
-  }));
-  document.querySelector('[data-newbinder]')?.addEventListener('click', ()=>{
+  });
+  document.getElementById('colBackBtn')?.addEventListener('click', ()=>history.back());
+  document.getElementById('colFab')?.addEventListener('click', ()=>{
     const name = prompt('New binder name');
     if(name && name.trim()){
       const nb = { id: 'bnd_'+Date.now().toString(36), name: name.trim() };
       state.collection.binders.push(nb); saveCollection();
-      state.colFilter.binder = nb.id; render();
+      openBinderIn(nb.id);
     }
-  });
-  document.getElementById('colBindersBtn')?.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    if(document.getElementById('bindersPop')){ document.getElementById('bindersPop').remove(); return; }
-    openBindersPop(e.currentTarget, (binderId)=>{ state.colFilter.binder = binderId; render(); }, true);
   });
   document.getElementById('colAdvToggle')?.addEventListener('click', ()=>{ state.colAdvOpen = !state.colAdvOpen; render(); });
   _csHandlers['colSet'] = v=>{ state.colFilter.set = v; csRerender(); };
@@ -6468,6 +6554,7 @@ function renderCardSheet(d, card, loc, idx){
 
   document.getElementById('csClose').addEventListener('click', closeTopOverlay);
   document.getElementById('dcImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
+  applyLocalizedSheetImage(card, 'dcImg');
   document.getElementById('csChangePrinting').addEventListener('click', ()=>openPrintingPicker(d, card, loc, idx));
   document.getElementById('csTags')?.addEventListener('click', ()=>{
     const box = document.getElementById('csTagBox');
@@ -7361,6 +7448,7 @@ function openCardInfo(card, opts){
   </div>`;
   document.getElementById('csClose').addEventListener('click', closeTopOverlay);
   document.getElementById('ciImg').addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
+  applyLocalizedSheetImage(card, 'ciImg');
   document.getElementById('ciReco')?.addEventListener('click', ()=>{
     if(pinned) openCardReco(card, pinned);
     else if(state.decksIndex.length) openDeckPickPopup(card, 'reco');
@@ -9485,6 +9573,13 @@ function settingsPageHtml(){
       </div>
     </div>
     <div class="settings-section">
+      <div class="settings-row"><div><div class="l1">Language</div><div class="l2">Card images appear in your language where printings exist (Deutsch, Français, Español, Italiano). Interface text remains English for now — full translation is on the chart.</div></div>
+        <select id="langSelect" style="background:var(--field);border:1px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:8px 10px;font-size:13.5px;">
+          ${APP_LANGS.map(L=>`<option value="${L.code}" ${appLang()===L.code?'selected':''}>${L.label}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="settings-section">
       <div class="settings-row"><div><div class="l1">Game format</div><div class="l2">${isCmdrMode() ? 'Regular Commander: 100 cards, official legality, 40 life, 21 cmdr damage. Admiral decks wait in their own folder.' : 'Admiral — or switch the whole app to regular Commander. Decks of the other format wait in their own folder.'}</div></div>
         <div class="seg seg-inline">
           <button data-mode-choice="admiral" class="${!isCmdrMode()?'active':''}">Admiral</button>
@@ -9717,6 +9812,11 @@ async function restoreFromFile(file){
   switchPage('decks');
 }
 function wireSettingsPage(){
+  document.getElementById('langSelect')?.addEventListener('change', (e)=>{
+    setAppLang(e.target.value);
+    state._langImgCache = {};   // re-resolve card images in the new language
+    toast('Language saved.');
+  });
   if(isCmdrMode()) ensureCmdrBans();
   document.querySelectorAll('[data-mode-choice]').forEach(b=>b.addEventListener('click', ()=>{
     if(setAppMode(b.dataset.modeChoice === 'commander' ? 'commander' : 'admiral')) render();
@@ -10494,11 +10594,12 @@ window.addEventListener('popstate', (e)=>{
     try{ top.closeFn(); }catch(err){ console.error(err); }
     return;
   }
-  // Inside a binder, back returns to the collection's binder overview.
+  // Inside a binder, back returns to the binder overview. Opening a binder
+  // pushed its own history entry, so this pop simply consumes it — history
+  // stays balanced, and repeated open/close can never eat the app's exit path.
   if(state.screen === 'collection' && state.colFilter && state.colFilter.binder){
     state.colFilter.binder = null;
     render();
-    try{ history.pushState({screen: state.screen}, '', '#'+state.screen); }catch(err){}
     return;
   }
   // An open Import / Bulk-edit panel consumes the back press: close it and stay.
