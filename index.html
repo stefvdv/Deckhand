@@ -2585,9 +2585,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.64';
+const APP_VERSION = '2.51.65';
 const CHANGELOG_NOTES = [
-  'Card detail views now show navigation arrows flanking the card — the same next/previous the swipe gesture always did, everywhere a card list opens a detail sheet: decklists, search, spoilers, Inspiration, Budget and beyond.'
+  'The back button now always closes what you actually see: a tools panel or dropdown buried beneath the Budget page or a card sheet can no longer silently swallow a back press — the fix behind card details sometimes needing extra presses to close.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -10307,6 +10307,24 @@ function renderPreview(){
 /* ========================= INIT ========================= */
 try{ history.replaceState({screen:'home'}, '', '#home'); }catch(e){}
 window.addEventListener('popstate', (e)=>{
+  // Back-press ownership, top of the screen first. Truly topmost transients
+  // (the deck-picker popup, a tile context menu) consume the press; then any
+  // open OVERLAY (card sheet, Budget, reco…) closes; and only when no overlay
+  // is stacked may the base page's panels and dropdowns eat a press — a panel
+  // buried under two overlays must never silently swallow "back".
+  const tileMenu = document.getElementById('tileMenuPop');
+  const deckPick = document.getElementById('deckPickScrim');
+  if(tileMenu || deckPick){
+    if(tileMenu) tileMenu.remove();
+    if(deckPick) deckPick.remove();
+    try{ history.pushState({screen: state.screen, folder: state.folderNav||null}, '', '#'+state.screen); }catch(err){}
+    return;
+  }
+  if(state.overlayStack.length){
+    const top = state.overlayStack.pop();
+    try{ top.closeFn(); }catch(err){ console.error(err); }
+    return;
+  }
   // An open Import / Bulk-edit panel consumes the back press: close it and stay.
   if(state.dlPanel){
     state.dlPanel = null;
@@ -10318,20 +10336,10 @@ window.addEventListener('popstate', (e)=>{
       return;
     }
   }
-  // An open dropdown or context menu consumes the back press: close it and
-  // stay put, instead of navigating the page underneath it.
-  const tileMenu = document.getElementById('tileMenuPop');
-  const deckPick = document.getElementById('deckPickScrim');
-  if(tileMenu || deckPick || state.openCSelect){
-    if(tileMenu) tileMenu.remove();
-    if(deckPick) deckPick.remove();
-    if(state.openCSelect){ state.openCSelect = null; try{ csRerender(); }catch(err){} }
+  // A page-level dropdown consumes the back press: close it and stay put.
+  if(state.openCSelect){
+    state.openCSelect = null; try{ csRerender(); }catch(err){}
     try{ history.pushState({screen: state.screen, folder: state.folderNav||null}, '', '#'+state.screen); }catch(err){}
-    return;
-  }
-  if(state.overlayStack.length){
-    const top = state.overlayStack.pop();
-    try{ top.closeFn(); }catch(err){ console.error(err); }
     return;
   }
   const st = e.state || {};
