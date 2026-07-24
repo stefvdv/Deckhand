@@ -2588,10 +2588,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.73';
+const APP_VERSION = '2.51.75';
 const CHANGELOG_NOTES = [
-  'My Collection, refined: binder covers are art-only and saved for good, long-press a binder to rename it, delete it, or choose any printing\'s art as its cover, the big ＋ button starts a new binder, add-and-import controls sit at the top with the totals beside a half-width Advanced filter, back inside a binder reliably returns to the shelf, and the My Collection folder now stands right beside the fleet folder on My Stuff.',
-  'New under Extras: a Language choice (Nederlands, English, Deutsch, Français, Español, Italiano, Svenska, Dansk, Norsk). Card detail pages already show cards in your language where such printings exist; full interface translation follows as its own careful effort.'
+  'Language polish: a card\'s Oracle text now appears as printed in your language when that card was actually printed in it (rulings stay English — they are only published in English), the translation machinery now stays fully asleep until a language is chosen so English users pay zero overhead, and colours, filter options and a handful of missed labels joined the dictionaries.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3972,6 +3971,88 @@ function artCropFrom(img){
    Magic is actually printed (German, French, Spanish, Italian); languages
    without printed cards (Dutch, Swedish, Danish, Norwegian) see English
    cards, exactly as requested. */
+
+/* ================= Interface translations =================
+   Hand-written, not machine-dumped. Two principles:
+   1. Exact-match only — a string translates only if it appears verbatim in
+      the dictionary, so card names, deck names and anything the user typed
+      can never be mangled.
+   2. Magic terminology follows each community: official localized type names
+      for German, French, Spanish and Italian; English game terms kept for
+      Dutch, Swedish, Danish and Norwegian, whose players play with English
+      cards — the surrounding interface translates, the game speaks as their
+      tables do. */
+const I18N = {
+nl:{"My Stuff":"Mijn Spullen","My Collection":"Mijn Collectie","Search":"Zoeken","Import":"Importeren","Export":"Exporteren","Budget":"Budget","Add Cards":"Kaarten toevoegen","Bulk Edit":"Bulk bewerken","Folders":"Mappen","Binders":"Binders","Wants":"Gezocht","Decks":"Decks","New binder":"Nieuwe binder","‹ All binders":"‹ Alle binders","🖼 Choose cover art":"🖼 Kies omslagkunst","✎ Rename":"✎ Hernoemen","🗑 Delete binder":"🗑 Binder verwijderen","Choose Cover Art":"Omslagkunst kiezen","+ Add to a deck":"+ Aan een deck toevoegen","Played with this":"Hiermee gespeeld","Collection":"Collectie","ORACLE TEXT":"ORACLE-TEKST","Oracle text":"Oracle-tekst","Checking price…":"Prijs controleren…","No Cardmarket price listed":"Geen Cardmarket-prijs bekend","Advanced filter":"Geavanceerd filter","Use filters":"Filters toepassen","Reset filters":"Filters wissen","Check for new spoilers":"Zoek nieuwe spoilers","Appearance":"Weergave","Dark":"Donker","Light":"Licht","Game format":"Spelformaat","Language":"Taal","Life Counter":"Levensteller","Open the multiplayer life tracker":"Open de multiplayer-levensteller","Sort by":"Sorteren op","Add to folder":"Aan map toevoegen","Duplicate":"Dupliceren","Share":"Delen","Delete":"Verwijderen","Add cards to collection…":"Kaarten aan collectie toevoegen…","Filter collection…":"Collectie filteren…","Nothing matches these filters.":"Niets komt overeen met deze filters.","missing from your decks":"ontbreekt in je decks","Budget Alternatives":"Budgetalternatieven","Inspiration":"Inspiratie","Extras":"Extra's","Any color":"Elke kleur","All sets":"Alle sets","All types":"Alle typen","White":"Wit","Blue":"Blauw","Black":"Zwart","Red":"Rood","Green":"Groen","Colorless":"Kleurloos","Multicolor":"Meerkleurig","Language saved.":"Taal opgeslagen.","Card images and the interface follow your language where possible.":"Kaartafbeeldingen en de interface volgen waar mogelijk je taal.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Je collectie is leeg. Zoek hierboven, of gebruik \"Aan collectie toevoegen\" bij een kaart in de app."},
+de:{"My Stuff":"Meine Sachen","My Collection":"Meine Sammlung","Search":"Suchen","Import":"Importieren","Export":"Exportieren","Budget":"Budget","Add Cards":"Karten hinzufügen","Bulk Edit":"Massenbearbeitung","Folders":"Ordner","Binders":"Binder","Wants":"Gesucht","Decks":"Decks","New binder":"Neuer Binder","‹ All binders":"‹ Alle Binder","🖼 Choose cover art":"🖼 Coverbild wählen","✎ Rename":"✎ Umbenennen","🗑 Delete binder":"🗑 Binder löschen","Choose Cover Art":"Coverbild wählen","+ Add to a deck":"+ Zu einem Deck hinzufügen","Played with this":"Damit gespielt","Collection":"Sammlung","ORACLE TEXT":"ORACLE-TEXT","Oracle text":"Oracle-Text","Checking price…":"Preis wird geprüft…","No Cardmarket price listed":"Kein Cardmarket-Preis gelistet","Advanced filter":"Erweiterter Filter","Use filters":"Filter anwenden","Reset filters":"Filter zurücksetzen","Check for new spoilers":"Nach neuen Spoilern suchen","Appearance":"Erscheinungsbild","Dark":"Dunkel","Light":"Hell","Game format":"Spielformat","Language":"Sprache","Life Counter":"Lebenspunktezähler","Open the multiplayer life tracker":"Öffnet den Multiplayer-Lebenszähler","Sort by":"Sortieren nach","Add to folder":"Zu Ordner hinzufügen","Duplicate":"Duplizieren","Share":"Teilen","Delete":"Löschen","Add cards to collection…":"Karten zur Sammlung hinzufügen…","Filter collection…":"Sammlung filtern…","Nothing matches these filters.":"Nichts entspricht diesen Filtern.","missing from your decks":"fehlt in deinen Decks","Budget Alternatives":"Budget-Alternativen","Any color":"Beliebige Farbe","All sets":"Alle Sets","All types":"Alle Typen","White":"Weiß","Blue":"Blau","Black":"Schwarz","Red":"Rot","Green":"Grün","Colorless":"Farblos","Multicolor":"Mehrfarbig","Language saved.":"Sprache gespeichert.","Card images and the interface follow your language where possible.":"Kartenbilder und die Oberfläche folgen wo möglich deiner Sprache.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Deine Sammlung ist leer. Suche oben, oder nutze \"Zur Sammlung hinzufügen\" bei jeder Karte in der App.","Creatures":"Kreaturen","Planeswalkers":"Planeswalker","Battles":"Schlachten","Instants":"Spontanzauber","Sorceries":"Hexereien","Artifacts":"Artefakte","Enchantments":"Verzauberungen","Lands":"Länder","Other":"Sonstiges"},
+fr:{"My Stuff":"Mes Affaires","My Collection":"Ma Collection","Search":"Rechercher","Import":"Importer","Export":"Exporter","Budget":"Budget","Add Cards":"Ajouter des cartes","Bulk Edit":"Édition groupée","Folders":"Dossiers","Binders":"Classeurs","Wants":"Recherchées","Decks":"Decks","New binder":"Nouveau classeur","‹ All binders":"‹ Tous les classeurs","🖼 Choose cover art":"🖼 Choisir la couverture","✎ Rename":"✎ Renommer","🗑 Delete binder":"🗑 Supprimer le classeur","Choose Cover Art":"Choisir la couverture","+ Add to a deck":"+ Ajouter à un deck","Played with this":"Joué avec ceci","Collection":"Collection","ORACLE TEXT":"TEXTE ORACLE","Oracle text":"Texte Oracle","Checking price…":"Vérification du prix…","No Cardmarket price listed":"Aucun prix Cardmarket","Advanced filter":"Filtre avancé","Use filters":"Appliquer les filtres","Reset filters":"Réinitialiser les filtres","Check for new spoilers":"Chercher de nouveaux spoilers","Appearance":"Apparence","Dark":"Sombre","Light":"Clair","Game format":"Format de jeu","Language":"Langue","Life Counter":"Compteur de vie","Open the multiplayer life tracker":"Ouvrir le compteur de vie multijoueur","Sort by":"Trier par","Add to folder":"Ajouter au dossier","Duplicate":"Dupliquer","Share":"Partager","Delete":"Supprimer","Add cards to collection…":"Ajouter des cartes à la collection…","Filter collection…":"Filtrer la collection…","Nothing matches these filters.":"Rien ne correspond à ces filtres.","missing from your decks":"manquantes dans vos decks","Budget Alternatives":"Alternatives budget","Any color":"Toute couleur","All sets":"Toutes les extensions","All types":"Tous les types","White":"Blanc","Blue":"Bleu","Black":"Noir","Red":"Rouge","Green":"Vert","Colorless":"Incolore","Multicolor":"Multicolore","Language saved.":"Langue enregistrée.","Card images and the interface follow your language where possible.":"Les images des cartes et l'interface suivent votre langue quand c'est possible.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Votre collection est vide. Cherchez ci-dessus, ou utilisez \"Ajouter à la collection\" sur n'importe quelle carte.","Creatures":"Créatures","Planeswalkers":"Planeswalkers","Battles":"Batailles","Instants":"Éphémères","Sorceries":"Rituels","Artifacts":"Artefacts","Enchantments":"Enchantements","Lands":"Terrains","Other":"Autres"},
+es:{"My Stuff":"Mis Cosas","My Collection":"Mi Colección","Search":"Buscar","Import":"Importar","Export":"Exportar","Budget":"Presupuesto","Add Cards":"Añadir cartas","Bulk Edit":"Edición masiva","Folders":"Carpetas","Binders":"Archivadores","Wants":"Buscadas","Decks":"Mazos","New binder":"Nuevo archivador","‹ All binders":"‹ Todos los archivadores","🖼 Choose cover art":"🖼 Elegir portada","✎ Rename":"✎ Renombrar","🗑 Delete binder":"🗑 Eliminar archivador","Choose Cover Art":"Elegir portada","+ Add to a deck":"+ Añadir a un mazo","Played with this":"Jugado con esto","Collection":"Colección","ORACLE TEXT":"TEXTO ORACLE","Oracle text":"Texto Oracle","Checking price…":"Comprobando precio…","No Cardmarket price listed":"Sin precio en Cardmarket","Advanced filter":"Filtro avanzado","Use filters":"Aplicar filtros","Reset filters":"Restablecer filtros","Check for new spoilers":"Buscar nuevos spoilers","Appearance":"Apariencia","Dark":"Oscuro","Light":"Claro","Game format":"Formato de juego","Language":"Idioma","Life Counter":"Contador de vidas","Open the multiplayer life tracker":"Abrir el contador de vidas multijugador","Sort by":"Ordenar por","Add to folder":"Añadir a carpeta","Duplicate":"Duplicar","Share":"Compartir","Delete":"Eliminar","Add cards to collection…":"Añadir cartas a la colección…","Filter collection…":"Filtrar colección…","Nothing matches these filters.":"Nada coincide con estos filtros.","missing from your decks":"faltan en tus mazos","Budget Alternatives":"Alternativas económicas","Inspiration":"Inspiración","Any color":"Cualquier color","All sets":"Todos los sets","All types":"Todos los tipos","White":"Blanco","Blue":"Azul","Black":"Negro","Red":"Rojo","Green":"Verde","Colorless":"Incoloro","Multicolor":"Multicolor","Language saved.":"Idioma guardado.","Card images and the interface follow your language where possible.":"Las imágenes de las cartas y la interfaz siguen tu idioma cuando es posible.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Tu colección está vacía. Busca arriba, o usa \"Añadir a la colección\" en cualquier carta.","Creatures":"Criaturas","Planeswalkers":"Planeswalkers","Battles":"Batallas","Instants":"Instantáneos","Sorceries":"Conjuros","Artifacts":"Artefactos","Enchantments":"Encantamientos","Lands":"Tierras","Other":"Otros"},
+it:{"My Stuff":"Le Mie Cose","My Collection":"La Mia Collezione","Search":"Cerca","Import":"Importa","Export":"Esporta","Budget":"Budget","Add Cards":"Aggiungi carte","Bulk Edit":"Modifica multipla","Folders":"Cartelle","Binders":"Raccoglitori","Wants":"Ricercate","Decks":"Mazzi","New binder":"Nuovo raccoglitore","‹ All binders":"‹ Tutti i raccoglitori","🖼 Choose cover art":"🖼 Scegli copertina","✎ Rename":"✎ Rinomina","🗑 Delete binder":"🗑 Elimina raccoglitore","Choose Cover Art":"Scegli la copertina","+ Add to a deck":"+ Aggiungi a un mazzo","Played with this":"Giocato con questa","Collection":"Collezione","ORACLE TEXT":"TESTO ORACLE","Oracle text":"Testo Oracle","Checking price…":"Controllo del prezzo…","No Cardmarket price listed":"Nessun prezzo Cardmarket","Advanced filter":"Filtro avanzato","Use filters":"Applica filtri","Reset filters":"Reimposta filtri","Check for new spoilers":"Cerca nuovi spoiler","Appearance":"Aspetto","Dark":"Scuro","Light":"Chiaro","Game format":"Formato di gioco","Language":"Lingua","Life Counter":"Contatore di vite","Open the multiplayer life tracker":"Apri il contatore di vite multigiocatore","Sort by":"Ordina per","Add to folder":"Aggiungi alla cartella","Duplicate":"Duplica","Share":"Condividi","Delete":"Elimina","Add cards to collection…":"Aggiungi carte alla collezione…","Filter collection…":"Filtra collezione…","Nothing matches these filters.":"Niente corrisponde a questi filtri.","missing from your decks":"mancanti nei tuoi mazzi","Budget Alternatives":"Alternative economiche","Inspiration":"Ispirazione","Extras":"Extra","Any color":"Qualsiasi colore","All sets":"Tutti i set","All types":"Tutti i tipi","White":"Bianco","Blue":"Blu","Black":"Nero","Red":"Rosso","Green":"Verde","Colorless":"Incolore","Multicolor":"Multicolore","Language saved.":"Lingua salvata.","Card images and the interface follow your language where possible.":"Le immagini delle carte e l'interfaccia seguono la tua lingua quando possibile.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"La tua collezione è vuota. Cerca qui sopra, o usa \"Aggiungi alla collezione\" su qualsiasi carta.","Creatures":"Creature","Planeswalkers":"Planeswalker","Battles":"Battaglie","Instants":"Istantanei","Sorceries":"Stregonerie","Artifacts":"Artefatti","Enchantments":"Incantesimi","Lands":"Terre","Other":"Altro"},
+sv:{"My Stuff":"Mina Saker","My Collection":"Min Samling","Search":"Sök","Import":"Importera","Export":"Exportera","Budget":"Budget","Add Cards":"Lägg till kort","Bulk Edit":"Massredigera","Folders":"Mappar","Binders":"Pärmar","Wants":"Önskas","New binder":"Ny pärm","‹ All binders":"‹ Alla pärmar","🖼 Choose cover art":"🖼 Välj omslagsbild","✎ Rename":"✎ Byt namn","🗑 Delete binder":"🗑 Radera pärm","Choose Cover Art":"Välj omslagsbild","+ Add to a deck":"+ Lägg till i ett deck","Played with this":"Spelas med denna","Collection":"Samling","Checking price…":"Kontrollerar pris…","No Cardmarket price listed":"Inget Cardmarket-pris","Advanced filter":"Avancerat filter","Use filters":"Använd filter","Reset filters":"Återställ filter","Check for new spoilers":"Sök nya spoilers","Appearance":"Utseende","Dark":"Mörkt","Light":"Ljust","Game format":"Spelformat","Language":"Språk","Life Counter":"Livräknare","Open the multiplayer life tracker":"Öppna livräknaren för flera spelare","Sort by":"Sortera efter","Add to folder":"Lägg till i mapp","Duplicate":"Duplicera","Share":"Dela","Delete":"Radera","Add cards to collection…":"Lägg till kort i samlingen…","Filter collection…":"Filtrera samlingen…","Nothing matches these filters.":"Inget matchar dessa filter.","missing from your decks":"saknas i dina decks","Budget Alternatives":"Budgetalternativ","Any color":"Valfri färg","All sets":"Alla set","All types":"Alla typer","White":"Vit","Blue":"Blå","Black":"Svart","Red":"Röd","Green":"Grön","Colorless":"Färglös","Multicolor":"Flerfärgad","Language saved.":"Språk sparat.","Card images and the interface follow your language where possible.":"Kortbilder och gränssnittet följer ditt språk där det är möjligt.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Din samling är tom. Sök ovan, eller använd \"Lägg till i samlingen\" på valfritt kort."},
+da:{"My Stuff":"Mine Ting","My Collection":"Min Samling","Search":"Søg","Import":"Importer","Export":"Eksporter","Budget":"Budget","Add Cards":"Tilføj kort","Bulk Edit":"Masseredigering","Folders":"Mapper","Binders":"Samlemapper","Wants":"Ønskes","New binder":"Ny samlemappe","‹ All binders":"‹ Alle samlemapper","🖼 Choose cover art":"🖼 Vælg omslagsbillede","✎ Rename":"✎ Omdøb","🗑 Delete binder":"🗑 Slet samlemappe","Choose Cover Art":"Vælg omslagsbillede","+ Add to a deck":"+ Føj til et deck","Played with this":"Spillet med dette","Collection":"Samling","Checking price…":"Tjekker pris…","No Cardmarket price listed":"Ingen Cardmarket-pris","Advanced filter":"Avanceret filter","Use filters":"Brug filtre","Reset filters":"Nulstil filtre","Check for new spoilers":"Søg efter nye spoilers","Appearance":"Udseende","Dark":"Mørk","Light":"Lys","Game format":"Spilformat","Language":"Sprog","Life Counter":"Livstæller","Open the multiplayer life tracker":"Åbn livstælleren til flere spillere","Sort by":"Sortér efter","Add to folder":"Føj til mappe","Duplicate":"Dupliker","Share":"Del","Delete":"Slet","Add cards to collection…":"Tilføj kort til samlingen…","Filter collection…":"Filtrér samlingen…","Nothing matches these filters.":"Intet matcher disse filtre.","missing from your decks":"mangler i dine decks","Budget Alternatives":"Budgetalternativer","Extras":"Ekstra","Any color":"Enhver farve","All sets":"Alle sæt","All types":"Alle typer","White":"Hvid","Blue":"Blå","Black":"Sort","Red":"Rød","Green":"Grøn","Colorless":"Farveløs","Multicolor":"Flerfarvet","Language saved.":"Sprog gemt.","Card images and the interface follow your language where possible.":"Kortbilleder og grænsefladen følger dit sprog, hvor det er muligt.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Din samling er tom. Søg ovenfor, eller brug \"Føj til samlingen\" på et hvilket som helst kort."},
+no:{"My Stuff":"Mine Ting","My Collection":"Min Samling","Search":"Søk","Import":"Importer","Export":"Eksporter","Budget":"Budsjett","Add Cards":"Legg til kort","Bulk Edit":"Masseredigering","Folders":"Mapper","Binders":"Permer","Wants":"Ønskes","New binder":"Ny perm","‹ All binders":"‹ Alle permer","🖼 Choose cover art":"🖼 Velg omslagsbilde","✎ Rename":"✎ Gi nytt navn","🗑 Delete binder":"🗑 Slett perm","Choose Cover Art":"Velg omslagsbilde","+ Add to a deck":"+ Legg til i et deck","Played with this":"Spilt med dette","Collection":"Samling","Checking price…":"Sjekker pris…","No Cardmarket price listed":"Ingen Cardmarket-pris","Advanced filter":"Avansert filter","Use filters":"Bruk filtre","Reset filters":"Tilbakestill filtre","Check for new spoilers":"Se etter nye spoilere","Appearance":"Utseende","Dark":"Mørk","Light":"Lys","Game format":"Spillformat","Language":"Språk","Life Counter":"Livsteller","Open the multiplayer life tracker":"Åpne livstelleren for flere spillere","Sort by":"Sorter etter","Add to folder":"Legg til i mappe","Duplicate":"Dupliser","Share":"Del","Delete":"Slett","Add cards to collection…":"Legg til kort i samlingen…","Filter collection…":"Filtrer samlingen…","Nothing matches these filters.":"Ingenting samsvarer med disse filtrene.","missing from your decks":"mangler i dine decks","Budget Alternatives":"Budsjettalternativer","Inspiration":"Inspirasjon","Extras":"Ekstra","Any color":"Enhver farge","All sets":"Alle sett","All types":"Alle typer","White":"Hvit","Blue":"Blå","Black":"Svart","Red":"Rød","Green":"Grønn","Colorless":"Fargeløs","Multicolor":"Flerfarget","Language saved.":"Språk lagret.","Card images and the interface follow your language where possible.":"Kortbilder og grensesnittet følger språket ditt der det er mulig.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Samlingen din er tom. Søk ovenfor, eller bruk \"Legg til i samlingen\" på hvilket som helst kort."}
+};
+const I18N_RX = {
+nl:[[/^Deck total: /g,'Decktotaal: '],[/(\d+) cards\b/g,'$1 kaarten'],[/(\d+) card\b/g,'$1 kaart'],[/(\d+) cards? owned\b/g,'$1 kaarten in bezit']],
+de:[[/^Deck total: /g,'Deck gesamt: '],[/(\d+) cards\b/g,'$1 Karten'],[/(\d+) card\b/g,'$1 Karte'],[/(\d+) decks\b/g,'$1 Decks'],[/(\d+) cards? owned\b/g,'$1 Karten im Besitz']],
+fr:[[/^Deck total: /g,'Total du deck : '],[/(\d+) cards\b/g,'$1 cartes'],[/(\d+) card\b/g,'$1 carte'],[/(\d+) cards? owned\b/g,'$1 cartes possédées']],
+es:[[/^Deck total: /g,'Total del mazo: '],[/(\d+) cards\b/g,'$1 cartas'],[/(\d+) card\b/g,'$1 carta'],[/(\d+) decks\b/g,'$1 mazos'],[/(\d+) deck\b/g,'$1 mazo'],[/(\d+) cards? owned\b/g,'$1 cartas en propiedad']],
+it:[[/^Deck total: /g,'Totale mazzo: '],[/(\d+) cards\b/g,'$1 carte'],[/(\d+) card\b/g,'$1 carta'],[/(\d+) decks\b/g,'$1 mazzi'],[/(\d+) deck\b/g,'$1 mazzo'],[/(\d+) cards? owned\b/g,'$1 carte possedute']],
+sv:[[/^Deck total: /g,'Deck totalt: '],[/(\d+) cards\b/g,'$1 kort'],[/(\d+) card\b/g,'$1 kort'],[/(\d+) cards? owned\b/g,'$1 kort i samlingen']],
+da:[[/^Deck total: /g,'Deck i alt: '],[/(\d+) cards\b/g,'$1 kort'],[/(\d+) card\b/g,'$1 kort'],[/(\d+) cards? owned\b/g,'$1 kort ejet']],
+no:[[/^Deck total: /g,'Deck totalt: '],[/(\d+) cards\b/g,'$1 kort'],[/(\d+) card\b/g,'$1 kort'],[/(\d+) cards? owned\b/g,'$1 kort eid']]
+};
+function trText(t, lang){
+  const d = I18N[lang];
+  if(!d) return null;
+  const key = t.trim();
+  if(key && d[key] != null) return t.replace(key, d[key]);
+  let out = t, hit = false;
+  (I18N_RX[lang]||[]).forEach(([re, sub])=>{ if(re.test(out)){ out = out.replace(re, sub); hit = true; } re.lastIndex = 0; });
+  return hit ? out : null;
+}
+function translateTree(root){
+  const lang = appLang();
+  if(lang === 'en' || !I18N[lang] || !root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let n;
+  while((n = walker.nextNode())){
+    const p = n.parentNode && n.parentNode.nodeName;
+    if(p === 'SCRIPT' || p === 'STYLE' || p === 'INPUT' || p === 'TEXTAREA') continue;
+    const nv = trText(n.nodeValue, lang);
+    if(nv != null && nv !== n.nodeValue) n.nodeValue = nv;
+  }
+  (root.querySelectorAll ? root.querySelectorAll('[placeholder],[title]') : []).forEach(el=>{
+    ['placeholder','title'].forEach(attr=>{
+      const v = el.getAttribute(attr);
+      if(!v) return;
+      const nv = trText(v, lang);
+      if(nv != null && nv !== v) el.setAttribute(attr, nv);
+    });
+  });
+}
+let _i18nPending = false, _i18nActive = false;
+const _i18nObserver = new MutationObserver(()=>{
+  if(!_i18nActive || _i18nPending) return;
+  _i18nPending = true;
+  requestAnimationFrame(()=>{ _i18nPending = false; try{ translateTree(document.body); }catch(e){} });
+});
+// The machinery sleeps until a language is chosen: English users pay zero
+// translation work — no observer, no tree walks — ever. nodeValue edits don't
+// retrigger the observer (childList only), so there's no feedback loop.
+function enableI18n(){
+  if(_i18nActive || appLang() === 'en') return;
+  _i18nActive = true;
+  _i18nObserver.observe(document.body, { childList: true, subtree: true });
+  translateTree(document.body);
+}
+function disableI18n(){
+  if(!_i18nActive) return;
+  _i18nActive = false;
+  _i18nObserver.disconnect();
+}
+if(appLang() !== 'en') setTimeout(()=>{ try{ enableI18n(); }catch(e){} }, 0);
+
 const APP_LANGS = [
   {code:'nl', label:'Nederlands', cards:false},
   {code:'en', label:'English', cards:true},
@@ -3986,34 +4067,65 @@ const APP_LANGS = [
 function appLang(){ try{ return localStorage.getItem(LS_PREFIX+'lang') || 'en'; }catch(e){ return 'en'; } }
 function setAppLang(code){ try{ localStorage.setItem(LS_PREFIX+'lang', code); }catch(e){} }
 const CARD_LANGS = new Set(['de','fr','es','it']);
-async function localizedCardImage(card){
-  // Resolve this card's image in the chosen language, if such a printing
-  // exists — cached per session, background lane, silent fallback to English.
+async function localizedCardData(card){
+  // Resolve this card's localized PRINTING, if one exists: its image and its
+  // printed Oracle text as it appears on the physical card. Cached per
+  // session, background lane, silent English fallback. Rulings are not part
+  // of this — Scryfall publishes rulings in English only, so they stay
+  // English by necessity, which also matches how judges cite them.
   const lang = appLang();
   if(!CARD_LANGS.has(lang) || !card || !card.name) return null;
   state._langImgCache = state._langImgCache || {};
   const key = lang + '|' + card.name;
   if(key in state._langImgCache) return state._langImgCache[key];
-  let img = null;
+  let out = null;
   try{
     const q = `!"${card.name}" lang:${lang}`;
     const res = await sfFetch(`${SF_BASE}/cards/search?unique=prints&q=${encodeURIComponent(q)}`, 0, true);
     if(res.ok){
       const data = await res.json();
       const p = (data.data||[])[0];
-      const f = p && (p.image_uris || (p.card_faces && p.card_faces[0] && p.card_faces[0].image_uris));
-      if(f && (f.large || f.normal)) img = f.large || f.normal;
+      if(p){
+        const imgs = p.image_uris || (p.card_faces && p.card_faces[0] && p.card_faces[0].image_uris) || {};
+        const rawFaces = (p.card_faces && p.card_faces.length) ? p.card_faces : [p];
+        out = {
+          img: imgs.large || imgs.normal || null,
+          faces: rawFaces.map(f=>({ name: f.printed_name || null, type: f.printed_type_line || null, text: f.printed_text || null }))
+        };
+        if(!out.img && !out.faces.some(f=>f.text)) out = null;
+      }
     }
   }catch(e){}
-  state._langImgCache[key] = img;
-  return img;
+  state._langImgCache[key] = out;
+  return out;
 }
 function applyLocalizedSheetImage(card, imgId){
   if(!CARD_LANGS.has(appLang())) return;
-  localizedCardImage(card).then(src=>{
-    if(!src) return;
-    const el = document.getElementById(imgId);
-    if(el && el.alt !== undefined) el.src = src;
+  localizedCardData(card).then(loc=>{
+    if(!loc) return;
+    if(loc.img){
+      const el = document.getElementById(imgId);
+      if(el && el.alt !== undefined) el.src = loc.img;
+    }
+    // Printed Oracle text replaces the English text ONLY when this card was
+    // actually printed in the chosen language with text to show.
+    const box = document.getElementById('sheetOracle');
+    if(box && loc.faces && loc.faces.some(f=>f.text)){
+      const enFaces = (card.card_faces && card.card_faces.length) ? card.card_faces : [card];
+      box.querySelectorAll('.oracle-face').forEach((faceEl, i)=>{
+        const lf = loc.faces[i], ef = enFaces[i] || {};
+        if(!lf) return;
+        const nameEl = faceEl.querySelector('.oracle-name');
+        const typeEl = faceEl.querySelector('.oracle-type');
+        const textEl = faceEl.querySelector('.oracle-text');
+        if(lf.name && nameEl) nameEl.textContent = lf.name;
+        if(lf.type && typeEl){
+          const pt = (ef.power!==undefined && ef.power!==null) ? `${ef.power}/${ef.toughness}` : (ef.loyalty!==undefined && ef.loyalty!==null ? `Loyalty ${ef.loyalty}` : '');
+          typeEl.textContent = lf.type + (pt ? ` · ${pt}` : '');
+        }
+        if(lf.text && textEl) textEl.innerHTML = escapeHtml(lf.text).replace(/\n/g,'<br>');
+      });
+    }
   });
 }
 function binderTileHtml(b){
@@ -6547,7 +6659,7 @@ function renderCardSheet(d, card, loc, idx){
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
-      <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div>${oracleBlockHtml(card)}</div>
+      <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
     </main>
   </div>`;
@@ -7442,7 +7554,7 @@ function openCardInfo(card, opts){
           <button class="ghost-btn" id="ciColl" style="width:100%;">${colIdx!=null ? '🗂 Manage copy' : `<span class="ib">${ICONS.collection}</span>Collection`}</button>
         </div>
       </div>
-      <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div>${oracleBlockHtml(card)}</div>
+      <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
     </main>
   </div>`;
@@ -9573,7 +9685,7 @@ function settingsPageHtml(){
       </div>
     </div>
     <div class="settings-section">
-      <div class="settings-row"><div><div class="l1">Language</div><div class="l2">Card images appear in your language where printings exist (Deutsch, Français, Español, Italiano). Interface text remains English for now — full translation is on the chart.</div></div>
+      <div class="settings-row"><div><div class="l1">Language</div><div class="l2">Card images and the interface follow your language where possible.</div></div>
         <select id="langSelect" style="background:var(--field);border:1px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:8px 10px;font-size:13.5px;">
           ${APP_LANGS.map(L=>`<option value="${L.code}" ${appLang()===L.code?'selected':''}>${L.label}</option>`).join('')}
         </select>
@@ -9814,8 +9926,11 @@ async function restoreFromFile(file){
 function wireSettingsPage(){
   document.getElementById('langSelect')?.addEventListener('change', (e)=>{
     setAppLang(e.target.value);
-    state._langImgCache = {};   // re-resolve card images in the new language
-    toast('Language saved.');
+    state._langImgCache = {};   // re-resolve card data in the new language
+    if(e.target.value === 'en'){ disableI18n(); render(); }
+    else { render(); enableI18n(); try{ translateTree(document.body); }catch(err){} }
+    const msgs = { nl:'Taal opgeslagen.', de:'Sprache gespeichert.', fr:'Langue enregistrée.', es:'Idioma guardado.', it:'Lingua salvata.', sv:'Språk sparat.', da:'Sprog gemt.', no:'Språk lagret.' };
+    toast(msgs[e.target.value] || 'Language saved.');
   });
   if(isCmdrMode()) ensureCmdrBans();
   document.querySelectorAll('[data-mode-choice]').forEach(b=>b.addEventListener('click', ()=>{
