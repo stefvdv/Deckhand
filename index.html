@@ -629,6 +629,11 @@ main.has-dock{padding-bottom:84px;}
 .cselect-btn .cs-car{font-size:10px;color:var(--sub-text);flex:0 0 auto;}
 .cselect-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:10px;max-height:280px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,0.5);}
 .cselect-panel.tall{max-height:none;}
+.ci-nav-wrap{position:relative;display:inline-block;}
+.ci-nav-arrow{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:56px;border:none;border-radius:10px;background:rgba(10,10,14,0.45);color:var(--brass);font-size:30px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;z-index:3;}
+.ci-nav-arrow.left{left:-14px;}
+.ci-nav-arrow.right{right:-14px;}
+.ci-nav-arrow:active{background:rgba(10,10,14,0.7);}
 .cselect-search{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:7px;padding:8px;background:var(--pop-bg);border-bottom:1px solid var(--pop-line);}
 .cselect-search .cs-mag{flex:0 0 auto;font-size:13px;opacity:0.7;}
 .cselect-search input{flex:1;min-width:0;background:var(--field);border:1px solid var(--field-line);border-radius:6px;color:var(--ink-text);padding:6px 9px;font-size:13px;font-family:'Inter';}
@@ -2580,10 +2585,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.63';
+const APP_VERSION = '2.51.64';
 const CHANGELOG_NOTES = [
-  'Spoilers keep proper time: the very newest reveals no longer sink days deep when Scryfall hasn\'t stamped their preview date yet, the page always opens on the full newest-first feed (as does "Check for new spoilers"), and long-running app sessions re-check automatically every three hours.',
-  'Small comforts: the Search page\'s random card is drawn quietly at launch so it\'s waiting when you arrive, and the yellow Search button now closes the advanced-filters panel just like "Use filters" does.'
+  'Card detail views now show navigation arrows flanking the card — the same next/previous the swipe gesture always did, everywhere a card list opens a detail sheet: decklists, search, spoilers, Inspiration, Budget and beyond.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7128,7 +7132,26 @@ function closeDeckPickPopup(){ document.getElementById('deckPickScrim')?.remove(
    rulings) for cards tapped anywhere outside a deck — search results, browse,
    inspiration. Offers an add button instead of deck-editing actions. */
 function attachSwipeNav(el, onNext, onPrev){
-  // Horizontal swipe on a card sheet moves through the list it came from.
+  // Horizontal swipe on a card sheet moves through the list it came from —
+  // and visible chevrons flanking the card do the same, for anyone who
+  // doesn't discover the gesture. The arrows wrap the hero image so they sit
+  // at its exact vertical middle, wherever the sheet came from.
+  const img = el.querySelector('.card-detail img');
+  if(img && !img.closest('.ci-nav-wrap')){
+    const wrap = document.createElement('div');
+    wrap.className = 'ci-nav-wrap';
+    img.parentNode.insertBefore(wrap, img);
+    wrap.appendChild(img);
+    const mk = (dir, glyph, side)=>{
+      const b = document.createElement('button');
+      b.className = 'ci-nav-arrow ' + side;
+      b.innerHTML = glyph;
+      b.addEventListener('click', (e)=>{ e.stopPropagation(); dir(); });
+      wrap.appendChild(b);
+    };
+    mk(onPrev, '‹', 'left');
+    mk(onNext, '›', 'right');
+  }
   let sx = 0, sy = 0, armed = false;
   el.addEventListener('touchstart', (e)=>{
     if(e.touches.length !== 1) return;
