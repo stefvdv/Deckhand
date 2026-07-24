@@ -272,7 +272,8 @@ main{flex:1;padding:16px 16px 28px;}
 .folder-tile{position:relative;background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--brass-dim);border-radius:var(--radius);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;padding:18px 10px 14px;transition:transform 0.15s, box-shadow 0.15s;}
 .folder-tile:active{transform:scale(0.97);}
 .folder-face{color:var(--brass);margin-bottom:10px;}
-.binder-tile .folder-face img{width:66px;border-radius:5px;display:block;box-shadow:0 6px 14px rgba(0,0,0,0.5);}
+.binder-tile .folder-face{width:100%;}
+.binder-tile .folder-face img{width:100%;height:60px;object-fit:cover;border-radius:6px;display:block;box-shadow:0 6px 14px rgba(0,0,0,0.5);}
 .binder-tile .folder-name{display:flex;align-items:center;justify-content:center;gap:4px;max-width:100%;overflow:hidden;}
 .folder-name{font-family:'Cinzel',serif;font-weight:700;font-size:15px;color:var(--ink-text);text-align:center;line-height:1.2;}
 .folder-sub{font-size:11px;color:var(--sub-text);margin-top:4px;}
@@ -2587,9 +2588,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.71';
+const APP_VERSION = '2.51.72';
 const CHANGELOG_NOTES = [
-  'My Collection now opens like My Stuff: binders sit at the top as folder tiles, each faced with the first card filed inside it, wearing the colour or rarity symbols its name implies, with card count and value beneath. Tap one to open it, ⋯ to rename, or the dashed tile to start a new binder — the Wants list has its own tile too.'
+  'Binder tiles now wear pure card art as their face, and the ⋯ menu lets you choose any card\'s art — from any printing — as a binder\'s cover. The hardware back button inside a binder returns to the binder overview, and My Collection now lives on the My Stuff page as its own labelled folder beside the fleet folder, faced with your collection\'s art, instead of the old top button.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3427,6 +3428,17 @@ function deckTileHtml(d){
       </div>
     </div>`;
 }
+function collectionFolderTileHtml(){
+  const items = state.collection.items;
+  const qty = items.reduce((a,it)=>a+(it.qty||1), 0);
+  const first = items.find(it=>it.img);
+  const face = first ? artCropFrom(first.img) : null;
+  return `<div class="folder-tile binder-tile" data-opencollection="1">
+      <div class="folder-face">${face ? `<img loading="lazy" src="${face}" alt="">` : `<span style="font-size:44px;line-height:1;">${ICONS.collection || '🗂'}</span>`}</div>
+      <div class="folder-name">My Collection</div>
+      <div class="folder-sub">${qty} card${qty===1?'':'s'} owned</div>
+    </div>`;
+}
 function otherFmtTileHtml(count){
   const label = isCmdrMode() ? 'Admiral' : 'Commander';
   const icon = isCmdrMode() ? '⚓' : '⚔';
@@ -3488,7 +3500,6 @@ function homeHtml(){
     ${decksNoticeHtml()}
     <div class="searchbar" style="margin-bottom:12px;">
       <input id="deckFilter" placeholder="Filter by folder or ${isCmdrMode()?'Commander':'Admiral'}…" value="${escapeHtml(state.deckFilter||'')}">
-      <button class="ghost-btn" id="collectionBtn" style="flex:none;padding:0 12px;white-space:nowrap;"><span class="ib">${ICONS.collection}</span>My Collection</button>
     </div>
     ${otherView
       ? `<button class="deck-fab" id="deckSwitchFab" title="Switch to ${isCmdrMode()?'Admiral':'Commander'}">${isCmdrMode()?'⚓':'⚔'}</button>`
@@ -3503,6 +3514,7 @@ function homeHtml(){
          ${(!favTiles&&!folderTiles&&!deckTiles&&nav)?`<div class="empty-note">This folder is empty.</div>`:''}
          ${(!favTiles&&!folderTiles&&!deckTiles&&!collected.length&&!nav&&otherMode.length)?`<div class="empty-note">No ${isCmdrMode()?'Commander':'Admiral'} decks yet — start a new fleet above. Your ${isCmdrMode()?'Admiral':'Commander'} decks are waiting below.</div>`:''}
          ${(!searching && !nav && otherMode.length) ? `<div class="section-label" style="margin-top:20px;">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid">${otherFmtTileHtml(otherMode.length)}</div>` : ''}
+         ${(!searching && !nav) ? `<div class="section-label" style="margin-top:20px;">My Collection</div><div class="deck-grid">${collectionFolderTileHtml()}</div>` : ''}
        ` :
        searching ? `<div class="empty-note">No decks match “${escapeHtml(state.deckFilter)}”.</div>` :
        `<div class="empty-home"><div class="seal lg">${formatSealSvg()}</div><p>No decks yet. Start a new fleet, appoint an Admiral, and begin mustering your crew.</p><button id="newDeckBtn2">New Deck</button></div>` }
@@ -3535,7 +3547,7 @@ function wireDecksNotice(){
 function wireHome(){
   wireDecksNotice();
   document.getElementById('newDeckBtn2')?.addEventListener('click', ()=>openModal('newdeck'));
-  document.getElementById('collectionBtn')?.addEventListener('click', ()=>switchPage('collection'));
+  document.querySelector('[data-opencollection]')?.addEventListener('click', ()=>switchPage('collection'));
   const switchFab = document.getElementById('deckSwitchFab');
   if(switchFab){
     switchFab.addEventListener('click', ()=>{
@@ -3943,17 +3955,61 @@ function collectionPageHtml(){
 /* Binders as folders, My Stuff style: the tile's face is the first card
    filed in that binder, its name line carries the colour/rarity glyphs the
    binder's own name implies, and the sub-line counts cards and value. */
+function artCropFrom(img){
+  // Scryfall image paths swap format in-place: …/normal/… → …/art_crop/…
+  return img ? String(img).replace('/normal/','/art_crop/').replace('/large/','/art_crop/') : img;
+}
 function binderTileHtml(b){
   const items = state.collection.items.filter(it=>it.binder===b.id);
   const first = items.find(it=>it.img);
   const qty = items.reduce((a,it)=>a+(it.qty||1), 0);
   const eur = items.reduce((a,it)=>a+((it.eur!=null?it.eur:0)*(it.qty||1)), 0);
+  const face = b.face || (first ? artCropFrom(first.img) : null);
   return `<div class="folder-tile binder-tile" data-binderopen="${b.id}">
-      <button class="tile-menu" data-binderedit="${b.id}" title="Rename binder">⋯</button>
-      <div class="folder-face">${first ? `<img loading="lazy" class="${first.border_color==='white'?'wb-card':''}" src="${first.img}" alt="">` : '<span style="font-size:44px;line-height:1;">🗂</span>'}</div>
+      <button class="tile-menu" data-binderedit="${b.id}" title="Binder options">⋯</button>
+      <div class="folder-face">${face ? `<img loading="lazy" src="${face}" alt="">` : '<span style="font-size:44px;line-height:1;">🗂</span>'}</div>
       <div class="folder-name">${binderGlyphsHtml(b.name)} ${escapeHtml(b.name)}</div>
       <div class="folder-sub">${qty} card${qty===1?'':'s'}${eur?` · €${eur.toFixed(2)}`:''}</div>
     </div>`;
+}
+async function openBinderArtPicker(binder){
+  const seed = (state.collection.items.find(it=>it.binder===binder.id)||{}).name || '';
+  const name = prompt('Cover card name', seed);
+  if(!name || !name.trim()) return;
+  let el = document.getElementById('binderArtOverlay');
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='binderArtOverlay'; document.body.appendChild(el); }
+  pushOverlay('binderArt', ()=>{ document.getElementById('binderArtOverlay')?.remove(); });
+  el.innerHTML = `<div class="overlay-inner">
+    <div class="topbar"><button class="icon-btn" id="baClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">Choose Cover Art</div></div>
+    <main><div id="baList" class="status"><div class="spinner"></div></div></main>
+  </div>`;
+  document.getElementById('baClose').addEventListener('click', closeTopOverlay);
+  try{
+    const res = await sfFetch(`${SF_BASE}/cards/search?unique=prints&q=${encodeURIComponent('!"'+name.trim()+'"')}`);
+    const data = res.ok ? await res.json() : {data:[]};
+    const prints = (data.data||[]).map(p=>{
+      const f = (p.image_uris || (p.card_faces && p.card_faces[0] && p.card_faces[0].image_uris) || {});
+      return { art: f.art_crop || artCropFrom(f.normal), set: p.set_name || p.set, cn: p.collector_number };
+    }).filter(p=>p.art);
+    const box = document.getElementById('baList');
+    if(!box) return;
+    if(!prints.length){ box.innerHTML = `<div class="empty-note">No printings found under that exact name.</div>`; return; }
+    box.className = '';
+    box.innerHTML = `<div class="deck-grid">${prints.map((p,i)=>`
+      <button class="folder-tile binder-tile" data-ba="${i}" style="padding:10px;">
+        <div class="folder-face" style="width:100%;"><img src="${p.art}" alt=""></div>
+        <div class="folder-sub">${escapeHtml(p.set)}${p.cn?' · #'+escapeHtml(String(p.cn)):''}</div>
+      </button>`).join('')}</div>`;
+    box.querySelectorAll('[data-ba]').forEach(btn=>btn.addEventListener('click', ()=>{
+      binder.face = prints[+btn.dataset.ba].art;
+      saveCollection();
+      closeTopOverlay();
+      render();
+    }));
+  }catch(e){
+    const box = document.getElementById('baList');
+    if(box) box.innerHTML = `<div class="empty-note">Couldn't reach the archive — try again.</div>`;
+  }
 }
 function collectionBindersGridHtml(){
   const binders = state.collection.binders;
@@ -3979,8 +4035,22 @@ function wireCollectionPage(){
   document.querySelectorAll('[data-binderedit]').forEach(b=>b.addEventListener('click', (e)=>{
     e.stopPropagation();
     const binder = state.collection.binders.find(x=>x.id===b.dataset.binderedit);
-    const name = prompt('Rename binder', binder ? binder.name : '');
-    if(binder && name && name.trim()){ binder.name = name.trim(); saveCollection(); render(); }
+    if(!binder) return;
+    document.getElementById('tileMenuPop')?.remove();
+    const pop = document.createElement('div');
+    pop.id = 'tileMenuPop';
+    pop.innerHTML = `<button data-a="art">🖼 Choose cover art</button><button data-a="ren">✎ Rename</button>`;
+    document.body.appendChild(pop);
+    const r = b.getBoundingClientRect();
+    pop.style.top = (r.bottom + window.scrollY + 4) + 'px';
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, r.right + window.scrollX - pop.offsetWidth)) + 'px';
+    pop.querySelector('[data-a="art"]').addEventListener('click', ()=>{ pop.remove(); openBinderArtPicker(binder); });
+    pop.querySelector('[data-a="ren"]').addEventListener('click', ()=>{
+      pop.remove();
+      const name = prompt('Rename binder', binder.name);
+      if(name && name.trim()){ binder.name = name.trim(); saveCollection(); render(); }
+    });
+    setTimeout(()=>document.addEventListener('click', function once(ev){ if(!pop.contains(ev.target)){ pop.remove(); document.removeEventListener('click', once); } }), 0);
   }));
   document.querySelector('[data-newbinder]')?.addEventListener('click', ()=>{
     const name = prompt('New binder name');
@@ -10422,6 +10492,13 @@ window.addEventListener('popstate', (e)=>{
   if(state.overlayStack.length){
     const top = state.overlayStack.pop();
     try{ top.closeFn(); }catch(err){ console.error(err); }
+    return;
+  }
+  // Inside a binder, back returns to the collection's binder overview.
+  if(state.screen === 'collection' && state.colFilter && state.colFilter.binder){
+    state.colFilter.binder = null;
+    render();
+    try{ history.pushState({screen: state.screen}, '', '#'+state.screen); }catch(err){}
     return;
   }
   // An open Import / Bulk-edit panel consumes the back press: close it and stay.
