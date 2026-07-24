@@ -629,10 +629,11 @@ main.has-dock{padding-bottom:84px;}
 .cselect-btn .cs-car{font-size:10px;color:var(--sub-text);flex:0 0 auto;}
 .cselect-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:10px;max-height:280px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,0.5);}
 .cselect-panel.tall{max-height:none;}
-.ci-nav-wrap{display:inline-block;}
-.ci-nav-row{display:flex;justify-content:center;gap:34px;margin-top:12px;}
-.ci-nav-arrow{width:64px;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--brass);font-size:26px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;}
-.ci-nav-arrow:active{background:var(--hl);}
+.ci-nav-wrap{position:relative;display:inline-block;}
+.ci-nav-arrow{position:absolute;top:63%;transform:translateY(-50%);width:44px;height:64px;border:none;background:none;color:var(--brass);font-size:38px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;z-index:3;text-shadow:0 2px 8px rgba(0,0,0,0.7);}
+.ci-nav-arrow.left{left:-42px;}
+.ci-nav-arrow.right{right:-42px;}
+.ci-nav-arrow:active{opacity:0.6;}
 .cselect-search{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:7px;padding:8px;background:var(--pop-bg);border-bottom:1px solid var(--pop-line);}
 .cselect-search .cs-mag{flex:0 0 auto;font-size:13px;opacity:0.7;}
 .cselect-search input{flex:1;min-width:0;background:var(--field);border:1px solid var(--field-line);border-radius:6px;color:var(--ink-text);padding:6px 9px;font-size:13px;font-family:'Inter';}
@@ -2584,9 +2585,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.68';
+const APP_VERSION = '2.51.69';
 const CHANGELOG_NOTES = [
-  'The card image on a deck\'s card details page now opens the full-screen view on tap, matching everywhere else — it was the one sheet missing the wiring — and the navigation chevrons moved from the card\'s sides to a tidy row beneath it, with breathing room between image and buttons.'
+  'The card-detail chevrons are back to bare arrows — no button chrome — resting beside the card\'s lower corners, right where a thumb expects them.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7142,18 +7143,15 @@ function attachSwipeNav(el, onNext, onPrev){
     wrap.className = 'ci-nav-wrap';
     img.parentNode.insertBefore(wrap, img);
     wrap.appendChild(img);
-    const row = document.createElement('div');
-    row.className = 'ci-nav-row';
     const mk = (dir, glyph, side)=>{
       const b = document.createElement('button');
       b.className = 'ci-nav-arrow ' + side;
       b.innerHTML = glyph;
       b.addEventListener('click', (e)=>{ e.stopPropagation(); dir(); });
-      row.appendChild(b);
+      wrap.appendChild(b);
     };
     mk(onPrev, '‹', 'left');
     mk(onNext, '›', 'right');
-    wrap.appendChild(row);
   }
   let sx = 0, sy = 0, armed = false;
   el.addEventListener('touchstart', (e)=>{
