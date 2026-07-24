@@ -737,8 +737,8 @@ main.has-dock{padding-bottom:84px;}
 .menu-pop hr{border:none;border-top:1px solid var(--line);margin:2px 0;}
 .toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--brass-dim);color:var(--ink-text);padding:9px 16px;border-radius:20px;font-size:12.5px;z-index:200;box-shadow:0 6px 18px rgba(0,0,0,0.4); opacity:0; pointer-events:none;transition:opacity 0.25s, transform 0.25s;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
-.card-preview-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:150;display:flex;align-items:center;justify-content:center;padding:24px;}
-.card-preview-backdrop img{max-width:min(340px,80vw);max-height:80vh;border-radius:4.75% / 3.5%;box-shadow:0 20px 50px rgba(0,0,0,0.6);}
+.card-preview-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:150;display:flex;align-items:center;justify-content:center;padding:10px;}
+.card-preview-backdrop img{max-width:96vw;max-height:90vh;border-radius:4.75% / 3.5%;box-shadow:0 20px 50px rgba(0,0,0,0.6);}
 
 /* ---------- life counter v2 ---------- */
 .player-count{display:flex;gap:6px;margin-bottom:10px;}
@@ -2585,9 +2585,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.65';
+const APP_VERSION = '2.51.66';
 const CHANGELOG_NOTES = [
-  'The back button now always closes what you actually see: a tools panel or dropdown buried beneath the Budget page or a card sheet can no longer silently swallow a back press — the fix behind card details sometimes needing extra presses to close.'
+  'Card taps behave everywhere as they should: one tap opens the details page, tapping the card there opens the full-screen image (now much larger, edge to edge), and tapping that closes it back to the details. Behind the scenes, a duplicate-tap bug that quietly stacked invisible card sheets — the reason back presses sometimes seemed to do nothing on the Budget page — is fixed.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -7169,6 +7169,9 @@ function attachSwipeNav(el, onNext, onPrev){
 function openCardInfo(card, opts){
   opts = opts || {};
   const colIdx = (opts.colIdx != null) ? opts.colIdx : null;
+  // A sheet is already up (double-fired tap, stray caller): replace its
+  // contents rather than stacking a phantom entry that eats a back press.
+  if(!opts._replace && document.getElementById('cardSheetOverlay')) opts._replace = true;
   if(!opts._replace) pushOverlay('cardInfo', ()=>{ document.getElementById('cardSheetOverlay')?.remove(); });
   let el = document.getElementById('cardSheetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; document.body.appendChild(el); }
@@ -7320,14 +7323,16 @@ function wireResultButtons(list, d, refreshFn, opts){
       else openDeckPickPopup(c, 'admiral', refreshFn);
     });
   });
-  document.querySelectorAll('.sr-tile img, .sr-row img').forEach(img=>img.addEventListener('click', ()=>{
+  document.querySelectorAll('.sr-tile img, .sr-row img').forEach(img=>{
+    if(img.dataset.w) return; img.dataset.w = '1';   // wireResultButtons runs repeatedly (per trio, per chunk) — one listener only
+    img.addEventListener('click', ()=>{
     const tile = img.closest('[data-name]');
     const c = tile && list.find(x=>x.name===decodeURIComponent(tile.dataset.name));
     if(swd && c && leaderReady(c)){ doSwitch(c); return; }
     if(opts.onCardTap && c){ opts.onCardTap(c); return; }
     if(c){ openCardInfo(c, { pool: list }); return; }   // full details: price, Oracle text, rulings
     showPreview(img.dataset.preview, img.dataset.wb === '1');
-  }));
+  });});
 }
 
 
