@@ -2585,9 +2585,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.69';
+const APP_VERSION = '2.51.70';
 const CHANGELOG_NOTES = [
-  'The card-detail chevrons are back to bare arrows — no button chrome — resting beside the card\'s lower corners, right where a thumb expects them.'
+  'Swiping and the chevrons through a deck\'s card details now move in the order the cards sit on the page — left to right, row by row, section by section, matching whatever sort you\'re viewing — instead of the deck\'s hidden storage order.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -5847,6 +5847,44 @@ function categorizedListHtml(d){
   }
   return html;
 }
+/* The on-screen order of a deck's tiles, as raw array indices — the same
+   branch logic the list tab renders with (tag groups / type groups / flat,
+   duplicates collapsed). Card-sheet navigation walks THIS, so swipe and
+   chevrons move by visual proximity, exactly as the grid reads. */
+function displayOrderIdxs(d, loc){
+  if(loc === 'maybe'){
+    const mIdxs = d.maybeboard.map((_,i)=>i).sort((a,b)=>d.maybeboard[a].name.localeCompare(d.maybeboard[b].name));
+    return dedupeIdxs(mIdxs, d.maybeboard).map(g=>g.i);
+  }
+  const out = [];
+  const grouped = state.sortMode==='type-cmc-name' || state.sortMode==='type-name' || !state.sortMode;
+  if(state.sortMode==='tags'){
+    const tagNames = allDeckTags(d);
+    const byTag = {}; tagNames.forEach(t=>byTag[t]=[]);
+    const untagged = [];
+    d.cards.forEach((c,i)=>{
+      const tags = getCardTags(d, c.name);
+      if(!tags.length){ untagged.push(i); return; }
+      tags.forEach(t=>{ if(!byTag[t]) byTag[t]=[]; byTag[t].push(i); });
+    });
+    const groups = tagNames.map(t=>byTag[t]).filter(a=>a.length);
+    if(untagged.length) groups.push(untagged);
+    groups.forEach(idxs=>{
+      dedupeIdxs(sortIdxs(idxs.slice(), d.cards, 'cmc-name'), d.cards).forEach(g=>out.push(g.i));
+    });
+  } else if(grouped){
+    const byCat = {}; catsFor(d).forEach(c=>byCat[c]=[]);
+    d.cards.forEach((c,i)=>byCat[categoryOf(c, d)].push(i));
+    catsFor(d).forEach(cat=>{
+      const idxs = byCat[cat];
+      if(!idxs.length) return;
+      dedupeIdxs(sortIdxs(idxs, d.cards, state.sortMode), d.cards).forEach(g=>out.push(g.i));
+    });
+  } else {
+    dedupeIdxs(sortIdxs(d.cards.map((_,i)=>i), d.cards, state.sortMode), d.cards).forEach(g=>out.push(g.i));
+  }
+  return out;
+}
 function dedupeIdxs(idxs, arr){
   // Collapse identical names into one tile carrying a quantity — basics and
   // any-number cards render Moxfield-style instead of as a wall of twins.
@@ -6380,12 +6418,15 @@ function renderCardSheet(d, card, loc, idx){
   loadCardPrice(card);
   const swPool = (loc === 'maybe') ? d.maybeboard : (loc === 'main' ? d.cards : null);
   if(swPool && swPool.length > 1){
+    const order = displayOrderIdxs(d, loc);
+    let pos = order.indexOf(idx);
+    if(pos < 0) pos = order.findIndex(i=>swPool[i] && swPool[i].name === card.name);
     const go = (dir)=>{
-      let n = idx + dir;
-      while(n >= 0 && n < swPool.length && swPool[n].name === card.name) n += dir;
-      if(n < 0 || n >= swPool.length) return;
+      if(pos < 0 || !order.length) return;
+      const n = pos + dir;
+      if(n < 0 || n >= order.length) return;
       try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
-      renderCardSheet(d, swPool[n], loc, n);
+      renderCardSheet(d, swPool[order[n]], loc, order[n]);
     };
     attachSwipeNav(el, ()=>go(1), ()=>go(-1));
   }
