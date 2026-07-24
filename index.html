@@ -272,6 +272,8 @@ main{flex:1;padding:16px 16px 28px;}
 .folder-tile{position:relative;background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--brass-dim);border-radius:var(--radius);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;padding:18px 10px 14px;transition:transform 0.15s, box-shadow 0.15s;}
 .folder-tile:active{transform:scale(0.97);}
 .folder-face{color:var(--brass);margin-bottom:10px;}
+.binder-tile .folder-face img{width:66px;border-radius:5px;display:block;box-shadow:0 6px 14px rgba(0,0,0,0.5);}
+.binder-tile .folder-name{display:flex;align-items:center;justify-content:center;gap:4px;max-width:100%;overflow:hidden;}
 .folder-name{font-family:'Cinzel',serif;font-weight:700;font-size:15px;color:var(--ink-text);text-align:center;line-height:1.2;}
 .folder-sub{font-size:11px;color:var(--sub-text);margin-top:4px;}
 .section-label{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:0.08em;font-size:12px;color:var(--brass);margin:14px 2px 8px;}
@@ -2585,9 +2587,9 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.70';
+const APP_VERSION = '2.51.71';
 const CHANGELOG_NOTES = [
-  'Swiping and the chevrons through a deck\'s card details now move in the order the cards sit on the page — left to right, row by row, section by section, matching whatever sort you\'re viewing — instead of the deck\'s hidden storage order.'
+  'My Collection now opens like My Stuff: binders sit at the top as folder tiles, each faced with the first card filed inside it, wearing the colour or rarity symbols its name implies, with card count and value beneath. Tap one to open it, ⋯ to rename, or the dashed tile to start a new binder — the Wants list has its own tile too.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3897,6 +3899,7 @@ function collectionPageHtml(){
       <button class="ghost-btn" id="colBindersBtn" style="flex:1;">${!f.binder ? '🗂' : (f.binder==='__wants__' ? '🔖' : binderGlyphsHtml(binderName(f.binder)||''))} ${escapeHtml(f.binder ? (f.binder==='__wants__' ? 'Wants' : (binderName(f.binder)||'Binder')) : 'All binders')} ⌄</button>
       <span style="align-self:center;font-size:12.5px;color:var(--sub-text);white-space:nowrap;">${totalQty} cards · <span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">€${totalEur.toFixed(2)}</span></span>
     </div>
+    ${!f.binder ? collectionBindersGridHtml() : ''}
     <div class="searchbar" style="margin-bottom:8px;"><input id="colAddName" placeholder="Add cards to collection…"><button id="colAddSearch">Search</button><button id="colImportBtn" title="Import a collection or binder from Moxfield / Archidekt">⬆ Import</button></div>
     <div id="colAddResults"></div>
     <button class="ghost-btn" id="colAdvToggle" style="width:100%;margin-bottom:8px;">Advanced filter ${state.colAdvOpen?'▴':'▾'}</button>
@@ -3937,7 +3940,56 @@ function collectionPageHtml(){
     : `<div class="empty-note" style="margin-top:20px;">${wantsMode ? 'Nothing on the Wants list — every card in your decks is in your collection. ⚓' : state.collection.items.length?'Nothing matches these filters.':'Your collection is empty. Search above, or use "Add to collection" on any card in the app.'}</div>`}
   </main>`;
 }
+/* Binders as folders, My Stuff style: the tile's face is the first card
+   filed in that binder, its name line carries the colour/rarity glyphs the
+   binder's own name implies, and the sub-line counts cards and value. */
+function binderTileHtml(b){
+  const items = state.collection.items.filter(it=>it.binder===b.id);
+  const first = items.find(it=>it.img);
+  const qty = items.reduce((a,it)=>a+(it.qty||1), 0);
+  const eur = items.reduce((a,it)=>a+((it.eur!=null?it.eur:0)*(it.qty||1)), 0);
+  return `<div class="folder-tile binder-tile" data-binderopen="${b.id}">
+      <button class="tile-menu" data-binderedit="${b.id}" title="Rename binder">⋯</button>
+      <div class="folder-face">${first ? `<img loading="lazy" class="${first.border_color==='white'?'wb-card':''}" src="${first.img}" alt="">` : '<span style="font-size:44px;line-height:1;">🗂</span>'}</div>
+      <div class="folder-name">${binderGlyphsHtml(b.name)} ${escapeHtml(b.name)}</div>
+      <div class="folder-sub">${qty} card${qty===1?'':'s'}${eur?` · €${eur.toFixed(2)}`:''}</div>
+    </div>`;
+}
+function collectionBindersGridHtml(){
+  const binders = state.collection.binders;
+  const wantsTile = `<div class="folder-tile binder-tile" data-binderopen="__wants__">
+      <div class="folder-face"><span style="font-size:44px;line-height:1;">🔖</span></div>
+      <div class="folder-name">Wants</div>
+      <div class="folder-sub">missing from your decks</div>
+    </div>`;
+  const newTile = `<div class="folder-tile binder-tile" data-newbinder="1" style="border-style:dashed;">
+      <div class="folder-face"><span style="font-size:44px;line-height:1;color:var(--brass);">＋</span></div>
+      <div class="folder-name">New binder</div>
+      <div class="folder-sub">file cards your way</div>
+    </div>`;
+  return `<div class="section-label">Binders</div>
+    <div class="deck-grid" style="margin-bottom:12px;">${binders.map(binderTileHtml).join('')}${wantsTile}${newTile}</div>`;
+}
 function wireCollectionPage(){
+  document.querySelectorAll('[data-binderopen]').forEach(t=>t.addEventListener('click', (e)=>{
+    if(e.target.closest('[data-binderedit]')) return;
+    state.colFilter.binder = t.dataset.binderopen;
+    render();
+  }));
+  document.querySelectorAll('[data-binderedit]').forEach(b=>b.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const binder = state.collection.binders.find(x=>x.id===b.dataset.binderedit);
+    const name = prompt('Rename binder', binder ? binder.name : '');
+    if(binder && name && name.trim()){ binder.name = name.trim(); saveCollection(); render(); }
+  }));
+  document.querySelector('[data-newbinder]')?.addEventListener('click', ()=>{
+    const name = prompt('New binder name');
+    if(name && name.trim()){
+      const nb = { id: 'bnd_'+Date.now().toString(36), name: name.trim() };
+      state.collection.binders.push(nb); saveCollection();
+      state.colFilter.binder = nb.id; render();
+    }
+  });
   document.getElementById('colBindersBtn')?.addEventListener('click', (e)=>{
     e.stopPropagation();
     if(document.getElementById('bindersPop')){ document.getElementById('bindersPop').remove(); return; }
