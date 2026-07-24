@@ -2580,9 +2580,10 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below (plain strings, one per bullet). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.62';
+const APP_VERSION = '2.51.63';
 const CHANGELOG_NOTES = [
-  'Built for daily deck building: everything the app loads — EDHREC rankings and recommendations, search results, prices — now persists for a week and opens instantly from the last visit. Anything older than a day quietly refreshes in the background while you work, so what you see is never more than a day behind and the numbers correct themselves on screen when fresher ones arrive.'
+  'Spoilers keep proper time: the very newest reveals no longer sink days deep when Scryfall hasn\'t stamped their preview date yet, the page always opens on the full newest-first feed (as does "Check for new spoilers"), and long-running app sessions re-check automatically every three hours.',
+  'Small comforts: the Search page\'s random card is drawn quietly at launch so it\'s waiting when you arrive, and the yellow Search button now closes the advanced-filters panel just like "Use filters" does.'
 ];
 /* ---------- First-visit welcome (new players usually arrive via a shared
    deck link, so this waits until any showcase overlay has been closed) ---------- */
@@ -3019,6 +3020,7 @@ function resetSearchFilters(){
 }
 function switchPage(p){
   state._focusSearchOnce = (p === 'search' && state.screen !== 'search');
+  if(p === 'spoilers') state.spoilerSetFilter = null;   // always land on the all-sets, newest-first feed
   // A deck pinned via "Search Cards" only lives for that one visit to the
   // Search page — any navigation elsewhere returns Search to popup mode.
   if(p !== 'search' && p !== 'browse'){
@@ -5276,16 +5278,17 @@ function renderSpoilerBody(loaded, failed){
     cards = got.filter(spoilerPlayable).sort((a,b)=> (spoilerColorBucket(a)-spoilerColorBucket(b)) || (cn(a)-cn(b)));
     footHtml = `<p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed so far.</p>`;
   } else {
-    // All sets, one feed, newest spoilers first — no set grouping. Cards
-    // without a preview date inherit their set's OLDEST known preview date
-    // (they were part of some earlier batch, not today's reveal); a set with
-    // no preview dates at all sinks to the end rather than claiming recency.
+    // All sets, one feed, newest spoilers first — no set grouping. Scryfall's
+    // freshest reveals sometimes arrive before their preview date is filled
+    // in, so undated cards in a set that HAS dates inherit its NEWEST date —
+    // they are almost certainly today's batch, and burying them left the
+    // page days behind. A set with no preview dates at all still sinks.
     const withKeys = [];
     sets.forEach((x, si)=>{
       const cs = (loaded[x.code]||[]).filter(spoilerPlayable);
-      let setMin = '';
-      cs.forEach(c=>{ const k = spoilerDateKey(c); if(k && (!setMin || k < setMin)) setMin = k; });
-      cs.forEach((c, ci)=> withKeys.push({c, k: spoilerDateKey(c) || setMin, si, ci}));
+      let setMax = '';
+      cs.forEach(c=>{ const k = spoilerDateKey(c); if(k && k > setMax) setMax = k; });
+      cs.forEach((c, ci)=> withKeys.push({c, k: spoilerDateKey(c) || setMax, si, ci}));
     });
     withKeys.sort((a,b)=> (a.k<b.k?1:a.k>b.k?-1:0) || (a.si-b.si) || (a.ci-b.ci));
     cards = withKeys.map(w=>w.c);
@@ -5308,8 +5311,8 @@ function renderSpoilerBody(loaded, failed){
 async function wireSpoilersPage(){
   // First visit of the session: force a fresh pull so the page is never behind
   // Scryfall, without the user having to remember the refresh button.
-  if(!state._spoilerAutoFresh){
-    state._spoilerAutoFresh = true;
+  if(!state._spoilerAutoFresh || Date.now() - state._spoilerAutoFresh > 3*3600*1000){
+    state._spoilerAutoFresh = Date.now();
     state._spoilerCache = {};
     (async ()=>{
       try{ await resolveLegalSets(true); }catch(e){}   // fresh /sets → allSetsRaw (Commander sees every new set)
@@ -5340,6 +5343,7 @@ async function wireSpoilersPage(){
     rBtn.addEventListener('click', async ()=>{
       rBtn.disabled = true;
       rBtn.textContent = '⟳ Checking for new spoilers…';
+      state.spoilerSetFilter = null;   // the check always shows the full newest-first feed
       state._spoilerCache = {};
       state._spoilerFresh = true;
       try{ await checkForNewSets(true); }catch(e){}
@@ -6743,7 +6747,7 @@ function wireSearchPage(){
     const adv = document.getElementById('advName');
     if(adv && adv.value !== e.target.value) adv.value = e.target.value;   // mirror into the filters panel
   });
-  document.getElementById('runSearchBtn').addEventListener('click', runAdvancedSearch);
+  document.getElementById('runSearchBtn').addEventListener('click', ()=>{ state.advOpen = false; runAdvancedSearch(); });
   document.getElementById('spoilersBtn')?.addEventListener('click', ()=>switchPage('spoilers'));
   document.getElementById('advToggle').addEventListener('click', ()=>{ state.advOpen=!state.advOpen; render(); });
   if(state.advOpen) wireAdvancedPanel();
@@ -6758,18 +6762,14 @@ function setCotdVisible(v){
 /* ---------------- RANDOM CARD ----------------
    One random Admiral-legal, non-banned, nonland card per app session, plus a
    reroll button for another draw any time. */
-async function loadCardOfTheDay(force){
-  const box = document.getElementById('cotdBox');
-  if(!box) return;
-  if(state.cotd && state.cotd.card && !force){ renderCotd(state.cotd.card); return; }
-  box.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
+async function fetchRandomCotd(bg){
   let card = null;
   if(isCmdrMode()){
     // Commander's random card rolls across EVERY Commander-legal card ever
     // printed — not the Admiral set pool, which used to quietly scope it.
     for(let attempt=0; attempt<5 && !card; attempt++){
       try{
-        const res = await sfFetch(`${SF_BASE}/cards/random?q=${encodeURIComponent('game:paper -is:digital legal:commander')}`);
+        const res = await sfFetch(`${SF_BASE}/cards/random?q=${encodeURIComponent('game:paper -is:digital legal:commander')}`, 0, !!bg);
         if(!res.ok) continue;
         const c = await res.json();
         if(c && c.name && !isBanned(c)) card = c;
@@ -6778,18 +6778,32 @@ async function loadCardOfTheDay(force){
   } else {
     await resolveLegalSets();
     const codes = activeLegalSetCodes();
-    if(!codes.length){ box.innerHTML=''; return; }
+    if(!codes.length) return null;
     for(let attempt=0; attempt<6 && !card; attempt++){
       const set = codes[Math.floor(Math.random()*codes.length)];
       try{
         const q = `set:${set} game:paper -is:digital -t:land`;
-        const res = await sfFetch(`${SF_BASE}/cards/random?q=${encodeURIComponent(q)}`);
+        const res = await sfFetch(`${SF_BASE}/cards/random?q=${encodeURIComponent(q)}`, 0, !!bg);
         if(!res.ok) continue;
         const c = await res.json();
         if(c && c.name && landOk(c) && !isBanned(c)) card = c;
       }catch(e){}
     }
   }
+  return card;
+}
+/* Draw the session's random card quietly at launch, so arriving on the Search
+   page finds it already waiting instead of a spinner. */
+function preloadCotd(){
+  if(state.cotd && state.cotd.card) return;
+  fetchRandomCotd(true).then(card=>{ if(card && !(state.cotd && state.cotd.card)) state.cotd = {card}; }).catch(()=>{});
+}
+async function loadCardOfTheDay(force){
+  const box = document.getElementById('cotdBox');
+  if(!box) return;
+  if(state.cotd && state.cotd.card && !force){ renderCotd(state.cotd.card); return; }
+  box.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
+  const card = await fetchRandomCotd(false);
   const live = document.getElementById('cotdBox');
   if(!live) return;   // user navigated away or ran a search
   if(!card){ live.innerHTML=''; return; }
@@ -10360,6 +10374,7 @@ try{
   }
   sessionStorage.setItem(LS_PREFIX+'booted','1');
 }catch(e){}
+setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
 function hideSplash(){
   const el = document.getElementById('appSplash');
   if(!el || el.classList.contains('out')) return;
