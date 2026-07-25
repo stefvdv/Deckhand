@@ -2592,13 +2592,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.83';
+const APP_VERSION = '2.51.86';
 const CHANGELOG_NOTES = {
   en: [
-    'The app now greets you in the language you left it in: the What\'s-new message follows your saved language choice instead of arriving in Dutch for everyone.'
+    'The Theme dropdown on deck recommendations now sorts by YOUR leader specifically: the themes that commander\'s own community builds float to the top (straight from their EDHREC page), with colour-wide play data ordering the rest — because different captains in the same colours build very different decks.'
   ],
   nl: [
-    'De app begroet je nu in de taal waarin je hem achterliet: het wat-is-nieuw-bericht volgt je opgeslagen taalkeuze, in plaats van voor iedereen in het Nederlands te verschijnen.'
+    'De Thema-lijst bij deck-aanbevelingen sorteert nu op JOUW aanvoerder specifiek: de thema\'s die de community van die commander daadwerkelijk bouwt staan bovenaan (rechtstreeks van hun EDHREC-pagina), met kleurbrede speeldata voor de rest — want verschillende aanvoerders in dezelfde kleuren bouwen heel verschillende decks.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7727,6 +7727,10 @@ function inspirationPageHtml(){
   if(!state.decksIndex.length) return `<main>${needDeckHtml('Create a deck first to see recommendations for it.')}</main>`;
   if(!state.inspireDeckId || !getDeck(state.inspireDeckId)) state.inspireDeckId = state.activeDeckId || state.decksIndex[0].id;
   const d = getDeck(state.inspireDeckId);
+  if(d && d.admiral){
+    ensureCommanderThemes(d);                 // this leader's own theme list leads the sort
+    ensureComboTagRanks(deckComboKey(d));     // colour-wide play data orders the rest
+  }
   if(!d.admiral){
     return `<main>
       <div class="deck-title-row" style="margin-bottom:6px;"><div class="tb-titles"><div class="t2">${escapeHtml(d.name)}</div></div></div>
@@ -7739,7 +7743,7 @@ function inspirationPageHtml(){
     <p class="hint">The most-played cards in ${escapeHtml(d.admiral.name)}'s colors, filtered to what's legal in Admiral. Tap <strong>+</strong> to add straight to ${escapeHtml(d.name)}, or <strong>☆</strong> for the Maybeboard.</p>
     <div class="browse-selects">
       <div class="bs-row">${cselectHtml('inspType', TYPE_CHIPS.map(c=>({v:c.key, l:c.key==='top'?'Card type — top cards':c.label})), sel.type, 'Card type — top cards')}</div>
-      <div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:'Theme — none'}].concat(BROWSE_THEMES.map(c=>({v:c.key, l:c.label}))), sel.theme, 'Theme — none', {search:true})}</div>
+      <div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:'Theme — none'}].concat(rankedBrowseThemeOptions(deckComboKey(d), d)), sel.theme, 'Theme — none', {search:true})}</div>
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -7785,7 +7789,7 @@ async function loadInspiration(d){
 function renderInspireFromCache(cacheKey, d){
   const box = document.getElementById('inspireResults');
   const pool = state.inspireCache[cacheKey] || [];
-  const inDeck = new Set(d.cards.map(c=>c.name));
+  const inDeck = new Set(d.cards.map(c=>c.name).concat((d.maybeboard||[]).map(c=>c.name)));
   const remaining = pool.filter(c=>!inDeck.has(c.name));
   const display = sortColorCmcName(remaining).slice(0,30);
   // Running low on unused recommendations for this category? Quietly fetch a
@@ -8203,7 +8207,67 @@ async function ensureComboTagRanks(comboKey){
   };
   const [th, ty] = await Promise.all([grab('themes'), grab('typal')]);
   state._comboRanks[comboKey] = { loading:false, t:Date.now(), themes:th, typal:ty };
-  if(state.screen === 'browse' && (th || ty)) render();
+  if((state.screen === 'browse' || state.screen === 'inspiration') && (th || ty)) render();
+}
+/* The deck's colour-combo key, matched into EDHREC_COMBO_SLUGS regardless of
+   letter order — the map spells combos the traditional Magic way ('bgu' for
+   Sultai, 'rw' for Boros), so we look up by SORTED letters rather than trying
+   to reproduce that convention. */
+const _comboKeyBySorted = {};
+Object.keys(EDHREC_COMBO_SLUGS).forEach(k=>{ _comboKeyBySorted[k.split('').sort().join('')] = k; });
+function deckComboKey(d){
+  if(!d || !d.admiral) return null;
+  const set = new Set();
+  deckLeaders(d).forEach(L=>(L.color_identity||[]).forEach(c=>set.add(c)));
+  if(!set.size) return 'c';
+  const sorted = Array.from(set).map(c=>String(c).toLowerCase()).sort().join('');
+  return _comboKeyBySorted[sorted] || null;
+}
+/* Themes ranked for one specific leader: their own EDHREC page's theme list.
+   Different captains in the same colours build differently — Mogis plays
+   group-slug where another Rakdos leader plays sacrifice — so this outranks
+   colour-wide data. Cached per leader pair for the session; the page data
+   itself rides the 7-day EDHREC cache. */
+async function ensureCommanderThemes(d){
+  if(!d || !d.admiral) return;
+  state._cmdrThemes = state._cmdrThemes || {};
+  const key = d.admiral.name + (d.partner ? '|' + d.partner.name : '');
+  if(state._cmdrThemes[key]) return;
+  state._cmdrThemes[key] = { loading: true, themes: [] };
+  try{
+    const page = d.partner ? await edhrecPairPage(d.admiral, d.partner) : await edhrecCommanderPage(d.admiral);
+    state._cmdrThemes[key] = { loading: false, themes: (page && page.themes) || [] };
+    if((page && page.themes || []).length) mergeEdhrecTags(page.themes);
+  }catch(e){
+    state._cmdrThemes[key] = { loading: false, themes: [] };
+  }
+  if(state.screen === 'inspiration' && state.inspireDeckId === d.id) render();
+}
+function commanderThemeRanks(d){
+  if(!d || !d.admiral || !state._cmdrThemes) return null;
+  const key = d.admiral.name + (d.partner ? '|' + d.partner.name : '');
+  const slot = state._cmdrThemes[key];
+  return (slot && !slot.loading && slot.themes.length) ? slot.themes : null;
+}
+/* BROWSE_THEMES in two tiers: themes THIS leader's community actually builds
+   (their page's list, by deck count) float to the top; beneath them, the
+   colour combo's play data orders the rest; alphabetical settles ties. */
+function rankedBrowseThemeOptions(comboKey, d){
+  const slot = comboKey && state._comboRanks && state._comboRanks[comboKey];
+  const rm = (slot && !slot.loading && slot.themes) || null;
+  const comboRank = {};
+  if(rm && (state.edhrecTags||[]).length){
+    state.edhrecTags.forEach(t=>{ if(rm[t.slug] != null) comboRank[String(t.label||'').toLowerCase()] = rm[t.slug]; });
+  }
+  const cmdrRank = {};
+  const ct = d ? commanderThemeRanks(d) : null;
+  if(ct) ct.forEach((t, i)=>{ cmdrRank[String(t.label||'').toLowerCase()] = (t.count || 0) + (ct.length - i); });
+  const opts = BROWSE_THEMES.map(c=>{
+    const lk = String(c.label||'').toLowerCase();
+    return { v:c.key, l:c.label, r1: cmdrRank[lk] || 0, r2: comboRank[lk] || 0 };
+  });
+  opts.sort((a,b)=> (b.r1 - a.r1) || (b.r2 - a.r2) || a.l.localeCompare(b.l));
+  return opts.map(o=>({v:o.v, l:o.l}));
 }
 function comboRankMap(kind){
   const ck = state.browseSel && state.browseSel.combo;
