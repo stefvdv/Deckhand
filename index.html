@@ -2693,13 +2693,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.106';
+const APP_VERSION = '2.51.107';
 const CHANGELOG_NOTES = {
   en: [
-    'Life counter, table manners edition: logging commander damage now also deducts that player\'s life (and gives it back if you correct a mistake), New Game keeps everyone\'s names, tapping outside an open menu only closes the menu — no more accidental life changes — and the poison chip, its menu\'s + and − buttons, and the Done button all grew for surer thumbs.'
+    'The theme catalog now harvests EDHREC\'s full theme census instead of the hub\'s top sample, walks the data twice as deep, and refetches fresh on every device — Aikido and its hundred niche siblings finally take their place in the dropdown.'
   ],
   nl: [
-    'Levensteller, tafeletiquette-editie: commander damage invoeren trekt nu ook meteen de levens van die speler af (en geeft ze terug als je een foutje corrigeert), Nieuwe pot behoudt ieders naam, buiten een open menu tikken sluit alleen het menu — geen onbedoelde levenswijzigingen meer — en de gif-knop, de + en − in dat menu en de Klaar-knop zijn allemaal gegroeid voor zekerdere duimen.'
+    'De themacatalogus oogst nu EDHREC\'s volledige thematelling in plaats van de topselectie van de hub, loopt twee keer zo diep door de data, en haalt op elk toestel vers op — Aikido en zijn honderd niche-broertjes nemen eindelijk hun plek in de dropdown in.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8470,7 +8470,7 @@ function edhrecTagCatalogFrom(data){
     seen.add(slug); out.push({ label, slug, count: count||0 });
   };
   const walk = (node, depth)=>{
-    if(!node || depth > 7) return;
+    if(!node || depth > 14) return;
     if(Array.isArray(node)){ node.forEach(x=>walk(x, depth+1)); return; }
     if(typeof node !== 'object') return;
     const u = typeof node.url === 'string' ? node.url : '';
@@ -8488,7 +8488,7 @@ async function ensureEdhrecTags(){
   if(state._edtagsAt && (Date.now() - state._edtagsAt) < 60000) return;   // retry at most once a minute
   state._edtagsAt = Date.now();
   try{
-    const raw = localStorage.getItem('admiral_app:edhrecTags2');
+    const raw = localStorage.getItem('admiral_app:edhrecTags3');
     if(raw){
       const j = JSON.parse(raw);
       if(j && Array.isArray(j.v) && j.v.length && (Date.now() - (j.t||0)) < 7*24*3600*1000){
@@ -8496,11 +8496,20 @@ async function ensureEdhrecTags(){
       }
     }
   }catch(e){}
-  const data = await edhrecFetchJson('/pages/tags.json');
-  const tags = edhrecTagCatalogFrom(data);
+  // The hub overview only shows a top SAMPLE per category — the full theme
+  // census lives one level deeper. Harvest both documents and merge; the
+  // walker dedupes by slug across them.
+  const docs = [];
+  for(const path of ['/pages/tags/themes.json', '/pages/tags.json']){
+    try{ const d = await edhrecFetchJson(path); if(d) docs.push(d); }catch(e){}
+  }
+  const tags = edhrecTagCatalogFrom(docs);
   if(tags.length){
     state.edhrecTags = tags;
-    try{ localStorage.setItem('admiral_app:edhrecTags2', JSON.stringify({ t: Date.now(), v: tags })); }catch(e){}
+    try{
+      localStorage.setItem('admiral_app:edhrecTags3', JSON.stringify({ t: Date.now(), v: tags }));
+      localStorage.removeItem('admiral_app:edhrecTags2');
+    }catch(e){}
     if(state.screen==='browse') render();
   }
 }
