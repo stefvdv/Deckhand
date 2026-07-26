@@ -2645,13 +2645,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.91';
+const APP_VERSION = '2.51.92';
 const CHANGELOG_NOTES = {
   en: [
-    'The back button inside the Comprehensive Rules is now two-stage: with a search active it first clears the search and returns you to the table of contents; from there, pressing back again closes the Rules and lands on Extras.'
+    'The hardware back button in the Comprehensive Rules now truly walks back one level at a time: an active search is cleared first, and the next press closes the Rules and lands on Extras — no more falling out of the app.'
   ],
   nl: [
-    'De terugknop in de Comprehensive Rules werkt nu in twee stappen: met een actieve zoekopdracht wist hij eerst de zoekopdracht en keer je terug naar de inhoudsopgave; van daaruit sluit nogmaals terug de Rules en beland je op Extra\'s.'
+    'De hardware-terugknop in de Comprehensive Rules loopt nu echt één niveau per keer terug: een actieve zoekopdracht wordt eerst gewist, en de volgende druk sluit de Rules en beland je op Extra\'s — geen uitvallen uit de app meer.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3580,22 +3580,21 @@ function openCROverlay(){
   document.body.appendChild(el);
   const body = el.querySelector('#crBody');
   const q = el.querySelector('#crQ');
-  // Back is TWO-stage here: with a search active it first clears the search
-  // and returns to the table of contents (re-arming its own history entry,
-  // since popstate already consumed it); only from the clean start view does
-  // it actually close the Rules and land back on Extras.
-  function crBackStep(){
+  // TWO-stage back, the app's blessed way: every level pushes its own history
+  // entry at the moment of a real user gesture. Opening the Rules pushes the
+  // close-entry; RUNNING a search pushes a clear-entry on top. Back then pops
+  // one level at a time — search cleared first, Rules closed second — and no
+  // pushState ever happens inside popstate (Chrome skips gesture-less entries,
+  // which previously made the second back exit the app entirely).
+  state._crqArmed = false;
+  function crClearStep(){
+    state._crqArmed = false;
     const host = document.getElementById('crOverlay');
     if(!host) return;
-    if(q.value.trim()){
-      q.value = '';
-      run();
-      pushOverlay('cr', crBackStep);
-      return;
-    }
-    host.remove();
+    q.value = '';
+    run();
   }
-  pushOverlay('cr', crBackStep);
+  pushOverlay('cr', ()=>{ state._crqArmed = false; document.getElementById('crOverlay')?.remove(); });
   el.querySelector('#crBack').addEventListener('click', ()=>history.back());
   const showToc = (rules)=>{
     const tops = rules.filter(r=>/^\d{3}$/.test(r.n) || /^\d\.$/.test(r.n));
@@ -3608,6 +3607,10 @@ function openCROverlay(){
     if(!rules) return;
     const query = q.value.trim();
     if(!query){ showToc(rules); return; }
+    if(!state._crqArmed){
+      state._crqArmed = true;
+      pushOverlay('crq', crClearStep);
+    }
     const toks = crTokens(query);
     const hits = crSearch(rules, query, 14);
     body.innerHTML = hits.length
