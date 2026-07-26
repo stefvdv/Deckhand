@@ -1844,6 +1844,21 @@ function cardImageLarge(card){
 function rawManaCost(card){
   return card.mana_cost || (card.card_faces && card.card_faces[0].mana_cost) || '';
 }
+function countsForCurve(c){
+  // The mana curve is a curve of castable SPELLS. A land stays out if it can
+  // provide mana in any form: producing it directly (produced_mana), or the
+  // workaround — searching other lands onto the battlefield (fetchlands,
+  // Evolving Wilds). Only a land with no path to mana at all, like Maze of
+  // Ith, is a real draw you spend a card on — that one counts, at 0.
+  const face0 = (c.card_faces && c.card_faces[0]) || null;
+  const tl0 = (c.type_line || (face0 && face0.type_line) || '').split('//')[0];
+  if(!/\bLand\b/i.test(tl0)) return true;
+  const pm = c.produced_mana || (face0 && face0.produced_mana) || [];
+  if(pm.length) return false;
+  const ot = (c.oracle_text || (face0 && face0.oracle_text) || '');
+  if(/search your library for [^.]*\b(plains|island|swamp|mountain|forest|gate|land)\b/i.test(ot)) return false;
+  return true;
+}
 function manaSymbolCounts(cards){
   // GEN counts generic pips ONLY from truly colourless cards — costs made of
   // nothing but numerals (and X): Sol Ring's {1} counts, but the {3} in
@@ -2677,13 +2692,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.103';
+const APP_VERSION = '2.51.104';
 const CHANGELOG_NOTES = {
   en: [
-    'Tapping a mana curve bar now shows exactly the cards the bar counts — mana-producing lands are gone from the detail view too, while a land with no mana ability still shows in the 0 bar where it belongs.'
+    'Fetchlands are mana in a workaround — Arid Mesa, Flooded Strand and their kin now stay out of the mana curve too, in the bars and the tap-detail alike. The rule lives in one place now, so the curve and its detail view can never disagree again.'
   ],
   nl: [
-    'Op een mana curve-balk tikken toont nu precies de kaarten die de balk telt — manaproducerende lands zijn ook uit de detailweergave verdwenen, terwijl een land zonder mana-vermogen gewoon in de 0-balk staat waar het hoort.'
+    'Fetchlands zijn mana via een omweg — Arid Mesa, Flooded Strand en verwanten blijven nu ook uit de mana curve, in de balken én de detailweergave. De regel staat nu op één plek, dus de curve en zijn detailweergave kunnen nooit meer van mening verschillen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6514,13 +6529,7 @@ function statsTabHtml(d){
   const typeCounts={}; const rarityCounts={};
   let cmcSum = 0, curveCount = 0;
   d.cards.forEach(c=>{
-    // Mana-producing lands stay out of the curve (and the average) — they're
-    // fuel, not spells. A land that can't add mana (Maze of Ith) is a real
-    // card you draw and play, so it stands honestly in the 0 bar.
-    const tl0 = (c.type_line || (c.card_faces && c.card_faces[0] && c.card_faces[0].type_line) || '').split('//')[0];
-    const isLand = /\bLand\b/i.test(tl0);
-    const pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
-    if(!(isLand && pm.length)){
+    if(countsForCurve(c)){
       const b = Math.min(Math.round(c.cmc||0),6);
       curve[b]++; curveCards[b].push(c);
       cmcSum += (c.cmc||0);
@@ -6683,14 +6692,9 @@ function wireStatsTab(d){
   }));
   let selectedCmc = null;
   const curveCards = {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
-  // Same membership rule as the rendered curve (keep in sync with statsTabHtml):
-  // mana-producing lands are out; a land with no mana ability (Maze of Ith)
-  // belongs in the 0 bucket like any other castable card.
+  // Shared membership rule with the rendered curve — see countsForCurve.
   d.cards.forEach(c=>{
-    const tl0 = (c.type_line || (c.card_faces && c.card_faces[0] && c.card_faces[0].type_line) || '').split('//')[0];
-    const isLand = /\bLand\b/i.test(tl0);
-    const pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
-    if(isLand && pm.length) return;
+    if(!countsForCurve(c)) return;
     const b = Math.min(Math.round(c.cmc||0),6);
     curveCards[b].push(c);
   });
