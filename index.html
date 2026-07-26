@@ -1845,19 +1845,22 @@ function rawManaCost(card){
   return card.mana_cost || (card.card_faces && card.card_faces[0].mana_cost) || '';
 }
 function manaSymbolCounts(cards){
-  // GEN = generic mana: {3} adds three generic pips. C = the true Eldrazi
-  // diamond {C}, which only exists on cards that literally demand it.
+  // GEN counts generic pips ONLY from truly colourless cards — costs made of
+  // nothing but numerals (and X): Sol Ring's {1} counts, but the {3} in
+  // {3}{R}{R} does not; that card contributes its two R symbols alone.
+  // C = the true Eldrazi diamond {C}, only on cards that literally demand it.
   // Hybrid symbols like {2/W} keep counting their colour half only.
   const counts = {W:0,U:0,B:0,R:0,G:0,C:0,GEN:0};
   let total = 0;
   cards.forEach(c=>{
     const symbols = rawManaCost(c).match(/\{([^}]+)\}/g) || [];
+    if(!symbols.length) return;
+    const pureGeneric = symbols.every(sym=>/^\d+$|^X$/i.test(sym.slice(1,-1)));
     symbols.forEach(sym=>{
       const inner = sym.slice(1,-1);
       if(/^\d+$/.test(inner)){
-        const n = parseInt(inner, 10);
-        counts.GEN += n; total += n;
-        return;
+        if(pureGeneric){ const n = parseInt(inner, 10); counts.GEN += n; total += n; }
+        return;   // generic pips on coloured cards count for nothing
       }
       inner.split('/').forEach(part=>{
         if(counts[part] !== undefined && part !== 'GEN'){ counts[part]++; total++; }
@@ -2669,13 +2672,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.99';
+const APP_VERSION = '2.51.100';
 const CHANGELOG_NOTES = {
   en: [
-    'Generic and colourless untangled: a new grey Generic emblem — always shown — counts the generic pips in your mana costs ({3} counts as three) with colourless producers filling its bar, while the Eldrazi diamond now appears only when the maindeck truly has {C} in a cost, showing those symbols alone.'
+    'The Generic emblem now counts only truly colourless cards — costs made entirely of numbers, like Sol Ring\'s {1}. The {3} in {3}{R}{R} no longer counts anywhere; that card speaks for Red alone with its two symbols.'
   ],
   nl: [
-    'Generiek en kleurloos ontward: een nieuw grijs Generiek-embleem — altijd zichtbaar — telt de generieke symbolen in je manakosten ({3} telt als drie) met kleurloze producenten in de balk eronder, terwijl de Eldrazi-diamant nu alleen verschijnt wanneer het maindeck echt {C} in een kost heeft, en dan alleen die symbolen toont.'
+    'Het Generiek-embleem telt nu alleen echt kleurloze kaarten — kosten die volledig uit cijfers bestaan, zoals Sol Rings {1}. De {3} in {3}{R}{R} telt nergens meer mee; die kaart spreekt alleen voor Rood met zijn twee symbolen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
