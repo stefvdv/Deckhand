@@ -1853,6 +1853,11 @@ function manaSymbolCounts(cards){
   const counts = {W:0,U:0,B:0,R:0,G:0,C:0,GEN:0};
   let total = 0;
   cards.forEach(c=>{
+    // Lands never count toward symbols (production scans them separately).
+    // The front face decides: a pure land is out; an MDFC spell//land still
+    // counts its castable spell side.
+    const tl = (c.type_line || (c.card_faces && c.card_faces[0] && c.card_faces[0].type_line) || '').split('//')[0];
+    if(/\bLand\b/i.test(tl)) return;
     const symbols = rawManaCost(c).match(/\{([^}]+)\}/g) || [];
     if(!symbols.length) return;
     const pureGeneric = symbols.every(sym=>/^\d+$|^X$/i.test(sym.slice(1,-1)));
@@ -2672,13 +2677,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.100';
+const APP_VERSION = '2.51.102';
 const CHANGELOG_NOTES = {
   en: [
-    'The Generic emblem now counts only truly colourless cards — costs made entirely of numbers, like Sol Ring\'s {1}. The {3} in {3}{R}{R} no longer counts anywhere; that card speaks for Red alone with its two symbols.'
+    'The mana curve no longer counts mana-producing lands — they\'re fuel, not spells, and the average mana value cleaned up with them. Lands that can\'t add mana, like Maze of Ith, rightfully stand in the 0 bar.'
   ],
   nl: [
-    'Het Generiek-embleem telt nu alleen echt kleurloze kaarten — kosten die volledig uit cijfers bestaan, zoals Sol Rings {1}. De {3} in {3}{R}{R} telt nergens meer mee; die kaart spreekt alleen voor Rood met zijn twee symbolen.'
+    'De mana curve telt manaproducerende lands niet meer mee — dat is brandstof, geen spells, en het gemiddelde mana value is met ze meegeschoond. Lands die geen mana kunnen toevoegen, zoals Maze of Ith, staan terecht in de 0-balk.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6507,16 +6512,25 @@ function cardTileHtml(card, idx, loc, qty){
 function statsTabHtml(d){
   const curve=[0,0,0,0,0,0,0]; const curveCards={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
   const typeCounts={}; const rarityCounts={};
-  let cmcSum = 0;
+  let cmcSum = 0, curveCount = 0;
   d.cards.forEach(c=>{
-    const b = Math.min(Math.round(c.cmc||0),6);
-    curve[b]++; curveCards[b].push(c);
-    cmcSum += (c.cmc||0);
+    // Mana-producing lands stay out of the curve (and the average) — they're
+    // fuel, not spells. A land that can't add mana (Maze of Ith) is a real
+    // card you draw and play, so it stands honestly in the 0 bar.
+    const tl0 = (c.type_line || (c.card_faces && c.card_faces[0] && c.card_faces[0].type_line) || '').split('//')[0];
+    const isLand = /\bLand\b/i.test(tl0);
+    const pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
+    if(!(isLand && pm.length)){
+      const b = Math.min(Math.round(c.cmc||0),6);
+      curve[b]++; curveCards[b].push(c);
+      cmcSum += (c.cmc||0);
+      curveCount++;
+    }
     const cat = categoryOf(c, d); typeCounts[cat]=(typeCounts[cat]||0)+1;
     const rar = c.rarity ? c.rarity[0].toUpperCase()+c.rarity.slice(1) : 'Unknown';
     rarityCounts[rar] = (rarityCounts[rar]||0)+1;
   });
-  const avgCmc = d.cards.length ? (cmcSum/d.cards.length).toFixed(2) : '0.00';
+  const avgCmc = curveCount ? (cmcSum/curveCount).toFixed(2) : '0.00';
   const { counts: symCounts, total: symTotal } = manaSymbolCounts(d.cards);
   const maxB=Math.max(1,...curve), maxT=Math.max(1,...Object.values(typeCounts)), maxR=Math.max(1,...Object.values(rarityCounts));
   const colorFill={W:'#F1E6C8',U:'#7CB8DB',B:'#8B7EA8',R:'#D98A6B',G:'#8FBD8F'};
