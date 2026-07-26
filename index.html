@@ -2693,13 +2693,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.108';
+const APP_VERSION = '2.51.109';
 const CHANGELOG_NOTES = {
   en: [
-    'A crash fix with an apology attached: a theme entry without a label could slip into the catalog from a commander page and crash the Inspiration screen on every visit after the first. Entries are now sanitized at every door, a dirty stored catalog heals itself on load, and catalog growth saves to the right place again.'
+    'Loading armor: if any screen ever fails to draw, the app now shows a recovery screen with the exact error text and two buttons — back to start, or heal the Inspiration catalog data — instead of dying silently. The theme dropdown also falls back to the built-in list if the community catalog ever misbehaves.'
   ],
   nl: [
-    'Een crashfix met excuses erbij: een thema zonder label kon vanaf een commander-pagina de catalogus binnenglippen en het Inspiratie-scherm bij elk volgend bezoek laten crashen. Invoer wordt nu bij elke deur ontsmet, een vervuilde opgeslagen catalogus geneest zichzelf bij het laden, en catalogusgroei wordt weer op de juiste plek opgeslagen.'
+    'Laadpantser: als een scherm ooit niet kan tekenen, toont de app nu een herstelscherm met de exacte foutmelding en twee knoppen — terug naar start, of de Inspiratie-catalogusdata genezen — in plaats van stil dood te gaan. De thema-dropdown valt bovendien terug op de ingebouwde lijst als de community-catalogus ooit dwarsligt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3313,6 +3313,34 @@ function goBack(){
 }
 
 function render(){
+  // The single choke point every screen flows through. If ANY page render
+  // throws, the app must never die silently: show a recovery screen with the
+  // ACTUAL error text (one screenshot ends any future hunt), and offer a way
+  // home plus a targeted heal for the Inspiration catalog data.
+  try{ renderInner(); }
+  catch(err){
+    try{ console.error('render failed:', err); }catch(_e){}
+    try{
+      const esc = (x)=>String(x).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+      const msg = esc((err && (err.message || err.toString())) || 'unknown error') + (err && err.stack ? '\n' + esc(String(err.stack).split('\n').slice(1,3).join('\n')) : '');
+      const root = document.getElementById('root');
+      root.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center;background:var(--ink);color:var(--ink-text);">
+        <div style="font-family:'Cinzel',serif;font-size:19px;color:var(--brass);">Something broke while drawing this screen</div>
+        <div style="font-size:13px;opacity:.8;">Er ging iets mis bij het tekenen van dit scherm — dit is de foutmelding:</div>
+        <pre style="max-width:100%;overflow:auto;text-align:left;font-size:11px;background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;">${msg}</pre>
+        <button id="recHome" class="primary-btn" style="width:auto;padding:12px 26px;">Back to start</button>
+        <button id="recHeal" class="ghost-btn" style="padding:11px 20px;font-size:13px;">Reset Inspiration data &amp; go back to start</button>
+      </div>`;
+      document.getElementById('recHome').onclick = ()=>{ state.screen = 'home'; render(); };
+      document.getElementById('recHeal').onclick = ()=>{
+        try{ localStorage.removeItem('admiral_app:edhrecTags3'); localStorage.removeItem('admiral_app:edhrecTags2'); }catch(_e){}
+        state.edhrecTags = null; state._kindredSet = null; state.screen = 'home';
+        render();
+      };
+    }catch(_e2){}
+  }
+}
+function renderInner(){
   const root = document.getElementById('root');
   const nav = navHtml();
   let body = '';
@@ -8640,6 +8668,10 @@ function comboRankMap(kind){
   return (slot && !slot.loading && slot[kind]) || null;
 }
 function browseThemeOptions(){
+  try{ return browseThemeOptionsInner(); }
+  catch(e){ try{ console.error('theme options failed, using built-ins:', e); }catch(_e){} return BROWSE_THEMES.map(c=>({v:c.key, l:c.label})); }
+}
+function browseThemeOptionsInner(){
   // The community catalog ENRICHES the list, it never replaces it: the app's
   // own ~55 themes are always present, EDHREC tags join them (winning the
   // spot on a label collision, since they carry play data), kindred stays in
