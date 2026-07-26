@@ -170,12 +170,12 @@ main{flex:1;padding:16px 16px 28px;}
 .cp-none{font-size:11.5px;color:var(--sub-text-2);font-style:italic;}
 .card-detail{max-width:560px;margin:0 auto;width:100%;}
 .detail-sec{margin-top:20px;}
-.ms-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px 18px;margin-top:12px;justify-items:center;}
+.ms-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px 18px;margin-top:12px;justify-items:center;}
 .ms-cell{display:flex;flex-direction:column;align-items:center;gap:7px;width:100%;max-width:150px;min-width:0;}
-.ms-big{position:relative;width:66px;height:66px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.35));}
+.ms-big{position:relative;width:92px;height:92px;filter:drop-shadow(0 2px 7px rgba(0,0,0,0.35));}
 .ms-big svg{width:100%;height:100%;display:block;}
 .ms-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
-.ms-pct i{font-style:normal;font-weight:800;font-size:14.5px;color:#17130c;background:rgba(255,255,255,0.78);border-radius:11px;padding:1px 7px;line-height:1.3;}
+.ms-pct i{font-style:normal;font-weight:800;font-size:18px;color:#17130c;background:rgba(255,255,255,0.72);border-radius:13px;padding:2px 9px;line-height:1.3;}
 .ms-prod-lbl{font-size:10.5px;letter-spacing:.04em;color:var(--sub-text);text-transform:uppercase;text-align:center;}
 .ms-prod{position:relative;width:100%;height:18px;border-radius:9px;background:rgba(0,0,0,0.28);border:1px solid var(--line);overflow:hidden;}
 .ms-prod-fill{height:100%;border-radius:9px;}
@@ -2660,13 +2660,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.95';
+const APP_VERSION = '2.51.96';
 const CHANGELOG_NOTES = {
   en: [
-    'Mana Symbols, the Moxfield way: each colour now shows its big mana pip with the symbol percentage inside it, and in Commander mode a bar in that colour beneath — "White production" and so on — with the production percentage inside the bar. Still two columns: White|Blue, Black|Red, Green|Colorless.'
+    'The mana pips grew to full emblem size with the percentage sitting comfortably inside the symbol, and the production bars are now shares of total production — all bars together add up to one imaginary 100% bar, so a 50/50 two-colour deck shows two half-filled bars.'
   ],
   nl: [
-    'Mana symbolen, op z\'n Moxfields: elke kleur toont nu zijn grote mana-symbool met het symboolpercentage erin, en in Commander-modus daaronder een balk in die kleur — "Witte productie" enzovoort — met het productiepercentage in de balk. Nog steeds twee kolommen: Wit|Blauw, Zwart|Rood, Groen|Kleurloos.'
+    'De mana-symbolen zijn gegroeid tot volwaardige emblemen met het percentage comfortabel in het symbool, en de productiebalken tonen nu aandelen van de totale productie — alle balken samen vormen één denkbeeldige 100%-balk, dus een 50/50 tweekleurendeck toont twee halfgevulde balken.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6527,7 +6527,7 @@ function statsTabHtml(d){
       // showing production — "White production", percentage inside the bar.
       // Two columns, fixed W|U / B|R / G|C order; vertical room well spent.
       const prod = { W:0, U:0, B:0, R:0, G:0, C:0 };
-      let prodAny = false, prodTotal = 1;
+      let prodAny = false, prodTotal = 1;   // prodTotal = sum of colour hits, for share-of-production bars
       if(isCmdrMode()){
         const all = deckLeaders(d).concat(d.cards);
         all.forEach(c=>{
@@ -6536,7 +6536,9 @@ function statsTabHtml(d){
           Object.keys(prod).forEach(k=>{ if(seen.has(k)) prod[k]++; });
         });
         prodAny = Object.keys(prod).some(k=>prod[k] > 0);
-        prodTotal = all.length || 1;
+        // Normalized to SHARE of total production: all bars together add up to
+        // one imaginary 100% bar (a 50/50 two-colour deck shows two half bars).
+        prodTotal = Object.keys(prod).reduce((t,k)=>t+prod[k], 0) || 1;
       }
       if(!symTotal && !prodAny){
         return `<div class="panel-card"><div class="panel-h">Mana Symbols</div><div class="empty-note" style="padding:10px 0;">No colored mana symbols yet.</div></div>`;
@@ -6547,7 +6549,7 @@ function statsTabHtml(d){
         const symPct = symTotal ? Math.round(((symCounts[k]||0)/symTotal)*100) : 0;
         const prodPct = Math.round((prod[k]/prodTotal)*100);
         return `<div class="ms-cell">
-          <div class="ms-big">${manaIconSvg(k, 66)}<span class="ms-pct"><i>${symPct}%</i></span></div>
+          <div class="ms-big">${manaIconSvg(k, 92)}<span class="ms-pct"><i>${symPct}%</i></span></div>
           ${prodAny ? `<div class="ms-prod-lbl">${CNAME[k]} production</div>
           <div class="ms-prod"><div class="ms-prod-fill" style="width:${(prod[k]/prodTotal)*100}%;background:${colorFill[k]||'#8a8f98'}"></div><span class="ms-prod-n">${prodPct}%</span></div>` : ''}
         </div>`;
