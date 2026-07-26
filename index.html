@@ -2693,13 +2693,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.107';
+const APP_VERSION = '2.51.108';
 const CHANGELOG_NOTES = {
   en: [
-    'The theme catalog now harvests EDHREC\'s full theme census instead of the hub\'s top sample, walks the data twice as deep, and refetches fresh on every device — Aikido and its hundred niche siblings finally take their place in the dropdown.'
+    'A crash fix with an apology attached: a theme entry without a label could slip into the catalog from a commander page and crash the Inspiration screen on every visit after the first. Entries are now sanitized at every door, a dirty stored catalog heals itself on load, and catalog growth saves to the right place again.'
   ],
   nl: [
-    'De themacatalogus oogst nu EDHREC\'s volledige thematelling in plaats van de topselectie van de hub, loopt twee keer zo diep door de data, en haalt op elk toestel vers op — Aikido en zijn honderd niche-broertjes nemen eindelijk hun plek in de dropdown in.'
+    'Een crashfix met excuses erbij: een thema zonder label kon vanaf een commander-pagina de catalogus binnenglippen en het Inspiratie-scherm bij elk volgend bezoek laten crashen. Invoer wordt nu bij elke deur ontsmet, een vervuilde opgeslagen catalogus geneest zichzelf bij het laden, en catalogusgroei wordt weer op de juiste plek opgeslagen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8492,7 +8492,8 @@ async function ensureEdhrecTags(){
     if(raw){
       const j = JSON.parse(raw);
       if(j && Array.isArray(j.v) && j.v.length && (Date.now() - (j.t||0)) < 7*24*3600*1000){
-        state.edhrecTags = j.v; return;
+        state.edhrecTags = j.v.filter(t=>t && typeof t.slug === 'string' && t.slug && typeof t.label === 'string' && t.label);
+        if(state.edhrecTags.length) return;
       }
     }
   }catch(e){}
@@ -8650,10 +8651,12 @@ function browseThemeOptions(){
   const seen = new Set();
   const out = [];
   ed.forEach(t=>{
-    const lk = String(t.label||'').toLowerCase();
-    if(ks.has(lk) || isColorComboTag(t) || seen.has(lk)) return;
+    if(!t) return;
+    const label = String(t.label || '').trim();
+    const lk = label.toLowerCase();
+    if(!label || ks.has(lk) || isColorComboTag(t) || seen.has(lk)) return;
     seen.add(lk);
-    out.push({ v:'ed:'+t.slug, l:t.label, r: rm ? (rm[t.slug]||0) : 0 });
+    out.push({ v:'ed:'+t.slug, l:label, r: rm ? (rm[t.slug]||0) : 0 });
   });
   BROWSE_THEMES.forEach(c=>{
     const lk = String(c.label||'').toLowerCase();
@@ -8673,11 +8676,17 @@ function mergeEdhrecTags(list){
   const have = new Set(cur.map(t=>t.slug));
   let grew = false;
   list.forEach(t=>{
-    if(t && t.slug && !have.has(t.slug)){ cur.push({ label: t.label, slug: t.slug, count: t.count||0 }); have.add(t.slug); grew = true; }
+    if(!t) return;
+    // Sanitize at the door: a label-less entry once crashed the theme sort.
+    const slug = String(t.slug || '').trim().toLowerCase();
+    if(!slug || have.has(slug)) return;
+    const label = String(t.label || '').trim() || slug.replace(/-/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+    cur.push({ label, slug, count: +t.count || 0 });
+    have.add(slug); grew = true;
   });
   if(grew){
     state.edhrecTags = cur;
-    try{ localStorage.setItem('admiral_app:edhrecTags2', JSON.stringify({ t: Date.now(), v: cur })); }catch(e){}
+    try{ localStorage.setItem('admiral_app:edhrecTags3', JSON.stringify({ t: Date.now(), v: cur })); }catch(e){}
   }
 }
 const KINDRED_PLURAL_IRREGULAR = { Elf:'Elves', Wolf:'Wolves', Werewolf:'Werewolves', Dwarf:'Dwarves', Mouse:'Mice', Fox:'Foxes', Sphinx:'Sphinxes', Phoenix:'Phoenixes', Ox:'Oxen', Octopus:'Octopuses' };
