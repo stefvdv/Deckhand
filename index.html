@@ -2677,13 +2677,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.102';
+const APP_VERSION = '2.51.103';
 const CHANGELOG_NOTES = {
   en: [
-    'The mana curve no longer counts mana-producing lands — they\'re fuel, not spells, and the average mana value cleaned up with them. Lands that can\'t add mana, like Maze of Ith, rightfully stand in the 0 bar.'
+    'Tapping a mana curve bar now shows exactly the cards the bar counts — mana-producing lands are gone from the detail view too, while a land with no mana ability still shows in the 0 bar where it belongs.'
   ],
   nl: [
-    'De mana curve telt manaproducerende lands niet meer mee — dat is brandstof, geen spells, en het gemiddelde mana value is met ze meegeschoond. Lands die geen mana kunnen toevoegen, zoals Maze of Ith, staan terecht in de 0-balk.'
+    'Op een mana curve-balk tikken toont nu precies de kaarten die de balk telt — manaproducerende lands zijn ook uit de detailweergave verdwenen, terwijl een land zonder mana-vermogen gewoon in de 0-balk staat waar het hoort.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6683,7 +6683,17 @@ function wireStatsTab(d){
   }));
   let selectedCmc = null;
   const curveCards = {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
-  d.cards.forEach(c=>{ const b=Math.min(Math.round(c.cmc||0),6); curveCards[b].push(c); });
+  // Same membership rule as the rendered curve (keep in sync with statsTabHtml):
+  // mana-producing lands are out; a land with no mana ability (Maze of Ith)
+  // belongs in the 0 bucket like any other castable card.
+  d.cards.forEach(c=>{
+    const tl0 = (c.type_line || (c.card_faces && c.card_faces[0] && c.card_faces[0].type_line) || '').split('//')[0];
+    const isLand = /\bLand\b/i.test(tl0);
+    const pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
+    if(isLand && pm.length) return;
+    const b = Math.min(Math.round(c.cmc||0),6);
+    curveCards[b].push(c);
+  });
   document.querySelectorAll('.curve-col[data-cmc]').forEach(col=>{
     col.addEventListener('click', ()=>{
       const cmc = col.dataset.cmc;
