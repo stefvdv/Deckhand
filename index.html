@@ -2660,13 +2660,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.96';
+const APP_VERSION = '2.51.97';
 const CHANGELOG_NOTES = {
   en: [
-    'The mana pips grew to full emblem size with the percentage sitting comfortably inside the symbol, and the production bars are now shares of total production — all bars together add up to one imaginary 100% bar, so a 50/50 two-colour deck shows two half-filled bars.'
+    'The Mana Symbols panel now shows only the colours of your Commander or Admiral\'s identity, plus Colorless always — mono-blue gets two proud emblems instead of six, and the production bars still add up to one imaginary 100% bar across what\'s shown.'
   ],
   nl: [
-    'De mana-symbolen zijn gegroeid tot volwaardige emblemen met het percentage comfortabel in het symbool, en de productiebalken tonen nu aandelen van de totale productie — alle balken samen vormen één denkbeeldige 100%-balk, dus een 50/50 tweekleurendeck toont twee halfgevulde balken.'
+    'Het Mana symbolen-paneel toont nu alleen de kleuren van de identiteit van je Commander of Admiral, plus altijd Kleurloos — mono-blauw krijgt twee trotse emblemen in plaats van zes, en de productiebalken vormen samen nog steeds één denkbeeldige 100%-balk over wat getoond wordt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6536,15 +6536,20 @@ function statsTabHtml(d){
           Object.keys(prod).forEach(k=>{ if(seen.has(k)) prod[k]++; });
         });
         prodAny = Object.keys(prod).some(k=>prod[k] > 0);
-        // Normalized to SHARE of total production: all bars together add up to
-        // one imaginary 100% bar (a 50/50 two-colour deck shows two half bars).
-        prodTotal = Object.keys(prod).reduce((t,k)=>t+prod[k], 0) || 1;
       }
       if(!symTotal && !prodAny){
         return `<div class="panel-card"><div class="panel-h">Mana Symbols</div><div class="empty-note" style="padding:10px 0;">No colored mana symbols yet.</div></div>`;
       }
       const CNAME = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', C:'Colorless' };
-      const order = ['W','U','B','R','G','C'];
+      // Only the leader's colour identity is shown (plus Colorless, always).
+      // A five-colour deck gets the full spread; mono-blue gets U and C.
+      const idSet = new Set();
+      deckLeaders(d).forEach(l=> (l.color_identity || []).forEach(c=>idSet.add(c)));
+      const order = ['W','U','B','R','G'].filter(k=> idSet.size ? idSet.has(k) : true).concat(['C']);
+      // Bars are shares of total production ACROSS THE SHOWN COLOURS, so the
+      // visible bars always add up to one imaginary 100% bar — off-identity
+      // production from "any colour" rocks can't skew the picture.
+      prodTotal = order.reduce((t,k)=>t+prod[k], 0) || 1;
       const cell = (k)=>{
         const symPct = symTotal ? Math.round(((symCounts[k]||0)/symTotal)*100) : 0;
         const prodPct = Math.round((prod[k]/prodTotal)*100);
