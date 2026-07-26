@@ -865,6 +865,12 @@ main.has-dock{padding-bottom:84px;}
 .cr-toc{display:flex;flex-direction:column;}
 .cr-toc-row{display:flex;gap:10px;align-items:baseline;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:11px 10px;color:var(--ink-text);font-size:13.5px;cursor:pointer;}
 #logGameOverlay{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.55);display:flex;align-items:flex-end;justify-content:center;}
+.cselect-panel.inline{position:static;max-height:44vh;overflow-y:auto;margin-top:6px;box-shadow:none;}
+.glog-csbox{flex:1;min-width:0;}
+.glog-csbox .cselect{width:100%;}
+.glog-copt{display:flex;align-items:center;gap:9px;min-width:0;text-align:left;}
+.glog-copt img{width:32px;height:45px;object-fit:cover;border-radius:4px;flex:none;background:#101418;}
+.glog-cname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .glog-sheet{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:var(--ink);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:14px 16px 22px;-webkit-overflow-scrolling:touch;}
 .glog-form{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
 .glog-frow{display:flex;align-items:center;gap:10px;}
@@ -1311,7 +1317,7 @@ function cselectHtml(id, options, value, placeholder, o){
       <span class="cs-label">${label}</span>
       <span class="cs-car">▾</span>
     </button>
-    ${open ? `<div class="cselect-panel${o.tall?' tall':''}">${o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:''}${options.map(x=>`<button class="cselect-opt ${String(x.v)===String(value ?? '')?'sel':''} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`).join('')}${o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:''}</div>` : ''}
+    ${open ? `<div class="cselect-panel${o.tall?' tall':''}${o.inline?' inline':''}">${o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:''}${options.map(x=>`<button class="cselect-opt ${String(x.v)===String(value ?? '')?'sel':''} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`).join('')}${o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:''}</div>` : ''}
   </div>`;
 }
 function csRerender(){
@@ -2719,13 +2725,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.112';
+const APP_VERSION = '2.51.113';
 const CHANGELOG_NOTES = {
   en: [
-    'The play log tab settled on a plain, honest name: Deck Log — same in both fleets.'
+    'The Deck Log form now speaks the house style: its dropdowns are the app\'s own — no more system pickers — and the MVP and Weakest card pickers show each card\'s image beside its name, with type-to-filter for big decks.'
   ],
   nl: [
-    'Het speellog-tabblad koos een gewone, eerlijke naam: Decklog — hetzelfde in beide vloten.'
+    'Het Decklog-formulier spreekt nu de huisstijl: de dropdowns zijn die van de app zelf — geen systeemmenu\'s meer — en de MVP- en Zwakste kaart-kiezers tonen elke kaart met afbeelding naast de naam, met typen-om-te-filteren voor grote decks.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6837,48 +6843,107 @@ function primerTabHtml(d){
 }
 function openLogGameOverlay(d){
   document.getElementById('logGameOverlay')?.remove();
-  const cardNames = deckLeaders(d).concat(d.cards).map(c=>c.name).filter((v,i,a)=>a.indexOf(v)===i).sort();
-  const opts = (sel)=>`<option value=""${!sel?' selected':''}>—</option>` + cardNames.map(n=>`<option${sel===n?' selected':''}>${escapeHtml(n)}</option>`).join('');
+  // Unique deck cards (leaders first), each carrying its thumbnail for the pickers.
+  const seen = new Set();
+  const cardOpts = [{ v:'', l:'—' }];
+  deckLeaders(d).concat(d.cards).forEach(c=>{
+    if(seen.has(c.name)) return;
+    seen.add(c.name);
+    const img = cardImage(c) || '';
+    cardOpts.push({ v: c.name, l: `<span class="glog-copt">${img?`<img src="${img}" loading="lazy" alt="">`:''}<span class="glog-cname">${escapeHtml(c.name)}</span></span>` });
+  });
+  cardOpts.splice(1, cardOpts.length-1, ...cardOpts.slice(1).sort((a,b)=>a.v.localeCompare(b.v)));
+  const byOpts = LOG_ENDINGS.map(x=>({ v:x, l:x }));
+  // The sheet renders from LOCAL state (the page-level cselect machinery
+  // can't reach an overlay outside #root), using the exact same markup and
+  // classes so it looks identical to every other dropdown in the app.
+  const local = { res:'W', by:'Combat', pod:'4', mull:'0', mana:'ok', turns:'', dead:'', mvp:'', weak:'', note:'', open:null };
   const el = document.createElement('div');
   el.id = 'logGameOverlay';
-  el.innerHTML = `<div class="glog-sheet">
-    <div class="appoint-head"><span>⊕ Log a game</span><button class="icon-btn" id="lgClose" style="flex:none;">✕</button></div>
-    <div class="glog-form">
-      <div class="glog-frow"><span class="glog-lbl">Result</span><div class="seg" id="lgRes"><button data-v="W" class="active">Won</button><button data-v="L">Lost</button></div></div>
-      <div class="glog-frow"><span class="glog-lbl">Ended by</span><select id="lgBy" class="glog-sel">${LOG_ENDINGS.map(x=>`<option>${x}</option>`).join('')}</select></div>
-      <div class="glog-frow"><span class="glog-lbl">Pod size</span><div class="seg" id="lgPod"><button data-v="2">2</button><button data-v="3">3</button><button data-v="4" class="active">4</button><button data-v="5">5</button></div></div>
-      <div class="glog-frow"><span class="glog-lbl">Turns</span><input id="lgTurns" type="number" min="1" max="99" inputmode="numeric" class="glog-num"></div>
-      <div class="glog-frow"><span class="glog-lbl">Mulligans</span><div class="seg" id="lgMull"><button data-v="0" class="active">0</button><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3+</button></div></div>
-      <div class="glog-frow"><span class="glog-lbl">Mana</span><div class="seg" id="lgMana"><button data-v="ok" class="active">Smooth</button><button data-v="screw">Screwed</button><button data-v="flood">Flooded</button></div></div>
-      <div class="glog-frow"><span class="glog-lbl">Dead turns</span><input id="lgDead" type="number" min="0" max="99" inputmode="numeric" class="glog-num" placeholder="0"></div>
-      <div class="glog-frow"><span class="glog-lbl">MVP card</span><select id="lgMvp" class="glog-sel">${opts('')}</select></div>
-      <div class="glog-frow"><span class="glog-lbl">Weakest card</span><select id="lgWeak" class="glog-sel">${opts('')}</select></div>
-      <textarea id="lgNote" class="bulk-textarea" style="min-height:64px;" placeholder="Notes — what decided this game?"></textarea>
-      <button class="primary-btn" id="lgSave">Save game</button>
-    </div>
-  </div>`;
   document.body.appendChild(el);
   pushOverlay('gamelog', ()=>{ document.getElementById('logGameOverlay')?.remove(); });
-  const seg = (id)=>{ const box = el.querySelector('#'+id); box.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ box.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); })); return ()=> box.querySelector('button.active')?.dataset.v; };
-  const gRes = seg('lgRes'), gPod = seg('lgPod'), gMull = seg('lgMull'), gMana = seg('lgMana');
-  el.querySelector('#lgClose').addEventListener('click', ()=>history.back());
-  el.querySelector('#lgSave').addEventListener('click', ()=>{
-    const numOf = (id)=>{ const v = parseInt(el.querySelector('#'+id).value, 10); return isNaN(v) ? undefined : v; };
-    const entry = {
-      t: Date.now(), res: gRes()==='L' ? 'L' : 'W',
-      by: el.querySelector('#lgBy').value, pod: parseInt(gPod(),10)||4,
-      turns: numOf('lgTurns'), mull: parseInt(gMull(),10)||0, mana: gMana()||'ok',
-      dead: numOf('lgDead'),
-      mvp: el.querySelector('#lgMvp').value || '', weak: el.querySelector('#lgWeak').value || '',
-      note: el.querySelector('#lgNote').value.trim()
-    };
-    if(!d.playLog) d.playLog = [];
-    d.playLog.push(entry);
-    scheduleSave(d);
-    history.back();
-    setTimeout(()=>{ const box = document.getElementById('builderBody'); if(box && state.builderTab==='primer'){ box.innerHTML = primerTabHtml(d); wireBuilderBody(d); } }, 60);
-    toast(entry.res==='W' ? 'Victory logged. ⚔' : 'Logged — every loss is data.');
-  });
+  const csLocal = (id, options, value, ph)=>{
+    const keep = state.openCSelect;
+    state.openCSelect = local.open;
+    const html = cselectHtml(id, options, value, ph, { inline:true, search: options.length > 12 });
+    state.openCSelect = keep;
+    return html;
+  };
+  const segHtml = (id, field, pairs)=> `<div class="seg" data-lseg="${id}">${pairs.map(([v,l])=>`<button data-v="${v}" data-f="${field}" class="${local[field]===v?'active':''}" type="button">${l}</button>`).join('')}</div>`;
+  const renderSheet = ()=>{
+    el.innerHTML = `<div class="glog-sheet">
+      <div class="appoint-head"><span>⊕ Log a game</span><button class="icon-btn" id="lgClose" style="flex:none;">✕</button></div>
+      <div class="glog-form">
+        <div class="glog-frow"><span class="glog-lbl">Result</span>${segHtml('res','res',[['W','Won'],['L','Lost']])}</div>
+        <div class="glog-frow"><span class="glog-lbl">Ended by</span><div class="glog-csbox">${csLocal('lgBy', byOpts, local.by, 'Ended by…')}</div></div>
+        <div class="glog-frow"><span class="glog-lbl">Pod size</span>${segHtml('pod','pod',[['2','2'],['3','3'],['4','4'],['5','5']])}</div>
+        <div class="glog-frow"><span class="glog-lbl">Turns</span><input id="lgTurns" type="number" min="1" max="99" inputmode="numeric" class="glog-num" value="${escapeHtml(local.turns)}"></div>
+        <div class="glog-frow"><span class="glog-lbl">Mulligans</span>${segHtml('mull','mull',[['0','0'],['1','1'],['2','2'],['3','3+']])}</div>
+        <div class="glog-frow"><span class="glog-lbl">Mana</span>${segHtml('mana','mana',[['ok','Smooth'],['screw','Screwed'],['flood','Flooded']])}</div>
+        <div class="glog-frow"><span class="glog-lbl">Dead turns</span><input id="lgDead" type="number" min="0" max="99" inputmode="numeric" class="glog-num" placeholder="0" value="${escapeHtml(local.dead)}"></div>
+        <div class="glog-frow"><span class="glog-lbl">MVP card</span><div class="glog-csbox">${csLocal('lgMvp', cardOpts, local.mvp, '—')}</div></div>
+        <div class="glog-frow"><span class="glog-lbl">Weakest card</span><div class="glog-csbox">${csLocal('lgWeak', cardOpts, local.weak, '—')}</div></div>
+        <textarea id="lgNote" class="bulk-textarea" style="min-height:64px;" placeholder="Notes — what decided this game?">${escapeHtml(local.note)}</textarea>
+        <button class="primary-btn" id="lgSave">Save game</button>
+      </div>
+    </div>`;
+    wireSheet();
+    if(local.open){ el.querySelector('.cselect-panel')?.scrollIntoView({ block:'nearest' }); }
+  };
+  const syncInputs = ()=>{
+    local.turns = el.querySelector('#lgTurns')?.value ?? local.turns;
+    local.dead  = el.querySelector('#lgDead')?.value ?? local.dead;
+    local.note  = el.querySelector('#lgNote')?.value ?? local.note;
+  };
+  const fieldOf = (id)=> id==='lgBy' ? 'by' : id==='lgMvp' ? 'mvp' : 'weak';
+  function wireSheet(){
+    el.querySelector('#lgClose').addEventListener('click', ()=>history.back());
+    el.querySelectorAll('[data-lseg] button').forEach(b=>b.addEventListener('click', ()=>{
+      syncInputs(); local[b.dataset.f] = b.dataset.v; renderSheet();
+    }));
+    el.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      syncInputs(); local.open = local.open === b.dataset.cs ? null : b.dataset.cs; renderSheet();
+    }));
+    el.querySelectorAll('[data-csopt]').forEach(opt=>opt.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      syncInputs(); local[fieldOf(opt.dataset.csopt)] = opt.dataset.val; local.open = null; renderSheet();
+    }));
+    const si = el.querySelector('.cselect-search input');
+    if(si){
+      si.focus();
+      si.addEventListener('input', ()=>{
+        const q = si.value.trim().toLowerCase();
+        let any = false;
+        el.querySelectorAll('[data-csopt]').forEach(o=>{
+          const hit = !q || o.textContent.toLowerCase().includes(q);
+          o.style.display = hit ? '' : 'none';
+          if(hit) any = true;
+        });
+        const nr = el.querySelector('.cs-noresults');
+        if(nr) nr.style.display = any ? 'none' : '';
+      });
+    }
+    el.querySelector('#lgSave').addEventListener('click', ()=>{
+      syncInputs();
+      const numOf = (v)=>{ const n = parseInt(v, 10); return isNaN(n) ? undefined : n; };
+      const entry = {
+        t: Date.now(), res: local.res==='L' ? 'L' : 'W',
+        by: local.by, pod: parseInt(local.pod,10)||4,
+        turns: numOf(local.turns), mull: parseInt(local.mull,10)||0, mana: local.mana||'ok',
+        dead: numOf(local.dead),
+        mvp: local.mvp || '', weak: local.weak || '',
+        note: local.note.trim()
+      };
+      if(!d.playLog) d.playLog = [];
+      d.playLog.push(entry);
+      scheduleSave(d);
+      history.back();
+      setTimeout(()=>{ const box = document.getElementById('builderBody'); if(box && state.builderTab==='primer'){ box.innerHTML = primerTabHtml(d); wireBuilderBody(d); } }, 60);
+      toast(entry.res==='W' ? 'Victory logged. ⚔' : 'Logged — every loss is data.');
+    });
+  }
+  renderSheet();
 }
 
 function wireBuilderBody(d){
