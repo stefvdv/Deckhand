@@ -908,14 +908,15 @@ main.has-dock{padding-bottom:84px;}
 .pname-input{position:relative;z-index:2;background:none;border:none;color:rgba(255,255,255,0.85);font-size:16.5px;text-transform:uppercase;letter-spacing:1px;text-align:center;margin:0 auto 4px;font-family:'Inter';width:auto;max-width:85%;min-width:30px;field-sizing:content;display:block;padding:2px 4px;}
 .pname-input:focus{outline:none;color:#fff;}
 .lval2{position:relative;font-family:'Cinzel',serif;font-size:44px;font-weight:700;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.35);pointer-events:auto;cursor:pointer;padding:2px 10px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+#lifeMenuShield{position:fixed;inset:0;z-index:70;background:transparent;}
 .tap-zone{position:absolute;top:0;bottom:0;width:50%;z-index:1;display:flex;align-items:center;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
 .tap-zone.left{left:0;justify-content:flex-start;padding-left:10px;}
 .tap-zone.right{right:0;justify-content:flex-end;padding-right:10px;}
 .tap-zone:active{background:rgba(0,0,0,0.12);}
 .tap-glyph{font-size:34px;color:rgba(255,255,255,0.65);pointer-events:none;}
 .lbtn{width:36px;height:36px;border-radius:50%;border:1px solid var(--brass-dim);background:var(--ink-2);color:var(--ink-text);font-size:17px;cursor:pointer;}
-.lbtn.sm{width:46px;height:46px;font-size:22px;}
-.submenu-toggle{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:2;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:22px;padding:12px 26px;font-size:15.5px;cursor:pointer;margin-top:10px;-webkit-tap-highlight-color:transparent;}
+.lbtn.sm{width:60px;height:60px;font-size:28px;}
+.submenu-toggle{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:2;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:26px;padding:15px 36px;font-size:20px;cursor:pointer;margin-top:10px;-webkit-tap-highlight-color:transparent;}
 .submenu-toggle.back{position:static;transform:none;align-self:flex-start;font-size:13px;font-weight:700;margin:0 0 10px;background:none;border:none;padding:2px 4px;}
 .medal-badge{position:absolute;top:6px;right:8px;font-size:16px;z-index:2;}
 .defeat-banner{position:absolute;inset:0;background:rgba(0,0,0,0.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px;z-index:3;}
@@ -923,7 +924,7 @@ main.has-dock{padding-bottom:84px;}
 .revive-btn{background:none;border:1px solid var(--line);color:var(--sub-text);padding:5px 12px;border-radius:8px;font-size:11px;cursor:pointer;}
 .back-h{width:100%;text-align:left;font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 3px;}
 .focus-name{font-size:10px;color:#fff;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
-.submenu-toggle.done{flex:0 0 auto;margin:6px 0 0;background:rgba(255,255,255,0.16);border-color:rgba(255,255,255,0.45);font-weight:700;width:100%;}
+.submenu-toggle.done{flex:0 0 auto;margin:8px 0 0;background:rgba(255,255,255,0.16);border-color:rgba(255,255,255,0.45);font-weight:700;width:100%;font-size:19px;padding:16px 26px;}
 .life-face.sub .mini-row{margin-bottom:2px;}
 .lval2.ghosted{opacity:0.18;}
 .dmg-overlay{
@@ -2692,13 +2693,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.104';
+const APP_VERSION = '2.51.106';
 const CHANGELOG_NOTES = {
   en: [
-    'Fetchlands are mana in a workaround — Arid Mesa, Flooded Strand and their kin now stay out of the mana curve too, in the bars and the tap-detail alike. The rule lives in one place now, so the curve and its detail view can never disagree again.'
+    'Life counter, table manners edition: logging commander damage now also deducts that player\'s life (and gives it back if you correct a mistake), New Game keeps everyone\'s names, tapping outside an open menu only closes the menu — no more accidental life changes — and the poison chip, its menu\'s + and − buttons, and the Done button all grew for surer thumbs.'
   ],
   nl: [
-    'Fetchlands zijn mana via een omweg — Arid Mesa, Flooded Strand en verwanten blijven nu ook uit de mana curve, in de balken én de detailweergave. De regel staat nu op één plek, dus de curve en zijn detailweergave kunnen nooit meer van mening verschillen.'
+    'Levensteller, tafeletiquette-editie: commander damage invoeren trekt nu ook meteen de levens van die speler af (en geeft ze terug als je een foutje corrigeert), Nieuwe pot behoudt ieders naam, buiten een open menu tikken sluit alleen het menu — geen onbedoelde levenswijzigingen meer — en de gif-knop, de + en − in dat menu en de Klaar-knop zijn allemaal gegroeid voor zekerdere duimen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8629,20 +8630,30 @@ function comboRankMap(kind){
   return (slot && !slot.loading && slot[kind]) || null;
 }
 function browseThemeOptions(){
+  // The community catalog ENRICHES the list, it never replaces it: the app's
+  // own ~55 themes are always present, EDHREC tags join them (winning the
+  // spot on a label collision, since they carry play data), kindred stays in
+  // its own dropdown, and colour-combo pseudo-tags are dropped. A sparse
+  // stored catalog can therefore never shrink the dropdown again.
   const ed = state.edhrecTags || [];
-  if(ed.length){
-    // Play data drives both modes now: the community catalog IS the theme
-    // list, alphabetical. (Kindred lives in its own dropdown.) Admiral mode
-    // filters everything through its own legality afterwards.
-    const ks = kindredNameSet();
-    const rm = comboRankMap('themes');
-    return ed.filter(t=>!ks.has(String(t.label||'').toLowerCase()) && !isColorComboTag(t))
-             .sort((a,b)=> rm
-               ? (((rm[b.slug]||0) - (rm[a.slug]||0)) || a.label.localeCompare(b.label))
-               : a.label.localeCompare(b.label))
-             .map(t=>({ v: 'ed:'+t.slug, l: t.label }));
-  }
-  return BROWSE_THEMES.map(c=>({v:c.key, l:c.label}));
+  const ks = kindredNameSet();
+  const rm = comboRankMap('themes');
+  const seen = new Set();
+  const out = [];
+  ed.forEach(t=>{
+    const lk = String(t.label||'').toLowerCase();
+    if(ks.has(lk) || isColorComboTag(t) || seen.has(lk)) return;
+    seen.add(lk);
+    out.push({ v:'ed:'+t.slug, l:t.label, r: rm ? (rm[t.slug]||0) : 0 });
+  });
+  BROWSE_THEMES.forEach(c=>{
+    const lk = String(c.label||'').toLowerCase();
+    if(seen.has(lk) || ks.has(lk)) return;
+    seen.add(lk);
+    out.push({ v:c.key, l:c.label, r:0 });
+  });
+  out.sort((a,b)=> (b.r - a.r) || a.l.localeCompare(b.l));
+  return out.map(o=>({ v:o.v, l:o.l }));
 }
 function mergeEdhrecTags(list){
   // Commander pages carry themes the hub's top-list omits (Aikido and other
@@ -10510,7 +10521,7 @@ function wireSettingsPage(){
 function ensureLifePlayers(){
   const L = state.life;
   if(!L.players) L.players = [];
-  while(L.players.length < L.count) L.players.push({ name:'Player '+(L.players.length+1), life:lifeStart(), poison:0, dmg:[], defeated:false, defeatMsg:'', medal:false });
+  while(L.players.length < L.count) L.players.push({ name:(L._keepNames && L._keepNames[L.players.length]) || 'Player '+(L.players.length+1), life:lifeStart(), poison:0, dmg:[], defeated:false, defeatMsg:'', medal:false });
   L.players.length = L.count;
   L.players.forEach((p,i)=>{
     if(!p.name) p.name = 'Player '+(i+1);
@@ -10560,7 +10571,21 @@ function adjustLifeField(idx, field, d, from){
     lifeLog(`${p.name}: life ${d>0?'+':''}${d} → ${p.life}`);
   }
   else if(field==='poison'){ p.poison = Math.max(0, p.poison+d); lifeLog(`${p.name}: poison ${d>0?'+':''}${d} → ${p.poison}`); }
-  else if(field==='dmg'){ p.dmg[from] = Math.max(0, p.dmg[from]+d); lifeLog(`${p.name}: Admiral dmg from ${players[from].name} ${d>0?'+':''}${d} → ${p.dmg[from]}`); }
+  else if(field==='dmg'){
+    // Commander damage IS damage: the tally and the life total move together.
+    // Clamp-aware so correcting a mistake with − gives the life back exactly.
+    const before = p.dmg[from];
+    p.dmg[from] = Math.max(0, p.dmg[from]+d);
+    const applied = p.dmg[from] - before;
+    if(applied !== 0){
+      p.life -= applied;
+      p._delta = (p._delta||0) - applied;
+      if(p._delta === 0) delete p._delta;
+      clearTimeout(p._deltaT);
+      p._deltaT = setTimeout(()=>{ delete p._delta; renderLifeGrid(); }, 2500);
+    }
+    lifeLog(`${p.name}: cmdr dmg from ${players[from].name} ${d>0?'+':''}${d} → ${p.dmg[from]}${applied?` · life → ${p.life}`:''}`);
+  }
   checkDefeat(p);
   renderLifeGrid();
 }
@@ -10645,6 +10670,8 @@ function flipCoin(){
 function restartLife(){
   if(!confirm('Reset all life totals, poison, Admiral damage, and medals?')) return;
   if(state.life.expandedIdx !== null) closeTopOverlay(); // drop damage mode + its history entry
+  // The table keeps its names between games — only the numbers reset.
+  state.life._keepNames = (state.life.players || []).map(p=>p.name);
   state.life.players = null;
   state.life.history = [];
   state.life.setupDone = false;
@@ -10718,7 +10745,7 @@ function renderLifeOverlay(){
       <div class="brand-txt" style="font-size:15px;">Life Totals</div>
       <div class="spacer"></div>
       <button class="icon-btn" id="lifeMenuBtn">${ICONS.dots}</button>
-      ${state.life.menuOpen ? lifeMenuPopHtml() : ''}
+      ${state.life.menuOpen ? `<div id="lifeMenuShield"></div>${lifeMenuPopHtml()}` : ''}
     </div>
     <main>
       <div id="lifeHistoryPanel"></div>
@@ -10747,6 +10774,18 @@ function renderLifeOverlay(){
       renderLifeOverlay();
     });
     document.addEventListener('click', closeLifeMenuOnce, {once:true});
+    // The shield sits over the whole table, under the menu: any tap outside
+    // the menu lands here first, closes the menu, and goes NO further — the
+    // tap-hold zones use pointer events, so only a physical layer stops them.
+    const shield = document.getElementById('lifeMenuShield');
+    if(shield){
+      ['pointerdown','touchstart','mousedown','click'].forEach(ev=>{
+        shield.addEventListener(ev, (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          if(state.life.menuOpen){ state.life.menuOpen = false; renderLifeOverlay(); }
+        }, {passive:false});
+      });
+    }
   }
   renderHistoryPanel();
   renderSettingsPanel();
