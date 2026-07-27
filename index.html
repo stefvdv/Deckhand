@@ -1039,6 +1039,15 @@ img[src*="scryfall.io"]{border-radius:4.75% / 3.43%;background:#0b0b0c;}
 img[src*="cards.scryfall.io"]{border-radius:4.75% / 3.5%;}
 img.wb-card{border-radius:0 !important;background:#fff !important;}
 *:has(> .ub-mark){position:relative;}
+/* Corner ribbons (GC-style): UB folds over the top-left card corner, SPOILER
+   over the top-right — a diagonal sliver instead of a pill, so the card name
+   and the mana cost stay readable underneath. */
+.ub-corner{position:absolute;top:0;left:0;width:0;height:0;border-style:solid;border-width:32px 32px 0 0;border-color:#5B3FB8 transparent transparent transparent;z-index:2;pointer-events:none;filter:drop-shadow(1px 1px 2px rgba(0,0,0,0.45));}
+.ub-corner span{position:absolute;top:-29px;left:2px;transform:rotate(-45deg);transform-origin:center;font-size:9.5px;font-weight:800;letter-spacing:.03em;color:#fff;font-family:'Inter',sans-serif;}
+*:has(> .ub-corner){position:relative;}
+.pv-corner{position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 34px 34px 0;border-color:transparent #C77B22 transparent transparent;z-index:2;pointer-events:none;filter:drop-shadow(-1px 1px 2px rgba(0,0,0,0.45));}
+.pv-corner span{position:absolute;top:6px;left:5px;transform:rotate(45deg);transform-origin:center;font-size:6px;font-weight:800;letter-spacing:.03em;color:#fff;font-family:'Inter',sans-serif;white-space:nowrap;}
+*:has(> .pv-corner){position:relative;}
 
 /* ---------- Large screens (tablet / desktop): full-width, Moxfield-style.
    Content spans up to 1200px; card grids multiply into many columns on their
@@ -2380,7 +2389,7 @@ const GAME_CHANGERS = new Set([
 ]);
 function isGameChanger(c){ return isCmdrMode() && c && GAME_CHANGERS.has(frontFace(c).name || c.name); }
 function gcMarkHtml(c){ return isGameChanger(c) ? `<span class="gc-mark" title="Game Changer"><span>GC</span></span>` : ''; }
-function ubMarkHtml(c){ return (!isCmdrMode() && isUBCard(c)) ? '<span class="ub-mark">UB</span>' : ''; }
+function ubMarkHtml(c){ return (!isCmdrMode() && isUBCard(c)) ? '<span class="ub-corner" title="Universes Beyond"><span>UB</span></span>' : ''; }
 /* Old scans have square white corners; the CSS clips every card image to the
    real card corner radius so corners read dark like the physical card — except
    genuinely white-bordered cards, which keep their light corners. */
@@ -2400,7 +2409,7 @@ function isPreviewSet(code){
   return !!d && d > new Date().toISOString().slice(0,10);
 }
 function isPreviewCard(c){ return !!c && (isPreviewSet(c.set) || (c.released_at && c.released_at > new Date().toISOString().slice(0,10))); }
-function pvMarkHtml(c){ return isPreviewCard(c) ? '<span class="pv-mark">SPOILER</span>' : ''; }
+function pvMarkHtml(c){ return isPreviewCard(c) ? '<span class="pv-corner" title="Spoiler — not yet released"><span>SPOILER</span></span>' : ''; }
 function activeLegalSetCodes(){
   const core = (state.legalSetCodesCore || []).concat(autoSets.previewCodes||[]);
   const ub = enabledUBCodes();
@@ -2736,21 +2745,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.114';
+const APP_VERSION = '2.51.115';
 const CHANGELOG_NOTES = {
   en: [
-    'The card page in Search now carries a Change printing button — pick the exact printing you want before it goes into a deck or your collection.',
-    'Add to a deck lists your current fleet\'s decks first; the other side\'s decks wait below under their own header.',
-    'Deck Log, sharpened: dropdowns float over the form instead of shoving it down, the MVP and Weakest pickers are pure card images in two columns, “Ended by — Other” takes your own words, and the whole form is more compact.',
-    'Backing all the way out of the app now asks before it exits, and renaming decks, folders and binders uses your phone\'s own dialogs.',
-    'My Collection: the top-left title always fits — inside a binder it becomes the binder\'s name (tap ‹ or press back to return), and the All binders row is gone.'
+    'The UB and SPOILER markers now fold over the card\'s corners like the Game Changer ribbon — UB top-left, SPOILER top-right — so the card name and mana cost stay readable underneath.'
   ],
   nl: [
-    'De kaartpagina in Zoeken heeft nu een Verander versie-knop — kies de exacte versie voordat de kaart je deck of collectie in gaat.',
-    'Aan een deck toevoegen toont eerst de decks van je huidige vloot; de decks van de andere kant staan eronder met een eigen kopje.',
-    'Decklog, aangescherpt: dropdowns zweven over het formulier in plaats van het omlaag te duwen, de MVP- en Zwakste-kiezers zijn pure kaartafbeeldingen in twee kolommen, “Beslist door — Anders” neemt je eigen woorden aan, en het hele formulier is compacter.',
-    'Helemaal terug uit de app? De app vraagt nu eerst of je wilt afsluiten, en decks, folders en mappen hernoemen gebruikt de eigen dialogen van je telefoon.',
-    'Mijn Collectie: de titel linksboven past nu altijd — in een map wordt het de mapnaam (tik op ‹ of druk op terug), en de regel Alle mappen is weg.'
+    'De UB- en SPOILER-markers vouwen nu over de hoeken van de kaart, net als het Game Changer-lint — UB linksboven, SPOILER rechtsboven — zodat kaartnaam en manakosten eronder leesbaar blijven.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
