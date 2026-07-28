@@ -893,6 +893,10 @@ main.has-dock{padding-bottom:84px;}
 .tr-del{flex:none;color:var(--sub-text);}
 .trade-verdict{font-size:14.5px;font-weight:700;}
 .trade-verdict.even{color:var(--brass);}
+.ta-tile{cursor:pointer;text-align:left;padding:0;font-family:'Inter';color:var(--ink-text);}
+.ta-tile .st-body{width:100%;box-sizing:border-box;}
+.tp-set{font-size:11.5px;font-weight:600;line-height:1.25;}
+.tp-sub{font-size:10.5px;color:var(--sub-text);margin:1px 0 2px;}
 .glog-cname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .glog-sheet{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:var(--ink);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:10px 12px 16px;-webkit-overflow-scrolling:touch;}
 .glog-form{display:flex;flex-direction:column;gap:7px;margin-top:6px;}
@@ -2759,15 +2763,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.116';
+const APP_VERSION = '2.51.117';
 const CHANGELOG_NOTES = {
   en: [
-    'Tapping a card on your Wants list now opens the normal card page, with Add to my collection right there — and once it\'s in your collection it leaves the Wants list by itself.',
-    'New: a Trade calculator behind the ⚖ button on Search. Build both sides of a trade — exact printings, Cardmarket trend prices — and the app shows who adds how much to balance it.'
+    'The card page opened from Wants now has the same chevrons and swipe gestures as everywhere else — sail through your whole Wants list card by card.',
+    'The Trade pages went full-size: search results and the printing chooser are the familiar two-wide card grids, with the lowest price under each search result and every printing\'s own Cardmarket trend price under its art.'
   ],
   nl: [
-    'Een kaart op je Gezocht-lijst opent nu de normale kaartpagina, met Aan mijn collectie toevoegen direct bij de hand — en zodra hij in je collectie zit, verdwijnt hij vanzelf van Gezocht.',
-    'Nieuw: een Ruilcalculator achter de ⚖-knop op Zoeken. Stel beide kanten van een ruil samen — exacte versies, Cardmarket-trendprijzen — en de app toont wie hoeveel bijlegt om de ruil gelijk te maken.'
+    'De kaartpagina vanuit Gezocht heeft nu dezelfde pijltjes en veeggebaren als overal — blader je hele Gezocht-lijst kaart voor kaart door.',
+    'De Ruil-pagina\'s zijn op volle grootte: zoekresultaten en de versie-kiezer zijn de vertrouwde rasters van twee kaarten breed, met de laagste prijs onder elk zoekresultaat en per versie de eigen Cardmarket-trendprijs onder de art.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4685,9 +4689,12 @@ function wireCollectionPage(){
     // Remove from Wants); the little manage sheet survives only as the
     // offline / not-found fallback.
     const name = tile.dataset.wn;
+    // Hand over the whole rendered Wants list, so the card page's chevrons
+    // and swipe gestures sail through it card by card.
+    const wpool = Array.from(document.querySelectorAll('.want-tile')).map(t=>t.dataset.wn);
     try{
       const r = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(name)}`);
-      if(r.ok){ openCardInfo(await r.json(), { wantName: name }); return; }
+      if(r.ok){ openCardInfo(await r.json(), { wantName: name, wantPool: wpool, wantIdx: wpool.indexOf(name) }); return; }
     }catch(e){}
     openWantSheet(name);
   }));
@@ -8253,6 +8260,23 @@ function openCardInfo(card, opts){
     };
     attachSwipeNav(el, ()=>go(1), ()=>go(-1));
   }
+  // From Wants the pool is a list of names, resolved one card at a time —
+  // exact same chevrons and swipe, with wantName tracking the shown card so
+  // Add to my collection and Remove from Wants always act on it.
+  const wpool = (!pool && Array.isArray(opts.wantPool)) ? opts.wantPool : null;
+  if(wpool && wpool.length > 1){
+    const wi = (opts.wantIdx != null && wpool[opts.wantIdx] === card.name) ? opts.wantIdx : wpool.indexOf(card.name);
+    const go = async (dir)=>{
+      const n = wi + dir;
+      if(n < 0 || n >= wpool.length) return;
+      try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
+      try{
+        const r = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(wpool[n])}`);
+        if(r.ok) openCardInfo(await r.json(), Object.assign({}, opts, { wantName: wpool[n], wantIdx: n, _replace: true }));
+      }catch(e){}
+    };
+    attachSwipeNav(el, ()=>go(1), ()=>go(-1));
+  }
 }
 
 /* Printing chooser for the read-only card sheet: not tied to any deck — the
@@ -8509,8 +8533,12 @@ function openTradeAdd(side){
       if(!r.ok){ box.innerHTML = '<p class="hint">No cards found.</p>'; return; }
       const d = await r.json();
       const cards = (d.data||[]).slice(0,30);
-      box.innerHTML = `<div class="search-results">${cards.map((c,i)=>`<div class="sr-row"><img src="${cardImage(c)}" alt=""><div class="sr-body"><div class="nm">${escapeHtml(c.name)}</div><div class="tl">${escapeHtml(c.type_line||'')}</div></div><button class="add-btn" data-i="${i}">›</button></div>`).join('')}</div>`;
-      box.querySelectorAll('.add-btn').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, cards[+btn.dataset.i])));
+      box.innerHTML = `<div class="sr-grid">${cards.map((c,i)=>`<button class="sr-tile ta-tile" data-i="${i}">
+        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
+        <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
+      </button>`).join('')}</div>`;
+      box.querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, cards[+btn.dataset.i])));
+      loadTilePrices(cards);
     }catch(e){ box.innerHTML = '<p class="hint">Couldn\'t reach Scryfall.</p>'; }
   };
   document.getElementById('taGo').addEventListener('click', go);
@@ -8534,11 +8562,18 @@ async function openTradePrints(side, card){
     const box = document.getElementById('tpList');
     if(!prints.length){ box.innerHTML = `<div class="empty-note">No printings with art found.</div>`; return; }
     box.className='';
-    box.innerHTML = `<div class="search-results">${prints.map((p,i)=>{
+    box.innerHTML = `<div class="sr-grid">${prints.map((p,i)=>{
       const eur = printEur(p);
-      return `<div class="sr-row"><img src="${cardImage(p)}" alt=""><div class="sr-body"><div class="nm">${setIcoHtml(p.set, p.rarity)} ${escapeHtml(p.set_name||p.set)}</div><div class="tl">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}${eur!=null?` · <span class="tr-eur">€${eur.toFixed(2)}</span>`:' · —'}</div></div><button class="add-btn" data-i="${i}">✓</button></div>`;
+      return `<button class="sr-tile ta-tile" data-i="${i}">
+        <img class="${wbClass(p)}" src="${cardImageMed(p)}" alt="${escapeHtml(p.name)}" loading="lazy">
+        <div class="st-body">
+          <div class="tp-set">${setIcoHtml(p.set, p.rarity)} ${escapeHtml(p.set_name||p.set)}</div>
+          <div class="tp-sub">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}</div>
+          <div class="st-price st-price-lg">${eur!=null?`€${eur.toFixed(2)}`:'no price listed'}</div>
+        </div>
+      </button>`;
     }).join('')}</div>`;
-    box.querySelectorAll('.add-btn').forEach(btn=>{
+    box.querySelectorAll('.ta-tile').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const chosen = prints[+btn.dataset.i];
         loadTrade();
