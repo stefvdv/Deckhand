@@ -2772,15 +2772,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.122';
+const APP_VERSION = '2.51.123';
 const CHANGELOG_NOTES = {
   en: [
-    'Search filters now match like Moxfield: unquoted words in Oracle Text, Card Name, and Card Type each match anywhere — "Any player activate ability" finds "Any player may activate this ability". Quotes still force exact phrases.',
-    'The keyboard\'s Enter key shows 🔍 in the app\'s search fields and runs the search — including every field in Advanced filters.'
+    'The card page no longer flickers or shows another card\'s rulings while swiping — every price and rulings request now knows which card it belongs to, and stale answers are discarded. Rulings you\'ve already seen come back instantly from a small cache.'
   ],
   nl: [
-    'Zoekfilters matchen nu zoals Moxfield: losse woorden in Oracle-tekst, Kaartnaam en Kaarttype matchen elk waar dan ook — "Any player activate ability" vindt "Any player may activate this ability". Aanhalingstekens dwingen nog steeds exacte zinnen af.',
-    'De Enter-toets van het toetsenbord toont 🔍 in de zoekvelden van de app en start de zoekopdracht — ook bij elk veld in Geavanceerde filters.'
+    'De kaartpagina flikkert niet meer en toont geen rulings van een andere kaart tijdens het vegen — elke prijs- en rulings-aanvraag weet nu bij welke kaart hij hoort, en verouderde antwoorden worden weggegooid. Eerder bekeken rulings komen direct terug uit een kleine cache.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7447,6 +7445,7 @@ function openCardActionSheet(d, card, loc, idx){
   renderCardSheet(d, card, loc, idx);
 }
 function renderCardSheet(d, card, loc, idx){
+  _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   let el = document.getElementById('cardSheetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; document.body.appendChild(el); }
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
@@ -7577,31 +7576,50 @@ function renderCardSheet(d, card, loc, idx){
     attachSwipeNav(el, ()=>go(1), ()=>go(-1));
   }
 }
+/* Every render of a card sheet bumps this generation counter. Async loaders
+   (price, rulings) capture the value when they start and drop their result if
+   another card has taken the sheet in the meantime — with the serial Scryfall
+   queue, several stale answers used to land one after another, each rewriting
+   the CURRENT card's sections (flicker, and worse: another card's rulings). */
+let _cardSheetGen = 0;
 async function loadCardPrice(card){
+  const gen = _cardSheetGen;
   const el = document.getElementById('csPrice');
   if(!el) return;
   const v = await cheapestEur(card);
+  if(gen !== _cardSheetGen) return;   // a different card owns the sheet now
   const live = document.getElementById('csPrice');
   if(!live) return;   // sheet closed while fetching
   live.innerHTML = (v===null)
     ? `<span class="cp-none">No Cardmarket price listed</span>`
     : `<span class="cp-val">${fmtEur(v)}</span> <span class="cp-sub">cheapest printing · Cardmarket trend</span>`;
 }
+const _rulingsCache = new Map();   // rulings_uri → rendered HTML, capped small
+function rulingsHtmlFrom(rulings){
+  if(!rulings.length) return `<div class="empty-note" style="padding:10px 0;">No rulings have been published for this card.</div>`;
+  return rulings.map(r=>`<div class="ruling"><div class="ruling-date">${escapeHtml(r.published_at||'')}</div><div class="ruling-text">${escapeHtml(r.comment||'')}</div></div>`).join('');
+}
 async function loadRulings(card){
+  const gen = _cardSheetGen;
   const box = document.getElementById('csRulings');
   if(!box) return;
   if(!card.rulings_uri){ box.innerHTML = `<div class="empty-note" style="padding:10px 0;">No rulings available for this printing.</div>`; return; }
+  const hit = _rulingsCache.get(card.rulings_uri);
+  if(hit != null){ box.innerHTML = hit; return; }
   try{
     const res = await sfFetch(card.rulings_uri);
     if(!res.ok) throw new Error('status '+res.status);
     const data = await res.json();
-    const rulings = data.data || [];
+    const html = rulingsHtmlFrom(data.data || []);
+    _rulingsCache.set(card.rulings_uri, html);
+    if(_rulingsCache.size > 60) _rulingsCache.delete(_rulingsCache.keys().next().value);
+    if(gen !== _cardSheetGen) return;   // a different card owns the sheet now
     const live = document.getElementById('csRulings');
     if(!live) return; // sheet was closed while we were fetching
-    if(!rulings.length){ live.innerHTML = `<div class="empty-note" style="padding:10px 0;">No rulings have been published for this card.</div>`; return; }
-    live.innerHTML = rulings.map(r=>`<div class="ruling"><div class="ruling-date">${escapeHtml(r.published_at||'')}</div><div class="ruling-text">${escapeHtml(r.comment||'')}</div></div>`).join('');
+    live.innerHTML = html;
   }catch(e){
     console.error('rulings failed', e);
+    if(gen !== _cardSheetGen) return;
     const live = document.getElementById('csRulings');
     if(live) live.innerHTML = `<div class="empty-note" style="padding:10px 0;">Couldn't load rulings — check your connection.</div>`;
   }
@@ -8393,6 +8411,7 @@ function attachSwipeNav(el, onNext, onPrev){
   }, {passive:true});
 }
 function openCardInfo(card, opts){
+  _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   opts = opts || {};
   const colIdx = (opts.colIdx != null) ? opts.colIdx : null;
   // A sheet is already up (double-fired tap, stray caller): replace its
