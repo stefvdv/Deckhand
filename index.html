@@ -2772,13 +2772,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.123';
+const APP_VERSION = '2.51.124';
 const CHANGELOG_NOTES = {
   en: [
-    'The card page no longer flickers or shows another card\'s rulings while swiping — every price and rulings request now knows which card it belongs to, and stale answers are discarded. Rulings you\'ve already seen come back instantly from a small cache.'
+    'One swipe, one card: swiping on a card page navigated many cards at once (and sometimes jammed) because every card rendered added another invisible swipe listener on top of the old ones. The sheet now carries exactly one.'
   ],
   nl: [
-    'De kaartpagina flikkert niet meer en toont geen rulings van een andere kaart tijdens het vegen — elke prijs- en rulings-aanvraag weet nu bij welke kaart hij hoort, en verouderde antwoorden worden weggegooid. Eerder bekeken rulings komen direct terug uit een kleine cache.'
+    'Eén veeg, één kaart: vegen op een kaartpagina sprong meerdere kaarten tegelijk (en liep soms vast) doordat elke getoonde kaart een extra onzichtbare veeg-listener bovenop de oude stapelde. Het paneel draagt er nu precies één.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8396,19 +8396,30 @@ function attachSwipeNav(el, onNext, onPrev){
     mk(onPrev, '‹', 'left');
     mk(onNext, '›', 'right');
   }
+  // The overlay element persists across _replace renders, so the previous
+  // render's touch listeners must come off before new ones go on — otherwise
+  // every card viewed stacks another handler and one swipe navigates them
+  // all at once (or stale closures cancel out and the sheet jams).
+  if(el._swipeNavHandlers){
+    el.removeEventListener('touchstart', el._swipeNavHandlers.ts);
+    el.removeEventListener('touchend', el._swipeNavHandlers.te);
+  }
   let sx = 0, sy = 0, armed = false;
-  el.addEventListener('touchstart', (e)=>{
+  const ts = (e)=>{
     if(e.touches.length !== 1) return;
     armed = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-  }, {passive:true});
-  el.addEventListener('touchend', (e)=>{
+  };
+  const te = (e)=>{
     if(!armed) return; armed = false;
     const t = e.changedTouches && e.changedTouches[0]; if(!t) return;
     const dx = t.clientX - sx, dy = t.clientY - sy;
     if(Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.4){
       if(dx < 0) onNext(); else onPrev();
     }
-  }, {passive:true});
+  };
+  el.addEventListener('touchstart', ts, {passive:true});
+  el.addEventListener('touchend', te, {passive:true});
+  el._swipeNavHandlers = { ts, te };
 }
 function openCardInfo(card, opts){
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
