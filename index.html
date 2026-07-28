@@ -2772,13 +2772,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.124';
+const APP_VERSION = '2.51.125';
 const CHANGELOG_NOTES = {
   en: [
-    'One swipe, one card: swiping on a card page navigated many cards at once (and sometimes jammed) because every card rendered added another invisible swipe listener on top of the old ones. The sheet now carries exactly one.'
+    'The card page opened from My Collection (and inside binders) now has the same chevrons and swipe gestures as everywhere else — sail through the grid copy by copy, with Manage copy always acting on the one you\'re viewing.',
+    'Rulings restored on deck cards: copies stored in a deck are slimmed and had lost their rulings link, so the page claimed none existed — the link is now rebuilt from the card itself, with a name lookup as last resort.'
   ],
   nl: [
-    'Eén veeg, één kaart: vegen op een kaartpagina sprong meerdere kaarten tegelijk (en liep soms vast) doordat elke getoonde kaart een extra onzichtbare veeg-listener bovenop de oude stapelde. Het paneel draagt er nu precies één.'
+    'De kaartpagina vanuit Mijn Collectie (en in mappen) heeft nu dezelfde pijltjes en veeggebaren als overal — blader kopie voor kopie door het raster, waarbij Kopie beheren altijd de getoonde kopie beheert.',
+    'Rulings hersteld op deckkaarten: kopieën in een deck zijn afgeslankt en waren hun rulings-link kwijt, dus de pagina beweerde dat er geen bestonden — de link wordt nu herbouwd vanuit de kaart zelf, met een naam-opzoek als laatste redmiddel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4818,7 +4820,9 @@ function wireCollectionPage(){
     tile.addEventListener('click', (e)=>{
       if(lpFired){ lpFired = false; e.preventDefault(); return; }
       if(state.colSel && state.colSel.size){ colToggleSel(ci, tile); return; }
-      openCollectionCard(ci);
+      // Hand over the grid's rendered order so the card page's chevrons and
+      // swipe gestures sail through it copy by copy.
+      openCollectionCard(ci, Array.from(document.querySelectorAll('.col-tile[data-ci]')).map(t=>+t.dataset.ci));
     });
   });
   const sf = document.getElementById('colSelFab');
@@ -4982,7 +4986,7 @@ function openWantSheet(name){
   });
   el.querySelector('#wsClose').addEventListener('click', closeTopOverlay);
 }
-async function openCollectionCard(idx){
+async function openCollectionCard(idx, pool){
   const it = state.collection.items[idx];
   if(!it) return;
   let card = null;
@@ -4990,7 +4994,7 @@ async function openCollectionCard(idx){
     if(it.set && it.cn){ const r = await sfFetch(`${SF_BASE}/cards/${it.set}/${encodeURIComponent(it.cn)}`); if(r.ok) card = await r.json(); }
     if(!card){ const r2 = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(it.name)}`); if(r2.ok) card = await r2.json(); }
   }catch(e){}
-  if(card) openCardInfo(card, { colIdx: idx });
+  if(card) openCardInfo(card, { colIdx: idx, colPool: Array.isArray(pool) ? pool : null, colPoolIdx: Array.isArray(pool) ? pool.indexOf(idx) : -1 });
   else openColItemSheet(idx);   // offline / not found — fall back to the manage sheet
 }
 function openColItemSheet(idx){
@@ -7603,15 +7607,29 @@ async function loadRulings(card){
   const gen = _cardSheetGen;
   const box = document.getElementById('csRulings');
   if(!box) return;
-  if(!card.rulings_uri){ box.innerHTML = `<div class="empty-note" style="padding:10px 0;">No rulings available for this printing.</div>`; return; }
-  const hit = _rulingsCache.get(card.rulings_uri);
-  if(hit != null){ box.innerHTML = hit; return; }
+  // Deck copies are slimmed and lose rulings_uri — but they keep their id,
+  // so the rulings link is rebuilt from it. As a last resort (very old
+  // saves without an id) the card is resolved by exact name.
+  let uri = card.rulings_uri || (card.id ? `${SF_BASE}/cards/${card.id}/rulings` : null);
+  if(!uri && card.name){
+    const hitN = _rulingsCache.get('name:'+card.name);
+    if(hitN != null){ box.innerHTML = hitN; return; }
+    try{
+      const rn = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(card.name)}`);
+      if(rn.ok){ uri = (await rn.json()).rulings_uri || null; }
+    }catch(e){}
+    if(gen !== _cardSheetGen) return;
+  }
+  if(!uri){ box.innerHTML = `<div class="empty-note" style="padding:10px 0;">No rulings available for this printing.</div>`; return; }
+  const hit = _rulingsCache.get(uri);
+  if(hit != null){ const live = document.getElementById('csRulings'); if(live) live.innerHTML = hit; return; }
   try{
-    const res = await sfFetch(card.rulings_uri);
+    const res = await sfFetch(uri);
     if(!res.ok) throw new Error('status '+res.status);
     const data = await res.json();
     const html = rulingsHtmlFrom(data.data || []);
-    _rulingsCache.set(card.rulings_uri, html);
+    _rulingsCache.set(uri, html);
+    if(!card.rulings_uri && !card.id && card.name) _rulingsCache.set('name:'+card.name, html);
     if(_rulingsCache.size > 60) _rulingsCache.delete(_rulingsCache.keys().next().value);
     if(gen !== _cardSheetGen) return;   // a different card owns the sheet now
     const live = document.getElementById('csRulings');
@@ -8494,7 +8512,21 @@ function openCardInfo(card, opts){
   // From Wants the pool is a list of names, resolved one card at a time —
   // exact same chevrons and swipe, with wantName tracking the shown card so
   // Add to my collection and Remove from Wants always act on it.
-  const wpool = (!pool && Array.isArray(opts.wantPool)) ? opts.wantPool : null;
+  // From the collection grid the pool is a list of item indices — the same
+  // chevrons and swipe, resolving each stack's exact printing as it comes
+  // into view, with colIdx following so Manage copy acts on the shown copy.
+  const cpool = (!pool && !Array.isArray(opts.wantPool) && Array.isArray(opts.colPool)) ? opts.colPool : null;
+  if(cpool && cpool.length > 1 && colIdx != null){
+    const ci0 = (opts.colPoolIdx != null && cpool[opts.colPoolIdx] === colIdx) ? opts.colPoolIdx : cpool.indexOf(colIdx);
+    const go = (dir)=>{
+      const n = ci0 + dir;
+      if(n < 0 || n >= cpool.length) return;
+      try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
+      openCollectionCard(cpool[n], cpool);
+    };
+    attachSwipeNav(el, ()=>go(1), ()=>go(-1));
+  }
+  const wpool = (!pool && !cpool && Array.isArray(opts.wantPool)) ? opts.wantPool : null;
   if(wpool && wpool.length > 1){
     const wi = (opts.wantIdx != null && wpool[opts.wantIdx] === card.name) ? opts.wantIdx : wpool.indexOf(card.name);
     const go = async (dir)=>{
