@@ -2772,15 +2772,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.121';
+const APP_VERSION = '2.51.122';
 const CHANGELOG_NOTES = {
   en: [
-    'Selecting cards is instant now — a tap marks the card in place instead of repainting the whole page.',
-    'Moving a copy from Manage copy asks first, and the card truly relocates: if the destination already holds the same printing, the copies fold into one stack.'
+    'Search filters now match like Moxfield: unquoted words in Oracle Text, Card Name, and Card Type each match anywhere — "Any player activate ability" finds "Any player may activate this ability". Quotes still force exact phrases.',
+    'The keyboard\'s Enter key shows 🔍 in the app\'s search fields and runs the search — including every field in Advanced filters.'
   ],
   nl: [
-    'Kaarten selecteren is nu direct — een tik markeert de kaart ter plekke in plaats van de hele pagina opnieuw te tekenen.',
-    'Een kopie verplaatsen vanuit Kopie beheren vraagt eerst om bevestiging, en de kaart verhuist écht: heeft de doelmap dezelfde versie al, dan vouwen de kopieën samen tot één stapel.'
+    'Zoekfilters matchen nu zoals Moxfield: losse woorden in Oracle-tekst, Kaartnaam en Kaarttype matchen elk waar dan ook — "Any player activate ability" vindt "Any player may activate this ability". Aanhalingstekens dwingen nog steeds exacte zinnen af.',
+    'De Enter-toets van het toetsenbord toont 🔍 in de zoekvelden van de app en start de zoekopdracht — ook bij elk veld in Geavanceerde filters.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4084,7 +4084,7 @@ function openInAppPrompt(title, placeholder, initial, onOk){
   el.style.zIndex = 200;
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:320px;">
     <h4>${escapeHtml(trS(title))}</h4>
-    <input id="iapInput" placeholder="${escapeHtml(trS(placeholder||''))}" value="${escapeHtml(initial||'')}" style="width:100%;box-sizing:border-box;margin:4px 0 14px;background:var(--ink-2);border:1px solid var(--brass-dim);border-radius:8px;color:var(--ink-text);padding:10px;font-size:15px;">
+    <input id="iapInput" enterkeyhint="done" placeholder="${escapeHtml(trS(placeholder||''))}" value="${escapeHtml(initial||'')}" style="width:100%;box-sizing:border-box;margin:4px 0 14px;background:var(--ink-2);border:1px solid var(--brass-dim);border-radius:8px;color:var(--ink-text);padding:10px;font-size:15px;">
     <div style="display:flex;gap:10px;"><button class="dp-cancel" id="iapCancel" style="flex:1;margin:0;">${escapeHtml(trS('Cancel'))}</button><button class="primary-btn" id="iapOk" style="flex:1;margin:0;">OK</button></div>
   </div>`;
   let settled = false;
@@ -4369,7 +4369,7 @@ function collectionPageHtml(){
   const totalQty = wantsMode ? items.length : items.reduce((a,it)=>a+it.qty,0);
   const totalEur = items.reduce((a,it)=>a+(it.eur||0)*(wantsMode?1:it.qty),0);
   return `<main>
-    <div class="searchbar" style="margin-bottom:8px;"><input id="colAddName" placeholder="Add cards to collection…"><button id="colAddSearch">Search</button><button id="colImportBtn" title="Import a collection or binder from Moxfield / Archidekt">⬆ Import</button><button id="tradeBtn" title="Trade calculator" style="flex:none;padding:0 13px;font-size:17px;">⚖</button></div>
+    <div class="searchbar" style="margin-bottom:8px;"><input id="colAddName" enterkeyhint="search" placeholder="Add cards to collection…"><button id="colAddSearch">Search</button><button id="colImportBtn" title="Import a collection or binder from Moxfield / Archidekt">⬆ Import</button><button id="tradeBtn" title="Trade calculator" style="flex:none;padding:0 13px;font-size:17px;">⚖</button></div>
     <div id="colAddResults"></div>
     <div class="action-row" style="margin-bottom:8px;align-items:center;">
       <button class="ghost-btn" id="colAdvToggle" style="flex:0 0 50%;">Advanced filter ${state.colAdvOpen?'▴':'▾'}</button>
@@ -7109,7 +7109,7 @@ function openLogGameOverlay(d){
       <div class="glog-form">
         <div class="glog-frow"><span class="glog-lbl">Result</span>${segHtml('res','res',[['W','Won'],['L','Lost']])}</div>
         <div class="glog-frow"><span class="glog-lbl">Ended by</span><div class="glog-csbox">${csLocal('lgBy', byOpts, local.by, 'Ended by…')}</div></div>
-        ${local.by==='Other' ? `<div class="glog-frow"><span class="glog-lbl"></span><input id="lgByTxt" type="text" class="glog-num" maxlength="60" placeholder="${escapeHtml(trS('How did it end?'))}" value="${escapeHtml(local.byTxt)}"></div>` : ''}
+        ${local.by==='Other' ? `<div class="glog-frow"><span class="glog-lbl"></span><input id="lgByTxt" type="text" enterkeyhint="done" class="glog-num" maxlength="60" placeholder="${escapeHtml(trS('How did it end?'))}" value="${escapeHtml(local.byTxt)}"></div>` : ''}
         <div class="glog-frow"><span class="glog-lbl">Pod size</span>${segHtml('pod','pod',[['2','2'],['3','3'],['4','4'],['5','5']])}</div>
         <div class="glog-frow"><span class="glog-lbl">Turns</span><input id="lgTurns" type="number" min="1" max="99" inputmode="numeric" class="glog-num" value="${escapeHtml(local.turns)}"></div>
         <div class="glog-frow"><span class="glog-lbl">Mulligans</span>${segHtml('mull','mull',[['0','0'],['1','1'],['2','2'],['3','3+']])}</div>
@@ -7863,7 +7863,7 @@ function searchPageHtml(){
     ${pinned
       ? `<div class="pin-pill"><span class="pp-txt">Adding straight to <strong>${escapeHtml(pinned.name)}</strong></span><button id="unpinBtn" title="Stop adding to this deck">✕</button></div>`
       : ''}
-    <div class="searchbar"><input id="searchName" placeholder="Card name…" value="${escapeHtml(state.searchName)}"><button id="runSearchBtn">Search</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
+    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}"><button id="runSearchBtn">Search</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
     <button class="adv-toggle ${state.advOpen?'open':''}" id="advToggle">Advanced filters <span class="car">▾</span></button>
     ${state.advOpen ? advancedPanelHtml() : ''}
     <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
@@ -8039,7 +8039,9 @@ function wireAdvancedPanel(){
     const top = document.getElementById('searchName');
     if(top) top.value = e.target.value;   // keep the top search box in step
   });
-  document.getElementById('advName')?.addEventListener('keydown', e=>{ if(e.key==='Enter') document.querySelector('.adv-go')?.click(); });
+  document.querySelectorAll('.adv-panel input[type="text"], .adv-panel input:not([type])').forEach(inp=>{
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); document.querySelector('.adv-go')?.click(); } });
+  });
   document.querySelectorAll('.adv-go').forEach(b=>b.addEventListener('click', ()=>{
     state.advOpen = false;   // collapse the filter menu, then run the search
     render();
@@ -8077,7 +8079,9 @@ function wireAdvancedPanel(){
 function buildAdvancedClause(){
   state.searchName = document.getElementById('searchName')?.value ?? state.searchName;
   const parts = [];
-  if(state.searchName.trim()) parts.push(`name:"${state.searchName.trim().replace(/"/g,'')}"`);
+  // Unquoted words each match anywhere in the name — the placeholder promises
+  // "Any words in the name", so "storm aether" must find Aether Storm.
+  if(state.searchName.trim()) state.searchName.trim().replace(/"/g,'').split(/\s+/).forEach(w=>parts.push(`name:"${w}"`));
 
   // Colour identity (what an Admiral will allow in the deck)
   const chosen = Object.keys(state.searchColors).filter(c=>c!=='C' && state.searchColors[c]);
@@ -8104,13 +8108,19 @@ function buildAdvancedClause(){
   if(state.searchPowOp && state.searchPowVal!=='') parts.push(`pow${state.searchPowOp}${state.searchPowVal.trim()}`);
   if(state.searchTouOp && state.searchTouVal!=='') parts.push(`tou${state.searchTouOp}${state.searchTouVal.trim()}`);
   if(state.searchLoyOp && state.searchLoyVal!=='') parts.push(`loy${state.searchLoyOp}${state.searchLoyVal.trim()}`);
-  if(state.searchTypeText.trim()) parts.push(`t:"${state.searchTypeText.trim().replace(/"/g,'')}"`);
+  if(state.searchTypeText.trim()) state.searchTypeText.trim().replace(/"/g,'').split(/[\s,]+/).filter(Boolean).forEach(w=>parts.push(`t:"${w}"`));
   if(state.searchOracleText.trim()){
     let o = state.searchOracleText.trim();
-    // A fully quoted phrase passes through; stray/unbalanced quotes are
-    // stripped — one lone " used to poison the whole query with a 400.
+    // Stray/unbalanced quotes are stripped — one lone " used to poison the
+    // whole query with a 400.
     if(((o.match(/"/g)||[]).length) % 2) o = o.replace(/"/g,'');
-    parts.push(/^".*"$/.test(o) ? `o:${o}` : `o:"${o.replace(/"/g,'')}"`);
+    // Moxfield-style semantics: unquoted words each match anywhere in the
+    // text, so "Any player activate ability" finds "Any player may activate
+    // this ability". Quoted segments stay exact phrases.
+    (o.match(/"[^"]*"|\S+/g) || []).forEach(t=>{
+      if(/^".*"$/.test(t)){ if(t.length > 2) parts.push(`o:${t}`); }
+      else parts.push(`o:"${t.replace(/"/g,'')}"`);
+    });
   }
   if(state.searchKeyword.trim()) parts.push(`keyword:"${state.searchKeyword.trim().replace(/"/g,'')}"`);
   if(state.searchFlavorText.trim()) parts.push(`ft:"${state.searchFlavorText.trim().replace(/"/g,'')}"`);
@@ -8780,7 +8790,7 @@ function openTradeAdd(side){
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar"><button class="icon-btn" id="taClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">${trS('Add to trade')}</div></div>
     <main>
-      <div class="searchbar" style="margin-bottom:8px;"><input id="taName" placeholder="${escapeHtml(trS('Card name…'))}"><button id="taGo">${trS('Search')}</button></div>
+      <div class="searchbar" style="margin-bottom:8px;"><input id="taName" enterkeyhint="search" placeholder="${escapeHtml(trS('Card name…'))}"><button id="taGo">${trS('Search')}</button></div>
       <div id="taResults"><p class="hint">${trS('Search any card — every printing of it can join the trade.')}</p></div>
     </main>
   </div>`;
@@ -11991,6 +12001,15 @@ try{
   history.replaceState({exitGuard:true}, '', '#home');
   history.pushState({screen:'home'}, '', '#home');
 }catch(e){}
+/* Any text input the user focuses gets the keyboard's 🔍 Enter key unless it
+   opted for another hint — search is what Enter does in this app's fields. */
+document.addEventListener('focusin', (e)=>{
+  const t = e.target;
+  if(t && t.tagName === 'INPUT' && !t.hasAttribute('enterkeyhint')){
+    const ty = (t.getAttribute('type')||'text').toLowerCase();
+    if(ty === 'text' || ty === 'search') t.setAttribute('enterkeyhint','search');
+  }
+});
 window.addEventListener('popstate', (e)=>{
   // Back-press ownership, top of the screen first. Truly topmost transients
   // (the deck-picker popup, a tile context menu) consume the press; then any
