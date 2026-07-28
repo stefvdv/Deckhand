@@ -2251,10 +2251,15 @@ let _nextSfSlot = 0;
    3. Retries rejoin the FRONT of their own lane after backoff. */
 const _sfQ = { hi: [], lo: [] };
 let _sfWorking = false, _sfGen = 0, _sfBeat = 0;
-function sfFetch(url, attempt, bg, fresh){
+function sfFetch(url, attempt, bg, fresh, front){
+  // `front` puts the job at the head of its lane: still strictly one request
+  // at a time at the same 80ms cadence — only the ORDER changes. Used for
+  // what the person is looking at right now (the open card sheet's rulings
+  // and price), which must not wait behind a deck page's background queue.
   return new Promise((resolve, reject)=>{
     const job = { url, attempt: attempt || 0, bg: !!bg, fresh: !!fresh, born: Date.now(), resolve, reject };
-    (job.bg ? _sfQ.lo : _sfQ.hi).push(job);
+    const lane = job.bg ? _sfQ.lo : _sfQ.hi;
+    if(front) lane.unshift(job); else lane.push(job);
     _sfPump();
   });
 }
@@ -2772,15 +2777,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.125';
+const APP_VERSION = '2.51.126';
 const CHANGELOG_NOTES = {
   en: [
-    'The card page opened from My Collection (and inside binders) now has the same chevrons and swipe gestures as everywhere else — sail through the grid copy by copy, with Manage copy always acting on the one you\'re viewing.',
-    'Rulings restored on deck cards: copies stored in a deck are slimmed and had lost their rulings link, so the page claimed none existed — the link is now rebuilt from the card itself, with a name lookup as last resort.'
+    'No more endless "Loading rulings…": the card you\'re actually looking at now jumps to the front of the request line. Rulings and the card\'s price no longer wait behind background work the deck page queued up — same strictly one-at-a-time pace, smarter order.'
   ],
   nl: [
-    'De kaartpagina vanuit Mijn Collectie (en in mappen) heeft nu dezelfde pijltjes en veeggebaren als overal — blader kopie voor kopie door het raster, waarbij Kopie beheren altijd de getoonde kopie beheert.',
-    'Rulings hersteld op deckkaarten: kopieën in een deck zijn afgeslankt en waren hun rulings-link kwijt, dus de pagina beweerde dat er geen bestonden — de link wordt nu herbouwd vanuit de kaart zelf, met een naam-opzoek als laatste redmiddel.'
+    'Geen eindeloos "Rulings laden…" meer: de kaart waar je daadwerkelijk naar kijkt springt nu vooraan in de aanvraagrij. Rulings en de prijs van de kaart wachten niet langer achter achtergrondwerk dat de deckpagina had klaargezet — zelfde strikt één-voor-één tempo, slimmere volgorde.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5739,14 +5742,14 @@ function fmtEur(v){
   if(v===null || v===undefined || isNaN(v)) return '—';
   return '€' + Number(v).toFixed(2);
 }
-async function cheapestEur(card){
+async function cheapestEur(card, front){
   if(!card || !card.name) return null;
   const hit = state.priceCache[card.name];
   if(hit && Date.now()-hit.t < PRICE_TTL) return hit.v;
   if(!card.prints_search_uri) return null;
   let min = null;
   try{
-    const res = await sfFetch(card.prints_search_uri, 0, true);
+    const res = await sfFetch(card.prints_search_uri, 0, true, false, front);
     if(!res.ok) return null;
     const data = await res.json();
     (data.data||[]).forEach(p=>{
@@ -7590,7 +7593,7 @@ async function loadCardPrice(card){
   const gen = _cardSheetGen;
   const el = document.getElementById('csPrice');
   if(!el) return;
-  const v = await cheapestEur(card);
+  const v = await cheapestEur(card, true);
   if(gen !== _cardSheetGen) return;   // a different card owns the sheet now
   const live = document.getElementById('csPrice');
   if(!live) return;   // sheet closed while fetching
@@ -7615,7 +7618,7 @@ async function loadRulings(card){
     const hitN = _rulingsCache.get('name:'+card.name);
     if(hitN != null){ box.innerHTML = hitN; return; }
     try{
-      const rn = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(card.name)}`);
+      const rn = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(card.name)}`, 0, false, false, true);
       if(rn.ok){ uri = (await rn.json()).rulings_uri || null; }
     }catch(e){}
     if(gen !== _cardSheetGen) return;
@@ -7624,7 +7627,7 @@ async function loadRulings(card){
   const hit = _rulingsCache.get(uri);
   if(hit != null){ const live = document.getElementById('csRulings'); if(live) live.innerHTML = hit; return; }
   try{
-    const res = await sfFetch(uri);
+    const res = await sfFetch(uri, 0, false, false, true);
     if(!res.ok) throw new Error('status '+res.status);
     const data = await res.json();
     const html = rulingsHtmlFrom(data.data || []);
