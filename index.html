@@ -879,6 +879,20 @@ main.has-dock{padding-bottom:84px;}
 .glog-cimg .glog-cname{display:block;padding:10px 6px;font-size:12px;text-align:center;}
 .cs-vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
 .dp-sect{margin:6px 0 0;padding-top:8px;border-top:1px solid var(--line);font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--sub-text);}
+/* Trade calculator */
+.trade-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);}
+.trade-row:last-of-type{border-bottom:none;}
+.trade-row img{width:38px;border-radius:4px;background:#101418;cursor:pointer;flex:none;}
+.trade-row .tr-body{flex:1;min-width:0;}
+.trade-row .nm{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.trade-row .tl{font-size:11px;color:var(--sub-text);}
+.tr-eur{color:var(--brass);font-family:'JetBrains Mono',monospace;}
+.tr-qty{display:flex;align-items:center;gap:5px;flex:none;}
+.tr-qty button{width:26px;height:26px;border-radius:6px;background:var(--field);border:1px solid var(--field-line);color:var(--ink-text);font-size:14px;cursor:pointer;line-height:1;}
+.tr-qty span{font-size:12px;min-width:26px;text-align:center;font-family:'JetBrains Mono',monospace;}
+.tr-del{flex:none;color:var(--sub-text);}
+.trade-verdict{font-size:14.5px;font-weight:700;}
+.trade-verdict.even{color:var(--brass);}
 .glog-cname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .glog-sheet{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:var(--ink);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:10px 12px 16px;-webkit-overflow-scrolling:touch;}
 .glog-form{display:flex;flex-direction:column;gap:7px;margin-top:6px;}
@@ -2745,13 +2759,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.115';
+const APP_VERSION = '2.51.116';
 const CHANGELOG_NOTES = {
   en: [
-    'The UB and SPOILER markers now fold over the card\'s corners like the Game Changer ribbon — UB top-left, SPOILER top-right — so the card name and mana cost stay readable underneath.'
+    'Tapping a card on your Wants list now opens the normal card page, with Add to my collection right there — and once it\'s in your collection it leaves the Wants list by itself.',
+    'New: a Trade calculator behind the ⚖ button on Search. Build both sides of a trade — exact printings, Cardmarket trend prices — and the app shows who adds how much to balance it.'
   ],
   nl: [
-    'De UB- en SPOILER-markers vouwen nu over de hoeken van de kaart, net als het Game Changer-lint — UB linksboven, SPOILER rechtsboven — zodat kaartnaam en manakosten eronder leesbaar blijven.'
+    'Een kaart op je Gezocht-lijst opent nu de normale kaartpagina, met Aan mijn collectie toevoegen direct bij de hand — en zodra hij in je collectie zit, verdwijnt hij vanzelf van Gezocht.',
+    'Nieuw: een Ruilcalculator achter de ⚖-knop op Zoeken. Stel beide kanten van een ruil samen — exacte versies, Cardmarket-trendprijzen — en de app toont wie hoeveel bijlegt om de ruil gelijk te maken.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3405,6 +3421,7 @@ function renderInner(){
   else if(state.screen==='settings') body = settingsPageHtml();
   else if(state.screen==='spoilers') body = spoilersPageHtml();
   else if(state.screen==='collection') body = collectionPageHtml();
+  else if(state.screen==='trade') body = tradePageHtml();
   root.innerHTML = `<div class="app">${nav}${body}</div>`;
 
   try{
@@ -3417,6 +3434,7 @@ function renderInner(){
     else if(state.screen==='settings') wireSettingsPage();
     else if(state.screen==='spoilers') wireSpoilersPage();
     else if(state.screen==='collection') wireCollectionPage();
+    else if(state.screen==='trade') wireTradePage();
   }catch(e){ console.error('page wiring failed', state.screen, e); }
   wireNav();   // the header (nav, home, mode long-press) must survive any page's failure
   renderModal();
@@ -3430,7 +3448,7 @@ function navHtml(){
     {k:'browse', l:'Inspiration', i:ICONS.inspire},
     {k:'settings', l:'Extras', i:ICONS.settings}
   ];
-  const titles = { home: isCmdrMode() ? 'COMMANDER' : 'ADMIRAL', decks:'MY STUFF', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', collection:'MY COLLECTION' };
+  const titles = { home: isCmdrMode() ? 'COMMANDER' : 'ADMIRAL', decks:'MY STUFF', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', trade:'TRADE', collection:'MY COLLECTION' };
   let title = titles[state.screen] || 'ADMIRAL';
   let editable = false;
   if(state.screen === 'decklist'){
@@ -3443,7 +3461,7 @@ function navHtml(){
     // to the binder overview.
     title = '‹ ' + (state.colFilter.binder==='__wants__' ? trS('Wants') : (binderName(state.colFilter.binder) || 'Binder'));
   }
-  const activeKey = (state.screen === 'collection' || state.screen === 'decklist') ? 'decks' : state.screen;
+  const activeKey = (state.screen === 'collection' || state.screen === 'decklist') ? 'decks' : state.screen === 'trade' ? 'search' : state.screen;
   return `<div class="brand-banner">
     <div class="compass ${state.screen==='home'?'active':''}" id="homeBtn" title="Home">${compassSvg()}</div>
     <div class="brand-txt ${editable?'editable':''} ${(state.screen==='decklist'||state.screen==='collection')?'two-line':''}" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner" ${(state.screen==='decklist'||state.screen==='collection')?'':'style="white-space:nowrap;"'}>${escapeHtml(title)}</span></div>
@@ -4374,7 +4392,7 @@ function artCropFrom(img){
       cards — the surrounding interface translates, the game speaks as their
       tables do. */
 const I18N = {
-nl:{"Exit this app?":"Deze app afsluiten?","How did it end?":"Hoe eindigde het?","My Stuff":"Mijn Stuff","My Collection":"Mijn Collectie","Search":"Zoeken","Import":"Importeren","Export":"Exporteren","Budget":"Budget","Add Cards":"Kaarten toevoegen","Bulk Edit":"Bulk bewerken","Folders":"Folders","Binders":"Mappen","Wants":"Gezocht","Decks":"Decks","New binder":"Nieuwe map","‹ All binders":"‹ Alle mappen","🖼 Choose cover art":"🖼 Kies omslagkunst","✎ Rename":"✎ Hernoemen","🗑 Delete binder":"🗑 Verwijder map","Choose Cover Art":"Omslagkunst kiezen","+ Add to a deck":"+ Aan een deck toevoegen","Played with this":"Hiermee gespeeld","Collection":"Collectie","ORACLE TEXT":"ORACLE-TEKST","Oracle text":"Oracle-tekst","Checking price…":"Prijs controleren…","No Cardmarket price listed":"Geen Cardmarket-prijs bekend","Advanced filter":"Geavanceerd filter","Use filters":"Filters toepassen","Reset filters":"Filters wissen","Check for new spoilers":"Zoek nieuwe spoilers","Appearance":"Weergave","Dark":"Donker","Light":"Licht","Game format":"Spelformaat","Language":"Taal","Life Counter":"Levens teller","Open the multiplayer life tracker":"Open de multiplayer-levensteller","Sort by":"Sorteren op","Add to folder":"Aan map toevoegen","Duplicate":"Dupliceren","Share":"Delen","Delete":"Verwijderen","Add cards to collection…":"Kaarten aan collectie toevoegen…","Filter collection…":"Collectie filteren…","Nothing matches these filters.":"Niets komt overeen met deze filters.","missing from your decks":"ontbreekt in je decks","Budget Alternatives":"Budgetalternatieven","Set sail":"Hijs de zeilen","A legendary Commander leads your 100-card singleton deck":"Een legendarische Commander leidt je singleton deck van 100 kaarten","Brew from every set ever printed":"Brouw uit elke set ooit gedrukt","Politics, alliances and comebacks at a four-player table":"Politiek, allianties en comebacks aan een tafel met vier spelers","Your Commander returns from the command zone, again and again":"Je Commander keert keer op keer terug uit de command zone","Official banned list, always current":"Officiële ban-lijst, altijd actueel","A legendary Admiral leads your 60-card singleton deck":"Een legendarische Admiral leidt je singleton deck van 60 kaarten","No lands to buy — a shared Landing Zone provides the mana":"Geen lands om te kopen — een gedeelde Landing Zone levert het mana","Every card that was ever Standard-legal":"Elke kaart die ooit Standard-legal was","Fast four-player games with real strategic depth":"Snelle potten met vier spelers en echte strategische diepgang","Magic's own universes only — story over power creep":"Alleen Magic's eigen universums — verhaal boven power creep","— thin bar: cards producing that color":"— dunne balk: kaarten die die kleur produceren","Mana Production":"Mana productie","— cards that can produce each color":"— kaarten die elke kleur kunnen produceren","⟳ Check for new spoilers":"⟳ Zoek nieuwe spoilers","Card Name":"Kaartnaam","Any words in the name":"Woorden uit de naam","Set / Expansion":"Set / Expansie","Any Set":"Elke set","Oracle Text":"Oracle-tekst","Any text, e.g. draw a card":"Willekeurige tekst, bijv. draw a card","For exact phrases, put quotes (\") around your search query.":"Zet aanhalingstekens (\") om je zoekopdracht voor exacte zinnen.","Card Type":"Kaarttype","e.g. Dragon, Equipment":"bijv. Dragon, Equipment","Color Identity":"Kleuridentiteit","Must have all selected":"Moet alle geselecteerde hebben","At most these colors":"Hoogstens deze kleuren","Mana Value":"Mana value","Mana Cost":"Manakosten","Power":"Power","Toughness":"Toughness","Loyalty":"Loyalty","Rarity":"Zeldzaamheid","Keyword":"Keyword","e.g. flying, lifelink":"bijv. flying, lifelink","Flavor Text":"Flavor-tekst","e.g. dragon":"bijv. dragon","Artist":"Artiest","e.g. Rebecca Guay":"bijv. Rebecca Guay","Sort Order":"Sorteervolgorde","Sort Direction":"Sorteerrichting","Ascending":"Oplopend","Descending":"Aflopend","Any":"Elke","Name":"Naam","🔍 Use filters":"🔍 Filters toepassen","Monocolored":"Eenkleurig","2 colors":"2 kleuren","3 colors":"3 kleuren","4 & 5 colors":"4 & 5 kleuren","Mana Curve":"Mana curve","— tap a bar to see those cards":"— tik op een balk om die kaarten te zien","Mana Symbols":"Mana symbolen","Most Expensive Cards":"Duurste kaarten","Cardmarket trend price, cheapest printing of each card.":"Cardmarket trendprijs, goedkoopste versie van elke kaart.","Pricing…":"Prijzen ophalen…","Budget alternatives":"Budgetalternatieven","Recent Changes":"Recente wijzigingen","View full construction log →":"Bekijk het volledige bouwlogboek →","Undo":"Ongedaan maken","Edit":"Bewerken","Preview":"Voorbeeld","# headers, **bold**, *italics*, - lists":"# koppen, **vet**, *cursief*, - lijsten","MY STUFF":"MIJN STUFF","SEARCH":"ZOEKEN","INSPIRATION":"INSPIRATIE","EXTRAS":"EXTRA'S","MY COLLECTION":"MIJN COLLECTIE","Admiral fleet":"Admiral vloot","Commander fleet":"Commander leger","empty":"leeg","Magic's grandest multiplayer battlefield":"Magic's grootste multiplayer slagveld","Choose your":"Kies je","— a legendary creature whose color identity defines your deck — then assemble a 100-card singleton army from":"— een legendarisch wezen wiens kleuridentiteit je deck bepaalt — en stel dan een singleton leger van 100 kaarten samen uit","every set ever printed":"elke set ooit gedrukt",". Cast your Commander from the command zone again and again as the table's politics unfold.":". Speel je Commander keer op keer vanuit de command zone terwijl de politiek aan tafel zich ontvouwt.","A four-player free-for-all. Official legality and a live banned list, always current.":"Een free-for-all voor vier spelers. Officiële legality en een live ban-lijst, altijd actueel.","Read the rules →":"Lees de regels →","Your Commander awaits.":"Je Commander wacht.","Take Command":"Neem het commando","Explore Commanders & deck inspiration":"Ontdek Commanders & deck-inspiratie","Crossing fleets: tap the crest above to sail to the Admiral side — or long-press the compass in the top-left from anywhere in the app.":"Van vloot wisselen: tik op het embleem hierboven om naar de Admiral-kant te varen — of houd het kompas linksboven overal in de app ingedrukt.","Set sail on a bold new Magic adventure":"Hijs de zeilen voor een gedurfd nieuw Magic-avontuur","Admiral is a":"Admiral is een","four-player":"vierspeler","format — an immersive challenge where the legends of Magic's":"format — een meeslepende uitdaging waarin de legendes van Magic's","own universes":"eigen universums","take center stage. Choose your Admiral — a legendary character whose colors define your deck — then chart a 60-card course with":"in de hoofdrol staan. Kies je Admiral — een legendarisch personage wiens kleuren je deck bepalen — en zet dan een koers uit van 60 kaarten met","no expensive lands":"geen dure lands",", drawing instead from a shared Landing Zone stocked with basics.":", puttend uit een gedeelde Landing Zone vol basics.","Faster games, strategic depth, and far less prone to":"Snellere potten, strategische diepgang en veel minder vatbaar voor","power creep":"power creep","— steeped in the story of Magic itself.":"— doordrenkt van het verhaal van Magic zelf.","Read the full rules →":"Lees alle regels →","Your Admiral awaits.":"Je Admiral wacht.","White production":"Witte productie","Blue production":"Blauwe productie","Black production":"Zwarte productie","Red production":"Rode productie","Green production":"Groene productie","Colorless production":"Kleurloze productie","Generic production":"Generieke productie","Deck Log":"Decklog","Play Log":"Speellog","⊕ Log a game":"⊕ Noteer een potje","Log a game":"Noteer een potje","Result":"Resultaat","Won":"Gewonnen","Lost":"Verloren","Ended by":"Beslist door","Pod size":"Aantal spelers","Turns":"Beurten","Mulligans":"Mulligans","Mana":"Mana","Smooth":"Soepel","Screwed":"Tekort","Flooded":"Overvloed","Dead turns":"Dode beurten","MVP card":"MVP-kaart","Weakest card":"Zwakste kaart","Save game":"Potje opslaan","Games":"Potjes","Avg turns":"Gem. beurten","Avg dead turns":"Gem. dode beurten","Mana trouble":"Mana-problemen","Top performers":"Toppers","Cut candidates":"Snijkandidaten","Primer — strategy notes":"Primer — strategienotities","No games logged yet — every logged game sharpens the picture: winrate, dead turns, which cards earn their slot and which don't.":"Nog geen potjes genoteerd — elk genoteerd potje scherpt het beeld aan: winrate, dode beurten, welke kaarten hun plek verdienen en welke niet.","Notes — what decided this game?":"Notities — wat besliste dit potje?","Victory logged. ⚔":"Overwinning genoteerd. ⚔","Logged — every loss is data.":"Genoteerd — elk verlies is data.","Combat":"Combat","Commander damage":"Commander damage","Combo":"Combo","Poison":"Poison","Mill":"Mill","Attrition":"Uitputting","Concession":"Opgave","Other":"Anders","Weigh Anchor":"Anker lichten","Explore Admirals & deck inspiration":"Ontdek Admirals & deck-inspiratie","Crossing fleets: tap the crest above to sail to the Commander side — or long-press the compass in the top-left from anywhere in the app.":"Van vloot wisselen: tik op het embleem hierboven om naar de Commander-kant te varen — of houd het kompas linksboven overal in de app ingedrukt.","cards":"kaarten","starting life":"start levens","multiplayer classic":"multiplayer klassieker","faster games":"snellere potten","commander damage":"commander damage","Admiral damage":"Admiral damage","wins outright":"wint direct","singleton":"singleton","Advanced filters":"Geavanceerde filters","Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.":"Zoek op naam, of open Geavanceerde filters voor kleuren, mana value, type en Oracle-tekst.","Random Card":"Willekeurige kaart","↻ New card":"↻ Nieuwe kaart","↻ Random Card":"↻ Willekeurige kaart","🔮 New cards have been spoiled":"🔮 Nieuwe kaarten zijn gespoild","Comprehensive Rules":"Comprehensive Rules","The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back":"De volledige officiële Magic-regels — lees, zoek, of stel een vraag en krijg de exacte regel terug geciteerd","Chart Your Course":"Bepaal je koers","Pick colors and a theme to find Admirals for that style. Tap an Admiral's":"Kies kleuren en een thema om Admirals voor die stijl te vinden. Tik op de","card art":"kaart-art","to see its recommended cards and build a deck around it.":"om de aanbevolen kaarten te zien en er een deck omheen te bouwen.","Pick colors and a theme to find Commanders for that style. Tap a Commander's":"Kies kleuren en een thema om Commanders voor die stijl te vinden. Tik op de kaart-art van een Commander","Theme — none":"Thema — geen","Kindred — none":"Kindred — geen","Colors":"Kleuren","Colors — any combination":"Kleuren — elke combinatie","Backup & Restore":"Back-up & herstel","Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.":"Alles in één bestand — decks, collectie, instellingen. Je ticket naar een nieuw adres of een nieuw toestel.","⬇ Back Up":"⬇ Back-up","⬆ Restore":"⬆ Herstel","Format Rules":"Format regels","Deckbuilding & play rules for Commander":"Deckbouw- & speelregels voor Commander","Deckbuilding & play rules for Admiral":"Deckbouw- & speelregels voor Admiral","Banned List":"Ban-lijst","📲 Install as an app":"📲 Installeer als app","Home-screen icon, full screen, works offline":"Icoon op je beginscherm, volledig scherm, werkt offline","Share this app with a friend":"Deel deze app met een vriend","Sends the app link with a short intro":"Stuurt de app-link met een korte intro","Regular Commander: 100 cards, official legality, 40 life, 21 cmdr damage. Admiral decks wait in their own folder.":"Regular Commander: 100 kaarten, officiële legality, 40 levens, 21 commander damage. Admiral-decks wachten in hun eigen folder.","Admiral — or switch the whole app to regular Commander. Decks of the other format wait in their own folder.":"Admiral — of zet de hele app om naar regular Commander. Decks van het andere format wachten in hun eigen folder.","Life Totals":"Levens totaal","New Game":"Nieuwe pot","↺ New Game":"↺ Nieuwe pot","How many players are at the table?":"Hoeveel spelers aan de tafel?","Start & Spin for First Player":"Start en draai voor start speler","🎡 Spin for First Player":"🎡 Draai voor start speler","🎲 Roll d6":"🎲 Rol een d6","🎲 Roll d20":"🎲 Rol een d20","History":"Geschiedenis","Settings":"Instellingen","✓ Done":"✓ Klaar","No events yet.":"Nog geen gebeurtenissen.","New binder name":"Nieuwe map naam","Rename binder":"Hernoem map","Cover card name":"Afbeelding kaart naam","Add a copy":"Voeg een toe","Move to Maybeboard":"Verplaats naar maybeboard","Move to Main":"Verplaats naar deck","Change printing":"Verander versie","Remove from deck":"Verwijder uit deck","Rulings":"Regels","Add to Deck":"Aan deck toevoegen","Set as Commander":"Stel in als Commander","Set as Admiral":"Stel in als Admiral","Favorites":"Favorieten","★ Favorites":"★ Favorieten","Rename folder":"Hernoem folder","Delete folder":"Verwijder folder","New folder":"Nieuwe folder","New deck":"Nieuw deck","Pick Admiral first":"Kies eerst een Admiral","Filter by folder or Admiral…":"Filter op folder of Admiral…","Filter by folder or Commander…":"Filter op folder of Commander…","Card name…":"Kaart naam…","Color breakdown":"Kleur overzicht","Details":"Details","Most played with this Commander, sorted on popularity.":"Meest gespeeld met deze Commander, gesorteerd op populariteit.","Most played with this Admiral, sorted on popularity.":"Meest gespeeld met deze Admiral, gesorteerd op populariteit.","tap cards to select":"tik op kaarten om te selecteren","Inspiration":"Inspiratie","Extras":"Extra's","Any color":"Elke kleur","All sets":"Alle sets","All types":"Alle typen","White":"Wit","Blue":"Blauw","Black":"Zwart","Red":"Rood","Green":"Groen","Colorless":"Kleurloos","Multicolor":"Meerkleurig","Language saved.":"Taal opgeslagen.","Card images and the interface follow your language where possible.":"Kaartafbeeldingen en de interface volgen waar mogelijk je taal.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Je collectie is leeg. Zoek hierboven, of gebruik \"Aan collectie toevoegen\" bij een kaart in de app."},
+nl:{"Add to my collection":"Aan mijn collectie toevoegen","Remove from Wants":"Verwijder van Gezocht","TRADE":"RUILEN","Add to trade":"Aan ruil toevoegen","Add card":"Kaart toevoegen","You give":"Jij geeft","You get":"Jij krijgt","Even trade.":"Gelijke ruil.","They add":"Zij leggen","You add":"Jij legt","to balance the trade":"bij om de ruil gelijk te maken","Cardmarket trend prices — pick the exact printing when adding a card.":"Cardmarket-trendprijzen — kies de exacte versie bij het toevoegen van een kaart.","Some cards have no listed price and count as €0.00.":"Sommige kaarten hebben geen bekende prijs en tellen als €0,00.","No cards on this side yet.":"Nog geen kaarten aan deze kant.","Clear trade":"Ruil wissen","Clear the whole trade?":"De hele ruil wissen?","Added to trade.":"Toegevoegd aan de ruil.","Search any card — every printing of it can join the trade.":"Zoek een kaart — elke versie ervan kan de ruil in.","Exit this app?":"Deze app afsluiten?","How did it end?":"Hoe eindigde het?","My Stuff":"Mijn Stuff","My Collection":"Mijn Collectie","Search":"Zoeken","Import":"Importeren","Export":"Exporteren","Budget":"Budget","Add Cards":"Kaarten toevoegen","Bulk Edit":"Bulk bewerken","Folders":"Folders","Binders":"Mappen","Wants":"Gezocht","Decks":"Decks","New binder":"Nieuwe map","‹ All binders":"‹ Alle mappen","🖼 Choose cover art":"🖼 Kies omslagkunst","✎ Rename":"✎ Hernoemen","🗑 Delete binder":"🗑 Verwijder map","Choose Cover Art":"Omslagkunst kiezen","+ Add to a deck":"+ Aan een deck toevoegen","Played with this":"Hiermee gespeeld","Collection":"Collectie","ORACLE TEXT":"ORACLE-TEKST","Oracle text":"Oracle-tekst","Checking price…":"Prijs controleren…","No Cardmarket price listed":"Geen Cardmarket-prijs bekend","Advanced filter":"Geavanceerd filter","Use filters":"Filters toepassen","Reset filters":"Filters wissen","Check for new spoilers":"Zoek nieuwe spoilers","Appearance":"Weergave","Dark":"Donker","Light":"Licht","Game format":"Spelformaat","Language":"Taal","Life Counter":"Levens teller","Open the multiplayer life tracker":"Open de multiplayer-levensteller","Sort by":"Sorteren op","Add to folder":"Aan map toevoegen","Duplicate":"Dupliceren","Share":"Delen","Delete":"Verwijderen","Add cards to collection…":"Kaarten aan collectie toevoegen…","Filter collection…":"Collectie filteren…","Nothing matches these filters.":"Niets komt overeen met deze filters.","missing from your decks":"ontbreekt in je decks","Budget Alternatives":"Budgetalternatieven","Set sail":"Hijs de zeilen","A legendary Commander leads your 100-card singleton deck":"Een legendarische Commander leidt je singleton deck van 100 kaarten","Brew from every set ever printed":"Brouw uit elke set ooit gedrukt","Politics, alliances and comebacks at a four-player table":"Politiek, allianties en comebacks aan een tafel met vier spelers","Your Commander returns from the command zone, again and again":"Je Commander keert keer op keer terug uit de command zone","Official banned list, always current":"Officiële ban-lijst, altijd actueel","A legendary Admiral leads your 60-card singleton deck":"Een legendarische Admiral leidt je singleton deck van 60 kaarten","No lands to buy — a shared Landing Zone provides the mana":"Geen lands om te kopen — een gedeelde Landing Zone levert het mana","Every card that was ever Standard-legal":"Elke kaart die ooit Standard-legal was","Fast four-player games with real strategic depth":"Snelle potten met vier spelers en echte strategische diepgang","Magic's own universes only — story over power creep":"Alleen Magic's eigen universums — verhaal boven power creep","— thin bar: cards producing that color":"— dunne balk: kaarten die die kleur produceren","Mana Production":"Mana productie","— cards that can produce each color":"— kaarten die elke kleur kunnen produceren","⟳ Check for new spoilers":"⟳ Zoek nieuwe spoilers","Card Name":"Kaartnaam","Any words in the name":"Woorden uit de naam","Set / Expansion":"Set / Expansie","Any Set":"Elke set","Oracle Text":"Oracle-tekst","Any text, e.g. draw a card":"Willekeurige tekst, bijv. draw a card","For exact phrases, put quotes (\") around your search query.":"Zet aanhalingstekens (\") om je zoekopdracht voor exacte zinnen.","Card Type":"Kaarttype","e.g. Dragon, Equipment":"bijv. Dragon, Equipment","Color Identity":"Kleuridentiteit","Must have all selected":"Moet alle geselecteerde hebben","At most these colors":"Hoogstens deze kleuren","Mana Value":"Mana value","Mana Cost":"Manakosten","Power":"Power","Toughness":"Toughness","Loyalty":"Loyalty","Rarity":"Zeldzaamheid","Keyword":"Keyword","e.g. flying, lifelink":"bijv. flying, lifelink","Flavor Text":"Flavor-tekst","e.g. dragon":"bijv. dragon","Artist":"Artiest","e.g. Rebecca Guay":"bijv. Rebecca Guay","Sort Order":"Sorteervolgorde","Sort Direction":"Sorteerrichting","Ascending":"Oplopend","Descending":"Aflopend","Any":"Elke","Name":"Naam","🔍 Use filters":"🔍 Filters toepassen","Monocolored":"Eenkleurig","2 colors":"2 kleuren","3 colors":"3 kleuren","4 & 5 colors":"4 & 5 kleuren","Mana Curve":"Mana curve","— tap a bar to see those cards":"— tik op een balk om die kaarten te zien","Mana Symbols":"Mana symbolen","Most Expensive Cards":"Duurste kaarten","Cardmarket trend price, cheapest printing of each card.":"Cardmarket trendprijs, goedkoopste versie van elke kaart.","Pricing…":"Prijzen ophalen…","Budget alternatives":"Budgetalternatieven","Recent Changes":"Recente wijzigingen","View full construction log →":"Bekijk het volledige bouwlogboek →","Undo":"Ongedaan maken","Edit":"Bewerken","Preview":"Voorbeeld","# headers, **bold**, *italics*, - lists":"# koppen, **vet**, *cursief*, - lijsten","MY STUFF":"MIJN STUFF","SEARCH":"ZOEKEN","INSPIRATION":"INSPIRATIE","EXTRAS":"EXTRA'S","MY COLLECTION":"MIJN COLLECTIE","Admiral fleet":"Admiral vloot","Commander fleet":"Commander leger","empty":"leeg","Magic's grandest multiplayer battlefield":"Magic's grootste multiplayer slagveld","Choose your":"Kies je","— a legendary creature whose color identity defines your deck — then assemble a 100-card singleton army from":"— een legendarisch wezen wiens kleuridentiteit je deck bepaalt — en stel dan een singleton leger van 100 kaarten samen uit","every set ever printed":"elke set ooit gedrukt",". Cast your Commander from the command zone again and again as the table's politics unfold.":". Speel je Commander keer op keer vanuit de command zone terwijl de politiek aan tafel zich ontvouwt.","A four-player free-for-all. Official legality and a live banned list, always current.":"Een free-for-all voor vier spelers. Officiële legality en een live ban-lijst, altijd actueel.","Read the rules →":"Lees de regels →","Your Commander awaits.":"Je Commander wacht.","Take Command":"Neem het commando","Explore Commanders & deck inspiration":"Ontdek Commanders & deck-inspiratie","Crossing fleets: tap the crest above to sail to the Admiral side — or long-press the compass in the top-left from anywhere in the app.":"Van vloot wisselen: tik op het embleem hierboven om naar de Admiral-kant te varen — of houd het kompas linksboven overal in de app ingedrukt.","Set sail on a bold new Magic adventure":"Hijs de zeilen voor een gedurfd nieuw Magic-avontuur","Admiral is a":"Admiral is een","four-player":"vierspeler","format — an immersive challenge where the legends of Magic's":"format — een meeslepende uitdaging waarin de legendes van Magic's","own universes":"eigen universums","take center stage. Choose your Admiral — a legendary character whose colors define your deck — then chart a 60-card course with":"in de hoofdrol staan. Kies je Admiral — een legendarisch personage wiens kleuren je deck bepalen — en zet dan een koers uit van 60 kaarten met","no expensive lands":"geen dure lands",", drawing instead from a shared Landing Zone stocked with basics.":", puttend uit een gedeelde Landing Zone vol basics.","Faster games, strategic depth, and far less prone to":"Snellere potten, strategische diepgang en veel minder vatbaar voor","power creep":"power creep","— steeped in the story of Magic itself.":"— doordrenkt van het verhaal van Magic zelf.","Read the full rules →":"Lees alle regels →","Your Admiral awaits.":"Je Admiral wacht.","White production":"Witte productie","Blue production":"Blauwe productie","Black production":"Zwarte productie","Red production":"Rode productie","Green production":"Groene productie","Colorless production":"Kleurloze productie","Generic production":"Generieke productie","Deck Log":"Decklog","Play Log":"Speellog","⊕ Log a game":"⊕ Noteer een potje","Log a game":"Noteer een potje","Result":"Resultaat","Won":"Gewonnen","Lost":"Verloren","Ended by":"Beslist door","Pod size":"Aantal spelers","Turns":"Beurten","Mulligans":"Mulligans","Mana":"Mana","Smooth":"Soepel","Screwed":"Tekort","Flooded":"Overvloed","Dead turns":"Dode beurten","MVP card":"MVP-kaart","Weakest card":"Zwakste kaart","Save game":"Potje opslaan","Games":"Potjes","Avg turns":"Gem. beurten","Avg dead turns":"Gem. dode beurten","Mana trouble":"Mana-problemen","Top performers":"Toppers","Cut candidates":"Snijkandidaten","Primer — strategy notes":"Primer — strategienotities","No games logged yet — every logged game sharpens the picture: winrate, dead turns, which cards earn their slot and which don't.":"Nog geen potjes genoteerd — elk genoteerd potje scherpt het beeld aan: winrate, dode beurten, welke kaarten hun plek verdienen en welke niet.","Notes — what decided this game?":"Notities — wat besliste dit potje?","Victory logged. ⚔":"Overwinning genoteerd. ⚔","Logged — every loss is data.":"Genoteerd — elk verlies is data.","Combat":"Combat","Commander damage":"Commander damage","Combo":"Combo","Poison":"Poison","Mill":"Mill","Attrition":"Uitputting","Concession":"Opgave","Other":"Anders","Weigh Anchor":"Anker lichten","Explore Admirals & deck inspiration":"Ontdek Admirals & deck-inspiratie","Crossing fleets: tap the crest above to sail to the Commander side — or long-press the compass in the top-left from anywhere in the app.":"Van vloot wisselen: tik op het embleem hierboven om naar de Commander-kant te varen — of houd het kompas linksboven overal in de app ingedrukt.","cards":"kaarten","starting life":"start levens","multiplayer classic":"multiplayer klassieker","faster games":"snellere potten","commander damage":"commander damage","Admiral damage":"Admiral damage","wins outright":"wint direct","singleton":"singleton","Advanced filters":"Geavanceerde filters","Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.":"Zoek op naam, of open Geavanceerde filters voor kleuren, mana value, type en Oracle-tekst.","Random Card":"Willekeurige kaart","↻ New card":"↻ Nieuwe kaart","↻ Random Card":"↻ Willekeurige kaart","🔮 New cards have been spoiled":"🔮 Nieuwe kaarten zijn gespoild","Comprehensive Rules":"Comprehensive Rules","The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back":"De volledige officiële Magic-regels — lees, zoek, of stel een vraag en krijg de exacte regel terug geciteerd","Chart Your Course":"Bepaal je koers","Pick colors and a theme to find Admirals for that style. Tap an Admiral's":"Kies kleuren en een thema om Admirals voor die stijl te vinden. Tik op de","card art":"kaart-art","to see its recommended cards and build a deck around it.":"om de aanbevolen kaarten te zien en er een deck omheen te bouwen.","Pick colors and a theme to find Commanders for that style. Tap a Commander's":"Kies kleuren en een thema om Commanders voor die stijl te vinden. Tik op de kaart-art van een Commander","Theme — none":"Thema — geen","Kindred — none":"Kindred — geen","Colors":"Kleuren","Colors — any combination":"Kleuren — elke combinatie","Backup & Restore":"Back-up & herstel","Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.":"Alles in één bestand — decks, collectie, instellingen. Je ticket naar een nieuw adres of een nieuw toestel.","⬇ Back Up":"⬇ Back-up","⬆ Restore":"⬆ Herstel","Format Rules":"Format regels","Deckbuilding & play rules for Commander":"Deckbouw- & speelregels voor Commander","Deckbuilding & play rules for Admiral":"Deckbouw- & speelregels voor Admiral","Banned List":"Ban-lijst","📲 Install as an app":"📲 Installeer als app","Home-screen icon, full screen, works offline":"Icoon op je beginscherm, volledig scherm, werkt offline","Share this app with a friend":"Deel deze app met een vriend","Sends the app link with a short intro":"Stuurt de app-link met een korte intro","Regular Commander: 100 cards, official legality, 40 life, 21 cmdr damage. Admiral decks wait in their own folder.":"Regular Commander: 100 kaarten, officiële legality, 40 levens, 21 commander damage. Admiral-decks wachten in hun eigen folder.","Admiral — or switch the whole app to regular Commander. Decks of the other format wait in their own folder.":"Admiral — of zet de hele app om naar regular Commander. Decks van het andere format wachten in hun eigen folder.","Life Totals":"Levens totaal","New Game":"Nieuwe pot","↺ New Game":"↺ Nieuwe pot","How many players are at the table?":"Hoeveel spelers aan de tafel?","Start & Spin for First Player":"Start en draai voor start speler","🎡 Spin for First Player":"🎡 Draai voor start speler","🎲 Roll d6":"🎲 Rol een d6","🎲 Roll d20":"🎲 Rol een d20","History":"Geschiedenis","Settings":"Instellingen","✓ Done":"✓ Klaar","No events yet.":"Nog geen gebeurtenissen.","New binder name":"Nieuwe map naam","Rename binder":"Hernoem map","Cover card name":"Afbeelding kaart naam","Add a copy":"Voeg een toe","Move to Maybeboard":"Verplaats naar maybeboard","Move to Main":"Verplaats naar deck","Change printing":"Verander versie","Remove from deck":"Verwijder uit deck","Rulings":"Regels","Add to Deck":"Aan deck toevoegen","Set as Commander":"Stel in als Commander","Set as Admiral":"Stel in als Admiral","Favorites":"Favorieten","★ Favorites":"★ Favorieten","Rename folder":"Hernoem folder","Delete folder":"Verwijder folder","New folder":"Nieuwe folder","New deck":"Nieuw deck","Pick Admiral first":"Kies eerst een Admiral","Filter by folder or Admiral…":"Filter op folder of Admiral…","Filter by folder or Commander…":"Filter op folder of Commander…","Card name…":"Kaart naam…","Color breakdown":"Kleur overzicht","Details":"Details","Most played with this Commander, sorted on popularity.":"Meest gespeeld met deze Commander, gesorteerd op populariteit.","Most played with this Admiral, sorted on popularity.":"Meest gespeeld met deze Admiral, gesorteerd op populariteit.","tap cards to select":"tik op kaarten om te selecteren","Inspiration":"Inspiratie","Extras":"Extra's","Any color":"Elke kleur","All sets":"Alle sets","All types":"Alle typen","White":"Wit","Blue":"Blauw","Black":"Zwart","Red":"Rood","Green":"Groen","Colorless":"Kleurloos","Multicolor":"Meerkleurig","Language saved.":"Taal opgeslagen.","Card images and the interface follow your language where possible.":"Kaartafbeeldingen en de interface volgen waar mogelijk je taal.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Je collectie is leeg. Zoek hierboven, of gebruik \"Aan collectie toevoegen\" bij een kaart in de app."},
 };
 const I18N_RX = {
 nl:[[/^(\d+) cards? owned$/g,'$1 kaarten in bezit'],[/What's new — v/g,'Wat is nieuw — v'],[/^Avg MV /g,'Gem. MV '],[/^(\d+)d ago · undone$/g,'$1d geleden · ongedaan'],[/^(\d+)d ago$/g,'$1d geleden'],[/^(\d+)h ago$/g,'$1u geleden'],[/^(\d+)m ago$/g,'$1m geleden'],[/^just now$/g,'zojuist'],[/^Bulk edit: (\d+) added, (\d+) removed$/g,'Bulk bewerken: $1 toegevoegd, $2 verwijderd'],[/^Deck total: /g,'Decktotaal: '],[/(\d+) decks? · waiting for the flag to change/g,'$1 decks · wachten op de vlagwissel'],[/Commanders — any colors/g,'Commanders — alle kleuren'],[/Admirals — any colors/g,'Admirals — alle kleuren'],[/^(\d+) cards — the official Commander list, live from Scryfall$/g,'$1 kaarten — de officiële Commander-lijst, live van Scryfall'],[/^(\d+) cards — tap a name to see it/g,'$1 kaarten — tik op een naam om hem te zien'],[/^Player (\d+)$/g,'Speler $1'],[/\bMain (\d+)\//g,'Deck $1/'],[/(\d+) cards\b/g,'$1 kaarten'],[/(\d+) card\b/g,'$1 kaart']],
@@ -4662,8 +4680,16 @@ function wireCollectionPage(){
     const el = document.getElementById('colFq');
     if(el){ el.focus(); const v=el.value; el.value=''; el.value=v; }
   }, 380); });
-  document.querySelectorAll('.want-tile').forEach(tile=>tile.addEventListener('click', ()=>{
-    openWantSheet(tile.dataset.wn);
+  document.querySelectorAll('.want-tile').forEach(tile=>tile.addEventListener('click', async ()=>{
+    // A Wants tile opens the normal card page (with Add to my collection and
+    // Remove from Wants); the little manage sheet survives only as the
+    // offline / not-found fallback.
+    const name = tile.dataset.wn;
+    try{
+      const r = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(name)}`);
+      if(r.ok){ openCardInfo(await r.json(), { wantName: name }); return; }
+    }catch(e){}
+    openWantSheet(name);
   }));
   const doSearch = async ()=>{
     const q = (document.getElementById('colAddName')?.value||'').trim();
@@ -7644,7 +7670,7 @@ function searchPageHtml(){
     ${pinned
       ? `<div class="pin-pill"><span class="pp-txt">Adding straight to <strong>${escapeHtml(pinned.name)}</strong></span><button id="unpinBtn" title="Stop adding to this deck">✕</button></div>`
       : ''}
-    <div class="searchbar"><input id="searchName" placeholder="Card name…" value="${escapeHtml(state.searchName)}"><button id="runSearchBtn">Search</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
+    <div class="searchbar"><input id="searchName" placeholder="Card name…" value="${escapeHtml(state.searchName)}"><button id="runSearchBtn">Search</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button><button id="tradeBtn" class="ghost-btn" title="Trade calculator" style="padding:0 13px;font-size:17px;flex:none;">⚖</button></div>
     <button class="adv-toggle ${state.advOpen?'open':''}" id="advToggle">Advanced filters <span class="car">▾</span></button>
     ${state.advOpen ? advancedPanelHtml() : ''}
     <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
@@ -7744,6 +7770,7 @@ function wireSearchPage(){
     runAdvancedSearch();     // name bar and any set filters, same as Use filters
   });
   document.getElementById('spoilersBtn')?.addEventListener('click', ()=>switchPage('spoilers'));
+  document.getElementById('tradeBtn')?.addEventListener('click', ()=>switchPage('trade'));
   document.getElementById('advToggle').addEventListener('click', ()=>{ state.advOpen=!state.advOpen; render(); });
   if(state.advOpen) wireAdvancedPanel();
   if(state.searchRan) renderSearchResultsBox();
@@ -8179,8 +8206,9 @@ function openCardInfo(card, opts){
         <button class="ghost-btn" id="ciAdd" style="width:100%;color:var(--brass);border-color:var(--brass);" ${isBanned(card)?'disabled':''}>${isBanned(card) ? 'Banned in Admiral' : pinned ? `+ Add to ${escapeHtml(pinned.name)}` : '+ Add to a deck'}</button>
         <div class="cs-actions-grid" style="margin:0;">
           <button class="ghost-btn" id="ciReco" style="width:100%;">✦ Played with this</button>
-          <button class="ghost-btn" id="ciColl" style="width:100%;">${colIdx!=null ? '🗂 Manage copy' : `<span class="ib">${ICONS.collection}</span>Collection`}</button>
+          <button class="ghost-btn" id="ciColl" style="width:100%;">${colIdx!=null ? '🗂 Manage copy' : opts.wantName ? `<span class="ib">${ICONS.collection}</span>${trS('Add to my collection')}` : `<span class="ib">${ICONS.collection}</span>Collection`}</button>
           <button class="ghost-btn" id="ciPrint" style="width:100%;">Change printing</button>
+          ${opts.wantName ? `<button class="ghost-btn" id="ciWantRm" style="width:100%;color:var(--danger);border-color:var(--danger);">${trS('Remove from Wants')}</button>` : ''}
         </div>
       </div>
       <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
@@ -8197,6 +8225,15 @@ function openCardInfo(card, opts){
   });
   document.getElementById('ciColl')?.addEventListener('click', ()=>{ if(colIdx!=null) openColItemSheet(colIdx); else openAddToCollection(card); });
   document.getElementById('ciPrint')?.addEventListener('click', ()=>openPrintingBrowse(card, opts));
+  document.getElementById('ciWantRm')?.addEventListener('click', ()=>{
+    const nm = opts.wantName;
+    state.collection.wantsExclude.push(nm);
+    state.collection.wantsManual = (state.collection.wantsManual||[]).filter(w=>w.name!==nm);
+    saveCollection();
+    toast(nm+' removed from Wants.');
+    closeTopOverlay();
+    if(state.screen==='collection') render();
+  });
   document.getElementById('ciAdd')?.addEventListener('click', ()=>{
     if(pinned) addCardToDeckValidated(pinned, card);
     else openDeckPickPopup(card, 'main');
@@ -8369,6 +8406,153 @@ function wireResultButtons(list, d, refreshFn, opts){
   });});
 }
 
+
+/* ---------------- TRADE PAGE ----------------
+   A Cardmarket-trend trade calculator behind the ⚖ button on Search. Two
+   sides (You give / You get), each card added as one exact printing carrying
+   that printing's trend price; the verdict line says who adds how much to
+   balance the trade. Persists in localStorage so a trade survives closing
+   the app mid-negotiation. */
+function loadTrade(){
+  if(state.trade) return state.trade;
+  let t = null;
+  try{ t = JSON.parse(localStorage.getItem(LS_PREFIX+'trade')||'null'); }catch(e){}
+  state.trade = (t && Array.isArray(t.a) && Array.isArray(t.b)) ? t : { a:[], b:[] };
+  return state.trade;
+}
+function saveTrade(){ try{ localStorage.setItem(LS_PREFIX+'trade', JSON.stringify(state.trade)); }catch(e){} }
+function tradeSideTotal(side){ return side.reduce((t,it)=> t + (it.eur!=null ? it.eur*it.qty : 0), 0); }
+function tradeRowsHtml(key){
+  const rows = state.trade[key];
+  if(!rows.length) return `<p class="hint" style="margin:4px 0 2px;">${trS('No cards on this side yet.')}</p>`;
+  return rows.map((it,i)=>`<div class="trade-row">
+    <img src="${it.img||''}" alt="" data-tprev="${key}:${i}">
+    <div class="tr-body"><div class="nm">${escapeHtml(it.name)}</div><div class="tl">${escapeHtml((it.set||'').toUpperCase())}${it.cn?' #'+escapeHtml(it.cn):''} · ${it.eur!=null?`<span class="tr-eur">€${it.eur.toFixed(2)}</span>`:'—'}</div></div>
+    <div class="tr-qty"><button data-tq="${key}:${i}:-1">−</button><span>×${it.qty}</span><button data-tq="${key}:${i}:1">＋</button></div>
+    <button class="icon-btn tr-del" data-tdel="${key}:${i}">✕</button>
+  </div>`).join('');
+}
+function tradePageHtml(){
+  loadTrade();
+  const totA = tradeSideTotal(state.trade.a), totB = tradeSideTotal(state.trade.b);
+  const missing = state.trade.a.concat(state.trade.b).some(it=>it.eur==null);
+  const diff = totA - totB;
+  const even = Math.abs(diff) < 0.005;
+  const verdict = even
+    ? trS('Even trade.')
+    : diff > 0
+      ? `${trS('They add')} <span class="tr-eur">€${diff.toFixed(2)}</span> ${trS('to balance the trade')}`
+      : `${trS('You add')} <span class="tr-eur">€${(-diff).toFixed(2)}</span> ${trS('to balance the trade')}`;
+  const sideCard = (key, label, tot)=>`<div class="panel-card">
+    <div class="panel-h">${trS(label)} <span style="float:right;color:var(--brass);font-family:'JetBrains Mono',monospace;">€${tot.toFixed(2)}</span></div>
+    ${tradeRowsHtml(key)}
+    <button class="ghost-btn" data-tradeadd="${key}" style="width:100%;margin-top:8px;">＋ ${trS('Add card')}</button>
+  </div>`;
+  return `<main>
+    <p class="hint">${trS('Cardmarket trend prices — pick the exact printing when adding a card.')}</p>
+    ${sideCard('a','You give',totA)}
+    ${sideCard('b','You get',totB)}
+    <div class="panel-card" style="text-align:center;">
+      <div class="trade-verdict ${even?'even':''}">${verdict}</div>
+      ${missing?`<p class="hint" style="margin:6px 0 0;">${trS('Some cards have no listed price and count as €0.00.')}</p>`:''}
+      ${(state.trade.a.length||state.trade.b.length)?`<button class="ghost-btn" id="tradeClear" style="width:100%;margin-top:10px;color:var(--danger);border-color:var(--danger);">${trS('Clear trade')}</button>`:''}
+    </div>
+  </main>`;
+}
+function wireTradePage(){
+  loadTrade();
+  document.querySelectorAll('[data-tradeadd]').forEach(b=>b.addEventListener('click', ()=>openTradeAdd(b.dataset.tradeadd)));
+  document.querySelectorAll('[data-tq]').forEach(b=>b.addEventListener('click', ()=>{
+    const [k,i,d] = b.dataset.tq.split(':');
+    const it = state.trade[k] && state.trade[k][+i]; if(!it) return;
+    it.qty = Math.max(1, Math.min(99, it.qty + parseInt(d,10)));
+    saveTrade(); render();
+  }));
+  document.querySelectorAll('[data-tdel]').forEach(b=>b.addEventListener('click', ()=>{
+    const [k,i] = b.dataset.tdel.split(':');
+    if(!state.trade[k]) return;
+    state.trade[k].splice(+i,1);
+    saveTrade(); render();
+  }));
+  document.querySelectorAll('[data-tprev]').forEach(img=>img.addEventListener('click', ()=>{
+    const [k,i] = img.dataset.tprev.split(':');
+    const it = state.trade[k] && state.trade[k][+i];
+    if(it && it.img) showPreview(it.img, !!it.wb);
+  }));
+  document.getElementById('tradeClear')?.addEventListener('click', ()=>{
+    if(!confirm(trS('Clear the whole trade?'))) return;
+    state.trade = { a:[], b:[] };
+    saveTrade(); render();
+  });
+}
+function openTradeAdd(side){
+  // Closing this overlay re-renders the trade page beneath it, so every card
+  // added while it was open is on the table the moment it comes down.
+  pushOverlay('tradeAdd', ()=>{ document.getElementById('tradeAddOverlay')?.remove(); if(state.screen==='trade') render(); });
+  let el = document.getElementById('tradeAddOverlay');
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='tradeAddOverlay'; document.body.appendChild(el); }
+  el.innerHTML = `<div class="overlay-inner">
+    <div class="topbar"><button class="icon-btn" id="taClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">${trS('Add to trade')}</div></div>
+    <main>
+      <div class="searchbar" style="margin-bottom:8px;"><input id="taName" placeholder="${escapeHtml(trS('Card name…'))}"><button id="taGo">${trS('Search')}</button></div>
+      <div id="taResults"><p class="hint">${trS('Search any card — every printing of it can join the trade.')}</p></div>
+    </main>
+  </div>`;
+  document.getElementById('taClose').addEventListener('click', closeTopOverlay);
+  const go = async ()=>{
+    const q = (document.getElementById('taName')?.value||'').trim();
+    const box = document.getElementById('taResults');
+    if(!q || !box) return;
+    box.innerHTML = '<div class="status"><div class="spinner"></div></div>';
+    try{
+      const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent(q+' game:paper')}`);
+      if(!r.ok){ box.innerHTML = '<p class="hint">No cards found.</p>'; return; }
+      const d = await r.json();
+      const cards = (d.data||[]).slice(0,30);
+      box.innerHTML = `<div class="search-results">${cards.map((c,i)=>`<div class="sr-row"><img src="${cardImage(c)}" alt=""><div class="sr-body"><div class="nm">${escapeHtml(c.name)}</div><div class="tl">${escapeHtml(c.type_line||'')}</div></div><button class="add-btn" data-i="${i}">›</button></div>`).join('')}</div>`;
+      box.querySelectorAll('.add-btn').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, cards[+btn.dataset.i])));
+    }catch(e){ box.innerHTML = '<p class="hint">Couldn\'t reach Scryfall.</p>'; }
+  };
+  document.getElementById('taGo').addEventListener('click', go);
+  document.getElementById('taName').addEventListener('keydown', e=>{ if(e.key==='Enter') go(); });
+  setTimeout(()=>{ try{ document.getElementById('taName')?.focus(); }catch(e){} }, 60);
+}
+async function openTradePrints(side, card){
+  pushOverlay('tradePrints', ()=>document.getElementById('tradePrintsOverlay')?.remove());
+  let el = document.getElementById('tradePrintsOverlay');
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='tradePrintsOverlay'; document.body.appendChild(el); }
+  el.innerHTML = `<div class="overlay-inner">
+    <div class="topbar"><button class="icon-btn" id="tpClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">Choose Printing</div></div>
+    <main><div id="tpList" class="status"><div class="spinner"></div>Loading printings…</div></main>
+  </div>`;
+  document.getElementById('tpClose').addEventListener('click', closeTopOverlay);
+  try{
+    const uri = card.prints_search_uri || (SF_BASE + '/cards/search?order=released&unique=prints&q=' + encodeURIComponent('!"'+card.name+'"'));
+    const res = await sfFetch(uri);
+    const data = await res.json();
+    const prints = (data.data||[]).filter(p=>p.image_uris || (p.card_faces && p.card_faces[0] && p.card_faces[0].image_uris));
+    const box = document.getElementById('tpList');
+    if(!prints.length){ box.innerHTML = `<div class="empty-note">No printings with art found.</div>`; return; }
+    box.className='';
+    box.innerHTML = `<div class="search-results">${prints.map((p,i)=>{
+      const eur = printEur(p);
+      return `<div class="sr-row"><img src="${cardImage(p)}" alt=""><div class="sr-body"><div class="nm">${setIcoHtml(p.set, p.rarity)} ${escapeHtml(p.set_name||p.set)}</div><div class="tl">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}${eur!=null?` · <span class="tr-eur">€${eur.toFixed(2)}</span>`:' · —'}</div></div><button class="add-btn" data-i="${i}">✓</button></div>`;
+    }).join('')}</div>`;
+    box.querySelectorAll('.add-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const chosen = prints[+btn.dataset.i];
+        loadTrade();
+        state.trade[side].push({ name: chosen.name, set: chosen.set, set_name: chosen.set_name||'', cn: chosen.collector_number||'', img: cardImage(chosen), wb: chosen.border_color==='white'?1:0, eur: printEur(chosen), qty: 1 });
+        saveTrade();
+        toast(trS('Added to trade.'));
+        closeTopOverlay();   // back to the search overlay — add the next card straight away
+      });
+    });
+  }catch(e){
+    console.error(e);
+    document.getElementById('tpList').innerHTML = `<div class="empty-note">Couldn't load printings.</div>`;
+  }
+}
 
 /* ---------------- INSPIRATION PAGE ---------------- */
 
