@@ -2806,13 +2806,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.131';
+const APP_VERSION = '2.51.132';
 const CHANGELOG_NOTES = {
   en: [
-    'My Collection\'s front page now shows only your loose, unfiled cards — everything else lives in its binder. A new Automatic folders shelf at the bottom holds All cards (every card you own, filed or loose, always up to date by itself) next to Wants. Filing a card never removes it from All cards, and the lighter front page opens noticeably faster.'
+    'The selection counter now counts CARDS, matching the header: selecting a ×2 stack counts as 2, so Select all shows the same number the top-right total does. The remove-confirmation counts the same way.'
   ],
   nl: [
-    'De voorpagina van Mijn Collectie toont nu alleen je losse, ongesorteerde kaarten — al het andere zit in zijn map. Een nieuwe plank Automatische mappen onderaan bevat Alle kaarten (elke kaart die je bezit, gesorteerd of los, altijd vanzelf actueel) naast Gezocht. Een kaart opbergen haalt hem nooit uit Alle kaarten, en de lichtere voorpagina opent merkbaar sneller.'
+    'De selectieteller telt nu KAARTEN, net als de kopregel: een stapel van ×2 selecteren telt als 2, dus Alles selecteren toont hetzelfde getal als het totaal rechtsboven. De verwijder-bevestiging telt op dezelfde manier.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4459,7 +4459,7 @@ function collectionPageHtml(){
         </div>
       </button>`).join('')}</div>`
     : `<div class="empty-note" style="margin-top:20px;">${wantsMode ? 'Nothing on the Wants list — every card in your decks is in your collection.' : (!f.binder && state.collection.items.length && !f.q && !f.set && !f.type && !f.color && !f.rarity && !f.legal) ? 'Every card is tucked into a binder — open All cards below to see the whole collection at once.' : state.collection.items.length?'Nothing matches these filters.':'Your collection is empty. Search above, or use "Add to collection" on any card in the app.'}</div>`}
-    ${state.colSel && state.colSel.size ? `<button class="deck-fab col-sel-fab ${f.binder?'solo':''}" id="colSelFab" title="Selected cards">✓ ${state.colSel.size}</button>` : ''}
+    ${state.colSel && state.colSel.size ? `<button class="deck-fab col-sel-fab ${f.binder?'solo':''}" id="colSelFab" title="Selected cards">✓ ${Array.from(state.colSel).reduce((a,i)=>a + ((state.collection.items[i]||{}).qty||1), 0)}</button>` : ''}
   </main>`;
 }
 /* Binders as folders, My Stuff style: the tile's face is the first card
@@ -4840,12 +4840,16 @@ function wireCollectionPage(){
   // deselection exits selection mode. Wants tiles keep their own handler.
   // Toggling mutates the DOM in place — a full re-render per tap made
   // selection visibly lag behind the finger.
+  // The selection counts CARDS (quantities summed), matching the header's
+  // "N cards" — a ×2 stack selected counts as 2, not 1.
+  const colSelQty = ()=> state.colSel
+    ? Array.from(state.colSel).reduce((a,i)=>a + ((state.collection.items[i]||{}).qty||1), 0)
+    : 0;
   const wireColSelFab = (fab)=>{
     fab.addEventListener('click', (e)=>{
       const anchor = e.currentTarget;
-      const n = state.colSel ? state.colSel.size : 0;
-      if(!n) return;
-      openColSelMenu(anchor, n);
+      if(!state.colSel || !state.colSel.size) return;
+      openColSelMenu(anchor);
     });
   };
   const updateColSelFab = ()=>{
@@ -4860,7 +4864,7 @@ function wireCollectionPage(){
       (document.querySelector('main')||document.body).appendChild(fab);
       wireColSelFab(fab);
     }
-    fab.textContent = '✓ ' + n;
+    fab.textContent = '✓ ' + colSelQty();
   };
   const colToggleSel = (ci, tile)=>{
     if(!state.colSel) state.colSel = new Set();
@@ -4894,7 +4898,8 @@ function wireCollectionPage(){
   });
   const sf = document.getElementById('colSelFab');
   if(sf) wireColSelFab(sf);
-  function openColSelMenu(anchor, n){
+  function openColSelMenu(anchor){
+    const n = colSelQty();
     openTileMenu(anchor, [
       {label:'☑ '+trS('Select all'), fn:()=>{
         state.colSel = new Set(Array.from(document.querySelectorAll('.col-tile[data-ci]')).map(t=>+t.dataset.ci));
