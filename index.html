@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.143';
+const APP_VERSION = '2.51.144';
 const CHANGELOG_NOTES = {
   en: [
-    'Grid prices are instant now. Search results, Inspiration lists, spoilers, and the trade search used to queue one lookup per tile to find each card\'s cheapest printing — a whole grid trickling in through the request line. Tiles now show a price already in hand (the known cheapest when fresh, otherwise that printing\'s own Cardmarket trend) with zero requests; the true cheapest is still computed the moment you open a card\'s page.'
+    'Double-faced Commanders and Admirals (King T\'Challa, Heliod, and friends) appear in Inspiration theme lists again: EDHREC names them by their front face while Scryfall answers with the full "Front // Back" name, and the matching step dropped them in between. Planeswalker-front Commanders were also wrongly held to a power/toughness requirement in theme lists — lifted in the Commander fleet.'
   ],
   nl: [
-    'Rasterprijzen zijn nu direct. Zoekresultaten, Inspiratie-lijsten, spoilers en de ruilzoeker zetten voorheen per tegel één opzoeking in de rij om de goedkoopste versie te vinden — een heel raster druppelde binnen via de aanvraagrij. Tegels tonen nu een prijs die al voorhanden is (de bekende goedkoopste indien vers, anders de eigen Cardmarket-trend van die versie) met nul aanvragen; de echte goedkoopste wordt nog steeds berekend zodra je een kaartpagina opent.'
+    'Dubbelzijdige Commanders en Admirals (King T\'Challa, Heliod en vrienden) verschijnen weer in Inspiratie-themalijsten: EDHREC noemt ze bij hun voorkant terwijl Scryfall met de volledige "Voor // Achter"-naam antwoordt, en de matchstap liet ze daartussen vallen. Planeswalker-Commanders werden in themalijsten ook onterecht aan een power/toughness-eis gehouden — opgeheven in de Commander-vloot.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8820,7 +8820,7 @@ function wireResultButtons(list, d, refreshFn, opts){
   // any way of choosing an eligible leader performs the swap and returns to
   // the deck — nothing gets silently added to the main deck instead.
   const swd = state.switchSeat ? getDeck(state.switchSeat) : null;
-  const leaderReady = (c)=> isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c);
+  const leaderReady = (c)=> isLegendary(c) && isNonlandFront(c) && !isBanned(c) && ((swd && deckFormat(swd)==='commander') ? true : hasPowerToughness(c));
   const doSwitch = (c)=>{
     if(!swd) return false;
     if(!leaderReady(c)){ toast(`${c.name} can't take command.`); return true; }
@@ -9735,7 +9735,7 @@ async function loadEdhrecTypalBrowse(box, key, slug){
   const rank = new Map(names.map((n,i)=>[n,i]));
   const cards = await namesToLegalCards(names);
   if(key !== JSON.stringify(state.browseSel)) return;
-  let list = (cards||[]).filter(c=> isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c) && colorSelectionAllows(c));
+  let list = (cards||[]).filter(c=> isLegendary(c) && (isCmdrMode() ? true : hasPowerToughness(c)) && isNonlandFront(c) && !isBanned(c) && colorSelectionAllows(c));
   list.sort((a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999));
   if(!list.length){
     box.innerHTML = `<div class="empty-note">No ${isCmdrMode()?'Commanders':'Admirals'} with play data for this creature type in these colors — try another combination.</div>`;
@@ -9818,7 +9818,9 @@ async function loadEdhrecThemeBrowse(box, key, slug){
   const rank = new Map(names.map((n,i)=>[n,i]));
   const cards = await namesToLegalCards(names);
   if(key !== JSON.stringify(state.browseSel)) return;
-  let list = (cards||[]).filter(c=> isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c) && colorSelectionAllows(c));
+  // Commander legality doesn't require printed power/toughness (planeswalker
+  // and vehicle commanders exist); the Admiral format does.
+  let list = (cards||[]).filter(c=> isLegendary(c) && (isCmdrMode() ? true : hasPowerToughness(c)) && isNonlandFront(c) && !isBanned(c) && colorSelectionAllows(c));
   list.sort((a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999));
   if(!list.length){
     box.innerHTML = `<div class="empty-note">No ${isCmdrMode()?'Commanders':'Admirals'} with play data for this theme in these colors — try another combination.</div>`;
@@ -10035,7 +10037,7 @@ async function loadBrowse(){
         const disk = await qdbGet(ck);
         if(disk && (Date.now() - (disk.t||0)) < QCACHE_TTL && Array.isArray(disk.v)) return disk.v;
         const cards = (await namesToLegalCards(names)).filter(c=>
-          isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c));
+          isLegendary(c) && (isCmdrMode() ? true : hasPowerToughness(c)) && isNonlandFront(c));
         if(cards.length) qdbSet(ck, cards);
         return cards;
       })();
@@ -10376,7 +10378,18 @@ async function namesToLegalCards(names){
   const chunks = chunkArr(names.slice(0, 600), 10);
   const settled = await Promise.all(chunks.map(resolveNameChunk));
   const byName = new Map();
-  settled.flat().forEach(c=>{ if(!byName.has(c.name)) byName.set(c.name, c); });
+  settled.flat().forEach(c=>{
+    if(!byName.has(c.name)) byName.set(c.name, c);
+    // Double-faced cards: EDHREC lists carry the FRONT face's name while
+    // Scryfall answers "Front // Back" — alias the front so the lookup
+    // below can't drop them (King T'Challa, Heliod, and every other
+    // transforming leader used to vanish exactly here).
+    const cut = c.name.indexOf(' // ');
+    if(cut > 0){
+      const front = c.name.slice(0, cut);
+      if(!byName.has(front)) byName.set(front, c);
+    }
+  });
   return names.map(n=>byName.get(n)).filter(Boolean);
 }
 function colorIdentityWithin(card, combo){
