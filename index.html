@@ -2891,13 +2891,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.163';
+const APP_VERSION = '2.51.164';
 const CHANGELOG_NOTES = {
   en: [
-    'Theme and Kindred pages show their spinner (and the waiting-room quips) again while loading — the sectioned rebuild had left the page blank until results arrived.'
+    'Blank theme pages, root fixed: a failed or empty load used to be remembered for the whole session, so revisiting that theme showed instant nothing — no spinner, no results. Empty leftovers are no longer treated as answers; the page loads fresh, spinner and quips included.'
   ],
   nl: [
-    'Thema- en Kindred-pagina\'s tonen hun laadcirkel (en de wachtkamer-quips) weer tijdens het laden — de herbouw met secties liet de pagina leeg tot de resultaten er waren.'
+    'Lege themapagina\'s, bij de wortel opgelost: een mislukte of lege lading werd de hele sessie onthouden, dus die opnieuw bezoeken toonde direct niets — geen laadcirkel, geen resultaten. Lege restanten gelden niet meer als antwoord; de pagina laadt vers, met laadcirkel en quips.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10216,7 +10216,12 @@ async function loadBrowse(){
       : '';
     loadEdhrecDeckCounts(key, state.browseSel.combo, tagSlug);
   }
-  if(state.browseCache[key]){ renderBrowseResults(key); return; }
+  // A cached EMPTY pool is a remembered failure, not an answer — treat it
+  // as no cache at all, so the page reloads with its spinner instead of
+  // rendering instant blankness for the rest of the session.
+  const cachedPool = state.browseCache[key];
+  if(cachedPool && (cachedPool.length || cachedPool._sections)){ renderBrowseResults(key); return; }
+  if(cachedPool) delete state.browseCache[key];
   box.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
   const admiralMode = browseAdmiralMode();
   const sel = state.browseSel;
