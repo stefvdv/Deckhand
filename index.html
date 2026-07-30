@@ -53,7 +53,7 @@ html[data-theme="light"]{
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{touch-action:pan-x pan-y;}
 button,input,select,textarea,.sr-tile,.vg-card,.tap-zone,.dmg-overlay,.chip{touch-action:manipulation;}
-html,body{margin:0;padding:0;height:100%;background:var(--ink);overflow-x:hidden;max-width:100%;}
+html,body{margin:0;padding:0;height:100%;background:var(--ink);overflow-x:clip;max-width:100%;}   /* clip, not hidden: hidden silently kills position:sticky */
 body{
   font-family:'Inter',sans-serif; color:var(--ink-text);
   background:
@@ -914,6 +914,11 @@ main.has-dock{padding-bottom:84px;}
 .edh-jump-row{position:sticky;top:6px;z-index:6;display:flex;justify-content:flex-end;height:0;pointer-events:none;}
 .edh-jump{pointer-events:auto;width:42px;height:42px;border-radius:50%;background:var(--field);border:1px solid var(--brass);color:var(--brass);font-size:17px;box-shadow:0 3px 10px rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;}
 .edh-sec{scroll-margin-top:74px;}
+/* The current section's name rides just below the top bar; the next
+   section's label pushes it out — classic sticky headers, scoped per
+   section. Solid backing so it stays readable over the tiles. */
+.edh-sec > .section-label{position:sticky;top:66px;z-index:5;background:var(--bg,#2A1014);padding:6px 2px;}
+.edh-jump-row{top:70px;}
 #tileMenuPop{max-height:70vh;overflow-y:auto;}
 .edh-rel{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-top:10px;-webkit-overflow-scrolling:touch;}
 .edh-rel-chip{flex:none;display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;border:1px solid var(--field-line);background:var(--field);color:var(--ink-text);font-size:12.5px;font-family:Inter;}
@@ -2885,13 +2890,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.159';
+const APP_VERSION = '2.51.161';
 const CHANGELOG_NOTES = {
   en: [
-    'A floating ☰ button rides along on theme pages: tap it for a menu of every section — Top Commanders, Game Changers, Lands, all of them — and jump straight there. The spoiler marker also slimmed down to the bare crystal ball, no more orange circle.'
+    'Tapping a leader on a theme or Kindred page now opens their recommendations FOR that theme straight away — EDHREC\'s commander-within-theme page loads first, instead of the generic list appearing and reshuffling later.'
   ],
   nl: [
-    'Een zwevende ☰-knop reist mee op themapagina\'s: tik erop voor een menu van elke sectie — Top Commanders, Game Changers, landen, allemaal — en spring er direct heen. De spoiler-marker is ook afgeslankt tot de kale kristallen bol, geen oranje cirkel meer.'
+    'Een leider aantikken op een thema- of Kindred-pagina opent nu direct hun aanbevelingen VOOR dat thema — EDHREC\'s commander-binnen-thema-pagina laadt als eerste, in plaats van dat de generieke lijst verschijnt en later herschikt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7965,9 +7970,11 @@ function openPrintingPicker(d, card, loc, idx){
     else if(loc==='maybe') d.maybeboard[idx] = chosen;
     else d.cards[idx] = chosen;
     scheduleSave(d);
+    // Picking a printing finishes the errand: close the card sheet too and
+    // land back on the deck list, where the confirmation and new art show.
+    closeTopOverlay();
     toast(`Now showing the ${chosen.set_name} printing.`);
-    renderCardSheet(d, chosen, loc, idx);    // redraw the sheet beneath with the new art
-    refreshDecklistBox(d);
+    setTimeout(()=>{ try{ render(); }catch(e){} }, 30);
   });
 }
 
@@ -11054,7 +11061,14 @@ async function loadBudgetAlternatives(d){
    chosen in the dropdowns), tap tiles to select, then spawn a ready-made
    deck from the selection. */
 function openAdmiralReco(admiral, partner){
-  state.reco = { admiral, partner: partner || null, pool: [], selected: new Set(), loading: true, error: false };
+  // Arriving from a theme or Kindred page: that context IS the request —
+  // seed the reco page with it so the first load is the commander-within-
+  // theme list, not the generic one reshuffled later.
+  const bs = state.browseSel || {};
+  const seedTheme = (state.screen === 'browse')
+    ? ((bs.theme && bs.theme.indexOf('ed:') === 0) ? bs.theme.slice(3) : (bs.tribe || null))
+    : null;
+  state.reco = { admiral, partner: partner || null, pool: [], selected: new Set(), loading: true, error: false, _seedTheme: seedTheme || null };
   let el = document.getElementById('recoOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='recoOverlay'; document.body.appendChild(el); }
   pushOverlay('reco', ()=>{ document.getElementById('recoOverlay')?.remove(); state.reco = null; });
@@ -11352,6 +11366,14 @@ async function loadRecoPool(){
   // (The old colour/cost re-sort is what made pages read white-then-blue-then-red.)
   R.pool = synergy.slice(0, 180 - staples.length).concat(staples);
   renderRecoBody();
+  // Seeded from a theme/Kindred page: chain straight into that theme's own
+  // list — its page is already in the cache from the browse just left, so
+  // the scoped recommendations are the first settled view.
+  if(R._seedTheme){
+    const t = R._seedTheme;
+    R._seedTheme = null;
+    if((R.themes||[]).some(x=>x.slug===t)) loadRecoTheme(t);
+  }
 }
 async function loadRecoTheme(slug){
   const R = state.reco;
