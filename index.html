@@ -2806,13 +2806,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.133';
+const APP_VERSION = '2.51.135';
 const CHANGELOG_NOTES = {
   en: [
-    'Themes like Group Hug show results again: EDHREC keeps pure deck themes in a second namespace the app didn\'t look in — every theme lookup now checks both, and the "no play data" note gained a Try again button for flaky connections.'
+    'Themes without a color choice work again — the page reader now finds commander lists wherever a theme page hides them — and the Try again button under the empty note is gone, per the captain\'s orders.'
   ],
   nl: [
-    'Thema\'s zoals Group Hug tonen weer resultaten: EDHREC bewaart pure deckthema\'s in een tweede naamruimte waar de app niet in keek — elke thema-opzoeking controleert nu beide, en de "geen speeldata"-melding kreeg een Probeer opnieuw-knop voor haperende verbindingen.'
+    'Thema\'s zonder kleurkeuze werken weer — de paginalezer vindt commanderlijsten nu waar een themapagina ze ook verstopt — en de Probeer opnieuw-knop onder de lege melding is weg, op bevel van de kapitein.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9688,6 +9688,23 @@ function edhrecCommanderNamesFrom(data){
       if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); }
     }
   }
+  if(out.length) return out;
+  // Rescue: some pages (theme landings especially) nest their lists deeper
+  // or under different containers than json_dict.cardlists. Walk the whole
+  // page for cardviews arrays before declaring it empty — and say so in the
+  // console, which is gold when chasing a shape change remotely.
+  const walk = (o, depth)=>{
+    if(!o || depth > 7) return;
+    if(Array.isArray(o)){ for(const x of o) walk(x, depth+1); return; }
+    if(typeof o === 'object'){
+      if(Array.isArray(o.cardviews)){
+        for(const cv of o.cardviews){ if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); } }
+      }
+      for(const k in o){ if(k !== 'cardviews') walk(o[k], depth+1); }
+    }
+  };
+  walk(data, 0);
+  if(!out.length && data) console.warn('edhrec: page carried no cardviews anywhere', Object.keys(data||{}));
   return out;
 }
 /* Commander names for a tag, colour-scoped first. The tag+colour page
@@ -9727,9 +9744,7 @@ async function loadEdhrecThemeBrowse(box, key, slug){
   const names = await edhrecTagCommanderNames(slug, state.browseSel.combo);
   if(key !== JSON.stringify(state.browseSel)) return;
   if(!names.length){
-    box.innerHTML = `<div class="empty-note">No play data for this theme right now — check your connection, or try another theme.</div>
-      <button class="ghost-btn" id="edhRetry" style="width:100%;margin-top:10px;">↻ Try again</button>`;
-    document.getElementById('edhRetry')?.addEventListener('click', ()=>{ delete state.browseCache[key]; loadEdhrecThemeBrowse(box, key, slug); });
+    box.innerHTML = `<div class="empty-note">No play data for this theme right now — check your connection, or try another theme.</div>`;
     return;
   }
   const rank = new Map(names.map((n,i)=>[n,i]));
@@ -10022,7 +10037,7 @@ function renderBrowseResults(key){
     return;
   }
   const note = (admiralMode && state.browseSel.theme)
-    ? `<p class="hint" style="margin:8px 0 0;">Admirals for this theme, most-played first.</p>`
+    ? `<p class="hint" style="margin:8px 0 0;">${isCmdrMode()?'Commanders':'Admirals'} for this theme, most-played first.</p>`
     : '';
   box.innerHTML = note;
   // Two-commander pairs are treated like any other eligible commander: they
