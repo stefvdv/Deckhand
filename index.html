@@ -905,8 +905,10 @@ main.has-dock{padding-bottom:84px;}
 /* The double-faced flip button: a circle on the art, Moxfield-style —
    right of center, off the name line and the text box. */
 .dfc-flip-box{position:absolute;top:0;left:0;width:100%;aspect-ratio:63/88;pointer-events:none;z-index:4;}
-.dfc-flip{position:absolute;top:28%;right:7%;width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,0.75);background:rgba(20,14,26,0.55);color:#fff;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,0.5);transition:transform .25s ease;padding:0;}
-.dfc-flip.flipped{transform:rotate(180deg);}
+.dfc-flip{position:absolute;top:28%;right:7%;width:40px;height:40px;border-radius:50%;border:2px solid #F6E7B0;background:linear-gradient(145deg,#E9C767,#A87715);color:#241304;display:flex;align-items:center;justify-content:center;pointer-events:auto;box-shadow:0 0 0 2px rgba(20,14,26,0.55),0 3px 10px rgba(0,0,0,0.6),0 0 14px rgba(233,199,103,0.35);transition:transform .28s ease, background .2s, color .2s;padding:0;}
+.dfc-flip:active{transform:scale(0.9);}
+.dfc-flip.flipped{transform:rotate(180deg);background:linear-gradient(145deg,#2E4A66,#152A3F);color:#F0D98C;border-color:#E9C767;box-shadow:0 0 0 2px rgba(20,14,26,0.55),0 3px 10px rgba(0,0,0,0.6),0 0 14px rgba(46,74,102,0.55);}
+.dfc-flip.flipped:active{transform:rotate(180deg) scale(0.9);}
 *:has(> .dfc-flip-box){position:relative;}
 .colfold-ico{color:var(--brass);}
 .colfold-ico svg{width:46px;height:46px;display:block;}
@@ -2498,7 +2500,7 @@ function dfcBackFace(card){
 function dfcFlipHtml(c){
   const d = dfcBackFace(c);
   if(!d) return '';
-  return `<span class="dfc-flip-box"><button class="dfc-flip" title="Flip to the other face" data-front="${escapeHtml(d.front)}" data-back="${escapeHtml(d.back)}">⟳</button></span>`;
+  return `<span class="dfc-flip-box"><button class="dfc-flip" title="Flip to the other face" data-front="${escapeHtml(d.front)}" data-back="${escapeHtml(d.back)}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6l5 4V7c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 13c0-4.42-3.58-8-8-8zm-5.3 2.74L5.24 6.28A7.93 7.93 0 0 0 4 13c0 4.42 3.58 8 8 8v3l5-4-5-4v3c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8z"/></svg></button></span>`;
 }
 function cardBadgesHtml(c){
   if(!c) return '';
@@ -2867,13 +2869,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.152';
+const APP_VERSION = '2.51.153';
 const CHANGELOG_NOTES = {
   en: [
-    'Double-faced cards can flip: a round ⟳ button sits on the art of every two-faced card — in grids, deck views, and both card pages — and turns it over to the back face and back again, right in place.'
+    'Found it: double-faced leaders were IN the theme lists all along — sorted to the very bottom, because EDHREC ranks them by front-face name and the sort looked them up by full name. King T\'Challa now sits where EDHREC ranks him. The flip button also got the house treatment: brass and bold, turning navy-and-gold once the back face is showing.'
   ],
   nl: [
-    'Dubbelzijdige kaarten kunnen omdraaien: een ronde ⟳-knop staat op de art van elke tweezijdige kaart — in rasters, deckweergaven en beide kaartpagina\'s — en draait hem ter plekke om naar de achterkant en weer terug.'
+    'Gevonden: dubbelzijdige leiders zaten al die tijd IN de themalijsten — helemaal onderaan gesorteerd, omdat EDHREC ze op voorkantnaam rangschikt en de sortering ze op volledige naam opzocht. King T\'Challa staat nu waar EDHREC hem rangschikt. De draaiknop kreeg ook de huisstijl: messing en gedurfd, en marineblauw-met-goud zodra de achterkant zichtbaar is.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9772,7 +9774,13 @@ async function loadEdhrecTypalBrowse(box, key, slug){
   const cards = await namesToLegalCards(names);
   if(key !== JSON.stringify(state.browseSel)) return;
   let list = (cards||[]).filter(c=> isLegendary(c) && (isCmdrMode() ? true : hasPowerToughness(c)) && isNonlandFront(c) && !isBanned(c) && colorSelectionAllows(c));
-  list.sort((a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999));
+  const rankOf = (c)=>{
+    if(rank.has(c.name)) return rank.get(c.name);
+    const cut = c.name.indexOf(' // ');
+    if(cut > 0 && rank.has(c.name.slice(0, cut))) return rank.get(c.name.slice(0, cut));
+    return 999;
+  };
+  list.sort((a,b)=>rankOf(a)-rankOf(b));
   if(!list.length){
     box.innerHTML = `<div class="empty-note">No ${isCmdrMode()?'Commanders':'Admirals'} with play data for this creature type in these colors — try another combination.</div>`;
     return;
@@ -9861,7 +9869,17 @@ async function loadEdhrecThemeBrowse(box, key, slug){
   // Commander legality doesn't require printed power/toughness (planeswalker
   // and vehicle commanders exist); the Admiral format does.
   let list = (cards||[]).filter(c=> isLegendary(c) && (isCmdrMode() ? true : hasPowerToughness(c)) && isNonlandFront(c) && !isBanned(c) && colorSelectionAllows(c));
-  list.sort((a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999));
+  // EDHREC ranks double-faced leaders by their FRONT face's name while the
+  // resolved card carries the full "Front // Back" — without this fallback
+  // they all fell to rank 999, the very bottom of the list, looking exactly
+  // like they were missing.
+  const rankOf = (c)=>{
+    if(rank.has(c.name)) return rank.get(c.name);
+    const cut = c.name.indexOf(' // ');
+    if(cut > 0 && rank.has(c.name.slice(0, cut))) return rank.get(c.name.slice(0, cut));
+    return 999;
+  };
+  list.sort((a,b)=>rankOf(a)-rankOf(b));
   if(!list.length){
     box.innerHTML = `<div class="empty-note">No ${isCmdrMode()?'Commanders':'Admirals'} with play data for this theme in these colors — try another combination.</div>`;
     return;
