@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.142';
+const APP_VERSION = '2.51.143';
 const CHANGELOG_NOTES = {
   en: [
-    'On Inspiration, an active leader-name search now behaves like its own page: the hardware back button first clears the search and shows the clean start — only the next press actually leaves the page.'
+    'Grid prices are instant now. Search results, Inspiration lists, spoilers, and the trade search used to queue one lookup per tile to find each card\'s cheapest printing — a whole grid trickling in through the request line. Tiles now show a price already in hand (the known cheapest when fresh, otherwise that printing\'s own Cardmarket trend) with zero requests; the true cheapest is still computed the moment you open a card\'s page.'
   ],
   nl: [
-    'Op Inspiratie gedraagt een actieve leiderzoekopdracht zich nu als een eigen pagina: de hardware terugknop wist eerst de zoekopdracht en toont het schone begin — pas de volgende druk verlaat de pagina echt.'
+    'Rasterprijzen zijn nu direct. Zoekresultaten, Inspiratie-lijsten, spoilers en de ruilzoeker zetten voorheen per tegel één opzoeking in de rij om de goedkoopste versie te vinden — een heel raster druppelde binnen via de aanvraagrij. Tegels tonen nu een prijs die al voorhanden is (de bekende goedkoopste indien vers, anders de eigen Cardmarket-trend van die versie) met nul aanvragen; de echte goedkoopste wordt nog steeds berekend zodra je een kaartpagina opent.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8438,19 +8438,21 @@ function sortColorCmcName(cards){
 /* Fill in the little price line on every visible result tile. Prices come
    from the same cheapest-Cardmarket-printing lookup the decklist uses, so
    anything already priced is instant from cache. */
-async function loadTilePrices(cards){
-  const pending = cards.filter(c=>document.querySelector(`.st-price[data-pricecard="${encodeURIComponent(c.name)}"]`));
-  if(!pending.length) return;
-  await runLimited(pending, async (c)=>{
-    // Yield the rate-limit queue to any live search before each price lookup
-    while(_searchBusy > 0) await new Promise(r=>setTimeout(r, 200));
-    if(!document.querySelector(`.st-price[data-pricecard="${encodeURIComponent(c.name)}"]`)) return null;
-    const v = await cheapestEur(c);
-    document.querySelectorAll(`.st-price[data-pricecard="${encodeURIComponent(c.name)}"]`).forEach(el=>{
-      el.textContent = (v===null) ? 'no price listed' : fmtEur(v);
-    });
-    return v;
-  }, 3);
+/* Tile prices are INSTANT: each tile shows a price already in hand — the
+   fresh cached cheapest when we know it, otherwise the returned printing's
+   own Cardmarket trend — with ZERO network requests. The true cheapest
+   across printings is computed only when a card's page opens
+   (loadCardPrice), which also refreshes the cache these tiles read next
+   time. A whole grid used to queue one prints-walk per tile through the
+   serial queue; that trickle is gone. */
+function loadTilePrices(cards){
+  for(const c of cards){
+    const els = document.querySelectorAll(`.st-price[data-pricecard="${encodeURIComponent(c.name)}"]`);
+    if(!els.length) continue;
+    const hit = state.priceCache[c.name];
+    const v = (hit && Date.now()-hit.t < PRICE_TTL) ? hit.v : printEur(c);
+    els.forEach(el=>{ el.textContent = (v===null || v===undefined) ? 'no price listed' : fmtEur(v); });
+  }
 }
 function searchRowHtml(c, d, opts){
   opts = opts || {};
