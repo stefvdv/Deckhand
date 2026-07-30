@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.149';
+const APP_VERSION = '2.51.150';
 const CHANGELOG_NOTES = {
   en: [
-    'Double-faced leaders, closed for good: EDHREC\'s own pages confirm they\'re listed by front-face name only, and whatever the batch lookup can\'t place under that spelling is now re-resolved through the same lenient endpoint deck imports have trusted all along. King T\'Challa and the Heliods take their seats.'
+    'Theme loading can no longer hang on a bad connection: the batch lookups that open every Inspiration load now carry a strict 6-second timeout — if they can\'t answer in time, the proven search path takes over immediately instead of the page spinning for minutes. The same guard protects CSV collection imports.'
   ],
   nl: [
-    'Dubbelzijdige leiders, definitief opgelost: EDHREC\'s eigen pagina\'s bevestigen dat ze alleen met hun voorkantnaam vermeld staan, en wat de batch-opzoeking onder die spelling niet kan plaatsen wordt nu opnieuw opgelost via hetzelfde soepele endpoint dat deck-imports altijd al vertrouwden. King T\'Challa en de Heliods nemen hun plek in.'
+    'Thema-laden kan niet meer blijven hangen op een slechte verbinding: de batch-opzoekingen waarmee elke Inspiratie-lading opent hebben nu een strikte time-out van 6 seconden — antwoorden ze niet op tijd, dan neemt het bewezen zoekpad het direct over in plaats van dat de pagina minutenlang draait. Dezelfde bescherming beschermt CSV-collectie-imports.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5696,7 +5696,7 @@ async function resolveCollectionEntries(entries, onProgress){
       const ids = chunk.map(e => (e.set && /^[0-9a-z]{2,6}$/.test(e.set) && e.cn) ? {set:e.set, collector_number:e.cn} : {name:e.name});
       for(let attempt = 0; attempt < 2; attempt++){
         try{
-          const r = await fetch(`${SF_BASE}/cards/collection`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({identifiers: ids})});
+          const r = await postWithTimeout(`${SF_BASE}/cards/collection`, {identifiers: ids}, 6000);
           if(r.ok){
             _sfBatchOk = true;
             const d = await r.json();
@@ -10369,6 +10369,18 @@ function startPairDeck(a, b){
    long card names in big batches can exceed Scryfall's URL length limit. If a
    batch still errors, it splits in half and retries, so one bad batch can
    never silently zero out the results. */
+/* A fetch that fails by TIMING OUT can hang a page for a minute-plus per
+   attempt. Every batch POST goes through this instead: answer within the
+   window or be aborted, so the fallback paths get their turn immediately. */
+async function postWithTimeout(url, body, ms){
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), ms || 6000);
+  try{
+    return await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal: ctl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 async function resolveNameChunk(chunk){
   if(!chunk.length) return [];
   // Commander mode: one POST to Scryfall's /cards/collection resolves the
@@ -10382,7 +10394,7 @@ async function resolveNameChunk(chunk){
   if(isCmdrMode()){
     for(let attempt = 0; attempt < 2; attempt++){
       try{
-        const r = await fetch(`${SF_BASE}/cards/collection`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifiers: chunk.map(n=>({ name: n })) }) });
+        const r = await postWithTimeout(`${SF_BASE}/cards/collection`, { identifiers: chunk.map(n=>({ name: n })) }, 6000);
         if(r.ok){
           const d = await r.json();
           const found = (d.data||[]).filter(c=> c.legalities && c.legalities.commander && c.legalities.commander !== 'not_legal');

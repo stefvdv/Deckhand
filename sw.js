@@ -5,7 +5,7 @@
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v2.51.149';
+const VERSION = 'admiral-v2.51.150';
 const SHELL = ['./', './index.html', './manifest.json', './format.txt', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
