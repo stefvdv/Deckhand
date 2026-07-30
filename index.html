@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.145';
+const APP_VERSION = '2.51.146';
 const CHANGELOG_NOTES = {
   en: [
-    'Double-faced leaders, act two: the theme lists\' Scryfall lookup used an exact-name operator that only matches FULL card names, so a front-face name from EDHREC ("King T\'Challa") matched nothing at all — silently. Each name is now also matched against card faces, completing yesterday\'s fix: transforming Commanders and Admirals finally take their ranked seats in every theme and Kindred list.'
+    'Names are now normalized on their way from EDHREC to Scryfall (curly quotes straightened, stray whitespace collapsed), and when a theme list still can\'t place a card, the console names the exact unresolved strings character-for-character — so the next report pins the culprit instead of feeding another theory.'
   ],
   nl: [
-    'Dubbelzijdige leiders, tweede bedrijf: de Scryfall-opzoeking van de themalijsten gebruikte een exacte-naam-operator die alleen VOLLEDIGE kaartnamen matcht, dus een voorkantnaam van EDHREC ("King T\'Challa") matchte helemaal niets — geruisloos. Elke naam wordt nu ook tegen kaartvoorkanten gematcht, wat de fix van gisteren voltooit: transformerende Commanders en Admirals nemen eindelijk hun plek in elke thema- en Kindred-lijst in.'
+    'Namen worden nu genormaliseerd op weg van EDHREC naar Scryfall (krulquotes rechtgezet, losse witruimte samengevoegd), en als een themalijst een kaart nog steeds niet kan plaatsen, benoemt de console de exacte onopgeloste tekenreeksen teken voor teken — zodat het volgende rapport de boosdoener vastpint in plaats van weer een theorie te voeden.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9750,10 +9750,14 @@ function edhrecCommanderNamesFrom(data){
   const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
   const cmd = lists.filter(L=>/commander/i.test(L.header||''));
   const use = cmd.length ? cmd : lists;
+  // Normalize on the way in: curly quotes straightened, non-breaking and
+  // doubled spaces collapsed, edges trimmed — Scryfall matches plain ASCII
+  // punctuation, and one invisible character is enough to lose a card.
+  const cleanName = (n)=> String(n).replace(/[\u2018\u2019\u02BC]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/\s+/g, ' ').trim();
   const seen = new Set(), out = [];
   for(const L of use){
     for(const cv of (L.cardviews||[])){
-      if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); }
+      if(cv && cv.name){ const nm = cleanName(cv.name); if(nm && !seen.has(nm)){ seen.add(nm); out.push(nm); } }
     }
   }
   if(out.length) return out;
@@ -9766,7 +9770,7 @@ function edhrecCommanderNamesFrom(data){
     if(Array.isArray(o)){ for(const x of o) walk(x, depth+1); return; }
     if(typeof o === 'object'){
       if(Array.isArray(o.cardviews)){
-        for(const cv of o.cardviews){ if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); } }
+        for(const cv of o.cardviews){ if(cv && cv.name){ const nm = cleanName(cv.name); if(nm && !seen.has(nm)){ seen.add(nm); out.push(nm); } } }
       }
       for(const k in o){ if(k !== 'cardviews') walk(o[k], depth+1); }
     }
@@ -10395,6 +10399,15 @@ async function namesToLegalCards(names){
       if(!byName.has(front)) byName.set(front, c);
     }
   });
+  // Ground truth for anything that still slips through: the EXACT strings,
+  // character for character, that no resolved card answered to — plus what
+  // Scryfall did send back for the same chunks. One remote-debug glance at
+  // this beats any amount of theorizing about invisible characters.
+  const unresolved = names.filter(n=>!byName.has(n));
+  if(unresolved.length){
+    console.warn('inspiration: unresolved names', JSON.stringify(unresolved.slice(0,12)));
+    console.warn('inspiration: resolved sample', JSON.stringify(settled.flat().slice(0,12).map(c=>c.name)));
+  }
   return names.map(n=>byName.get(n)).filter(Boolean);
 }
 function colorIdentityWithin(card, combo){
