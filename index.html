@@ -879,6 +879,15 @@ main.has-dock{padding-bottom:84px;}
 .glog-cimg .glog-cname{display:block;padding:10px 6px;font-size:12px;text-align:center;}
 .cs-vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
 .dp-sect{margin:6px 0 0;padding-top:8px;border-top:1px solid var(--line);font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--sub-text);}
+/* Bottom-left badge rail — replaces the corner ribbons and the old ✓ dot.
+   Right padding keeps the rail away from the power/toughness corner even
+   with all three badges showing. */
+.card-badges{position:absolute;top:0;left:0;width:100%;aspect-ratio:63/88;pointer-events:none;z-index:3;display:flex;align-items:flex-end;justify-content:flex-start;gap:4px;padding:0 30px 5px 5px;box-sizing:border-box;}
+.cb{width:22px;height:22px;min-width:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'Inter',sans-serif;font-style:normal;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.55);}
+.cb-ub{background:linear-gradient(135deg,#7B5CD6,#4A2F96);font-size:8.5px;letter-spacing:.02em;}
+.cb-sp{background:linear-gradient(135deg,#C77B22,#8F5313);font-size:12px;}
+.cb-own{background:linear-gradient(135deg,#1F9A63,#0E5C3A);font-size:12px;}
+*:has(> .card-badges){position:relative;}
 /* Trade calculator */
 .trade-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);}
 .trade-row:last-of-type{border-bottom:none;}
@@ -1056,8 +1065,8 @@ input, textarea, [contenteditable="true"]{-webkit-user-select:text;user-select:t
    matches a real card's corner (Scryfall's own recommendation). */
 img[src*="scryfall.io"]{border-radius:4.75% / 3.43%;background:#0b0b0c;}
 /* Universes Beyond marker on card views */
-.gc-mark{position:absolute;top:0;left:0;width:0;height:0;border-style:solid;border-width:32px 32px 0 0;border-color:#e07818 transparent transparent transparent;z-index:2;pointer-events:none;filter:drop-shadow(1px 1px 2px rgba(0,0,0,0.45));}
-.gc-mark span{position:absolute;top:-29px;left:2px;transform:rotate(-45deg);transform-origin:center;font-size:9.5px;font-weight:800;letter-spacing:.03em;color:#fff;font-family:'Inter',sans-serif;}
+.gc-mark{position:absolute;top:0;left:0;width:0;height:0;border-style:solid;border-width:24px 24px 0 0;border-color:#e07818 transparent transparent transparent;z-index:2;pointer-events:none;filter:drop-shadow(1px 1px 2px rgba(0,0,0,0.45));}
+.gc-mark span{position:absolute;top:-22px;left:1px;transform:rotate(-45deg);transform-origin:center;font-size:7px;font-weight:800;letter-spacing:.03em;color:#fff;font-family:'Inter',sans-serif;}
 .gc-inline{display:inline-block;background:#e07818;color:#fff;border-radius:3px;padding:0 4px;font-size:10px;font-weight:800;vertical-align:1px;}
 .ub-mark{position:absolute;top:4px;left:4px;z-index:2;background:linear-gradient(135deg,#7B5CD6,#4A2F96);color:#fff;font-size:7.5px;font-weight:800;letter-spacing:.03em;padding:1px 3px;border-radius:4px;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,0.45);}
 .col-mark{position:absolute;bottom:4px;left:4px;z-index:2;background:linear-gradient(135deg,#1F9A63,#0E5C3A);color:#fff;font-size:9.5px;font-weight:800;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,0.45);}
@@ -2450,7 +2459,21 @@ const GAME_CHANGERS = new Set([
 ]);
 function isGameChanger(c){ return isCmdrMode() && c && GAME_CHANGERS.has(frontFace(c).name || c.name); }
 function gcMarkHtml(c){ return isGameChanger(c) ? `<span class="gc-mark" title="Game Changer"><span>GC</span></span>` : ''; }
-function ubMarkHtml(c){ return (!isCmdrMode() && isUBCard(c)) ? '<span class="ub-corner" title="Universes Beyond"><span>UB</span></span>' : ''; }
+/* The bottom-left badge rail: UB, the spoiler 🔮 (matching the Spoilers
+   page's own button), and the owned-✓ as small circles packed from the
+   card's bottom-left rightward — over the type line and art edge, the least
+   load-bearing part of a card frame — and never anywhere near the mana
+   cost, the name, or the power/toughness box. The rail overlay copies the
+   card's 63:88 box, so it hugs the IMAGE's bottom even when the tile
+   carries text below it. */
+function cardBadgesHtml(c){
+  if(!c) return '';
+  const b = [];
+  if(!isCmdrMode() && isUBCard(c)) b.push('<i class="cb cb-ub" title="Universes Beyond">UB</i>');
+  if(isPreviewCard(c)) b.push('<i class="cb cb-sp" title="Spoiler — not yet released">🔮</i>');
+  if(ownedNames().has(c.name)) b.push('<i class="cb cb-own" title="In your collection">✓</i>');
+  return b.length ? `<span class="card-badges">${b.join('')}</span>` : '';
+}
 /* Old scans have square white corners; the CSS clips every card image to the
    real card corner radius so corners read dark like the physical card — except
    genuinely white-bordered cards, which keep their light corners. */
@@ -2461,7 +2484,6 @@ function ownedNames(){
   if(!state._ownedSet) state._ownedSet = new Set((state.collection.items||[]).map(it=>it.name));
   return state._ownedSet;
 }
-function colMarkHtml(c){ return (c && ownedNames().has(c.name)) ? '<span class="col-mark">✓</span>' : ''; }
 /* Spoiler season: sets whose release date is still ahead but whose previews
    are already on Scryfall. Their cards flow into the pool the moment they're
    spoiled, wearing a SPOILER marker until the set actually releases. */
@@ -2470,7 +2492,6 @@ function isPreviewSet(code){
   return !!d && d > new Date().toISOString().slice(0,10);
 }
 function isPreviewCard(c){ return !!c && (isPreviewSet(c.set) || (c.released_at && c.released_at > new Date().toISOString().slice(0,10))); }
-function pvMarkHtml(c){ return isPreviewCard(c) ? '<span class="pv-corner" title="Spoiler — not yet released"><span>SPOILER</span></span>' : ''; }
 function activeLegalSetCodes(){
   const core = (state.legalSetCodesCore || []).concat(autoSets.previewCodes||[]);
   const ub = enabledUBCodes();
@@ -2806,13 +2827,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.135';
+const APP_VERSION = '2.51.136';
 const CHANGELOG_NOTES = {
   en: [
-    'Themes without a color choice work again — the page reader now finds commander lists wherever a theme page hides them — and the Try again button under the empty note is gone, per the captain\'s orders.'
+    'Card markers moved home: UB, the spoiler 🔮, and the owned-✓ now sit as small circles along the card\'s bottom-left — over the least important part of the frame, never near the mana cost, the name, or the power/toughness corner. The Game Changer fold shrank so it stays off the name too.'
   ],
   nl: [
-    'Thema\'s zonder kleurkeuze werken weer — de paginalezer vindt commanderlijsten nu waar een themapagina ze ook verstopt — en de Probeer opnieuw-knop onder de lege melding is weg, op bevel van de kapitein.'
+    'Kaartmarkers zijn verhuisd: UB, de spoiler-🔮 en het bezit-✓ staan nu als kleine cirkels linksonder op de kaart — over het minst belangrijke deel van het frame, nooit bij de manakosten, de naam of de power/toughness-hoek. De Game Changer-vouw is gekrompen zodat hij ook van de naam afblijft.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6293,7 +6314,7 @@ function renderSpoilerBody(loaded, failed){
   const sets = currentPreviewSets();
   const fmtDate = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined, {month:'short', day:'numeric'}); }catch(e){ return d; } };
   const active = state.spoilerSetFilter && sets.some(x=>x.code===state.spoilerSetFilter) ? state.spoilerSetFilter : null;
-  const tile = c => `<button class="sc-tile" data-spn="${escapeHtml(c.name)}" data-spset="${escapeHtml(c.set||'')}"><img loading="lazy" class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${ubMarkHtml(c)}${pvMarkHtml(c)}</button>`;
+  const tile = c => `<button class="sc-tile" data-spn="${escapeHtml(c.name)}" data-spset="${escapeHtml(c.set||'')}"><img loading="lazy" class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${cardBadgesHtml(c)}</button>`;
   let cards = [], headHtml = '', footHtml = '';
   if(active){
     const x = sets.find(s=>s.code===active);
@@ -6522,7 +6543,7 @@ async function renderShowcaseCards(payload, admiralCard){
   if(!wrap) return out;   // showcase was closed mid-resolve
   const missing = names.concat(maybe).filter(n=>!byName0.get(n.toLowerCase()));
 
-  const tile = (c)=>`<button class="sc-tile" data-scn="${escapeHtml(c.name)}"><img loading="lazy" class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${ubMarkHtml(c)}${pvMarkHtml(c)}</button>`;
+  const tile = (c)=>`<button class="sc-tile" data-scn="${escapeHtml(c.name)}"><img loading="lazy" class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${cardBadgesHtml(c)}</button>`;
 
   // Grouped and sorted exactly like the decklist page's default view: the
   // same categories in the same order, each with its price and count, cards
@@ -6924,7 +6945,7 @@ function dedupeIdxs(idxs, arr){
 function cardTileHtml(card, idx, loc, qty){
   // No quick-remove cross on tiles: it was too easy to hit by accident.
   // Removing a card is a deliberate act — tap the card, then Remove.
-  return `<div class="vg-card" data-idx="${idx}" data-loc="${loc}"><img class="${wbClass(card)}" src="${cardImageMed(card)}" alt="${escapeHtml(card.name)}">${(qty&&qty>1)?`<span class="vg-qty">×${qty}</span>`:''}${ubMarkHtml(card)}${pvMarkHtml(card)}${colMarkHtml(card)}${gcMarkHtml(card)}</div>`;
+  return `<div class="vg-card" data-idx="${idx}" data-loc="${loc}"><img class="${wbClass(card)}" src="${cardImageMed(card)}" alt="${escapeHtml(card.name)}">${(qty&&qty>1)?`<span class="vg-qty">×${qty}</span>`:''}${cardBadgesHtml(card)}${gcMarkHtml(card)}</div>`;
 }
 function statsTabHtml(d){
   const curve=[0,0,0,0,0,0,0]; const curveCards={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
@@ -8402,7 +8423,7 @@ function searchRowHtml(c, d, opts){
   } else if(banned){ tag='banned'; tagTxt='Banned'; }
   const canBeAdmiral = opts.showAdmiralBtn && isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !banned;
   return `<div class="sr-tile" data-name="${encodeURIComponent(c.name)}">
-    <img class="${wbClass(c)}" src="${cardImageMed(c)}" data-preview="${cardImageLarge(c)}" data-wb="${wbClass(c)?1:''}" alt="${escapeHtml(c.name)}" loading="lazy">${ubMarkHtml(c)}${pvMarkHtml(c)}${colMarkHtml(c)}${gcMarkHtml(c)}
+    <img class="${wbClass(c)}" src="${cardImageMed(c)}" data-preview="${cardImageLarge(c)}" data-wb="${wbClass(c)?1:''}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}${gcMarkHtml(c)}
     <div class="st-body">
       ${tag!=='ok' ? `<div class="st-meta"><span class="tag ${tag}">${tagTxt}</span></div>` : ''}
       <div class="st-meta-row">
@@ -9909,7 +9930,7 @@ async function loadTypal(box, key){
   live.innerHTML = `<p class="hint" style="margin:8px 0 0;">Creature types with a typal identity — each shown as its most-played Admiral. Tap one to see all its Admirals.</p>
     <div class="sr-grid">${items.map(it=>`
       <div class="sr-tile typal-tile" data-tribe="${escapeHtml(it.tribe)}">
-        <img loading="lazy" class="${wbClass(it.card)}" src="${cardImageMed(it.card)}" alt="${escapeHtml(it.card.name)}">${ubMarkHtml(it.card)}${pvMarkHtml(it.card)}
+        <img loading="lazy" class="${wbClass(it.card)}" src="${cardImageMed(it.card)}" alt="${escapeHtml(it.card.name)}">${cardBadgesHtml(it.card)}
         <div class="typal-label">${escapeHtml(it.tribe)}</div>
       </div>`).join('')}</div>`;
   live.querySelectorAll('.typal-tile').forEach(t=>t.addEventListener('click', ()=>{
@@ -11058,7 +11079,7 @@ function renderRecoBody(){
     const sel = R.selected.has(c.name);
     return `<div class="sr-tile selectable ${sel?'selected':''}" data-name="${encodeURIComponent(c.name)}">
       <span class="sel-check">✓</span>
-      <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${ubMarkHtml(c)}${pvMarkHtml(c)}
+      <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}
       <div class="st-body">
         <div class="st-meta-row">
           <div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div>
