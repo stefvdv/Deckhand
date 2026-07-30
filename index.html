@@ -902,6 +902,12 @@ main.has-dock{padding-bottom:84px;}
 .tr-del{flex:none;color:var(--sub-text);}
 .iac-msg{font-size:14px;line-height:1.5;white-space:pre-line;color:var(--ink-text);text-align:left;}
 .col-grid .col-tile{content-visibility:auto;contain-intrinsic-size:auto 330px;}
+/* The double-faced flip button: a circle on the art, Moxfield-style —
+   right of center, off the name line and the text box. */
+.dfc-flip-box{position:absolute;top:0;left:0;width:100%;aspect-ratio:63/88;pointer-events:none;z-index:4;}
+.dfc-flip{position:absolute;top:28%;right:7%;width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,0.75);background:rgba(20,14,26,0.55);color:#fff;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,0.5);transition:transform .25s ease;padding:0;}
+.dfc-flip.flipped{transform:rotate(180deg);}
+*:has(> .dfc-flip-box){position:relative;}
 .colfold-ico{color:var(--brass);}
 .colfold-ico svg{width:46px;height:46px;display:block;}
 .col-tile.csel{outline:2px solid var(--brass);outline-offset:-2px;}
@@ -1446,6 +1452,20 @@ document.addEventListener('click', (e)=>{
   if(bp){ if(!inside('#bindersPop')){ swallow(); bp.remove(); } return; }
   const pd = Array.from(document.querySelectorAll('.pd-panel')).find(p=>!p.hidden);
   if(pd){ if(!inside('.pd')){ swallow(); pd.hidden = true; } return; }
+}, true);
+/* One handler flips every double-faced card in place. The tap is fully
+   consumed — it never opens the card page or selects the tile beneath. */
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest && e.target.closest('.dfc-flip');
+  if(!btn) return;
+  e.preventDefault(); e.stopPropagation();
+  const host = btn.closest('.dfc-flip-box') && btn.closest('.dfc-flip-box').parentElement;
+  const img = host && host.querySelector('img');
+  if(!img) return;
+  const toBack = btn.dataset.showing !== 'back';
+  img.src = toBack ? btn.dataset.back : btn.dataset.front;
+  btn.dataset.showing = toBack ? 'back' : 'front';
+  btn.classList.toggle('flipped', toBack);
 }, true);
 document.addEventListener('click', (e)=>{
   if(state.colAdvOpen && state.screen==='collection' &&
@@ -2466,13 +2486,29 @@ function gcMarkHtml(c){ return isGameChanger(c) ? `<span class="gc-mark" title="
    cost, the name, or the power/toughness box. The rail overlay copies the
    card's 63:88 box, so it hugs the IMAGE's bottom even when the tile
    carries text below it. */
+/* A two-faced card carries an image per face; split and adventure cards
+   share one image and get no flip. */
+function dfcBackFace(card){
+  const f = card && card.card_faces;
+  if(!f || f.length < 2) return null;
+  const pick = (im)=> im && (im.normal || im.large || im.png) || null;
+  const front = pick(f[0].image_uris), back = pick(f[1].image_uris);
+  return (front && back) ? { front, back } : null;
+}
+function dfcFlipHtml(c){
+  const d = dfcBackFace(c);
+  if(!d) return '';
+  return `<span class="dfc-flip-box"><button class="dfc-flip" title="Flip to the other face" data-front="${escapeHtml(d.front)}" data-back="${escapeHtml(d.back)}">⟳</button></span>`;
+}
 function cardBadgesHtml(c){
   if(!c) return '';
   const b = [];
   if(!isCmdrMode() && isUBCard(c)) b.push('<i class="cb cb-ub" title="Universes Beyond">UB</i>');
   if(isPreviewCard(c)) b.push('<i class="cb cb-sp" title="Spoiler — not yet released">🔮</i>');
   if(ownedNames().has(c.name)) b.push('<i class="cb cb-own" title="In your collection">✓</i>');
-  return b.length ? `<span class="card-badges">${b.join('')}</span>` : '';
+  // The flip button for double-faced cards rides along wherever the badge
+  // rail is emitted — every grid tile and deck view gets it in one place.
+  return (b.length ? `<span class="card-badges">${b.join('')}</span>` : '') + dfcFlipHtml(c);
 }
 /* Old scans have square white corners; the CSS clips every card image to the
    real card corner radius so corners read dark like the physical card — except
@@ -2831,13 +2867,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.151';
+const APP_VERSION = '2.51.152';
 const CHANGELOG_NOTES = {
   en: [
-    'Built directly on the stable base, two careful additions: double-faced leaders (King T\'Challa, the Heliods) now take their seats in theme lists — EDHREC names them by front face, and leftovers from the batch lookup are re-resolved through the endpoint deck imports have always trusted — and every batch lookup carries a strict 6-second timeout, so a bad connection can slow a load but never hang it.'
+    'Double-faced cards can flip: a round ⟳ button sits on the art of every two-faced card — in grids, deck views, and both card pages — and turns it over to the back face and back again, right in place.'
   ],
   nl: [
-    'Rechtstreeks op de stabiele basis gebouwd, twee zorgvuldige toevoegingen: dubbelzijdige leiders (King T\'Challa, de Heliods) nemen nu hun plek in themalijsten in — EDHREC noemt ze bij hun voorkant, en restjes van de batch-opzoeking worden opnieuw opgelost via het endpoint dat deck-imports altijd al vertrouwden — en elke batch-opzoeking heeft een strikte time-out van 6 seconden, zodat een slechte verbinding het laden kan vertragen maar nooit laten hangen.'
+    'Dubbelzijdige kaarten kunnen omdraaien: een ronde ⟳-knop staat op de art van elke tweezijdige kaart — in rasters, deckweergaven en beide kaartpagina\'s — en draait hem ter plekke om naar de achterkant en weer terug.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7641,7 +7677,7 @@ function renderCardSheet(d, card, loc, idx){
     <div class="topbar"><button class="icon-btn" id="csClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
-        <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="max-width:270px;width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">
+        <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${isUBCard(card)?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''}</div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
@@ -8673,7 +8709,7 @@ function openCardInfo(card, opts){
     <div class="topbar"><button class="icon-btn" id="csClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
-        <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="ciImg" style="max-width:270px;width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">
+        <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${isUBCard(card)?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''}</div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
