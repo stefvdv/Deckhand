@@ -2806,13 +2806,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.132';
+const APP_VERSION = '2.51.133';
 const CHANGELOG_NOTES = {
   en: [
-    'The selection counter now counts CARDS, matching the header: selecting a ×2 stack counts as 2, so Select all shows the same number the top-right total does. The remove-confirmation counts the same way.'
+    'Themes like Group Hug show results again: EDHREC keeps pure deck themes in a second namespace the app didn\'t look in — every theme lookup now checks both, and the "no play data" note gained a Try again button for flaky connections.'
   ],
   nl: [
-    'De selectieteller telt nu KAARTEN, net als de kopregel: een stapel van ×2 selecteren telt als 2, dus Alles selecteren toont hetzelfde getal als het totaal rechtsboven. De verwijder-bevestiging telt op dezelfde manier.'
+    'Thema\'s zoals Group Hug tonen weer resultaten: EDHREC bewaart pure deckthema\'s in een tweede naamruimte waar de app niet in keek — elke thema-opzoeking controleert nu beide, en de "geen speeldata"-melding kreeg een Probeer opnieuw-knop voor haperende verbindingen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9696,17 +9696,30 @@ function edhrecCommanderNamesFrom(data){
    colour's regulars rarely chart against all-colour totals. The global page's
    remainder is appended for depth beyond the scoped list. */
 async function edhrecTagCommanderNames(slug, combo){
+  // EDHREC keeps two namespaces: /tags/<slug> and /themes/<slug>. Most
+  // entries answer as tags, but pure deck themes (Group Hug and friends)
+  // live only under /themes — every lookup tries both roots, and the first
+  // one that yields names wins. Misses are cheap: failures are never cached.
+  const roots = ['/pages/tags/', '/pages/themes/'];
   let scoped = [];
   if(combo){
+    outer:
     for(const cs of (EDHREC_COMBO_SLUGS[(combo||'').toLowerCase()] || [])){
-      const d = await edhrecFetchJson('/pages/tags/' + slug + '/' + cs + '.json');
-      if(!d) continue;
-      scoped = edhrecCommanderNamesFrom(d).slice(0, 100);
-      if(scoped.length) break;
+      for(const root of roots){
+        const d = await edhrecFetchJson(root + slug + '/' + cs + '.json');
+        if(!d) continue;
+        scoped = edhrecCommanderNamesFrom(d).slice(0, 100);
+        if(scoped.length) break outer;
+      }
     }
   }
-  const g = await edhrecFetchJson('/pages/tags/' + slug + '.json');
-  const global = g ? edhrecCommanderNamesFrom(g).slice(0, 100) : [];
+  let global = [];
+  for(const root of roots){
+    const g = await edhrecFetchJson(root + slug + '.json');
+    if(!g) continue;
+    global = edhrecCommanderNamesFrom(g).slice(0, 100);
+    if(global.length) break;
+  }
   const seen = new Set(scoped);
   return scoped.concat(global.filter(n=>!seen.has(n)));
 }
@@ -9714,7 +9727,9 @@ async function loadEdhrecThemeBrowse(box, key, slug){
   const names = await edhrecTagCommanderNames(slug, state.browseSel.combo);
   if(key !== JSON.stringify(state.browseSel)) return;
   if(!names.length){
-    box.innerHTML = `<div class="empty-note">No play data for this theme right now — check your connection, or try another theme.</div>`;
+    box.innerHTML = `<div class="empty-note">No play data for this theme right now — check your connection, or try another theme.</div>
+      <button class="ghost-btn" id="edhRetry" style="width:100%;margin-top:10px;">↻ Try again</button>`;
+    document.getElementById('edhRetry')?.addEventListener('click', ()=>{ delete state.browseCache[key]; loadEdhrecThemeBrowse(box, key, slug); });
     return;
   }
   const rank = new Map(names.map((n,i)=>[n,i]));
@@ -10047,7 +10062,15 @@ async function loadEdhrecDeckCounts(key, combo, tagSlug){
     // these colours" — EDHREC's /tags/<tag>/<colour> page. Without one, it's
     // the colour page itself. No cross-fallback: if the tag page is missing,
     // the pool's own order (already the tag's play order) is the truth.
-    const data = await edhrecFetchJson(tagSlug ? ('/pages/tags/' + tagSlug + '/' + cs + '.json') : ('/pages/commanders/' + cs + '.json'));
+    let data = null;
+    if(tagSlug){
+      for(const root of ['/pages/tags/', '/pages/themes/']){    // themes live in a second namespace
+        data = await edhrecFetchJson(root + tagSlug + '/' + cs + '.json');
+        if(data) break;
+      }
+    } else {
+      data = await edhrecFetchJson('/pages/commanders/' + cs + '.json');
+    }
     if(!data) continue;
     const m = edhrecDeckCountsFrom(data);
     if(Object.keys(m).length){ map = m; break; }
