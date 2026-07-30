@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.144';
+const APP_VERSION = '2.51.145';
 const CHANGELOG_NOTES = {
   en: [
-    'Double-faced Commanders and Admirals (King T\'Challa, Heliod, and friends) appear in Inspiration theme lists again: EDHREC names them by their front face while Scryfall answers with the full "Front // Back" name, and the matching step dropped them in between. Planeswalker-front Commanders were also wrongly held to a power/toughness requirement in theme lists — lifted in the Commander fleet.'
+    'Double-faced leaders, act two: the theme lists\' Scryfall lookup used an exact-name operator that only matches FULL card names, so a front-face name from EDHREC ("King T\'Challa") matched nothing at all — silently. Each name is now also matched against card faces, completing yesterday\'s fix: transforming Commanders and Admirals finally take their ranked seats in every theme and Kindred list.'
   ],
   nl: [
-    'Dubbelzijdige Commanders en Admirals (King T\'Challa, Heliod en vrienden) verschijnen weer in Inspiratie-themalijsten: EDHREC noemt ze bij hun voorkant terwijl Scryfall met de volledige "Voor // Achter"-naam antwoordt, en de matchstap liet ze daartussen vallen. Planeswalker-Commanders werden in themalijsten ook onterecht aan een power/toughness-eis gehouden — opgeheven in de Commander-vloot.'
+    'Dubbelzijdige leiders, tweede bedrijf: de Scryfall-opzoeking van de themalijsten gebruikte een exacte-naam-operator die alleen VOLLEDIGE kaartnamen matcht, dus een voorkantnaam van EDHREC ("King T\'Challa") matchte helemaal niets — geruisloos. Elke naam wordt nu ook tegen kaartvoorkanten gematcht, wat de fix van gisteren voltooit: transformerende Commanders en Admirals nemen eindelijk hun plek in elke thema- en Kindred-lijst in.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10367,7 +10367,12 @@ function startPairDeck(a, b){
    never silently zero out the results. */
 async function resolveNameChunk(chunk){
   if(!chunk.length) return [];
-  const clause = '(' + chunk.map(exactNameClause).join(' or ') + ')';
+  // Scryfall's ! operator matches FULL card names only — a front-face name
+  // ("King T'Challa") matches nothing, silently. name:"…" matches card
+  // faces too, so each name gets both operators; unrequested extra hits are
+  // simply never looked up by the name map afterwards. The broadened clause
+  // is also a fresh cache lane, so old face-blind results can't be served.
+  const clause = '(' + chunk.flatMap(n=>[exactNameClause(n), 'name:"' + n.replace(/"/g,'') + '"']).join(' or ') + ')';
   const { results, error } = await searchAndVerifyLegal(clause, 'edhrec', 100).catch(()=>({results:[], error:true}));
   if(!error || chunk.length <= 2) return results || [];
   const mid = Math.ceil(chunk.length/2);
