@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.141';
+const APP_VERSION = '2.51.142';
 const CHANGELOG_NOTES = {
   en: [
-    'The big ＋ button grew Import from file: it opens your phone\'s Downloads picker straight away, the file\'s name becomes the suggested deck name, and Create deck does the rest. Paste in decklist was simplified the same way — no more appointing a leader first, just a deck name and the list (a COMMANDER:/ADMIRAL: first line still appoints; otherwise appoint one later from the deck).'
+    'On Inspiration, an active leader-name search now behaves like its own page: the hardware back button first clears the search and shows the clean start — only the next press actually leaves the page.'
   ],
   nl: [
-    'De grote ＋-knop kreeg Importeer uit bestand: hij opent direct de Downloads-kiezer van je telefoon, de bestandsnaam wordt de voorgestelde decknaam, en Deck aanmaken doet de rest. Plak een decklijst is op dezelfde manier vereenvoudigd — geen leider meer vooraf kiezen, alleen een decknaam en de lijst (een eerste regel COMMANDER:/ADMIRAL: benoemt nog steeds; anders benoem je er later een vanuit het deck).'
+    'Op Inspiratie gedraagt een actieve leiderzoekopdracht zich nu als een eigen pagina: de hardware terugknop wist eerst de zoekopdracht en toont het schone begin — pas de volgende druk verlaat de pagina echt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12333,6 +12333,16 @@ window.addEventListener('popstate', (e)=>{
     if(fabMenu) fabMenu.remove();
     if(bindersPopEl) bindersPopEl.remove();
     if(openPd) openPd.hidden = true;
+    try{ history.pushState({screen: state.screen, folder: state.folderNav||null}, '', '#'+state.screen); }catch(err){}
+    return;
+  }
+  // An active leader-name search on Inspiration is its own "page": the first
+  // back press clears the search in place and shows the clean start — only
+  // the next press actually leaves.
+  if(state.screen === 'browse' && state.browseNameQ){
+    state.browseNameQ = '';
+    const bsInp = document.getElementById('bsName'); if(bsInp) bsInp.value = '';
+    const bsBox = document.getElementById('bsNameResults'); if(bsBox) bsBox.innerHTML = '';
     try{ history.pushState({screen: state.screen, folder: state.folderNav||null}, '', '#'+state.screen); }catch(err){}
     return;
   }
