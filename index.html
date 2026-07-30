@@ -2891,13 +2891,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.162';
+const APP_VERSION = '2.51.163';
 const CHANGELOG_NOTES = {
   en: [
-    'The recommendations page now wears a clear brass banner naming the active theme — "Group Hug — theme recommendations" — so there\'s never a doubt which list you\'re looking at.'
+    'Theme and Kindred pages show their spinner (and the waiting-room quips) again while loading — the sectioned rebuild had left the page blank until results arrived.'
   ],
   nl: [
-    'De aanbevelingenpagina draagt nu een duidelijke messing banner met het actieve thema — "Group Hug — thema-aanbevelingen" — zodat er nooit twijfel is naar welke lijst je kijkt.'
+    'Thema- en Kindred-pagina\'s tonen hun laadcirkel (en de wachtkamer-quips) weer tijdens het laden — de herbouw met secties liet de pagina leeg tot de resultaten er waren.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9995,6 +9995,9 @@ function renderEdhrecSections(box, key, S){
   }));
 }
 async function loadEdhrecSectionedBrowse(box, key, slug, what){
+  // Paint the house spinner immediately — the quip ticker hooks any
+  // .status > .spinner automatically, so the wait is never a blank page.
+  box.innerHTML = '<div class="status" style="margin:16px 0;"><div class="spinner"></div></div>';
   const sec = await edhrecTagSections(slug, state.browseSel.combo);
   if(key !== JSON.stringify(state.browseSel)) return;
   if(!(sec.newCmd.length || sec.topCmd.length)){
