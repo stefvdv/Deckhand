@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.147';
+const APP_VERSION = '2.51.148';
 const CHANGELOG_NOTES = {
   en: [
-    'Settings gained a small Diagnostics block: when a theme list can\'t place every card, the exact unresolved names (and what Scryfall answered) appear there with a Copy button — no USB debugging needed to report exactly what went wrong.'
+    'Inspiration lists in the Commander fleet now resolve through Scryfall\'s batch endpoint — the one built for name lists, which understands front-face names natively (double-faced leaders included) and replaces dozens of searches per theme with a handful of requests. Faster, lighter on shaky connections, with the old search path standing by as fallback. Admiral mode keeps its set-pool verification unchanged.'
   ],
   nl: [
-    'Instellingen kreeg een klein Diagnostiek-blok: als een themalijst niet elke kaart kan plaatsen, verschijnen daar de exacte onopgeloste namen (en wat Scryfall antwoordde) met een Kopieer-knop — geen USB-debugging nodig om precies te melden wat er misging.'
+    'Inspiratie-lijsten in de Commander-vloot lossen nu op via Scryfalls batch-endpoint — gebouwd voor naamlijsten, dat voorkantnamen native begrijpt (dubbelzijdige leiders incluis) en tientallen zoekopdrachten per thema vervangt door een handvol aanvragen. Sneller, lichter op haperende verbindingen, met het oude zoekpad als reserve. Admiral-modus behoudt zijn setpool-verificatie ongewijzigd.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10371,11 +10371,26 @@ function startPairDeck(a, b){
    never silently zero out the results. */
 async function resolveNameChunk(chunk){
   if(!chunk.length) return [];
-  // Scryfall's ! operator matches FULL card names only — a front-face name
-  // ("King T'Challa") matches nothing, silently. name:"…" matches card
-  // faces too, so each name gets both operators; unrequested extra hits are
-  // simply never looked up by the name map afterwards. The broadened clause
-  // is also a fresh cache lane, so old face-blind results can't be served.
+  // Commander mode: one POST to Scryfall's /cards/collection resolves the
+  // whole chunk. That endpoint is BUILT for name lists — it accepts
+  // front-face names natively (double-faced leaders included, from the
+  // source) and replaces up to ten paged searches with a single request:
+  // faster, and far kinder to a shaky connection. Commander legality rides
+  // the returned card itself. If the batch endpoint is down, fall through
+  // to the search path below. Admiral mode always uses the search path —
+  // set-pool legality lives in printings there.
+  if(isCmdrMode()){
+    for(let attempt = 0; attempt < 2; attempt++){
+      try{
+        const r = await fetch(`${SF_BASE}/cards/collection`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifiers: chunk.map(n=>({ name: n })) }) });
+        if(r.ok){
+          const d = await r.json();
+          return (d.data||[]).filter(c=> c.legalities && c.legalities.commander && c.legalities.commander !== 'not_legal');
+        }
+      }catch(e){ console.error('collection chunk failed', e); }
+      await new Promise(res=>setTimeout(res, 500));
+    }
+  }
   const clause = '(' + chunk.flatMap(n=>[exactNameClause(n), 'name:"' + n.replace(/"/g,'') + '"']).join(' or ') + ')';
   const { results, error } = await searchAndVerifyLegal(clause, 'edhrec', 100).catch(()=>({results:[], error:true}));
   if(!error || chunk.length <= 2) return results || [];
@@ -10384,7 +10399,9 @@ async function resolveNameChunk(chunk){
   return halves.flat();
 }
 async function namesToLegalCards(names){
-  const chunks = chunkArr(names.slice(0, 600), 10);
+  // The batch endpoint takes up to 75 identifiers per POST — big chunks in
+  // Commander mode; the search path keeps its small ones in Admiral mode.
+  const chunks = chunkArr(names.slice(0, 600), isCmdrMode() ? 70 : 10);
   const settled = await Promise.all(chunks.map(resolveNameChunk));
   const byName = new Map();
   settled.flat().forEach(c=>{
