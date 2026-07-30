@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.148';
+const APP_VERSION = '2.51.149';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration lists in the Commander fleet now resolve through Scryfall\'s batch endpoint — the one built for name lists, which understands front-face names natively (double-faced leaders included) and replaces dozens of searches per theme with a handful of requests. Faster, lighter on shaky connections, with the old search path standing by as fallback. Admiral mode keeps its set-pool verification unchanged.'
+    'Double-faced leaders, closed for good: EDHREC\'s own pages confirm they\'re listed by front-face name only, and whatever the batch lookup can\'t place under that spelling is now re-resolved through the same lenient endpoint deck imports have trusted all along. King T\'Challa and the Heliods take their seats.'
   ],
   nl: [
-    'Inspiratie-lijsten in de Commander-vloot lossen nu op via Scryfalls batch-endpoint — gebouwd voor naamlijsten, dat voorkantnamen native begrijpt (dubbelzijdige leiders incluis) en tientallen zoekopdrachten per thema vervangt door een handvol aanvragen. Sneller, lichter op haperende verbindingen, met het oude zoekpad als reserve. Admiral-modus behoudt zijn setpool-verificatie ongewijzigd.'
+    'Dubbelzijdige leiders, definitief opgelost: EDHREC\'s eigen pagina\'s bevestigen dat ze alleen met hun voorkantnaam vermeld staan, en wat de batch-opzoeking onder die spelling niet kan plaatsen wordt nu opnieuw opgelost via hetzelfde soepele endpoint dat deck-imports altijd al vertrouwden. King T\'Challa en de Heliods nemen hun plek in.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10385,7 +10385,25 @@ async function resolveNameChunk(chunk){
         const r = await fetch(`${SF_BASE}/cards/collection`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifiers: chunk.map(n=>({ name: n })) }) });
         if(r.ok){
           const d = await r.json();
-          return (d.data||[]).filter(c=> c.legalities && c.legalities.commander && c.legalities.commander !== 'not_legal');
+          const found = (d.data||[]).filter(c=> c.legalities && c.legalities.commander && c.legalities.commander !== 'not_legal');
+          // EDHREC lists double-faced leaders by their FRONT face name only
+          // (verified on their own pages). Whatever the batch endpoint
+          // couldn't place under that spelling goes through /cards/named —
+          // the lenient lookup deck imports already trust for exactly these
+          // shapes. A handful of extra requests at most, only for leftovers.
+          const have = new Set();
+          found.forEach(c=>{ have.add(c.name); const cut = c.name.indexOf(' // '); if(cut > 0) have.add(c.name.slice(0, cut)); });
+          const missing = chunk.filter(n=>!have.has(n));
+          for(const nm of missing){
+            try{
+              const rr = await sfFetch(`${SF_BASE}/cards/named?fuzzy=${encodeURIComponent(nm)}`);
+              if(rr.ok){
+                const c = await rr.json();
+                if(c && c.legalities && c.legalities.commander && c.legalities.commander !== 'not_legal') found.push(c);
+              }
+            }catch(err){}
+          }
+          return found;
         }
       }catch(e){ console.error('collection chunk failed', e); }
       await new Promise(res=>setTimeout(res, 500));
