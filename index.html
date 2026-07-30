@@ -2831,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.140';
+const APP_VERSION = '2.51.141';
 const CHANGELOG_NOTES = {
   en: [
-    'The big ＋ button\'s Paste-in-decklist sheet (on My Stuff and inside every folder) can now load a downloaded .txt file too — pick the leader, load the file into the box, press Create deck.'
+    'The big ＋ button grew Import from file: it opens your phone\'s Downloads picker straight away, the file\'s name becomes the suggested deck name, and Create deck does the rest. Paste in decklist was simplified the same way — no more appointing a leader first, just a deck name and the list (a COMMANDER:/ADMIRAL: first line still appoints; otherwise appoint one later from the deck).'
   ],
   nl: [
-    'Het Plak-een-decklijst-paneel van de grote ＋-knop (op Mijn Stuff en in elke folder) kan nu ook een gedownload .txt-bestand laden — kies de leider, laad het bestand in het vak, druk op Deck aanmaken.'
+    'De grote ＋-knop kreeg Importeer uit bestand: hij opent direct de Downloads-kiezer van je telefoon, de bestandsnaam wordt de voorgestelde decknaam, en Deck aanmaken doet de rest. Plak een decklijst is op dezelfde manier vereenvoudigd — geen leider meer vooraf kiezen, alleen een decknaam en de lijst (een eerste regel COMMANDER:/ADMIRAL: benoemt nog steeds; anders benoem je er later een vanuit het deck).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4065,13 +4065,17 @@ function wireHome(){
       if(m){ m.remove(); return; }
       const menu = document.createElement('div');
       menu.id = 'fabMenu';
-      menu.innerHTML = `<button id="fabNewDeck">${isCmdrMode()?"⚔":"🚢"} New deck</button><button id="fabNewFolder"><span class="ib">${ICONS.decks}</span>New folder</button><button id="fabImportDeck">📋 Paste in decklist</button>`;
+      menu.innerHTML = `<button id="fabNewDeck">${isCmdrMode()?"⚔":"🚢"} New deck</button><button id="fabNewFolder"><span class="ib">${ICONS.decks}</span>New folder</button><button id="fabImportDeck">📋 Paste in decklist</button><button id="fabImportFile">📄 Import from file</button>`;
       document.body.appendChild(menu);
       document.getElementById('fabNewDeck').addEventListener('click', ()=>{ menu.remove(); openModal('newdeck'); });
       document.getElementById('fabNewFolder').addEventListener('click', ()=>{ menu.remove(); openNewFolderPrompt(state.folderNav||null); });
       document.getElementById('fabImportDeck').addEventListener('click', ()=>{
         menu.remove();
-        startPasteImportFlow();
+        openPasteListSheet();
+      });
+      document.getElementById('fabImportFile').addEventListener('click', ()=>{
+        menu.remove();
+        openPasteListSheet({ pickFile: true });   // sheet opens with the phone's file picker
       });
       setTimeout(()=>document.addEventListener('click', function once(){ menu.remove(); document.removeEventListener('click', once); }), 0);
     });
@@ -4289,29 +4293,23 @@ function openDeck(id){
    text list, straight from the ＋ menu: creates the deck (named after the file),
    opens it, and runs the list through the normal import pipeline so legality,
    duplicates and the Admiral are all validated with the familiar report. */
-/* "Paste in decklist" from the + button: appoint the leader(s) first, then
-   paste the list. Pasted copies of a chosen leader are lifted out of the main
-   deck automatically — they stay in command, never duplicated. */
-function startPasteImportFlow(){
-  const pseudo = { format: appMode(), cards: [], maybeboard: [], admiral: null, partner: null };
-  openAppointSearch(pseudo, (leader)=>{
-    pseudo.admiral = leader;
-    const next = ()=> openPasteListSheet(pseudo);
-    if(pairAbility(leader)) setTimeout(()=>openPartnerSearch(pseudo, (c)=>{ pseudo.partner = c; next(); }, { skippable:true, onSkip:next }), 60);
-    else next();
-  });
-}
-function openPasteListSheet(pseudo){
+/* "Paste in decklist" / "Import from file" from the + button: a deck NAME
+   and a list — nothing more. No leader is appointed up front; a
+   COMMANDER:/ADMIRAL: first line in the list appoints one, and otherwise
+   the deck is born leaderless, ready for an appointment from its own page.
+   With { pickFile: true } the sheet opens the phone's file picker straight
+   away, and the file's name becomes the suggested deck name. */
+function openPasteListSheet(opts){
+  opts = opts || {};
   setTimeout(()=>{
     document.getElementById('appointOverlay')?.remove();
     const el = document.createElement('div');
     el.id = 'appointOverlay';
-    const leaders = deckLeaders(pseudo).map(c=>c.name).join(' & ');
     el.innerHTML = `
       <div class="appoint-sheet" style="max-width:480px;">
         <div class="appoint-head"><span>${modeGlyph()} Paste in decklist</span><button class="icon-btn" id="appointClose" style="flex:none;">${ICONS.close||'✕'}</button></div>
-        <p class="hint" style="margin:0 0 8px;">Leading: <strong style="color:var(--brass);">${escapeHtml(leaders)}</strong>. Any pasted copies of ${deckLeaders(pseudo).length>1?'them':'it'} are kept in command, not duplicated in the deck.</p>
-        <input id="pasteDeckName" style="width:100%;margin:0 0 8px;box-sizing:border-box;background:var(--field);border:1px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:9px 10px;font-family:Inter;font-size:14px;" value="${escapeHtml((pseudo.admiral?pseudo.admiral.name.split(',')[0]:'New')+' deck')}" placeholder="Deck name">
+        <p class="hint" style="margin:0 0 8px;">A first line <span style="font-family:'JetBrains Mono',monospace;">${leaderLineLabel({format: appMode()})}: Card Name</span> appoints the leader — otherwise appoint one later from the deck.</p>
+        <input id="pasteDeckName" style="width:100%;margin:0 0 8px;box-sizing:border-box;background:var(--field);border:1px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:9px 10px;font-family:Inter;font-size:14px;" value="" placeholder="Deck name">
         <textarea id="pasteDeckText" class="bulk-textarea" style="min-height:180px;" placeholder="1 Card Name&#10;1 Another Card&#10;…"></textarea>
         <input type="file" id="pasteDeckFile" accept=".txt,.dec,text/plain" style="display:none;">
         <button class="ghost-btn" id="pasteDeckFileBtn" style="width:100%;margin-top:8px;">📄 ${trS('Load a .txt file')}</button>
@@ -4321,8 +4319,6 @@ function openPasteListSheet(pseudo){
     pushOverlay('appoint', ()=>{ document.getElementById('appointOverlay')?.remove(); });
     el.addEventListener('click', (e)=>{ if(!e.target.closest('.appoint-sheet')) closeTopOverlay(); });
     document.getElementById('appointClose').addEventListener('click', ()=> closeTopOverlay());
-    // Same file-loading as the deck's own Import panel: the list lands in
-    // the box for review; Create deck stays the one deliberate step.
     document.getElementById('pasteDeckFileBtn')?.addEventListener('click', ()=>document.getElementById('pasteDeckFile')?.click());
     document.getElementById('pasteDeckFile')?.addEventListener('change', async (e)=>{
       const f = e.target.files && e.target.files[0];
@@ -4331,6 +4327,8 @@ function openPasteListSheet(pseudo){
         const text = await f.text();
         const ta = document.getElementById('pasteDeckText');
         if(ta){ ta.value = text; ta.scrollTop = 0; }
+        const nmEl = document.getElementById('pasteDeckName');
+        if(nmEl && !nmEl.value.trim()) nmEl.value = f.name.replace(/\.[^.]+$/, '');
         toast(`${f.name} ${trS('loaded — press Create deck when ready.')}`);
       }catch(err){ console.error(err); toast(trS('Could not read that file.')); }
       e.target.value = '';
@@ -4342,10 +4340,6 @@ function openPasteListSheet(pseudo){
         createNewDeck(nm);
         const d = getDeck(state.activeDeckId);
         if(!d) return;
-        d.admiral = pseudo.admiral || null;
-        d.partner = pseudo.partner || null;
-        if(d.admiral) logDeckChange(d, {type:'admiral', name:d.admiral.name, card:d.admiral, prev:null});
-        persistDeck(d);
         if(!listText.trim()){ render(); return; }
         state.dlPanel = 'import';
         renderBuilderBody(d);
@@ -4356,7 +4350,8 @@ function openPasteListSheet(pseudo){
         }, 60);
       });
     });
-    setTimeout(()=>{ try{ document.getElementById('pasteDeckText').focus(); }catch(e){} }, 40);
+    if(opts.pickFile) setTimeout(()=>{ try{ document.getElementById('pasteDeckFile')?.click(); }catch(e){} }, 120);
+    else setTimeout(()=>{ try{ document.getElementById('pasteDeckName').focus(); }catch(e){} }, 40);
   }, 60);
 }
 function importDeckFromFile(text, filename){
