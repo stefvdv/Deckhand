@@ -2776,7 +2776,11 @@ async function resolveManyByName(names, onProgress){
 }
 
 async function resolveCardByName(rawName){
-  const name = rawName.trim();
+  // Defense in depth: whatever fed us this string, strip set codes, collector
+  // numbers, and category tags before the fuzzy lookup — Scryfall's fuzzy
+  // matcher treats decorated names as a coin flip ("Dol Amroth (LTC) 389"
+  // happens to match, "Aetherize (FDN) 151" doesn't).
+  const name = stripDeckLineDecorations(rawName).trim();
   if(!name) return null;
   try{
     const res = await sfFetch(SF_BASE + '/cards/named?fuzzy=' + encodeURIComponent(name));
@@ -2827,13 +2831,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.136';
+const APP_VERSION = '2.51.138';
 const CHANGELOG_NOTES = {
   en: [
-    'Card markers moved home: UB, the spoiler 🔮, and the owned-✓ now sit as small circles along the card\'s bottom-left — over the least important part of the frame, never near the mana cost, the name, or the power/toughness corner. The Game Changer fold shrank so it stays off the name too.'
+    'Deck-import honesty: a card that failed only because Scryfall couldn\'t be reached now says "Couldn\'t reach Scryfall — try again" instead of pretending it doesn\'t exist, and the typo-tolerant fallback lookup now strips set codes and tags from the name first, so it stops being a coin flip on decorated lines.'
   ],
   nl: [
-    'Kaartmarkers zijn verhuisd: UB, de spoiler-🔮 en het bezit-✓ staan nu als kleine cirkels linksonder op de kaart — over het minst belangrijke deel van het frame, nooit bij de manakosten, de naam of de power/toughness-hoek. De Game Changer-vouw is gekrompen zodat hij ook van de naam afblijft.'
+    'Deck-import eerlijkheid: een kaart die alleen faalde omdat Scryfall onbereikbaar was zegt nu "Scryfall onbereikbaar — probeer opnieuw" in plaats van te doen alsof hij niet bestaat, en de typo-tolerante terugval-opzoeking stript nu eerst setcodes en labels van de naam, zodat het geen muntworp meer is bij versierde regels.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7886,6 +7890,19 @@ function openPrintingPicker(d, card, loc, idx){
 }
 
 
+/* Deck-list lines arrive decorated in some dialects — Archidekt appends a
+   set code, collector number, and category tag: "Aetherize (znc) 23
+   [Instant]", sometimes with a foil marker. Strip trailing decorations down
+   to the pure card name; real card names never end in these shapes, so
+   plain Moxfield lines pass through untouched. */
+function stripDeckLineDecorations(nm){
+  return String(nm||'')
+    .replace(/\s*\[[^\]]*\]\s*$/, '')                          // [Instant]
+    .replace(/\s*\*[A-Za-z]+\*\s*$/, '')                        // *F* foil marker
+    .replace(/\s*\(([0-9A-Za-z]{2,6})\)\s+[\w★-]+\s*$/, '')   // (znc) 23 · (plst) CMD-261
+    .replace(/\s*\(([0-9A-Za-z]{2,6})\)\s*$/, '')               // bare (znc)
+    .trim();
+}
 async function applyTextToDeck(d, raw, reportElId, isImport){
   const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   let admiralName=null, partnerName=null; const cardNames=[]; const maybeNames=[];
@@ -7904,13 +7921,13 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   };
   lines.forEach(l=>{
     const m = l.match(/^(?:ADMIRAL|COMMANDER):\s*(.+)$/i);
-    if(m){ admiralName=m[1].trim(); section='main'; return; }
+    if(m){ admiralName=stripDeckLineDecorations(m[1]); section='main'; return; }
     const pm = l.match(/^PARTNER:\s*(.+)$/i);
-    if(pm){ partnerName=pm[1].trim(); section='main'; return; }
+    if(pm){ partnerName=stripDeckLineDecorations(pm[1]); section='main'; return; }
     const hdr = headerOf(l);
     if(hdr){ section = hdr; return; }
     const q = l.match(/^(\d+)x?\s+(.+)$/i);
-    const nm = q ? q[2].trim() : l;
+    const nm = stripDeckLineDecorations(q ? q[2] : l);
     if(section === 'leader'){
       if(!admiralName) admiralName = nm;
       else if(!partnerName) partnerName = nm;
@@ -7966,7 +7983,7 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   results.forEach(r=>{
     if(!r || !r.found){
       if(r && r.networkIssue) report.push({name:r.input,status:'notfound',msg:"Couldn't verify — network issue"});
-      else report.push({name:r?r.input:'?',status:'notfound',msg:'Not found'});
+      else report.push({name:r?r.input:'?',status:'notfound',msg: r&&r.networkIssue ? "Couldn't reach Scryfall — try again" : 'Not found'});
       return;
     }
     const c=r.card;
