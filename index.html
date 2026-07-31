@@ -2891,13 +2891,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.164';
+const APP_VERSION = '2.51.165';
 const CHANGELOG_NOTES = {
   en: [
-    'Blank theme pages, root fixed: a failed or empty load used to be remembered for the whole session, so revisiting that theme showed instant nothing — no spinner, no results. Empty leftovers are no longer treated as answers; the page loads fresh, spinner and quips included.'
+    'The vanishing spinner, found: while a theme page was still loading, the deck-count data could arrive first and repaint the results early — wiping the spinner and leaving just the caption over an empty page. That repaint now waits until the page itself has landed.'
   ],
   nl: [
-    'Lege themapagina\'s, bij de wortel opgelost: een mislukte of lege lading werd de hele sessie onthouden, dus die opnieuw bezoeken toonde direct niets — geen laadcirkel, geen resultaten. Lege restanten gelden niet meer als antwoord; de pagina laadt vers, met laadcirkel en quips.'
+    'De verdwijnende laadcirkel, gevonden: terwijl een themapagina nog laadde, kon de deck-telling eerder binnenkomen en de resultaten te vroeg hertekenen — de laadcirkel werd gewist en alleen het bijschrift bleef over boven een lege pagina. Die hertekening wacht nu tot de pagina zelf geland is.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10379,7 +10379,10 @@ async function loadEdhrecDeckCounts(key, combo, tagSlug){
     if(Object.keys(m).length){ map = m; break; }
   }
   state.browseCache[dk] = map;
-  if(key === JSON.stringify(state.browseSel)) renderBrowseResults(key);
+  // Re-render only if the pool itself has landed. Firing before that wiped
+  // the loading spinner: with pairs already in, the render skipped the
+  // still-loading branch and painted the caption over an empty page.
+  if(key === JSON.stringify(state.browseSel) && state.browseCache[key]) renderBrowseResults(key);
 }
 function edhrecDeckCountsFrom(data){
   // Walk the page JSON for anything carrying a name and a num_decks. Partner
