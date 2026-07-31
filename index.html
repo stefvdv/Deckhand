@@ -2902,15 +2902,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.182';
+const APP_VERSION = '2.51.183';
 const CHANGELOG_NOTES = {
   en: [
-    'Spoiler counting done right: the all-sets feed drops its tally (371/371 said nothing), and the count lives where it means something — pick a set symbol and see \u201c193/233 cards previewed so far\u201d, measured against the set\u2019s announced size (or the highest collector number seen, until the size is known).',
-    'The heavyweights load too: Jodah, The Ur-Dragon and friends carry EDHREC\u2019s biggest pages, which a mobile evening couldn\u2019t move inside the old time limit — exactly why the popular Commanders kept falling back while smaller ones worked. The fetch now gets the time it needs; one success is then kept for a week.'
+    'Commander mode stops mentioning the Universes Beyond switch: that toggle is Admiral law — in Commander every UB set is simply playable, so the spoiler page keeps that hint to the Admiral side.',
+    'The Hobbit gets its denominator: the set count now takes the larger of Scryfall\u2019s announced size and the highest collector number actually seen — so a spoiled #206 proves the set runs past 193 even while Scryfall\u2019s size field lags.',
+    'A parachute for the heavyweight Commanders: when the full EDHREC page for an Ur-Dragon-sized leader is too big for the connection, the app now falls back to EDHREC\u2019s average-deck page — a fraction of the size, same most-played core — before resorting to its own synergy picks.'
   ],
   nl: [
-    'Spoilers tellen zoals het hoort: de alle-sets-feed laat zijn teller vallen (371/371 zei niets), en de telling woont waar hij iets betekent — kies een setsymbool en zie \u201c193/233 kaarten previewed\u201d, gemeten aan de aangekondigde omvang van de set (of het hoogste geziene verzamelnummer, tot de omvang bekend is).',
-    'De zwaargewichten laden nu ook: Jodah, The Ur-Dragon en vrienden dragen de grootste EDHREC-pagina\u2019s, die een mobiele avond niet binnen de oude tijdslimiet kon verplaatsen — precies waarom de populaire Commanders bleven terugvallen terwijl kleinere werkten. Het ophalen krijgt nu de tijd die het nodig heeft; \u00e9\u00e9n succes wordt daarna een week bewaard.'
+    'Commander-modus zwijgt over de Universes Beyond-schakelaar: die schakelaar is Admiral-wet — in Commander is elke UB-set gewoon speelbaar, dus de spoilerpagina houdt die hint aan de Admiral-kant.',
+    'The Hobbit krijgt zijn noemer: de settelling neemt nu de grootste van Scryfalls aangekondigde omvang en het hoogste werkelijk geziene verzamelnummer — een gespoilde #206 bewijst dat de set verder loopt dan 193, ook als Scryfalls veld achterloopt.',
+    'Een parachute voor de zwaargewicht-Commanders: wanneer de volledige EDHREC-pagina van een Ur-Dragon-formaat leider te groot is voor de verbinding, valt de app nu terug op EDHREC\u2019s gemiddelde-deck-pagina — een fractie van de omvang, dezelfde meest-gespeelde kern — voordat de eigen synergiekeuzes aan bod komen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6428,10 +6430,13 @@ function renderSpoilerBody(loaded, failed){
     // for preview sets that just equals what's spoiled. When printed_size
     // isn't known yet, the highest collector number seen is the best floor.
     const maxCN = playables.reduce((m,c)=>{ const n = parseInt(String(c.collector_number||'').replace(/\D/g,''),10); return (!isNaN(n) && n>m) ? n : m; }, 0);
-    const setTotal = rawSet.printed_size || maxCN || 0;
+    // Take the larger of Scryfall's announced size and the highest collector
+    // number seen: printed_size can lag during preview season (HOB reported
+    // its spoiled count), and a #206 in hand proves the set runs past 193.
+    const setTotal = Math.max(rawSet.printed_size || 0, maxCN);
     headHtml = `<div class="chip-label" style="margin:2px 0 6px;">${escapeHtml(x.name)}${x.ub?' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>':''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>`
       + (gotN ? `<p class="hint" style="margin:0 0 6px;">${gotN}${setTotal>gotN?`/${setTotal}`:''} cards previewed so far.</p>` : '')
-      + (x.ub?'<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>':'');
+      + (x.ub && !isCmdrMode() ? '<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>' : '');
     if(failed.has(active)){ box.innerHTML = headHtml + '<p class="hint">Couldn\'t reach the archive for this set — tap “Check for new spoilers” to retry.</p>'; return; }
     // Colour-sorted set view; collector number orders within each colour.
     const cn = c => { const n = parseInt(String(c.collector_number||'').replace(/\D/g,''),10); return isNaN(n) ? 1e9 : n; };
@@ -11378,7 +11383,13 @@ async function edhrecPairPage(a, b){
   return edhrecCommanderPage(a);
 }
 async function edhrecCommanderPage(card){
-  const data = await edhrecFetchJson('/pages/commanders/' + edhrecSlug(card.name) + '.json');
+  const slug = edhrecSlug(card.name);
+  let data = await edhrecFetchJson('/pages/commanders/' + slug + '.json');
+  // The most-played commanders (Ur-Dragon, Kenrith, Jodah…) carry the
+  // biggest pages on EDHREC — too big for a weak connection even with a
+  // patient timeout. The average-deck page is a fraction of the size and
+  // carries the same core signal: the most-played hundred. A parachute.
+  if(!data) data = await edhrecFetchJson('/pages/average-decks/' + slug + '.json');
   if(!data) return { names: [], themes: [] };
   return { names: edhrecNamesFrom(data), themes: edhrecThemesFrom(data) };
 }
