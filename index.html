@@ -2891,13 +2891,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.165';
+const APP_VERSION = '2.51.166';
 const CHANGELOG_NOTES = {
   en: [
-    'The vanishing spinner, found: while a theme page was still loading, the deck-count data could arrive first and repaint the results early — wiping the spinner and leaving just the caption over an empty page. That repaint now waits until the page itself has landed.'
+    'The Kindred dropdown, finally complete: the app only ever harvested EDHREC\'s sample of creature types, which after filtering left basically Humans — in every colour. It now reads the full typal census (120+ Kindred, Dragons down to Symbiotes), and each entry is marked Kindred at the source, so even Tyranids and Time Lords land in the right dropdown.'
   ],
   nl: [
-    'De verdwijnende laadcirkel, gevonden: terwijl een themapagina nog laadde, kon de deck-telling eerder binnenkomen en de resultaten te vroeg hertekenen — de laadcirkel werd gewist en alleen het bijschrift bleef over boven een lege pagina. Die hertekening wacht nu tot de pagina zelf geland is.'
+    'De Kindred-lijst, eindelijk compleet: de app oogstte alleen EDHREC\'s steekproef van wezentypes, wat na filteren vrijwel alleen Humans overliet — in elke kleur. Nu leest hij de volledige typal-telling (120+ Kindred, van Dragons tot Symbiotes), en elk item wordt bij de bron als Kindred gemarkeerd, zodat ook Tyranids en Time Lords in de juiste lijst belanden.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3184,7 +3184,7 @@ async function persistDeck(d){
       // drop rebuildable catalogs, then RETRY this save — never lose a deck
       // to a full disk without a fight.
       try{ compactAllDecks(d.id); }catch(_e){}
-      try{ localStorage.removeItem('admiral_app:edhrecTags2'); }catch(_e){}
+      try{ localStorage.removeItem('admiral_app:edhrecTags4'); }catch(_e){}
       try{ localStorage.removeItem('admiral_app:edhrecTypal2'); }catch(_e){}
       try{
         localStorage.setItem(LS_PREFIX+'deck:'+d.id, payload);
@@ -3531,7 +3531,7 @@ function render(){
       </div>`;
       document.getElementById('recHome').onclick = ()=>{ state.screen = 'home'; render(); };
       document.getElementById('recHeal').onclick = ()=>{
-        try{ localStorage.removeItem('admiral_app:edhrecTags3'); localStorage.removeItem('admiral_app:edhrecTags2'); }catch(_e){}
+        try{ localStorage.removeItem('admiral_app:edhrecTags4'); localStorage.removeItem('admiral_app:edhrecTags3'); }catch(_e){}
         state.edhrecTags = null; state._kindredSet = null; state.screen = 'home';
         render();
       };
@@ -9559,7 +9559,7 @@ async function ensureEdhrecTags(){
   if(state._edtagsAt && (Date.now() - state._edtagsAt) < 60000) return;   // retry at most once a minute
   state._edtagsAt = Date.now();
   try{
-    const raw = localStorage.getItem('admiral_app:edhrecTags3');
+    const raw = localStorage.getItem('admiral_app:edhrecTags4');
     if(raw){
       const j = JSON.parse(raw);
       if(j && Array.isArray(j.v) && j.v.length && (Date.now() - (j.t||0)) < 7*24*3600*1000){
@@ -9575,11 +9575,28 @@ async function ensureEdhrecTags(){
   for(const path of ['/pages/tags/themes.json', '/pages/tags.json']){
     try{ const d = await edhrecFetchJson(path); if(d) docs.push(d); }catch(e){}
   }
-  const tags = edhrecTagCatalogFrom(docs);
+  // The Kindred census lives on its own page — /tags/typal carries every
+  // creature-type tag EDHREC tracks (120+, Dragons down to Symbiotes). The
+  // hub sample only ever showed a top handful, which after filtering left
+  // basically Humans. Harvest it separately so its entries can be flagged
+  // kindred AT THE SOURCE (k:1) — data beats guessing from a name list,
+  // which never knew Tyranids or Time Lords were creature types.
+  let typalTags = [];
+  try{
+    const td = await edhrecFetchJson('/pages/tags/typal.json');
+    if(td) typalTags = edhrecTagCatalogFrom(td).map(t=>Object.assign(t, { k: 1 }));
+  }catch(e){}
+  const themeTags = edhrecTagCatalogFrom(docs);
+  // Typal first, so a slug on both pages keeps its kindred flag and census count.
+  const seenSlug = new Set();
+  const tags = [];
+  typalTags.concat(themeTags).forEach(t=>{ if(seenSlug.has(t.slug)) return; seenSlug.add(t.slug); tags.push(t); });
+  tags.sort((a,b)=>(b.count||0)-(a.count||0));
   if(tags.length){
     state.edhrecTags = tags;
     try{
-      localStorage.setItem('admiral_app:edhrecTags3', JSON.stringify({ t: Date.now(), v: tags }));
+      localStorage.setItem('admiral_app:edhrecTags4', JSON.stringify({ t: Date.now(), v: tags }));
+      localStorage.removeItem('admiral_app:edhrecTags3');
       localStorage.removeItem('admiral_app:edhrecTags2');
     }catch(e){}
     if(state.screen==='browse') render();
@@ -9729,7 +9746,7 @@ function browseThemeOptionsInner(){
     if(!t) return;
     const label = String(t.label || '').trim();
     const lk = label.toLowerCase();
-    if(!label || ks.has(lk) || isColorComboTag(t) || seen.has(lk)) return;
+    if(!label || t.k || ks.has(lk) || isColorComboTag(t) || seen.has(lk)) return;
     seen.add(lk);
     out.push({ v:'ed:'+t.slug, l:label, r: rm ? (rm[t.slug]||0) : 0 });
   });
@@ -9761,7 +9778,7 @@ function mergeEdhrecTags(list){
   });
   if(grew){
     state.edhrecTags = cur;
-    try{ localStorage.setItem('admiral_app:edhrecTags3', JSON.stringify({ t: Date.now(), v: cur })); }catch(e){}
+    try{ localStorage.setItem('admiral_app:edhrecTags4', JSON.stringify({ t: Date.now(), v: cur })); }catch(e){}
   }
 }
 const KINDRED_PLURAL_IRREGULAR = { Elf:'Elves', Wolf:'Wolves', Werewolf:'Werewolves', Dwarf:'Dwarves', Mouse:'Mice', Fox:'Foxes', Sphinx:'Sphinxes', Phoenix:'Phoenixes', Ox:'Oxen', Octopus:'Octopuses' };
@@ -9782,7 +9799,7 @@ function browseKindredOptions(){
   const ks = kindredNameSet();
   const rm = comboRankMap('typal');
   return (state.edhrecTags || [])
-    .filter(t=>ks.has(String(t.label||'').toLowerCase()) && !isColorComboTag(t))
+    .filter(t=>(t.k || ks.has(String(t.label||'').toLowerCase())) && !isColorComboTag(t))
     .sort((a,b)=> rm
       ? (((rm[b.slug]||0) - (rm[a.slug]||0)) || ((b.count||0) - (a.count||0)))
       : ((b.count||0) - (a.count||0)));   // most-played tribes for THIS colour first
