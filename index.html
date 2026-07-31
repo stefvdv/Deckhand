@@ -2902,15 +2902,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.181';
+const APP_VERSION = '2.51.182';
 const CHANGELOG_NOTES = {
   en: [
-    'The spoiler tally leads the page: \u201c193/233 cards previewed\u201d now sits at the top of the feed — spoiled so far out of everything Scryfall knows for those sets — and the single-set view shows its own count under the set name.',
-    'The recommendations page stopped failing silently: when EDHREC play data doesn\u2019t load, the page says so and offers \u201c\u21bb Try EDHREC again\u201d — one tap re-fetches and, when it lands, the Theme and Kindred dropdowns appear with it. The fetch also waits longer before giving up on slow connections.'
+    'Spoiler counting done right: the all-sets feed drops its tally (371/371 said nothing), and the count lives where it means something — pick a set symbol and see \u201c193/233 cards previewed so far\u201d, measured against the set\u2019s announced size (or the highest collector number seen, until the size is known).',
+    'The heavyweights load too: Jodah, The Ur-Dragon and friends carry EDHREC\u2019s biggest pages, which a mobile evening couldn\u2019t move inside the old time limit — exactly why the popular Commanders kept falling back while smaller ones worked. The fetch now gets the time it needs; one success is then kept for a week.'
   ],
   nl: [
-    'De spoilerteller voorop: \u201c193/233 kaarten previewed\u201d staat nu bovenaan de feed — tot nu toe gespoild van alles wat Scryfall voor die sets kent — en de enkele-set-weergave toont zijn eigen telling onder de setnaam.',
-    'De aanbevelingenpagina faalt niet meer in stilte: wanneer EDHREC-speeldata niet laadt, zegt de pagina dat en biedt \u201c\u21bb Probeer EDHREC opnieuw\u201d — \u00e9\u00e9n tik haalt het opnieuw op en, wanneer het lukt, verschijnen de Thema- en Kindred-menu\u2019s erbij. Het ophalen wacht ook langer voordat het opgeeft op trage verbindingen.'
+    'Spoilers tellen zoals het hoort: de alle-sets-feed laat zijn teller vallen (371/371 zei niets), en de telling woont waar hij iets betekent — kies een setsymbool en zie \u201c193/233 kaarten previewed\u201d, gemeten aan de aangekondigde omvang van de set (of het hoogste geziene verzamelnummer, tot de omvang bekend is).',
+    'De zwaargewichten laden nu ook: Jodah, The Ur-Dragon en vrienden dragen de grootste EDHREC-pagina\u2019s, die een mobiele avond niet binnen de oude tijdslimiet kon verplaatsen — precies waarom de populaire Commanders bleven terugvallen terwijl kleinere werkten. Het ophalen krijgt nu de tijd die het nodig heeft; \u00e9\u00e9n succes wordt daarna een week bewaard.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6421,9 +6421,16 @@ function renderSpoilerBody(loaded, failed){
     const got = loaded[active];
     if(got === undefined && !failed.has(active)){ box.innerHTML = `<div class="status"><div class="spinner"></div></div>`; return; }
     const rawSet = ((state.allSetsRaw||[]).find(s=>s.code===active)||{});
-    const gotN = (got||[]).filter(spoilerPlayable).length;
+    const playables = (got||[]).filter(spoilerPlayable);
+    const gotN = playables.length;
+    // The honest denominator: Scryfall's printed_size is the set's announced
+    // collector-number count (233 for The Hobbit). card_count is NOT it —
+    // for preview sets that just equals what's spoiled. When printed_size
+    // isn't known yet, the highest collector number seen is the best floor.
+    const maxCN = playables.reduce((m,c)=>{ const n = parseInt(String(c.collector_number||'').replace(/\D/g,''),10); return (!isNaN(n) && n>m) ? n : m; }, 0);
+    const setTotal = rawSet.printed_size || maxCN || 0;
     headHtml = `<div class="chip-label" style="margin:2px 0 6px;">${escapeHtml(x.name)}${x.ub?' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>':''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>`
-      + (gotN ? `<p class="hint" style="margin:0 0 6px;">${gotN}${rawSet.card_count?`/${rawSet.card_count}`:''} cards previewed so far.</p>` : '')
+      + (gotN ? `<p class="hint" style="margin:0 0 6px;">${gotN}${setTotal>gotN?`/${setTotal}`:''} cards previewed so far.</p>` : '')
       + (x.ub?'<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>':'');
     if(failed.has(active)){ box.innerHTML = headHtml + '<p class="hint">Couldn\'t reach the archive for this set — tap “Check for new spoilers” to retry.</p>'; return; }
     // Colour-sorted set view; collector number orders within each colour.
@@ -6454,11 +6461,6 @@ function renderSpoilerBody(loaded, failed){
       feedGroups[feedGroups.length-1].cs.push(w.c);
     });
     const pending = sets.filter(x=>loaded[x.code]===undefined && !failed.has(x.code)).length;
-    // The tally leads the page now: spoiled so far out of everything Scryfall
-    // knows for these sets (the total grows as preview season fills in).
-    const rawBy = new Map((state.allSetsRaw||[]).map(s=>[s.code, s]));
-    const totKnown = sets.reduce((a,x)=> a + ((rawBy.get(x.code)||{}).card_count || (loaded[x.code]||[]).length || 0), 0);
-    headHtml = (cards.length ? `<p class="hint" style="margin:0 0 8px;text-align:center;">${cards.length}${totKnown?`/${totKnown}`:''} cards previewed across ${sets.length} set${sets.length===1?'':'s'}.</p>` : '') + headHtml;
     footHtml = (pending ? `<div class="status" style="margin:8px 0;"><div class="spinner"></div>More sets unfurling…</div>` : '')
       + (failed.size ? `<p class="hint" style="margin:6px 0 2px;">Couldn't reach ${failed.size} set${failed.size===1?'':'s'} — tap “Check for new spoilers” to retry.</p>` : '');
     if(!cards.length && !pending){ box.innerHTML = '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
@@ -11304,7 +11306,10 @@ async function edhrecFetchNetwork(path){
   const urls = ['/edhrec' + path, 'https://json.edhrec.com' + path];
   for(const u of urls){
     const ctrl = new AbortController();
-    const timer = setTimeout(()=>ctrl.abort(), 9000);
+    // The most popular commanders carry the biggest pages — multi-megabyte
+    // JSON that a 5G evening won't move in nine seconds. One success caches
+    // for a week, so a patient first load is the right trade.
+    const timer = setTimeout(()=>ctrl.abort(), 20000);
     try{
       const res = await fetch(u, { signal: ctrl.signal });
       if(res.ok){ const data = await res.json(); if(data) return data; }
