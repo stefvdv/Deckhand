@@ -2902,17 +2902,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.179';
+const APP_VERSION = '2.51.180';
 const CHANGELOG_NOTES = {
   en: [
-    'Crash fixed in the deck check: opening it on a Commander deck could bring the whole screen down (\u201cCannot read properties of undefined\u201d) because Commander findings carry a different shape than Admiral ones. The panel now reads both dialects.',
-    'Spoiler season, day by day: the all-sets feed now files each preview day under its own date heading, newest day first — pick a specific set symbol and the dates step aside for the colour-sorted view, exactly as before.',
-    'The keyboard takes a bow: pressing the \ud83d\udd0d key on the phone keyboard now fires the search and closes the keyboard, in every search field across the app.'
+    'Recommendation pages remember themselves: the resolved card list and the leader\u2019s themes are kept for the session, so reopening the same Commander is instant — and the Theme and Kindred dropdowns no longer vanish on a second visit. Both dropdowns also gained the Type-to-filter search box, same as Inspiration.',
+    'The deck check stopped nagging about spoilers: unreleased preview cards raise no warning at all anymore — the \ud83d\udd2e badge on the card already tells the story, the counter stays white, and no note appears above the decklist.',
+    'Spoiler day headings speak your language: the dates now follow the app\u2019s language setting — English when English is selected, Nederlands when Nederlands is selected — instead of whatever the phone happens to speak.'
   ],
   nl: [
-    'Crash verholpen in de deckcontrole: die openen op een Commander-deck kon het hele scherm neerhalen (\u201cCannot read properties of undefined\u201d) omdat Commander-bevindingen een andere vorm hebben dan Admiral-bevindingen. Het paneel leest nu beide dialecten.',
-    'Spoilerseizoen, dag voor dag: de alle-sets-feed zet elke previewdag nu onder zijn eigen datumkop, nieuwste dag eerst — kies een specifiek setsymbool en de datums stappen opzij voor de kleurgesorteerde weergave, precies als voorheen.',
-    'Het toetsenbord neemt een buiging: de \ud83d\udd0d-toets op het telefoontoetsenbord voert nu de zoekopdracht uit en sluit het toetsenbord, in elk zoekveld in de hele app.'
+    'Aanbevelingspagina\u2019s onthouden zichzelf: de opgehaalde kaartenlijst en de thema\u2019s van de leider blijven de sessie bewaard, dus dezelfde Commander opnieuw openen is direct — en de Thema- en Kindred-menu\u2019s verdwijnen niet meer bij een tweede bezoek. Beide menu\u2019s kregen ook het Typ-om-te-filteren zoekveld, net als Inspiratie.',
+    'De deckcontrole zeurt niet meer over spoilers: nog niet uitgebrachte preview-kaarten geven helemaal geen waarschuwing meer — de \ud83d\udd2e-badge op de kaart vertelt het verhaal al, de teller blijft wit, en er verschijnt geen notitie boven de decklijst.',
+    'Spoiler-dagkoppen spreken jouw taal: de datums volgen nu de taalinstelling van de app — Engels wanneer Engels is gekozen, Nederlands wanneer Nederlands is gekozen — in plaats van wat de telefoon toevallig spreekt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5508,11 +5508,10 @@ function checkCommanderLegality(d){
     }
     if(c.legalities){
       if(c.legalities.commander === 'banned') issues.push({ level:'error', text:`${c.name} is banned in Commander.` });
-      // Previews report not_legal until release day — that's a heads-up, not
-      // an error: it kept the deck counter red at a perfectly legal 100/100.
-      else if(c.legalities.commander === 'not_legal' && isPreviewCard(c))
-        issues.push({ level:'warn', text:`${c.name} isn't released yet — Commander-legal on release.` });
-      else if(c.legalities.commander === 'not_legal') issues.push({ level:'error', text:`${c.name} isn't legal in Commander.` });
+      // Previews report not_legal until release day — no issue at all: the
+      // 🔮 badge on the card already says it, and the deck check should not
+      // nag about cards that become legal by themselves.
+      else if(c.legalities.commander === 'not_legal' && !isPreviewCard(c)) issues.push({ level:'error', text:`${c.name} isn't legal in Commander.` });
     }
     if(d.admiral && (c.color_identity||[]).some(x=>!ci.has(x)))
       issues.push({ level:'error', text:`${c.name} is outside your Commanders' color identity.` });
@@ -6461,7 +6460,7 @@ function renderSpoilerBody(loaded, failed){
     if(!cards.length){ box.innerHTML = `<div class="status"><div class="spinner"></div></div>`; return; }
   }
   if(active && !cards.length){ box.innerHTML = headHtml + '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
-  const fmtDayHead = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'}); }catch(e){ return d; } };
+  const fmtDayHead = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(appLang()==='nl'?'nl-NL':'en-US', {weekday:'long', month:'long', day:'numeric'}); }catch(e){ return d; } };
   const gridHtml = feedGroups
     ? feedGroups.map(g=>`<div class="chip-label" style="margin:12px 0 6px;">${g.k ? fmtDayHead(g.k) : trS('Date to be announced')}</div><div class="sc-grid">${g.cs.map(tile).join('')}</div>`).join('')
     : `<div class="sc-grid">${cards.map(tile).join('')}</div>`;
@@ -11220,6 +11219,13 @@ async function loadBudgetAlternatives(d){
    EDHREC-ranked recommendations in its colors below (respecting any theme
    chosen in the dropdowns), tap tiles to select, then spawn a ready-made
    deck from the selection. */
+/* Session cache for the recommendations page: the resolved pool and the
+   leader's themes, keyed per leader (pair-aware). Without it every visit
+   re-resolved ~90 names through the serial Scryfall queue — slow — and a
+   lost race on the repeat visit dropped to the synergy fallback, taking
+   the theme dropdowns with it. Once earned, both are kept. */
+state._recoCache = state._recoCache || {};
+function recoCacheKey(a, p){ return edhrecSlug(a.name) + (p ? '::'+edhrecSlug(p.name) : ''); }
 function openAdmiralReco(admiral, partner){
   // Arriving from a theme or Kindred page: that context IS the request —
   // seed the reco page with it so the first load is the commander-within-
@@ -11229,11 +11235,19 @@ function openAdmiralReco(admiral, partner){
     ? ((bs.theme && bs.theme.indexOf('ed:') === 0) ? bs.theme.slice(3) : (bs.tribe || null))
     : null;
   state.reco = { admiral, partner: partner || null, pool: [], selected: new Set(), loading: true, error: false, _seedTheme: seedTheme || null };
+  // Served from the session cache: the page is complete on arrival.
+  const hit = state._recoCache[recoCacheKey(admiral, partner)];
+  if(hit && hit.pool && hit.pool.length){
+    state.reco.pool = hit.pool.slice();
+    state.reco.themes = (hit.themes||[]).slice();
+    state.reco.edhrecSourced = !!hit.edhrecSourced;
+    state.reco.loading = false;
+  }
   let el = document.getElementById('recoOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='recoOverlay'; document.body.appendChild(el); }
   pushOverlay('reco', ()=>{ document.getElementById('recoOverlay')?.remove(); state.reco = null; });
   renderRecoOverlay();
-  loadRecoPool();
+  if(state.reco.loading) loadRecoPool();
 }
 function renderRecoOverlay(){
   const el = document.getElementById('recoOverlay');
@@ -11482,6 +11496,7 @@ async function loadRecoPool(){
         (await Promise.all(proms.slice(1))).forEach(absorb);
         if(!state.reco || state.reco !== R) return;
         pool = got.filter(keep).sort(byRank);
+        if(pool.length >= 10) state._recoCache[recoCacheKey(R.admiral, R.partner)] = { pool: pool.slice(0, 180), themes: (R.themes||[]).slice(), edhrecSourced: true };
         if(pool.length >= 10){
           R.loading = false; R.edhrecSourced = true;
           R.pool = pool.slice(0, 180);
@@ -11574,7 +11589,8 @@ function renderRecoBody(){
   if(!box || !R) return;
   if(R.error){ box.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
   if(!R.pool.length){ box.innerHTML = `<div class="empty-note">No recommendations found for this combination.</div>`; return; }
-  const chipList = (R.themes||[]).slice();
+  const cachedThemes = (state._recoCache[recoCacheKey(R.admiral, R.partner)]||{}).themes;
+  const chipList = ((R.themes && R.themes.length) ? R.themes : (cachedThemes||[])).slice();
   if(R.activeThemeSlug && !chipList.some(t=>t.slug===R.activeThemeSlug)){
     chipList.unshift({ label: R.activeThemeSlug.replace(/-/g,' ').replace(/(^|\s)\w/g, ch=>ch.toUpperCase()), slug: R.activeThemeSlug, count: 0 });
   }
@@ -11599,6 +11615,7 @@ function renderRecoBody(){
         <span class="cs-label">${cur ? escapeHtml(cur.label) : ph}</span><span class="cs-car">▾</span>
       </button>
       <div class="cselect-panel" data-recopanel="${rid}" style="display:none;">
+        <div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-recofilter="${rid}"></div>
         <button class="cselect-opt ${cur?'':'sel'}" data-recoval="" data-recoid="${rid}">${ph}</button>
         ${opts.map(t=>`<button class="cselect-opt ${R.activeThemeSlug===t.slug?'sel':''}" data-recoval="${escapeHtml(t.slug)}" data-recoid="${rid}">${escapeHtml(t.label)}</button>`).join('')}
       </div>
@@ -11634,6 +11651,16 @@ function renderRecoBody(){
       p.style.display = (p.dataset.recopanel === rid && p.style.display === 'none') ? '' : 'none';
     });
   }));
+  box.querySelectorAll('[data-recofilter]').forEach(inp=>{
+    inp.addEventListener('click', e=>e.stopPropagation());
+    inp.addEventListener('input', ()=>{
+      const q = inp.value.trim().toLowerCase();
+      const panel = inp.closest('[data-recopanel]');
+      panel.querySelectorAll('[data-recoval]').forEach(o=>{
+        o.style.display = (!q || o.textContent.toLowerCase().includes(q) || o.dataset.recoval === '') ? '' : 'none';
+      });
+    });
+  });
   box.querySelectorAll('[data-recoval]').forEach(o=>o.addEventListener('click', (e)=>{
     e.stopPropagation();
     const v = o.dataset.recoval;
