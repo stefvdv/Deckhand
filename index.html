@@ -2891,13 +2891,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.166';
+const APP_VERSION = '2.51.168';
 const CHANGELOG_NOTES = {
   en: [
-    'The Kindred dropdown, finally complete: the app only ever harvested EDHREC\'s sample of creature types, which after filtering left basically Humans — in every colour. It now reads the full typal census (120+ Kindred, Dragons down to Symbiotes), and each entry is marked Kindred at the source, so even Tyranids and Time Lords land in the right dropdown.'
+    'No more teleporting search results: adding a card from deep in the list used to rebuild the grid from the top — the page shrank, and your view jumped to a different spot. The grid now rebuilds to the same depth and puts your scroll position right back where it was.'
   ],
   nl: [
-    'De Kindred-lijst, eindelijk compleet: de app oogstte alleen EDHREC\'s steekproef van wezentypes, wat na filteren vrijwel alleen Humans overliet — in elke kleur. Nu leest hij de volledige typal-telling (120+ Kindred, van Dragons tot Symbiotes), en elk item wordt bij de bron als Kindred gemarkeerd, zodat ook Tyranids en Time Lords in de juiste lijst belanden.'
+    'Geen teleporterende zoekresultaten meer: een kaart toevoegen diep in de lijst herbouwde het raster vanaf boven — de pagina kromp, en je beeld sprong naar een andere plek. Het raster herbouwt nu tot dezelfde diepte en zet je scrollpositie precies terug waar die was.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8477,10 +8477,17 @@ function renderSearchResultsBox(){
   if(state.searchError === 'badquery'){ box.innerHTML = `<div class="error-note">One of the filters contains something Scryfall can't read — most often a stray quote (") or a symbol in Mana Cost. Clear or fix that filter and search again.</div>`; return; }
   if(state.searchError){ box.innerHTML = `<div class="error-note">Scryfall couldn't be reached just now. Check your connection and try again — the search retries on its own, so this only appears after several failed attempts.</div>`; return; }
   if(!state.searchResults.length){ box.innerHTML = `<div class="empty-note">No legal cards found for that search.</div>`; return; }
+  // Rebuilding after an add used to restart at the first 20 tiles: the page
+  // shrank, the browser clamped the scroll, and the view jumped somewhere
+  // else. Re-render to the previous depth and put the scroll right back.
+  const prevShown = box.querySelectorAll('.sr-tile').length;
+  const y = window.scrollY;
   box.innerHTML = '';
   pagedGrid(box, state.searchResults,
     (c)=>searchRowHtml(c, d, {showAdmiralBtn:true}),
-    (chunk, shown)=>{ wireResultButtons(shown, d, renderSearchResultsBox); loadTilePrices(chunk); });
+    (chunk, shown)=>{ wireResultButtons(shown, d, renderSearchResultsBox); loadTilePrices(chunk); },
+    { initial: prevShown });
+  if(prevShown) window.scrollTo(0, y);
 }
 /* Sort for recommendation lists: color first (WUBRG, then multicolor, then
    colorless), mana value second, name third. */
@@ -8844,6 +8851,10 @@ function pagedGrid(box, items, tileHtml, afterChunk, opts){
   // first grid appears, without touching how many results exist — scrolling
   // streams the rest in just as before.
   const pageSize = opts.pageSize || 20;
+  // A rebuild mid-scroll (e.g. refreshing badges after an add) can ask for
+  // its previous depth back: the first chunk renders opts.initial tiles at
+  // once, so the page keeps its height and the scroll position stays honest.
+  let firstStep = Math.max(pageSize, opts.initial || 0);
   if(opts.prefixHtml) box.insertAdjacentHTML('beforeend', opts.prefixHtml);
   const grid = document.createElement('div');
   grid.className = opts.gridClass || 'sr-grid';
@@ -8857,7 +8868,8 @@ function pagedGrid(box, items, tileHtml, afterChunk, opts){
       if(opts.stream && !items._complete){ setTimeout(renderMore, 450); return; }
       done(); return;
     }
-    const upto = Math.min(items.length, shown + pageSize);
+    const upto = Math.min(items.length, shown + firstStep);
+    firstStep = pageSize;
     const chunk = items.slice(shown, upto);
     grid.insertAdjacentHTML('beforeend', chunk.map((it,k)=>tileHtml(it, shown+k)).join(''));
     shown = upto;
@@ -12690,13 +12702,18 @@ window.addEventListener('popstate', (e)=>{
     try{ history.pushState({screen: state.screen, folder: state.folderNav||null}, '', '#'+state.screen); }catch(err){}
     return;
   }
-  // An active leader-name search on Inspiration is its own "page": the first
-  // back press clears the search in place and shows the clean start — only
-  // the next press actually leaves.
-  if(state.screen === 'browse' && state.browseNameQ){
+  // Any active pick on Inspiration is its own "page": the first back press
+  // clears EVERYTHING — name search, colours, theme, Kindred, typal view —
+  // the same wipe as the \u2715 button, showing the clean start. Only the next
+  // press actually leaves. An open dropdown closes first (its own handler
+  // below), and an open overlay still outranks the page.
+  if(state.screen === 'browse' && !state.openCSelect && !state.overlayStack.length
+     && (state.browseNameQ || state.browseTypal || state.browseSel.count || state.browseSel.combo
+         || state.browseSel.theme || state.browseSel.tribe || state.browseSel.type)){
+    state.browseSel = { count:'', combo:'', theme:'', tribe:'', type:'' };
     state.browseNameQ = '';
-    const bsInp = document.getElementById('bsName'); if(bsInp) bsInp.value = '';
-    const bsBox = document.getElementById('bsNameResults'); if(bsBox) bsBox.innerHTML = '';
+    state.browseTypal = null;
+    render();
     try{ history.pushState({screen: state.screen, folder: state.folderNav||null}, '', '#'+state.screen); }catch(err){}
     return;
   }
