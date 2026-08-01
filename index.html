@@ -2924,21 +2924,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.185';
+const APP_VERSION = '2.51.186';
 const CHANGELOG_NOTES = {
   en: [
-    'Universes Beyond finds itself: upcoming sets — Commander companions included — are probed against Scryfall\u2019s own UB stamp, so new crossover universes get their Admiral-side UB marker and Extras switch with no list to edit. The marker stays Admiral law; Commander mode shows none of it.',
-    'Kindred learns new species by itself: the Kindred recognition now reads Scryfall\u2019s live creature-type catalog (refreshed monthly), so types from brand-new sets classify themselves — the built-in list remains as offline parachute.',
-    'Old decks heal quietly: opening a deck refreshes a few pre-2026 stored cards per visit with their live Game Changer flag and current legalities — and speaks up when something meaningful changed: \u201cX is no longer a Game Changer\u201d, \u201cY is now banned in Commander.\u201d',
-    'Extras gained a Data Sources panel: every living feed — sets & spoilers, EDHREC themes, creature types, bans, prices — with its age and a \u21bb refresh lever.',
-    'Longer memory, same freshness: cached data is now served for up to two weeks (a month for creature types) with quiet background refreshes after two days — fewer fetches, no visible staleness. Prices deliberately stay on a 24-hour clock; the Budget tools need them honest.'
+    'Four- and five-colour Inspiration fixed: the app was asking EDHREC for four-colour pages under names EDHREC doesn\u2019t use, wasting a full network round-trip on every lookup before finding the right one. The live nicknames (Yore-Tiller, Witch-Maw, Glint-Eye, Dune-Brood, Ink-Treader) now go first — dropdowns, deck counts and rankings for 4/5-colour combinations load reliably on the first visit, so the order no longer shuffles between loads.'
   ],
   nl: [
-    'Universes Beyond vindt zichzelf: aankomende sets — Commander-companions inbegrepen — worden getoetst aan Scryfalls eigen UB-stempel, dus nieuwe crossover-universums krijgen hun UB-markering en Extra\u2019s-schakelaar aan de Admiral-kant zonder lijst om te bewerken. De markering blijft Admiral-wet; Commander-modus toont er niets van.',
-    'Kindred leert zelf nieuwe soorten: de Kindred-herkenning leest nu Scryfalls actuele wezentypecatalogus (maandelijks ververst), dus types uit gloednieuwe sets classificeren zichzelf — de ingebouwde lijst blijft als offline parachute.',
-    'Oude decks helen stilletjes: een deck openen ververst per bezoek een paar oudere opgeslagen kaarten met hun actuele Game Changer-vlag en legaliteit — en zegt het hardop wanneer er iets wezenlijks veranderde: \u201cX is geen Game Changer meer\u201d, \u201cY is nu banned in Commander.\u201d',
-    'Extra\u2019s kreeg een Databronnen-paneel: elke levende bron — sets & spoilers, EDHREC-thema\u2019s, wezentypes, bans, prijzen — met leeftijd en een \u21bb-verversknop.',
-    'Langer geheugen, zelfde versheid: gecachte data wordt nu tot twee weken geserveerd (een maand voor wezentypes) met stille verversing op de achtergrond na twee dagen — minder ophalen, geen zichtbare veroudering. Prijzen blijven bewust op een 24-uursklok; de Budget-tools hebben ze eerlijk nodig.'
+    'Vier- en vijfkleurige Inspiratie hersteld: de app vroeg EDHREC om vierkleurenpagina\u2019s onder namen die EDHREC niet gebruikt, en verspilde zo bij elke opzoeking een volledige netwerkronde voordat de juiste gevonden werd. De echte bijnamen (Yore-Tiller, Witch-Maw, Glint-Eye, Dune-Brood, Ink-Treader) gaan nu voorop — dropdowns, deck-aantallen en ranglijsten voor 4/5-kleurencombinaties laden betrouwbaar bij het eerste bezoek, dus de volgorde schudt niet meer tussen ladingen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9837,8 +9829,12 @@ const EDHREC_COMBO_SLUGS = {
   wb:['orzhov'], ur:['izzet'], bg:['golgari'], rw:['boros'], gu:['simic'],
   wub:['esper'], ubr:['grixis'], brg:['jund'], rgw:['naya'], gwu:['bant'],
   wbg:['abzan'], urw:['jeskai'], bgu:['sultai'], rwb:['mardu'], gur:['temur'],
-  wubr:['sans-green','yore-tiller'], ubrg:['sans-white','glint-eye'], brgw:['sans-blue','dune-brood'],
-  rgwu:['sans-black','ink-treader'], gwub:['sans-red','witch-maw'], wubrg:['five-color']
+  // EDHREC's live four-colour slugs are the Nephilim nicknames (verified:
+  // /commanders/yore-tiller and /tags/themes/yore-tiller both resolve).
+  // The sans-* spellings stay as fallback only — trying them FIRST burned a
+  // guaranteed-miss proxy fetch (up to the full timeout) on every 4c lookup.
+  wubr:['yore-tiller','sans-green'], ubrg:['glint-eye','sans-white'], brgw:['dune-brood','sans-blue'],
+  rgwu:['ink-treader','sans-black'], gwub:['witch-maw','sans-red'], wubrg:['five-color']
 };
 async function ensureComboTagRanks(comboKey){
   // EDHREC publishes colour-scoped theme and Kindred rankings (the pages the
