@@ -2637,11 +2637,22 @@ function qdbOpen(){
 async function qdbGet(key){
   try{
     const db = await qdbOpen(); if(!db) return null;
-    return await new Promise((res)=>{
+    const rec = await new Promise((res)=>{
       const rq = db.transaction('q').objectStore('q').get(key);
       rq.onsuccess = ()=>res(rq.result || null);
       rq.onerror = ()=>res(null);
     });
+    // Self-heal: some earlier writers passed an already-wrapped {t,v} into
+    // qdbSet (which wraps again), leaving {t,v:{t,v:data}} on disk. Reading
+    // that served the wrapper instead of the data — the "works once, then
+    // never again" EDHREC bug. Unwrap here and rewrite the record properly.
+    if(rec && rec.v && typeof rec.v === 'object' && !Array.isArray(rec.v)
+       && typeof rec.v.t === 'number' && ('v' in rec.v) && Object.keys(rec.v).length === 2){
+      const fixed = { t: rec.v.t, v: rec.v.v };
+      try{ db.transaction('q','readwrite').objectStore('q').put(fixed, key); }catch(e){}
+      return fixed;
+    }
+    return rec;
   }catch(e){ return null; }
 }
 function qdbSet(key, value){
@@ -2717,7 +2728,7 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
       next = dd.has_more ? dd.next_page : null;
     }
     _queryCache.set(qcKey, out);
-    qdbSet(qcKey, { t: Date.now(), v: out });
+    qdbSet(qcKey, out);
     return { results: out.slice(), error: false };
   }
   let codes = activeLegalSetCodes();
@@ -2924,13 +2935,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.186';
+const APP_VERSION = '2.51.188';
 const CHANGELOG_NOTES = {
   en: [
-    'Four- and five-colour Inspiration fixed: the app was asking EDHREC for four-colour pages under names EDHREC doesn\u2019t use, wasting a full network round-trip on every lookup before finding the right one. The live nicknames (Yore-Tiller, Witch-Maw, Glint-Eye, Dune-Brood, Ink-Treader) now go first — dropdowns, deck counts and rankings for 4/5-colour combinations load reliably on the first visit, so the order no longer shuffles between loads.'
+    'Fixed the \u201cworks the first time, never again\u201d EDHREC bug: cached play-data pages were stored double-wrapped on disk, so every later visit read the wrapper instead of the data and fell back to synergy picks. Reads now unwrap and permanently repair old records, and the same flaw silently disabling the search and rules caches is fixed too.'
   ],
   nl: [
-    'Vier- en vijfkleurige Inspiratie hersteld: de app vroeg EDHREC om vierkleurenpagina\u2019s onder namen die EDHREC niet gebruikt, en verspilde zo bij elke opzoeking een volledige netwerkronde voordat de juiste gevonden werd. De echte bijnamen (Yore-Tiller, Witch-Maw, Glint-Eye, Dune-Brood, Ink-Treader) gaan nu voorop — dropdowns, deck-aantallen en ranglijsten voor 4/5-kleurencombinaties laden betrouwbaar bij het eerste bezoek, dus de volgorde schudt niet meer tussen ladingen.'
+    'De \u201cwerkt \u00e9\u00e9n keer, daarna nooit meer\u201d EDHREC-bug opgelost: gecachte speeldata-pagina\u2019s stonden dubbel verpakt op schijf, waardoor elk later bezoek de verpakking las in plaats van de data en terugviel op synergiekeuzes. Lezen pakt oude records nu uit en repareert ze blijvend, en dezelfde fout die de zoek- en regelcache stilletjes uitschakelde is ook verholpen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3815,8 +3826,11 @@ async function ensureCR(){
   if(state._cr) return state._cr;
   try{
     const hit = await qdbGet('cr|full');
-    if(hit && (Date.now() - hit.t) < CR_TTL && hit.rules && hit.rules.length){
-      state._cr = hit.rules; return hit.rules;
+    // New records carry the rules array in .v; the old shape nested them one
+    // level deeper — accept both so no one re-downloads the whole CR.
+    const crRules = hit && (Array.isArray(hit.v) ? hit.v : (hit.v && hit.v.rules) || hit.rules || null);
+    if(hit && (Date.now() - (hit.t||0)) < CR_TTL && crRules && crRules.length){
+      state._cr = crRules; return crRules;
     }
   }catch(e){}
   let data = null;
@@ -3853,7 +3867,7 @@ async function ensureCR(){
   });
   if(!rules.length) return null;
   state._cr = rules;
-  try{ await qdbSet('cr|full', { t: Date.now(), rules }); }catch(e){}
+  try{ qdbSet('cr|full', rules); }catch(e){}
   return rules;
 }
 const CR_STOP = new Set(['the','a','an','of','to','in','on','is','are','it','its','and','or','if','do','does','can','i','my','you','your','when','what','how','with','that','this','was','were','be','at','as','for','from','into','by','have','has','had','will','would','they','them','their','there','then','than','but','not','no','also','any','all','each','may','must']);
@@ -8774,8 +8788,11 @@ function deckPickRowsHtml(){
   const row = d=>`<button class="dp-row" data-deck="${d.id}">
         <div class="dp-txt">${escapeHtml(d.name)}<div class="dp-meta">${d.admiral ? escapeHtml(d.admiral.name) : 'No '+fmtName(d)+' yet'} · ${d.cards.length + deckLeaders(d).length} cards</div></div>
       </button>`;
-  const cur = state.decksIndex.filter(x=>deckFormat(x)===appMode());
-  const oth = state.decksIndex.filter(x=>deckFormat(x)!==appMode());
+  // Most recently edited first, freshly sorted at open time — the load-time
+  // index order goes stale as soon as a deck is touched mid-session.
+  const byEdit = (a,b)=>(b.updatedAt||0)-(a.updatedAt||0);
+  const cur = state.decksIndex.filter(x=>deckFormat(x)===appMode()).slice().sort(byEdit);
+  const oth = state.decksIndex.filter(x=>deckFormat(x)!==appMode()).slice().sort(byEdit);
   return cur.map(row).join('') + (oth.length ? `<div class="dp-sect">${isCmdrMode() ? 'Admiral' : 'Commander'} decks</div>` + oth.map(row).join('') : '');
 }
 function openDeckPickPopup(card, mode, refreshFn, pairWith){
@@ -11457,12 +11474,12 @@ async function edhrecFetchJson(path){
   if(disk && disk.v && (Date.now() - (disk.t||0)) < SWR_SERVE){
     if((Date.now() - (disk.t||0)) > SWR_FRESH && !_edhRevalidating.has(key)){
       _edhRevalidating.add(key);
-      edhrecFetchNetwork(path).then(fresh=>{ if(fresh) qdbSet(key, {t: Date.now(), v: fresh}); }).finally(()=>_edhRevalidating.delete(key));
+      edhrecFetchNetwork(path).then(fresh=>{ if(fresh) qdbSet(key, fresh); }).finally(()=>_edhRevalidating.delete(key));
     }
     return disk.v;
   }
   const data = await edhrecFetchNetwork(path);
-  if(data) qdbSet(key, {t: Date.now(), v: data});   // failures are never stored — a bad day can't poison a week
+  if(data) qdbSet(key, data);   // failures are never stored — a bad day can't poison a week; qdbSet adds the {t,v} wrap
   return data;
 }
 function edhrecNamesFrom(data){
