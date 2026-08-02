@@ -2034,8 +2034,20 @@ function setPrintPref(chosen){
   const iu = chosen.image_uris || (chosen.card_faces && chosen.card_faces[0] && chosen.card_faces[0].image_uris) || null;
   if(!iu) return;
   const prefs = _printPrefs();
-  prefs[chosen.name] = { id: chosen.id, i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
+  const rec = { id: chosen.id, i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
+  prefs[chosen.name] = rec;
   try{ localStorage.setItem(LS_PREFIX+'printPrefs', JSON.stringify(prefs)); }catch(e){}
+  // Already-rendered tiles keep their old art until something repaints them —
+  // sweep every visible image of this card and swap the art in place, sized
+  // to match what each tile was showing.
+  try{
+    document.querySelectorAll('img[alt]').forEach(img=>{
+      if(img.alt !== chosen.name) return;
+      const cur = img.getAttribute('src') || '';
+      img.src = /\/small\//.test(cur) ? (rec.i.s || rec.i.n) : (rec.i.n || rec.i.s);
+      if(img.dataset && img.dataset.preview) img.dataset.preview = rec.i.n || rec.i.s;
+    });
+  }catch(e){}
 }
 function cardImage(card){
   const pp = printPrefFor(card); if(pp) return pp.i.s || pp.i.n;
@@ -2962,15 +2974,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.190';
+const APP_VERSION = '2.51.191';
 const CHANGELOG_NOTES = {
   en: [
-    'Creating a new deck from a card now walks the whole plank: name it, appoint its Commander or Admiral on the spot, choose a folder (or none), and the card climbs aboard — no more empty deck stopped by \u201cappoint a leader first\u201d.',
-    'Fixed new decks made from a card or from the recommendation flow landing in the Admiral folder even in Commander mode — they now carry their format from birth.'
+    'Choosing a printing now repaints every tile of that card that is already on screen — no more waiting for a restart before search results show the new art.',
+    'The folder question when creating a new deck now shows each folder\u2019s small icon next to its name instead of spelling the icon out as a word.',
+    'Fixed a brief flash of the previous card when swiping through the card sheet — a slow-arriving printing lookup can no longer repaint a card you have already swiped past.'
   ],
   nl: [
-    'Een nieuw deck vanaf een kaart aanmaken doorloopt nu de hele route: naam geven, meteen de Commander of Admiral aanstellen, een map kiezen (of geen), en de kaart komt aan boord — geen leeg deck meer dat strandt op \u201cstel eerst een leider aan\u201d.',
-    'Opgelost: nieuwe decks vanaf een kaart of via de aanbevelingen belandden in de Admiral-map, ook in Commander-modus — ze dragen nu vanaf hun geboorte het juiste format.'
+    'Een druk kiezen werkt nu elke al zichtbare tegel van die kaart meteen bij — geen herstart meer nodig voordat zoekresultaten de nieuwe art tonen.',
+    'De mapvraag bij een nieuw deck toont nu het kleine icoon van elke map naast de naam, in plaats van het icoon als woord uit te schrijven.',
+    'Opgelost: een korte flits van de vorige kaart bij het swipen door het kaartvenster — een traag binnenkomende drukopzoeking kan een kaart waar je al voorbij bent niet meer terugtekenen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8838,7 +8852,7 @@ function openFolderPickPopup(d, onPick){
     <h4>Put ${escapeHtml(d.name)} in a folder?</h4>
     <div class="deckpick-list">
       <button class="dp-row" data-fid=""><div class="dp-txt">No folder<div class="dp-meta">${escapeHtml(d.name)} stays loose in the fleet list</div></div></button>
-      ${flds.map(f=>`<button class="dp-row" data-fid="${f.id}"><div class="dp-txt">${escapeHtml(f.icon||'')} ${escapeHtml(folderPath(f.id).map(x=>x.name).join(' / '))}</div></button>`).join('')}
+      ${flds.map(f=>`<button class="dp-row" data-fid="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,20)}</span><span class="dp-txt" style="display:inline;">${escapeHtml(folderPath(f.id).map(x=>x.name).join(' / '))}</span></button>`).join('')}
     </div>
     <button class="dp-cancel" id="fpCancel">Skip</button>
   </div>`;
@@ -8975,8 +8989,11 @@ function openCardInfo(card, opts){
     const pp = printPrefFor(card);
     if(pp){
       opts._ppApplied = true;
+      // Generation guard: if the person swipes on before this arrives, a late
+      // resolve must not flash the old card back onto the sheet.
+      const myGen = _cardSheetGen;
       sfFetch(SF_BASE + '/cards/' + pp.id).then(r=> r.ok ? r.json() : null).then(full=>{
-        if(full && full.name === card.name && document.getElementById('cardSheetOverlay'))
+        if(full && full.name === card.name && _cardSheetGen === myGen && document.getElementById('cardSheetOverlay'))
           openCardInfo(full, Object.assign({}, opts, { _replace: true }));
       }).catch(()=>{});
     }
