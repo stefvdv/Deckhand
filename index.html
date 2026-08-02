@@ -2013,17 +2013,44 @@ function reconcilePartner(d){
     toast(`${p.name} no longer pairs and a copy was already in the deck.`);
   }
 }
+/* ---- remembered printing preference ----
+   Choosing a printing (card sheet or deck picker) is remembered app-wide by
+   card name: every tile and sheet shows that printing from then on. Stored
+   slim — just the print id and two image sizes — so quota stays untouched. */
+function _printPrefs(){
+  if(!state._printPrefs){
+    try{ state._printPrefs = JSON.parse(localStorage.getItem(LS_PREFIX+'printPrefs')||'{}') || {}; }
+    catch(e){ state._printPrefs = {}; }
+  }
+  return state._printPrefs;
+}
+function printPrefFor(card){
+  if(!card || !card.name) return null;
+  const p = _printPrefs()[card.name];
+  return (p && p.id && p.id !== card.id && p.i) ? p : null;
+}
+function setPrintPref(chosen){
+  if(!chosen || !chosen.name || !chosen.id) return;
+  const iu = chosen.image_uris || (chosen.card_faces && chosen.card_faces[0] && chosen.card_faces[0].image_uris) || null;
+  if(!iu) return;
+  const prefs = _printPrefs();
+  prefs[chosen.name] = { id: chosen.id, i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
+  try{ localStorage.setItem(LS_PREFIX+'printPrefs', JSON.stringify(prefs)); }catch(e){}
+}
 function cardImage(card){
+  const pp = printPrefFor(card); if(pp) return pp.i.s || pp.i.n;
   if(card.image_uris) return card.image_uris.small || card.image_uris.normal;
   if(card.card_faces && card.card_faces[0].image_uris) return card.card_faces[0].image_uris.small || card.card_faces[0].image_uris.normal;
   return '';
 }
 function cardImageMed(card){
+  const pp = printPrefFor(card); if(pp) return pp.i.n || pp.i.s;
   if(card.image_uris) return card.image_uris.normal || card.image_uris.large || card.image_uris.small;
   if(card.card_faces && card.card_faces[0].image_uris) return card.card_faces[0].image_uris.normal || card.card_faces[0].image_uris.small;
   return '';
 }
 function cardImageLarge(card){
+  const pp = printPrefFor(card); if(pp) return pp.i.n || pp.i.s;
   if(card.image_uris) return card.image_uris.normal || card.image_uris.large;
   if(card.card_faces && card.card_faces[0].image_uris) return card.card_faces[0].image_uris.normal;
   return '';
@@ -2935,13 +2962,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.188';
+const APP_VERSION = '2.51.190';
 const CHANGELOG_NOTES = {
   en: [
-    'Fixed the \u201cworks the first time, never again\u201d EDHREC bug: cached play-data pages were stored double-wrapped on disk, so every later visit read the wrapper instead of the data and fell back to synergy picks. Reads now unwrap and permanently repair old records, and the same flaw silently disabling the search and rules caches is fixed too.'
+    'Creating a new deck from a card now walks the whole plank: name it, appoint its Commander or Admiral on the spot, choose a folder (or none), and the card climbs aboard — no more empty deck stopped by \u201cappoint a leader first\u201d.',
+    'Fixed new decks made from a card or from the recommendation flow landing in the Admiral folder even in Commander mode — they now carry their format from birth.'
   ],
   nl: [
-    'De \u201cwerkt \u00e9\u00e9n keer, daarna nooit meer\u201d EDHREC-bug opgelost: gecachte speeldata-pagina\u2019s stonden dubbel verpakt op schijf, waardoor elk later bezoek de verpakking las in plaats van de data en terugviel op synergiekeuzes. Lezen pakt oude records nu uit en repareert ze blijvend, en dezelfde fout die de zoek- en regelcache stilletjes uitschakelde is ook verholpen.'
+    'Een nieuw deck vanaf een kaart aanmaken doorloopt nu de hele route: naam geven, meteen de Commander of Admiral aanstellen, een map kiezen (of geen), en de kaart komt aan boord — geen leeg deck meer dat strandt op \u201cstel eerst een leider aan\u201d.',
+    'Opgelost: nieuwe decks vanaf een kaart of via de aanbevelingen belandden in de Admiral-map, ook in Commander-modus — ze dragen nu vanaf hun geboorte het juiste format.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8086,6 +8115,7 @@ function openPrintingPicker(d, card, loc, idx){
     else if(loc==='partner') d.partner = chosen;
     else if(loc==='maybe') d.maybeboard[idx] = chosen;
     else d.cards[idx] = chosen;
+    setPrintPref(chosen);   // remembered app-wide: every tile shows this printing now
     scheduleSave(d);
     // Picking a printing finishes the errand: close the card sheet too and
     // land back on the deck list, where the confirmation and new art show.
@@ -8795,6 +8825,30 @@ function deckPickRowsHtml(){
   const oth = state.decksIndex.filter(x=>deckFormat(x)!==appMode()).slice().sort(byEdit);
   return cur.map(row).join('') + (oth.length ? `<div class="dp-sect">${isCmdrMode() ? 'Admiral' : 'Commander'} decks</div>` + oth.map(row).join('') : '');
 }
+/* ---- folder chooser for a freshly created deck ----
+   Same visual language as the deck picker: No folder first, then every
+   folder of the deck's own format with its full path. Tapping outside or
+   Skip simply means no folder — the flow always continues. */
+function openFolderPickPopup(d, onPick){
+  document.getElementById('folderPickScrim')?.remove();
+  const flds = (state.folders||[]).filter(f=>folderFormat(f)===deckFormat(d));
+  const el = document.createElement('div');
+  el.className = 'deckpick-scrim'; el.id = 'folderPickScrim';
+  el.innerHTML = `<div class="deckpick">
+    <h4>Put ${escapeHtml(d.name)} in a folder?</h4>
+    <div class="deckpick-list">
+      <button class="dp-row" data-fid=""><div class="dp-txt">No folder<div class="dp-meta">${escapeHtml(d.name)} stays loose in the fleet list</div></div></button>
+      ${flds.map(f=>`<button class="dp-row" data-fid="${f.id}"><div class="dp-txt">${escapeHtml(f.icon||'')} ${escapeHtml(folderPath(f.id).map(x=>x.name).join(' / '))}</div></button>`).join('')}
+    </div>
+    <button class="dp-cancel" id="fpCancel">Skip</button>
+  </div>`;
+  document.body.appendChild(el);
+  let settled = false;
+  const done = (fid)=>{ if(settled) return; settled = true; el.remove(); onPick(fid||null); };
+  el.addEventListener('click', e=>{ if(e.target===el) done(null); });
+  document.getElementById('fpCancel').addEventListener('click', ()=>done(null));
+  el.querySelectorAll('.dp-row').forEach(b=>b.addEventListener('click', ()=>done(b.dataset.fid||null)));
+}
 function openDeckPickPopup(card, mode, refreshFn, pairWith){
   closeDeckPickPopup();
   const nm = pairWith ? `${card.name} & ${pairWith.name}` : card.name;
@@ -8828,10 +8882,25 @@ function openDeckPickPopup(card, mode, refreshFn, pairWith){
         closeDeckPickPopup();
         openInAppPrompt('New deck', 'Deck name', '', name=>{
           if(name === null) return;   // cancelled
-          const nd = { id: uid(), name: (name||'').trim() || 'Untitled Fleet', admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', folderId: null, createdAt: Date.now(), updatedAt: Date.now() };
-          state.decksIndex.unshift(nd);
-          persistDeck(nd);
-          act(nd);
+          // Born with its format stamped — an unstamped deck reads as Admiral
+          // and strands a Commander deck in the wrong fleet folder.
+          const nd = { id: uid(), name: (name||'').trim() || 'Untitled Fleet', format: appMode(), admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', folderId: null, createdAt: Date.now(), updatedAt: Date.now() };
+          // A deck can't take cards without a leader, so appoint one right
+          // away, then offer a folder, then the card climbs aboard. Backing
+          // out of the appoint step leaves no empty deck husk behind.
+          openAppointSearch(nd, (leader)=>{
+            nd.admiral = leader;
+            logDeckChange(nd, {type:'admiral', name: leader.name, card: leader});
+            const commit = (folderId)=>{
+              nd.folderId = folderId || null;
+              state.decksIndex.unshift(nd);
+              persistDeck(nd);
+              toast(`${leader.name} takes command of ${nd.name}.`);
+              act(nd);
+            };
+            const flds = (state.folders||[]).filter(f=>folderFormat(f)===deckFormat(nd));
+            if(flds.length) openFolderPickPopup(nd, commit); else commit(null);
+          });
         });
         return;
       }
@@ -8899,6 +8968,19 @@ function attachSwipeNav(el, onNext, onPrev){
 function openCardInfo(card, opts){
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   opts = opts || {};
+  // A remembered printing upgrades the sheet to that exact printing — art,
+  // set line, and price all agree. The original shows while it loads; the
+  // sheet re-renders in place when the preferred one arrives.
+  if(!opts._ppApplied){
+    const pp = printPrefFor(card);
+    if(pp){
+      opts._ppApplied = true;
+      sfFetch(SF_BASE + '/cards/' + pp.id).then(r=> r.ok ? r.json() : null).then(full=>{
+        if(full && full.name === card.name && document.getElementById('cardSheetOverlay'))
+          openCardInfo(full, Object.assign({}, opts, { _replace: true }));
+      }).catch(()=>{});
+    }
+  }
   const colIdx = (opts.colIdx != null) ? opts.colIdx : null;
   // A sheet is already up (double-fired tap, stray caller): replace its
   // contents rather than stacking a phantom entry that eats a back press.
@@ -9033,8 +9115,9 @@ function openCardInfo(card, opts){
    Collection carry that exact printing onward. */
 function openPrintingBrowse(card, opts){
   openPrintingGrid(card, (chosen)=>{
+    setPrintPref(chosen);   // remembered app-wide: every tile shows this printing now
     toast(`Now showing the ${chosen.set_name} printing.`);
-    openCardInfo(chosen, Object.assign({}, opts||{}, { _replace: true }));
+    openCardInfo(chosen, Object.assign({}, opts||{}, { _replace: true, _ppApplied: true }));
   });
 }
 
@@ -11883,7 +11966,7 @@ function createDeckFromReco(){
   openInAppPrompt('Name your new deck', 'Deck name', `${R.admiral.name}'s Fleet`, (name)=>{
     if(name === null) return;   // cancelled
     const picks = R.pool.filter(c=>R.selected.has(c.name));
-    const d = { id: uid(), name: (name.trim() || `${R.admiral.name}'s Fleet`), admiral: R.admiral, partner: R.partner || null, cards: [], maybeboard: [], tags: {}, primer: '', createdAt: Date.now(), updatedAt: Date.now() };
+    const d = { id: uid(), name: (name.trim() || `${R.admiral.name}'s Fleet`), admiral: R.admiral, partner: R.partner || null, cards: [], maybeboard: [], tags: {}, primer: '', format: appMode(), createdAt: Date.now(), updatedAt: Date.now() };
     state.decksIndex.unshift(d);
     logDeckChange(d, {type:'admiral', name:R.admiral.name, card:R.admiral, prev:null});
     if(R.partner) logDeckChange(d, {type:'admiral', name:R.partner.name, card:R.partner, prev:null});
