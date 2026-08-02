@@ -2974,17 +2974,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.191';
+const APP_VERSION = '2.51.192';
 const CHANGELOG_NOTES = {
   en: [
-    'Choosing a printing now repaints every tile of that card that is already on screen — no more waiting for a restart before search results show the new art.',
-    'The folder question when creating a new deck now shows each folder\u2019s small icon next to its name instead of spelling the icon out as a word.',
-    'Fixed a brief flash of the previous card when swiping through the card sheet — a slow-arriving printing lookup can no longer repaint a card you have already swiped past.'
+    'Swiping quickly through the card sheet can no longer flash an earlier card — a slow swipe lookup that arrives after a newer one is now dropped instead of drawn.',
+    'Adding a card to a trade now returns straight to the trade overview after choosing the printing, with the new card already on the table.'
   ],
   nl: [
-    'Een druk kiezen werkt nu elke al zichtbare tegel van die kaart meteen bij — geen herstart meer nodig voordat zoekresultaten de nieuwe art tonen.',
-    'De mapvraag bij een nieuw deck toont nu het kleine icoon van elke map naast de naam, in plaats van het icoon als woord uit te schrijven.',
-    'Opgelost: een korte flits van de vorige kaart bij het swipen door het kaartvenster — een traag binnenkomende drukopzoeking kan een kaart waar je al voorbij bent niet meer terugtekenen.'
+    'Snel swipen door het kaartvenster kan geen eerdere kaart meer laten opflitsen — een trage swipe-opzoeking die na een nieuwere binnenkomt wordt nu genegeerd in plaats van getekend.',
+    'Een kaart aan een ruil toevoegen keert na het kiezen van de druk nu direct terug naar het ruiloverzicht, met de nieuwe kaart al op tafel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9119,8 +9117,11 @@ function openCardInfo(card, opts){
       if(n < 0 || n >= wpool.length) return;
       try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
       try{
+        // Generation guard: with two quick swipes, the earlier fetch can land
+        // after the later one — a stale resolve must never repaint the sheet.
+        const myGen = _cardSheetGen;
         const r = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(wpool[n])}`);
-        if(r.ok) openCardInfo(await r.json(), Object.assign({}, opts, { wantName: wpool[n], wantIdx: n, _replace: true }));
+        if(r.ok && _cardSheetGen === myGen) openCardInfo(await r.json(), Object.assign({}, opts, { wantName: wpool[n], wantIdx: n, _replace: true }));
       }catch(e){}
     };
     attachSwipeNav(el, ()=>go(1), ()=>go(-1));
@@ -9446,8 +9447,10 @@ function openTradePrints(side, card){
     state.trade[side].push({ name: chosen.name, set: chosen.set, set_name: chosen.set_name||'', cn: chosen.collector_number||'', img: cardImage(chosen), wb: chosen.border_color==='white'?1:0, eur: printEur(chosen), qty: 1, type_line: chosen.type_line||'', colors: chosen.colors || chosen.color_identity || [], rarity: chosen.rarity||'' });
     saveTrade();
     toast(trS('Added to trade.'));
-    // The chooser already closed — the search overlay beneath is live again
-    // for the next card.
+    // The chooser already closed itself; closing the search overlay beneath
+    // as well lands back on the trade overview, freshly rendered with the
+    // new card on the table.
+    closeTopOverlay();
   });
 }
 
