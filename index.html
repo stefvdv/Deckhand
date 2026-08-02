@@ -2974,15 +2974,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.192';
+const APP_VERSION = '2.51.193';
 const CHANGELOG_NOTES = {
   en: [
-    'Swiping quickly through the card sheet can no longer flash an earlier card — a slow swipe lookup that arrives after a newer one is now dropped instead of drawn.',
-    'Adding a card to a trade now returns straight to the trade overview after choosing the printing, with the new card already on the table.'
+    'The last source of the card-sheet flash is gone: the language-localized image lookup could still paint an earlier card\u2019s art (and even its printed text) over a newer card during fast swiping. It now verifies it is still talking to the same sheet before touching anything, and stale lookups are dropped.'
   ],
   nl: [
-    'Snel swipen door het kaartvenster kan geen eerdere kaart meer laten opflitsen — een trage swipe-opzoeking die na een nieuwere binnenkomt wordt nu genegeerd in plaats van getekend.',
-    'Een kaart aan een ruil toevoegen keert na het kiezen van de druk nu direct terug naar het ruiloverzicht, met de nieuwe kaart al op tafel.'
+    'De laatste bron van de kaartvenster-flits is weg: de taalgelokaliseerde afbeeldingsopzoeking kon bij snel swipen nog de art (en zelfs de gedrukte tekst) van een eerdere kaart over een nieuwere heen tekenen. Er wordt nu gecontroleerd of het nog om hetzelfde venster gaat voordat er iets wordt aangeraakt; verouderde opzoekingen worden genegeerd.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4813,16 +4811,22 @@ async function localizedCardData(card){
 }
 function applyLocalizedSheetImage(card, imgId){
   if(!CARD_LANGS.has(appLang())) return;
+  // Identity anchors: the exact DOM nodes as they exist right now. Every
+  // sheet render replaces these nodes (same ids, new elements), so a slow
+  // localized lookup for an earlier card fails the identity check below and
+  // is dropped — it can never paint its art or text onto a newer card.
+  const imgAnchor = document.getElementById(imgId);
+  const oracleAnchor = document.getElementById('sheetOracle');
   localizedCardData(card).then(loc=>{
     if(!loc) return;
     if(loc.img){
       const el = document.getElementById(imgId);
-      if(el && el.alt !== undefined) el.src = loc.img;
+      if(el && el === imgAnchor && el.alt !== undefined) el.src = loc.img;
     }
     // Printed Oracle text replaces the English text ONLY when this card was
     // actually printed in the chosen language with text to show.
     const box = document.getElementById('sheetOracle');
-    if(box && loc.faces && loc.faces.some(f=>f.text)){
+    if(box && box === oracleAnchor && loc.faces && loc.faces.some(f=>f.text)){
       const enFaces = (card.card_faces && card.card_faces.length) ? card.card_faces : [card];
       box.querySelectorAll('.oracle-face').forEach((faceEl, i)=>{
         const lf = loc.faces[i], ef = enFaces[i] || {};
