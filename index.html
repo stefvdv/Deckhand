@@ -921,6 +921,10 @@ main.has-dock{padding-bottom:84px;}
    section's label pushes it out — classic sticky headers, scoped per
    section. Solid backing so it stays readable over the tiles. */
 .edh-sec > .section-label{position:sticky;top:66px;z-index:5;background:var(--bg,#2A1014);padding:6px 2px;}
+/* Overlays scroll inside <main>, whose top edge already sits under the
+   overlay topbar — the 66px offset above is browse-page tuning (under the
+   app nav) and pins the label mid-screen there. Hug the scrollport instead. */
+.overlay main .edh-sec > .section-label{top:0;}
 .edh-jump-row{top:70px;}
 .reco-theme-banner{width:fit-content;margin:0 auto 8px;padding:6px 14px;border:1px solid var(--brass);border-radius:999px;color:var(--brass);font-size:13px;font-weight:600;text-align:center;}
 #tileMenuPop{max-height:70vh;overflow-y:auto;}
@@ -2974,15 +2978,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.198';
+const APP_VERSION = '2.51.199';
 const CHANGELOG_NOTES = {
   en: [
-    'Leader recommendations now come in EDHREC\u2019s own sections — Top Cards, High Synergy Cards, Creatures, Instants, and the rest — with section names staying pinned at the top while you scroll and a \u2630 button to jump straight to any section, just like the Inspiration browse page. Long sections open a dozen cards deep with a Show-all button.',
-    'Fixed themed leader pages getting stuck on the spinner: opening a leader from a theme or Kindred page now always hands off cleanly into the themed list, fresh or from cache.'
+    'The pinned section names on the recommendations page now sit snugly under the title bar instead of floating a bar-height too low over the cards.'
   ],
   nl: [
-    'Leider-aanbevelingen komen nu in EDHREC\u2019s eigen secties — Topkaarten, Hoge-synergie kaarten, Wezens, Instants en de rest — met sectienamen die bovenaan blijven staan tijdens het scrollen en een \u2630-knop om direct naar een sectie te springen, net als de Inspiratie-bladerpagina. Lange secties openen twaalf kaarten diep met een Toon-alles-knop.',
-    'Opgelost: thema-leiderpagina\u2019s die op de spinner bleven hangen — een leider openen vanaf een thema- of Kindred-pagina gaat nu altijd netjes door naar de themalijst, vers of uit de cache.'
+    'De vastgezette sectienamen op de aanbevelingenpagina zitten nu strak onder de titelbalk in plaats van een balkhoogte te laag over de kaarten te zweven.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
