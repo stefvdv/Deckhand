@@ -2075,6 +2075,14 @@ function cardImageMed(card){
   if(card.card_faces && card.card_faces[0].image_uris) return card.card_faces[0].image_uris.normal || card.card_faces[0].image_uris.small;
   return '';
 }
+function cardImageLargeRaw(card){
+  if(card.image_uris) return card.image_uris.normal || card.image_uris.large;
+  if(card.card_faces && card.card_faces[0] && card.card_faces[0].image_uris){
+    const iu = card.card_faces[0].image_uris;
+    return iu.normal || iu.large;
+  }
+  return '';
+}
 function cardImageLarge(card){
   const pp = printPrefFor(card); if(pp) return pp.i.n || pp.i.s;
   if(card.image_uris) return card.image_uris.normal || card.image_uris.large;
@@ -2988,17 +2996,19 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.202';
+const APP_VERSION = '2.51.203';
 const CHANGELOG_NOTES = {
   en: [
-    'Card pages reorganized: one clear button grid per context, each action with its own icon.',
-    'Recommendations replaces \u201cPlayed with this\u201d, now also on deck and collection cards.',
-    'New share icon, and Share on every card page.'
+    'Collection cards open instantly; details fill in as they load.',
+    'A collection copy always shows its own printing on the card page.',
+    'Back-to-exit confirmation made stubborn against Chrome\u2019s history skipping.',
+    'Similar cards now also weighs shared rules wording, strongest matches first.'
   ],
   nl: [
-    'Kaartpagina\u2019s herschikt: \u00e9\u00e9n duidelijk knoppenrooster per context, elke actie met eigen icoon.',
-    'Aanbevelingen vervangt \u201cHiermee gespeeld\u201d, nu ook op deck- en collectiekaarten.',
-    'Nieuw deel-icoon, en Delen op elke kaartpagina.'
+    'Collectiekaarten openen direct; details vullen zich in tijdens het laden.',
+    'Een collectie-exemplaar toont op de kaartpagina altijd zijn eigen druk.',
+    'Terug-om-af-te-sluiten-bevestiging bestand gemaakt tegen Chrome\u2019s geschiedenis-overslaan.',
+    'Vergelijkbare kaarten weegt nu ook gedeelde regeltekst mee, sterkste eerst.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5314,13 +5324,23 @@ function openWantSheet(name){
 async function openCollectionCard(idx, pool){
   const it = state.collection.items[idx];
   if(!it) return;
+  const colOpts = { colIdx: idx, colPool: Array.isArray(pool) ? pool : null, colPoolIdx: Array.isArray(pool) ? pool.indexOf(idx) : -1 };
+  // Open INSTANTLY from what the copy already knows — name, art, set line —
+  // then upgrade in place when the full card arrives. The first tap of a
+  // session used to wait behind the whole startup fetch queue in silence.
+  if(it.img){
+    openCardInfo({ name: it.name, set: it.set || '', set_name: it.set_name || (it.set||'').toUpperCase(), collector_number: it.cn || '', border_color: it.border_color, image_uris: { small: it.img, normal: it.img, large: it.img } }, colOpts);
+  }
   let card = null;
   try{
     if(it.set && it.cn){ const r = await sfFetch(`${SF_BASE}/cards/${it.set}/${encodeURIComponent(it.cn)}`); if(r.ok) card = await r.json(); }
     if(!card){ const r2 = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(it.name)}`); if(r2.ok) card = await r2.json(); }
   }catch(e){}
-  if(card) openCardInfo(card, { colIdx: idx, colPool: Array.isArray(pool) ? pool : null, colPoolIdx: Array.isArray(pool) ? pool.indexOf(idx) : -1 });
-  else openColItemSheet(idx);   // offline / not found — fall back to the manage sheet
+  if(card){
+    // Only upgrade if the sheet is still showing this copy.
+    if(!it.img || (document.getElementById('cardSheetOverlay') && state._colSheetIdx === idx)) openCardInfo(card, Object.assign({}, colOpts, it.img ? { _replace: true } : {}));
+  }
+  else if(!it.img) openColItemSheet(idx);   // offline / not found — fall back to the manage sheet
 }
 function openColItemSheet(idx){
   const it = state.collection.items[idx];
@@ -9026,7 +9046,9 @@ function openCardInfo(card, opts){
   // A remembered printing upgrades the sheet to that exact printing — art,
   // set line, and price all agree. The original shows while it loads; the
   // sheet re-renders in place when the preferred one arrives.
-  if(!opts._ppApplied){
+  // A collection copy is a physical printing — never "upgrade" it to the
+  // remembered one; that made the sheet disagree with the binder tile.
+  if(!opts._ppApplied && colIdx == null){
     const pp = printPrefFor(card);
     if(pp){
       opts._ppApplied = true;
@@ -9040,6 +9062,7 @@ function openCardInfo(card, opts){
     }
   }
   const colIdx = (opts.colIdx != null) ? opts.colIdx : null;
+  state._colSheetIdx = colIdx;
   // A sheet is already up (double-fired tap, stray caller): replace its
   // contents rather than stacking a phantom entry that eats a back press.
   if(!opts._replace && document.getElementById('cardSheetOverlay')) opts._replace = true;
@@ -9055,7 +9078,7 @@ function openCardInfo(card, opts){
     <div class="topbar"><button class="icon-btn" id="csClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
-        <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
+        <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${isUBCard(card)?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''} · <a href="https://edhrec.com/cards/${encodeURIComponent(String(card.name).split(' // ')[0].toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-'))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">EDHREC ↗</a></div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
@@ -9082,7 +9105,7 @@ function openCardInfo(card, opts){
     </main>
   </div>`;
   document.getElementById('csClose').addEventListener('click', closeTopOverlay);
-  document.getElementById('ciImg').addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
+  document.getElementById('ciImg').addEventListener('click', ()=>showPreview(colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'ciImg');
   document.getElementById('ciReco')?.addEventListener('click', ()=>{
     if(pinned) openCardReco(card, pinned);
@@ -9503,6 +9526,17 @@ function shareCardLink(card){
    the card DOES (same engine as Budget alternatives, minus the price cap),
    and EDHREC play-rank orders every result. Colored cards stay inside their
    own identity; colorless cards compete across all identities. */
+/* Shared MTG-language vocabulary: keywords, zones, and game verbs. Pure
+   client-side string matching on candidates already in hand — adds no
+   network time to Similar cards. */
+const MTG_LANG = ['whenever','when','each opponent','opponent','each player','you control','cast','noncreature','creature','draw','discard','exile','destroy','counter target','sacrifice','search your library','return','create','copy','scry','surveil','mill','tap','untap','attack','block','pay','token','treasure','clue','graveyard','battlefield','library','hand','damage','gain life','life','+1/+1','-1/-1','proliferate','flying','first strike','double strike','deathtouch','lifelink','haste','vigilance','trample','menace','reach','defender','hexproof','ward','indestructible','flash','prowess','landfall','cascade','equip','enchant','add {'];
+function oracleTermSet(card){
+  const faces = (card.card_faces && card.card_faces.length) ? card.card_faces : [card];
+  const t = faces.map(f=>f.oracle_text||'').join(' ').toLowerCase();
+  const s = new Set();
+  for(const k of MTG_LANG) if(t.includes(k)) s.add(k);
+  return s;
+}
 async function openSimilarCards(card){
   pushOverlay('similar', ()=>{ document.getElementById('similarOverlay')?.remove(); });
   let el = document.getElementById('similarOverlay');
@@ -9539,8 +9573,10 @@ async function openSimilarCards(card){
             pools[tag] = ((r&&r.results)||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
           }catch(e){ pools[tag] = []; }
         }, 3);
-        // Rank: how many of this card's jobs a candidate shares, then EDHREC
-        // play order within that (its best position across the pools).
+        // Rank: shared function tags first, then shared MTG-language wording
+        // (whenever / opponent / draw / pay …), then EDHREC play order — so
+        // the closest cousins surface first and the strongest of them lead.
+        const srcTerms = oracleTermSet(card);
         const cand = new Map();
         Object.values(pools).forEach(arr=>arr.forEach((x,i)=>{
           if(x.name === card.name) return;
@@ -9548,7 +9584,12 @@ async function openSimilarCards(card){
           if(e){ e.n++; e.best = Math.min(e.best, i); }
           else cand.set(x.name, { x, n: 1, best: i });
         }));
-        ranked = Array.from(cand.values()).sort((a,b)=> (b.n - a.n) || (a.best - b.best)).map(e=>e.x);
+        cand.forEach(e=>{
+          let o = 0; const ts = oracleTermSet(e.x);
+          srcTerms.forEach(k=>{ if(ts.has(k)) o++; });
+          e.o = o;
+        });
+        ranked = Array.from(cand.values()).sort((a,b)=> (b.n - a.n) || ((b.o||0) - (a.o||0)) || (a.best - b.best)).map(e=>e.x);
       }
       if(!ranked.length){
         // No curated tags for this one — fall back to its closest kin by type.
@@ -13335,12 +13376,17 @@ try{
   history.replaceState({exitGuard:true}, '', '#home');
   history.pushState({screen:'home'}, '', '#home');
 }catch(e){}
-// Chrome may skip history entries created without a user gesture when the
-// hardware back button picks a landing spot — which can leap straight past
-// the exit guard and close the app unasked. The first real touch pushes an
-// activation-backed rung above the guard so back always has a legal step.
+// Chrome's hardware back skips history entries created without a user
+// gesture — the whole boot-time stack qualifies, so back could leap past
+// the exit guard and close the app unasked. The first real touch therefore
+// pushes a GUARD entry and the current screen, both activation-backed:
+// hardware back must land on that guard and gets the confirm dialog, while
+// the Exit drain (JS history.back()) ignores skippability entirely.
 window.addEventListener('pointerdown', ()=>{
-  try{ history.pushState({screen: state.screen||'home', folder: state.folderNav||null}, '', '#'+(state.screen||'home')); }catch(e){}
+  try{
+    history.pushState({exitGuard:true}, '', '#home');
+    history.pushState({screen: state.screen||'home', folder: state.folderNav||null}, '', '#'+(state.screen||'home'));
+  }catch(e){}
 }, { once:true, capture:true });
 // Shared card links (…/?card=Name) open that card once the app settles;
 // the query is stripped immediately so a refresh doesn't reopen it.
