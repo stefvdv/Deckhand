@@ -2996,19 +2996,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.203';
+const APP_VERSION = '2.51.204';
 const CHANGELOG_NOTES = {
   en: [
-    'Collection cards open instantly; details fill in as they load.',
-    'A collection copy always shows its own printing on the card page.',
-    'Back-to-exit confirmation made stubborn against Chrome\u2019s history skipping.',
-    'Similar cards now also weighs shared rules wording, strongest matches first.'
+    'Fixed card pages failing to open outside deck lists.'
   ],
   nl: [
-    'Collectiekaarten openen direct; details vullen zich in tijdens het laden.',
-    'Een collectie-exemplaar toont op de kaartpagina altijd zijn eigen druk.',
-    'Terug-om-af-te-sluiten-bevestiging bestand gemaakt tegen Chrome\u2019s geschiedenis-overslaan.',
-    'Vergelijkbare kaarten weegt nu ook gedeelde regeltekst mee, sterkste eerst.'
+    'Opgelost: kaartpagina\u2019s openden niet buiten decklijsten.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9048,7 +9042,7 @@ function openCardInfo(card, opts){
   // sheet re-renders in place when the preferred one arrives.
   // A collection copy is a physical printing — never "upgrade" it to the
   // remembered one; that made the sheet disagree with the binder tile.
-  if(!opts._ppApplied && colIdx == null){
+  if(!opts._ppApplied && opts.colIdx == null){
     const pp = printPrefFor(card);
     if(pp){
       opts._ppApplied = true;
