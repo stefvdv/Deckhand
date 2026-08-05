@@ -3169,13 +3169,19 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.227';
+const APP_VERSION = '2.51.228';
 const CHANGELOG_NOTES = {
   en: [
-    'Exiting works reliably now: with the Exit question showing, ONE back press closes the app; Cancel keeps you in with all guards restored.'
+    'Bulk Edit shows the maybeboard under a MAYBEBOARD: line \u2014 and saves it back exactly as written.',
+    'Imports route Sideboard/Maybeboard sections into the maybeboard automatically.',
+    'A lone eligible card set apart by a blank line at the top of a paste becomes the leader.',
+    'The Exit button now closes the app where the platform allows it.'
   ],
   nl: [
-    'Afsluiten werkt nu betrouwbaar: met de afsluitvraag in beeld sluit \u00E9\u00E9n terugdruk de app; Annuleren houdt je binnen met alle beveiligingen hersteld.'
+    'Bulk bewerken toont het maybeboard onder een MAYBEBOARD:-regel \u2014 en slaat het precies zo weer op.',
+    'Imports zetten Sideboard/Maybeboard-secties automatisch in het maybeboard.',
+    'Een losse geschikte kaart apart gezet door een lege regel bovenaan een plak wordt de leider.',
+    'De afsluitknop sluit de app nu waar het platform het toestaat.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7347,9 +7353,10 @@ function listTabHtml(d){
 function dlPanelHtml(d){
   if(state.dlPanel==='bulk'){
     const lines=[]; if(d.admiral) lines.push(leaderLineLabel(d)+': '+d.admiral.name); if(d.partner) lines.push('PARTNER: '+d.partner.name); { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); }
+    { const mb = ensureMaybeboard(d); if(mb.length){ lines.push('', 'MAYBEBOARD:'); const mm=new Map(); mb.forEach(c=>mm.set(c.name,(mm.get(c.name)||0)+1)); mm.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); } }
     return `<div class="panel-card">
       <div class="panel-h">Bulk Edit</div>
-      <p class="hint">Your whole decklist as text. Edit freely, then save to rebuild the deck. First lines can be <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">${leaderLineLabel(d)}: Card Name</span> and <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">PARTNER: Card Name</span>.</p>
+      <p class="hint">Your whole decklist as text. Edit freely, then save to rebuild the deck. First lines can be <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">${leaderLineLabel(d)}: Card Name</span> and <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">PARTNER: Card Name</span>. Everything under <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">MAYBEBOARD:</span> is the maybeboard.</p>
       <textarea id="bulkText" class="bulk-textarea">${lines.join('\n')}</textarea>
       <button class="primary-btn" id="applyBulkBtn">Check &amp; Save Changes</button>
       <div id="bulkReport"></div>
@@ -8613,7 +8620,6 @@ function stripDeckLineDecorations(nm){
     .trim();
 }
 async function applyTextToDeck(d, raw, reportElId, isImport){
-  const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   let admiralName=null, partnerName=null; const cardNames=[]; const maybeNames=[];
   // Lists arrive in many dialects: "[CREATURES]" sections, "Sorceries:" labels,
   // "// Sideboard" comments, "# Lands" markdown. Any bare category line is a
@@ -8628,6 +8634,33 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     if(/^(deck|main ?board|main|planeswalkers?|creatures?|battles?|instants?|sorcer(?:y|ies)|artifacts?|enchantments?|lands?|spells?|other|tokens?)$/i.test(bare)) return 'main';
     return null;
   };
+  // A lone card (or pair) standing APART at the top — separated from the
+  // list by a blank line, the way Moxfield and friends export — claims the
+  // leader's seat. Only leader-ELIGIBLE cards keep it: if the guess doesn't
+  // hold up at resolution, the card quietly joins the main list instead.
+  const rawLines = raw.split(/\r?\n/).map(l=>l.trim());
+  let isoLeaderNames = [];
+  {
+    let i = 0; while(i < rawLines.length && !rawLines[i]) i++;
+    let j = i; while(j < rawLines.length && rawLines[j]) j++;
+    const block = rawLines.slice(i, j);
+    const rest = rawLines.slice(j).filter(Boolean);
+    const plainName = (l)=>{
+      if(/^(ADMIRAL|COMMANDER|PARTNER):/i.test(l)) return null;
+      if(headerOf(l)) return null;
+      const q = l.match(/^(\d+)x?\s+(.+)$/i);
+      if(q && parseInt(q[1], 10) !== 1) return null;   // "4 Forest" is never a leader
+      return stripDeckLineDecorations(q ? q[2] : l);
+    };
+    if(block.length >= 1 && block.length <= 2 && rest.length >= 5){
+      const names = block.map(plainName);
+      if(names.every(Boolean)){
+        isoLeaderNames = names;
+        rawLines.splice(i, j - i);   // consumed — the loop below never sees them
+      }
+    }
+  }
+  const lines = rawLines.filter(Boolean);
   lines.forEach(l=>{
     const m = l.match(/^(?:ADMIRAL|COMMANDER):\s*(.+)$/i);
     if(m){ admiralName=stripDeckLineDecorations(m[1]); section='main'; return; }
@@ -8648,6 +8681,16 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     const qty = q ? Math.max(1, Math.min(99, parseInt(q[1], 10) || 1)) : 1;
     for(let i = 0; i < qty; i++) (section==='maybe'?maybeNames:cardNames).push(nm);
   });
+  let admiralIsGuess = false, partnerIsGuess = false;
+  if(isoLeaderNames.length){
+    if(!admiralName){
+      admiralName = isoLeaderNames[0]; admiralIsGuess = true;
+      if(isoLeaderNames[1]){
+        if(!partnerName){ partnerName = isoLeaderNames[1]; partnerIsGuess = true; }
+        else cardNames.unshift(isoLeaderNames[1]);
+      }
+    } else cardNames.unshift(...isoLeaderNames);
+  }
   document.getElementById(reportElId).innerHTML = `<div class="status"><div class="spinner"></div>Resolving ${cardNames.length+(admiralName?1:0)} cards…</div>`;
   await resolveLegalSets();
   let newAdmiral = isImport ? null : d.admiral;
@@ -8660,14 +8703,16 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     const r = await resolveCardByName(admiralName);
     if(r && r.found && r.legalPrint && leaderOk(r.card) && (deckFormat(d)!=='commander' ? hasPowerToughness(r.card) : true)){
       newAdmiral = r.card; report.push({name:r.card.name,status:'ok',msg:fmtName(d)+' set'});
-    } else report.push({name:admiralName,status:'bad',msg:'Not usable as '+fmtName(d)});
+    } else if(admiralIsGuess){ cardNames.unshift(admiralName); admiralName = null; }
+    else report.push({name:admiralName,status:'bad',msg:'Not usable as '+fmtName(d)});
   }
   if(partnerName){
     const r = await resolveCardByName(partnerName);
     const lead = newAdmiral || d.admiral;
     if(r && r.found && r.legalPrint && leaderOk(r.card) && lead && canPair(lead, r.card)){
       newPartner = r.card; report.push({name:r.card.name,status:'ok',msg:'Second '+fmtName(d)+' set'});
-    } else report.push({name:partnerName,status:'bad',msg: lead ? ("Can't pair with "+lead.name) : 'No first leader to pair with'});
+    } else if(partnerIsGuess){ cardNames.unshift(partnerName); partnerName = null; }
+    else report.push({name:partnerName,status:'bad',msg: lead ? ("Can't pair with "+lead.name) : 'No first leader to pair with'});
   }
   const effLead = { admiral: newAdmiral || d.admiral, partner: (newPartner!==undefined ? newPartner : d.partner) || null, format: d.format };
   if(effLead.partner && (!effLead.admiral || !canPair(effLead.admiral, effLead.partner))) effLead.partner = null;
@@ -8718,14 +8763,17 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     }
     if(newAdmiral && (!d.admiral || d.admiral.name!==newAdmiral.name)) logDeckChange(d, {type:'admiral', name:newAdmiral.name, card:newAdmiral, prev:d.admiral||null});
   }
-  // Resolve any sideboard/maybeboard cards and route them to the maybeboard.
-  let newMaybe = isImport ? [] : (d.maybeboard || []);
+  // The maybe section in the text IS the maybeboard now — Bulk Edit prints
+  // it, so saving replaces it wholesale: deleting a line there removes the
+  // card, exactly like the main list. Imports likewise: SIDEBOARD /
+  // MAYBEBOARD sections land here.
+  let newMaybe = [];
   if(maybeNames.length){
     const mres = await resolveManyByName(maybeNames, null);
-    const collected = isImport ? [] : (d.maybeboard || []).slice();
+    const collected = [];
     mres.forEach(r=>{
       if(r && r.found && r.card){
-        if(!collected.some(x=>x.name===r.card.name)) collected.push(r.card);
+        if(!collected.some(x=>x.name===r.card.name) || allowsDuplicates(r.card)) collected.push(r.card);
         report.push({name:r.card.name,status:'ok',msg:'To Maybeboard'});
       } else {
         report.push({name:(r && r.input) ? r.input : '?', status:'notfound', msg:'Maybeboard: not found'});
@@ -14103,9 +14151,15 @@ window.addEventListener('pointerdown', ()=>{
         state._exitAsk = false;
         if(ok){
           try{ window.close(); }catch(err){}
-          // Where close() is refused we are already parked at the bottom:
-          // a single system back finishes the job — say so.
-          setTimeout(()=>{ if(!document.hidden){ try{ toast(trS('Press back once more to close.')); }catch(err){} } }, 240);
+          setTimeout(()=>{
+            if(document.hidden) return;
+            // Chrome refuses close() for windows it didn't open. Re-opening
+            // the window ONTO ITSELF makes it script-owned — after which
+            // close() is honored. Only if even that is refused does the
+            // toast concede: parked at the bottom, one system back closes.
+            try{ const w = window.open('', '_self'); if(w) w.close(); }catch(err){}
+            setTimeout(()=>{ if(!document.hidden){ try{ toast(trS('Press back once more to close.')); }catch(err){} } }, 180);
+          }, 80);
         } else {
           state._exiting = false;
           arm();   // the Cancel tap carries fresh activation
