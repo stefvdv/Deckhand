@@ -938,8 +938,8 @@ main.has-dock{padding-bottom:84px;}
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
 .overlay main .edh-sec > .section-label{top:0;}
-#recoOverlay .edh-sec > .section-label{top:0;z-index:6;}
-#recoOverlay .edh-jump-row{top:4px;}
+#recoOverlay .edh-sec > .section-label{top:var(--reco-sticky, 0px) !important;z-index:6;}
+#recoOverlay .edh-jump-row{top:calc(var(--reco-sticky, 0px) + 4px) !important;z-index:7;}
 .edh-jump-row{top:70px;}
 .reco-theme-banner{width:fit-content;margin:0 auto 8px;padding:6px 14px;border:1px solid var(--brass);border-radius:999px;color:var(--brass);font-size:13px;font-weight:600;text-align:center;}
 #tileMenuPop{max-height:70vh;overflow-y:auto;}
@@ -3072,15 +3072,21 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.208';
+const APP_VERSION = '2.51.209';
 const CHANGELOG_NOTES = {
   en: [
+    'The pinned section names on recommendation pages now measure their own position every scroll and lock themselves flush under the title bar \u2014 on every device.',
+    'The \u2630 jump button no longer hides behind the pinned section bar.',
+    'The hardware back button now closes an open Advanced-filter panel on the Search and My Collection pages instead of leaving the page.',
     'The spoiler feed now dates late-season reveals honestly: cards Scryfall hasn\u2019t dated yet land on today\u2019s shelf instead of under the last known preview day.',
     'The color chips on theme pages show the app\u2019s own mana symbols with the deck count \u2014 letters and guild names are gone.',
     'My Collection\u2019s Advanced filter now matches the Search page: free-text type, mana-symbol color checkboxes with match modes, and multi-select rarity pills.',
     'Both filter panels gained a price slider \u2014 drag the two thumbs to filter on Cardmarket prices, with the top end open (\u221E).'
   ],
   nl: [
+    'De vastgezette sectienamen op aanbevelingspagina\u2019s meten bij elke scroll hun eigen positie en zetten zichzelf strak onder de titelbalk vast \u2014 op elk toestel.',
+    'De \u2630 springknop verdwijnt niet langer achter de vastgezette sectiebalk.',
+    'De hardware-terugknop sluit nu een geopend Geavanceerd-filterpaneel op de Zoek- en Mijn Collectie-pagina in plaats van de pagina te verlaten.',
     'De spoilerfeed dateert late onthullingen nu eerlijk: kaarten die Scryfall nog geen datum gaf, komen op de plank van vandaag in plaats van onder de laatst bekende previewdag.',
     'De kleurchips op themapagina\u2019s tonen de eigen manasymbolen van de app met het deck-aantal \u2014 letters en gildenamen zijn weg.',
     'Het Geavanceerd filter van Mijn Collectie is nu gelijk aan de Zoekpagina: vrij typeveld, kleurvinkjes met manasymbolen en matchmodes, en meervoudige zeldzaamheidspillen.',
@@ -11909,6 +11915,42 @@ function openAdmiralReco(admiral, partner){
     loadRecoTheme(t);
   }
 }
+/* The reco overlay's sticky section labels have refused every static top
+   offset across three releases — each build showed a different gap under the
+   title bar (one culprit found late: sticky insets position the MARGIN box,
+   and these labels carry margin-top:14px). So stop guessing and measure: on
+   every scroll frame the label that is provably pinned is compared against
+   the topbar's real underside, and any difference is folded into a CSS
+   variable that both the labels and the \u2630 row follow. Whatever creates
+   the offset — margins, borders, future layout changes — the loop cancels it
+   within one frame. */
+function tuneRecoStickyLabels(){
+  const el = document.getElementById('recoOverlay');
+  const inner = el && el.querySelector('.overlay-inner');
+  const scroller = inner && inner.querySelector('main');
+  const bar = inner && inner.querySelector('.topbar');
+  if(!el || !inner || !scroller || !bar || scroller.dataset.stickyTuned) return;
+  scroller.dataset.stickyTuned = '1';
+  let cur = 0, raf = 0;
+  const tune = ()=>{
+    raf = 0;
+    const want = bar.getBoundingClientRect().bottom;
+    for(const L of el.querySelectorAll('.edh-sec > .section-label')){
+      const sec = L.parentElement.getBoundingClientRect();
+      const r = L.getBoundingClientRect();
+      // Only a label whose section spans the pin line is provably stuck —
+      // labels resting in natural flow must not feed the correction.
+      if(sec.top >= want - 4 || sec.bottom <= want + r.height + 6) continue;
+      const delta = r.top - want;
+      if(Math.abs(delta) > 1.5){
+        cur -= delta;
+        inner.style.setProperty('--reco-sticky', cur.toFixed(1) + 'px');
+      }
+      break;
+    }
+  };
+  scroller.addEventListener('scroll', ()=>{ if(!raf) raf = requestAnimationFrame(tune); }, {passive:true});
+}
 function renderRecoOverlay(){
   const el = document.getElementById('recoOverlay');
   const R = state.reco;
@@ -11937,6 +11979,7 @@ function renderRecoOverlay(){
   const p2 = document.getElementById('recoAdmImg2');
   if(p2) p2.addEventListener('click', ()=>showPreview(cardImageLarge(R.partner), R.partner.border_color==='white'));
   document.getElementById('recoCreate').addEventListener('click', openRecoDeckChooser);
+  tuneRecoStickyLabels();
   if(!R.loading) renderRecoBody();
 }
 /* EDHREC integration: the cards ACTUALLY most played with this exact leader,
@@ -13649,6 +13692,25 @@ window.addEventListener('popstate', (e)=>{
   if(state.overlayStack.length){
     const top = state.overlayStack.pop();
     try{ top.closeFn(); }catch(err){ console.error(err); }
+    return;
+  }
+  // An open Advanced-filter panel consumes the back press: close it and stay
+  // put — Search page and My Collection alike. An open dropdown inside the
+  // panel is more transient still and goes first (its own handler below), so
+  // these steps stand aside while one is open.
+  if(!state.openCSelect && state.colAdvOpen && state.screen === 'collection'){
+    state.colAdvOpen = false;
+    const box = document.getElementById('colAdvBox');
+    if(box) box.style.display = 'none';
+    const t = document.getElementById('colAdvToggle');
+    if(t) t.innerHTML = 'Advanced filter \u25BE';
+    try{ history.pushState({screen: state.screen, folder: state.folderNav||null}, '', '#'+state.screen); }catch(err){}
+    return;
+  }
+  if(!state.openCSelect && state.advOpen && state.screen === 'search'){
+    state.advOpen = false;
+    render();
+    try{ history.pushState({screen: state.screen, folder: state.folderNav||null}, '', '#'+state.screen); }catch(err){}
     return;
   }
   // Inside a binder, back returns to the binder overview. Opening a binder
