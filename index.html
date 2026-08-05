@@ -636,6 +636,19 @@ main.has-dock{padding-bottom:84px;}
 
 /* browse page dropdowns */
 .mana-ic{vertical-align:middle;display:inline-block;}
+/* House price range slider: two overlaid thumbs on a brass-filled rail.
+   The top end of the scale is open — the last stop reads ∞ and means
+   "no upper limit", exactly the bol.com pattern in app dress. */
+.pr-slider{margin:4px 0 2px;}
+.pr-vals{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--brass);margin-bottom:4px;}
+.pr-track{position:relative;height:28px;}
+.pr-track input[type=range]{position:absolute;left:0;right:0;top:0;width:100%;height:28px;margin:0;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;}
+.pr-track input[type=range]::-webkit-slider-runnable-track{background:none;border:none;height:28px;}
+.pr-track input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:21px;height:21px;margin-top:3.5px;border-radius:50%;background:var(--brass);border:2px solid rgba(26,18,8,0.9);box-shadow:0 1px 3px rgba(0,0,0,0.55);cursor:pointer;}
+.pr-track input[type=range]::-moz-range-track{background:none;border:none;}
+.pr-track input[type=range]::-moz-range-thumb{pointer-events:auto;width:18px;height:18px;border-radius:50%;background:var(--brass);border:2px solid rgba(26,18,8,0.9);cursor:pointer;}
+.pr-rail{position:absolute;top:50%;left:2px;right:2px;height:4px;transform:translateY(-50%);border-radius:2px;background:var(--field);border:1px solid var(--field-line);}
+.pr-fill{position:absolute;top:50%;height:4px;transform:translateY(-50%);border-radius:2px;background:var(--brass);}
 .typal-tile{cursor:pointer;}
 .st-meta-row{display:flex;align-items:center;justify-content:space-between;gap:5px;}
 .st-meta-row .st-price{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -925,6 +938,8 @@ main.has-dock{padding-bottom:84px;}
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
 .overlay main .edh-sec > .section-label{top:0;}
+#recoOverlay .edh-sec > .section-label{top:0;z-index:6;}
+#recoOverlay .edh-jump-row{top:4px;}
 .edh-jump-row{top:70px;}
 .reco-theme-banner{width:fit-content;margin:0 auto 8px;padding:6px 14px;border:1px solid var(--brass);border-radius:999px;color:var(--brass);font-size:13px;font-weight:600;text-align:center;}
 #tileMenuPop{max-height:70vh;overflow-y:auto;}
@@ -1333,6 +1348,7 @@ let state = {
   searchSetCode: '',
   searchManaCost: '',
   searchRarity: {common:false, uncommon:false, rare:false, mythic:false},
+  searchEurMin: 0, searchEurMax: null,
   searchArtist: '', searchFlavorText: '', searchKeyword: '',
   searchPowOp: '', searchPowVal: '',
   searchTouOp: '', searchTouVal: '',
@@ -1345,7 +1361,9 @@ let state = {
   priceCache: {},
   appMode: 'admiral',
   collection: {binders:[], items:[], wantsExclude:[], wantsManual:[]},
-  colFilter: {q:'', color:'', type:'', set:'', rarity:'', legal:'', binder:null},
+  colFilter: {q:'', type:'', set:'', legal:'', binder:null,
+    colors:{W:false,U:false,B:false,R:false,G:false,C:false}, colorMode:'all',
+    rarity:{common:false, uncommon:false, rare:false, mythic:false}, eurMin:0, eurMax:null},
   colAdvOpen: false,
   _priceRun: 0,
   legalityOpen: false,
@@ -1527,6 +1545,64 @@ function manaIconSvg(c, px){
 }
 function manaRowSvg(letters, px){
   return (letters||'').split('').map(l=>manaIconSvg(l, px)).join('');
+}
+/* ---- Price range slider (Collection filter + Search filters) ----
+   Stops are hand-picked card-price milestones rather than a linear scale, so
+   the interesting €0–€10 stretch gets most of the travel. The final stop is
+   null = no upper limit (shown as ∞). */
+const PRICE_STOPS = [0,0.25,0.5,0.75,1,1.5,2,2.5,3,4,5,7.5,10,12.5,15,20,25,30,40,50,75,100,150,200,300,500,null];
+function priceStopIdx(v){
+  if(v == null) return PRICE_STOPS.length - 1;
+  let best = 0, bd = Infinity;
+  PRICE_STOPS.forEach((p,i)=>{ if(p==null) return; const d = Math.abs(p - v); if(d < bd){ bd = d; best = i; } });
+  return best;
+}
+function priceStopLabel(i){
+  const v = PRICE_STOPS[i];
+  if(v == null) return '\u221E';
+  return '\u20AC' + (v >= 10 ? String(Math.round(v)) : (Math.round(v*100)/100).toString());
+}
+function priceSliderHtml(pid, minV, maxV){
+  const N = PRICE_STOPS.length - 1;
+  const mi = Math.min(priceStopIdx(minV||0), N), ma = priceStopIdx(maxV);
+  return `<div class="pr-slider" id="${pid}">
+    <div class="pr-vals"><span data-prlab-min>${priceStopLabel(mi)}</span><span data-prlab-max>${priceStopLabel(ma)}</span></div>
+    <div class="pr-track">
+      <div class="pr-rail"></div><div class="pr-fill"></div>
+      <input type="range" min="0" max="${N}" step="1" value="${mi}" data-prlo aria-label="Minimum price">
+      <input type="range" min="0" max="${N}" step="1" value="${ma}" data-prhi aria-label="Maximum price">
+    </div>
+  </div>`;
+}
+function wirePriceSlider(pid, onCommit){
+  const box = document.getElementById(pid);
+  if(!box || box.dataset.wired) return;
+  box.dataset.wired = '1';
+  const lo = box.querySelector('[data-prlo]'), hi = box.querySelector('[data-prhi]');
+  const labLo = box.querySelector('[data-prlab-min]'), labHi = box.querySelector('[data-prlab-max]');
+  const fill = box.querySelector('.pr-fill');
+  const N = PRICE_STOPS.length - 1;
+  const paint = ()=>{
+    let a = +lo.value, b = +hi.value;
+    labLo.textContent = priceStopLabel(a);
+    labHi.textContent = priceStopLabel(b);
+    fill.style.left = (a/N*100) + '%';
+    fill.style.width = ((b-a)/N*100) + '%';
+    // Both thumbs parked on the same edge: put the one that can still move on top.
+    lo.style.zIndex = (a === N || (a === b && a > N/2)) ? 5 : 3;
+    hi.style.zIndex = 4;
+  };
+  const clamp = (which)=>{
+    if(+lo.value > +hi.value){
+      if(which === 'lo') hi.value = lo.value; else lo.value = hi.value;
+    }
+  };
+  lo.addEventListener('input', ()=>{ clamp('lo'); paint(); });
+  hi.addEventListener('input', ()=>{ clamp('hi'); paint(); });
+  const commit = ()=>{ onCommit(PRICE_STOPS[+lo.value] || 0, PRICE_STOPS[+hi.value]); };
+  lo.addEventListener('change', commit);
+  hi.addEventListener('change', commit);
+  paint();
 }
 
 const norm = s => (s||'').toLowerCase().replace(/[’'"():.\-]/g,'').replace(/\s+/g,' ').trim();
@@ -2996,15 +3072,19 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.205';
+const APP_VERSION = '2.51.208';
 const CHANGELOG_NOTES = {
   en: [
-    'Manage copy now ends with Save, returning to the refreshed card page.',
-    'Changing a copy\u2019s printing stores that printing\u2019s own art; older mismatched copies heal themselves.'
+    'The spoiler feed now dates late-season reveals honestly: cards Scryfall hasn\u2019t dated yet land on today\u2019s shelf instead of under the last known preview day.',
+    'The color chips on theme pages show the app\u2019s own mana symbols with the deck count \u2014 letters and guild names are gone.',
+    'My Collection\u2019s Advanced filter now matches the Search page: free-text type, mana-symbol color checkboxes with match modes, and multi-select rarity pills.',
+    'Both filter panels gained a price slider \u2014 drag the two thumbs to filter on Cardmarket prices, with the top end open (\u221E).'
   ],
   nl: [
-    'Beheer exemplaar eindigt nu met Opslaan en keert terug naar de ververste kaartpagina.',
-    'Een andere druk kiezen bewaart de art van die druk zelf; oudere afwijkende exemplaren herstellen zichzelf.'
+    'De spoilerfeed dateert late onthullingen nu eerlijk: kaarten die Scryfall nog geen datum gaf, komen op de plank van vandaag in plaats van onder de laatst bekende previewdag.',
+    'De kleurchips op themapagina\u2019s tonen de eigen manasymbolen van de app met het deck-aantal \u2014 letters en gildenamen zijn weg.',
+    'Het Geavanceerd filter van Mijn Collectie is nu gelijk aan de Zoekpagina: vrij typeveld, kleurvinkjes met manasymbolen en matchmodes, en meervoudige zeldzaamheidspillen.',
+    'Beide filterpanelen kregen een prijsschuif \u2014 sleep de twee knoppen om op Cardmarket-prijzen te filteren, met een open bovenkant (\u221E).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3460,6 +3540,7 @@ function resetSearchFilters(){
   state.searchTypeText=''; state.searchOracleText='';
   Object.keys(state.searchRarity).forEach(k=>state.searchRarity[k]=false);
   state.searchKeyword=''; state.searchFlavorText=''; state.searchArtist='';
+  state.searchEurMin=0; state.searchEurMax=null;
   state.searchSort='name'; state.searchSortDir='asc';
 }
 function switchPage(p){
@@ -4599,15 +4680,27 @@ function createNewDeck(name){
 function colMatch(it, codes){
   const f = state.colFilter;
   if(f.q && !it.name.toLowerCase().includes(f.q.toLowerCase())) return false;
-  if(f.type && !(it.type_line||'').toLowerCase().includes(f.type.toLowerCase())) return false;
-  if(f.set && it.set !== f.set) return false;
-  if(f.rarity && it.rarity !== f.rarity) return false;
-  if(f.color){
-    const cs = it.colors||[];
-    if(f.color==='M'){ if(cs.length < 2) return false; }
-    else if(f.color==='C'){ if(cs.length) return false; }
-    else if(!cs.includes(f.color)) return false;
+  if(f.type){
+    // Same semantics as the Search page's Card Type box: every word must
+    // appear in the type line, commas and spaces both separate words.
+    const tl = (it.type_line||'').toLowerCase();
+    const wants = f.type.toLowerCase().replace(/"/g,'').split(/[\s,]+/).filter(Boolean);
+    if(wants.length && !wants.every(w=>tl.includes(w))) return false;
   }
+  if(f.set && it.set !== f.set) return false;
+  const rsel = Object.keys(f.rarity||{}).filter(k=>f.rarity[k]);
+  if(rsel.length && !rsel.includes(it.rarity)) return false;
+  const csel = Object.keys(f.colors||{}).filter(k=>k!=='C' && f.colors[k]);
+  const wantC = !!(f.colors||{}).C;
+  if(csel.length || wantC){
+    const cs = it.colors||[];
+    if(wantC && !csel.length){ if(cs.length) return false; }         // C alone = colorless only
+    else if(f.colorMode==='exact'){ if(!(cs.length===csel.length && csel.every(c=>cs.includes(c)))) return false; }
+    else if(f.colorMode==='atmost'){ if(!cs.every(c=>csel.includes(c))) return false; }
+    else { if(!csel.every(c=>cs.includes(c))) return false; }        // 'all' — must have all selected
+  }
+  if(f.eurMin > 0 && (it.eur||0) < f.eurMin) return false;
+  if(f.eurMax != null && (it.eur||0) > f.eurMax) return false;
   if(f.legal){
     codes = codes || new Set((activeLegalSetCodes()||[]).map(c=>String(c).toLowerCase()));
     const s = collectionCardStatus(it, codes);              // null = legal in current format
@@ -4628,6 +4721,11 @@ function colFilteredItems(){
     else { if(it.binder) return false; }
     return colMatch(it, codes);
   });
+}
+function colFilterActive(){
+  const f = state.colFilter;
+  return !!(f.q || f.set || f.type || f.legal || f.eurMin > 0 || f.eurMax != null
+    || Object.values(f.colors||{}).some(Boolean) || Object.values(f.rarity||{}).some(Boolean));
 }
 function binderName(id){
   if(id === '__wants__') return 'Wants';
@@ -4676,16 +4774,23 @@ function collectionPageHtml(){
       const sets = Array.from(new Map(state.collection.items.map(it=>[it.set, it.set_name||it.set])).entries())
         .sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
       const setOpts = [{v:'',l:'All sets'}].concat(sets.map(([code,name])=>({v:code, l:name})));
-      const typeOpts = [{v:'',l:'All types'}].concat(['Creature','Instant','Sorcery','Artifact','Enchantment','Planeswalker','Battle','Land'].map(t=>({v:t,l:t})));
-      const colorOpts = [{v:'',l:'Any color'},{v:'W',l:'White', icons:manaIconSvg('W',16)},{v:'U',l:'Blue', icons:manaIconSvg('U',16)},{v:'B',l:'Black', icons:manaIconSvg('B',16)},{v:'R',l:'Red', icons:manaIconSvg('R',16)},{v:'G',l:'Green', icons:manaIconSvg('G',16)},{v:'M',l:'Multicolor'},{v:'C',l:'Colorless', icons:manaIconSvg('C',16)}];
-      const rarOpts = [{v:'',l:'Any rarity'},{v:'common',l:'Common'},{v:'uncommon',l:'Uncommon'},{v:'rare',l:'Rare'},{v:'mythic',l:'Mythic'}];
+      const colorOrder = ['W','U','B','R','G','C'];
       return `<div class="panel-card" id="colAdvPanel" style="margin-bottom:12px;">
         <div class="adv-row"><label>Name</label><input id="colFq" class="col-filter-input" placeholder="Card name…" value="${escapeHtml(f.q)}"></div>
         <div class="adv-row"><label>Set</label>${cselectHtml('colSet', setOpts, f.set, 'All sets')}</div>
-        <div class="adv-row"><label>Type</label>${cselectHtml('colType', typeOpts, f.type, 'All types')}</div>
-        <div class="adv-row"><label>Color</label>${cselectHtml('colColor', colorOpts, f.color, 'Any color')}</div>
-        <div class="adv-row"><label>Rarity</label>${cselectHtml('colRar', rarOpts, f.rarity, 'Any rarity')}</div>
+        <div class="adv-row"><label>Type</label><input id="colTypeText" class="col-filter-input" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(f.type)}"></div>
+        <div class="adv-row"><label>Colors</label><div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" data-colcolor="${c}" ${f.colors[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>
+          <div class="adv-sub" style="max-width:220px;">${cselectHtml('colCM', [
+            {v:'all', l:'Must have all selected'},
+            {v:'exact', l:'Exactly these colors'},
+            {v:'atmost', l:'At most these colors'}
+          ], f.colorMode, 'Match mode')}</div>
+        </div>
+        <div class="adv-row"><label>Rarity</label><div class="rarity-row">
+          ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-colrarity="${v}" ${f.rarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
+        </div></div>
         <div class="adv-row"><label>Legality</label>${cselectHtml('colLegal', [{v:'',l:'All cards'},{v:'legal',l:`${fmtName()}-legal only`},{v:'illegal',l:'Illegal / banned only'}], f.legal, 'All cards')}</div>
+        <div class="adv-row"><label>Price</label>${priceSliderHtml('colPr', f.eurMin, f.eurMax)}</div>
         <button class="ghost-btn" id="colClearF" style="width:100%;margin-top:6px;">Clear filters</button>
       </div>`;
     })()}</div>
@@ -4707,7 +4812,7 @@ function collectionPageHtml(){
           <div class="l3"><span>×${it.qty}</span>${it.eur!=null?`<span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">€${(it.eur*it.qty).toFixed(2)}</span>`:''}</div>
         </div>
       </button>`).join('')}</div>`
-    : `<div class="empty-note" style="margin-top:20px;">${wantsMode ? 'Nothing on the Wants list — every card in your decks is in your collection.' : (!f.binder && state.collection.items.length && !f.q && !f.set && !f.type && !f.color && !f.rarity && !f.legal) ? 'Every card is tucked into a binder — open All cards below to see the whole collection at once.' : state.collection.items.length?'Nothing matches these filters.':'Your collection is empty. Search above, or use "Add to collection" on any card in the app.'}</div>`}
+    : `<div class="empty-note" style="margin-top:20px;">${wantsMode ? 'Nothing on the Wants list — every card in your decks is in your collection.' : (!f.binder && state.collection.items.length && !colFilterActive()) ? 'Every card is tucked into a binder — open All cards below to see the whole collection at once.' : state.collection.items.length?'Nothing matches these filters.':'Your collection is empty. Search above, or use "Add to collection" on any card in the app.'}</div>`}
     ${state.colSel && state.colSel.size ? `<button class="deck-fab col-sel-fab ${f.binder?'solo':''}" id="colSelFab" title="Selected cards">✓ ${Array.from(state.colSel).reduce((a,i)=>a + ((state.collection.items[i]||{}).qty||1), 0)}</button>` : ''}
   </main>`;
 }
@@ -5038,14 +5143,21 @@ function wireCollectionPage(){
     if(t) t.innerHTML = 'Advanced filter ' + (state.colAdvOpen ? '▴' : '▾');
   });
   _csHandlers['colSet'] = v=>{ state.colFilter.set = v; csRerender(); };
-  _csHandlers['colType'] = v=>{ state.colFilter.type = v; csRerender(); };
-  _csHandlers['colColor'] = v=>{ state.colFilter.color = v; csRerender(); };
-  _csHandlers['colRar'] = v=>{ state.colFilter.rarity = v; csRerender(); };
+  _csHandlers['colCM'] = v=>{ state.colFilter.colorMode = v; csRerender(); };
   _csHandlers['colLegal'] = v=>{ state.colFilter.legal = v; csRerender(); };
   wireCSelects();
   if(!isCmdrMode()) checkCollectionLegality();   // confirm per-card Admiral legality in the background
+  document.querySelectorAll('[data-colcolor]').forEach(chk=>chk.addEventListener('change', ()=>{
+    state.colFilter.colors[chk.dataset.colcolor] = chk.checked; csRerender();
+  }));
+  document.querySelectorAll('[data-colrarity]').forEach(chk=>chk.addEventListener('change', ()=>{
+    state.colFilter.rarity[chk.dataset.colrarity] = chk.checked; csRerender();
+  }));
+  wirePriceSlider('colPr', (mn, mx)=>{ state.colFilter.eurMin = mn; state.colFilter.eurMax = mx; csRerender(); });
   document.getElementById('colClearF')?.addEventListener('click', ()=>{
-    state.colFilter = { ...state.colFilter, q:'', set:'', type:'', color:'', rarity:'', legal:'' };
+    state.colFilter = { ...state.colFilter, q:'', set:'', type:'', legal:'',
+      colors:{W:false,U:false,B:false,R:false,G:false,C:false}, colorMode:'all',
+      rarity:{common:false, uncommon:false, rare:false, mythic:false}, eurMin:0, eurMax:null };
     csRerender();
   });
   const fq = document.getElementById('colFq');
@@ -5054,6 +5166,14 @@ function wireCollectionPage(){
     state.colFilter.q = fq.value;
     const y = window.scrollY; render(); window.scrollTo(0,y);
     const el = document.getElementById('colFq');
+    if(el){ el.focus(); const v=el.value; el.value=''; el.value=v; }
+  }, 380); });
+  const ftype = document.getElementById('colTypeText');
+  let tt=null;
+  ftype?.addEventListener('input', ()=>{ clearTimeout(tt); tt=setTimeout(()=>{
+    state.colFilter.type = ftype.value;
+    const y = window.scrollY; render(); window.scrollTo(0,y);
+    const el = document.getElementById('colTypeText');
     if(el){ el.focus(); const v=el.value; el.value=''; el.value=v; }
   }, 380); });
   document.querySelectorAll('.want-tile').forEach(tile=>tile.addEventListener('click', async ()=>{
@@ -6565,7 +6685,7 @@ function spoilersPageHtml(){
       <button class="sp-jump-btn ${active===x.code?'active':''}" data-spjump="${x.code}" title="${escapeHtml(x.name)}">${setIcoHtml(x.code, 'rare')}<span class="sp-jump-code">${escapeHtml((x.code||'').toUpperCase())}</span></button>
     `).join('')}</div>` : '';
   return `<main id="spMainPage">
-    <button class="ghost-btn" id="spRefreshBtn" style="width:100%;margin:2px 0 10px;">⟳ Check for new spoilers</button>
+
     ${jumpRow}
     ${sets.length ? `<div id="spBody"><div class="status"><div class="spinner"></div></div></div>`
       : `<div class="empty-note" style="margin-top:24px;">No sets are previewing right now.<br>Spoiler season returns in the weeks before each release.</div>`}
@@ -6616,7 +6736,7 @@ function renderSpoilerBody(loaded, failed){
     headHtml = `<div class="chip-label" style="margin:2px 0 6px;">${escapeHtml(x.name)}${x.ub && !isCmdrMode() ? ' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>' : ''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>`
       + (gotN ? `<p class="hint" style="margin:0 0 6px;">${gotN}${setTotal>gotN?`/${setTotal}`:''} cards previewed so far.</p>` : '')
       + (x.ub && !isCmdrMode() ? '<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>' : '');
-    if(failed.has(active)){ box.innerHTML = headHtml + '<p class="hint">Couldn\'t reach the archive for this set — tap “Check for new spoilers” to retry.</p>'; return; }
+    if(failed.has(active)){ box.innerHTML = headHtml + '<p class="hint">Couldn\'t reach the archive for this set — reopen this page to retry.</p>'; return; }
     // Colour-sorted set view; collector number orders within each colour.
     const cn = c => { const n = parseInt(String(c.collector_number||'').replace(/\D/g,''),10); return isNaN(n) ? 1e9 : n; };
     cards = got.filter(spoilerPlayable).sort((a,b)=> (spoilerColorBucket(a)-spoilerColorBucket(b)) || (cn(a)-cn(b)));
@@ -6628,11 +6748,23 @@ function renderSpoilerBody(loaded, failed){
     // they are almost certainly today's batch, and burying them left the
     // page days behind. A set with no preview dates at all still sinks.
     const withKeys = [];
+    // Cards arrive newest-first (order=spoiled). Scryfall often stops filling
+    // previewed_at partway through a season, and the old rule filed every
+    // later reveal under the set's last KNOWN date — the "stuck on July 30"
+    // effect. Position tells the truth instead: an undated card ABOVE the
+    // newest dated card was revealed after it, so it belongs to today's
+    // shelf; an undated card between dated ones inherits its nearest newer
+    // neighbour. A set with no preview dates at all still sinks to the end.
+    const todayKey = new Date().toISOString().slice(0,10);
     sets.forEach((x, si)=>{
       const cs = (loaded[x.code]||[]).filter(spoilerPlayable);
-      let setMax = '';
-      cs.forEach(c=>{ const k = spoilerDateKey(c); if(k && k > setMax) setMax = k; });
-      cs.forEach((c, ci)=> withKeys.push({c, k: spoilerDateKey(c) || setMax, si, ci}));
+      const hasDates = cs.some(c=>spoilerDateKey(c));
+      let newerDate = null;   // date of the nearest dated card above (newer side)
+      cs.forEach((c, ci)=>{
+        const own = spoilerDateKey(c);
+        if(own) newerDate = own;
+        withKeys.push({c, k: own || (hasDates ? (newerDate || todayKey) : ''), si, ci});
+      });
     });
     withKeys.sort((a,b)=> (a.k<b.k?1:a.k>b.k?-1:0) || (a.si-b.si) || (a.ci-b.ci));
     cards = withKeys.map(w=>w.c);
@@ -6646,7 +6778,7 @@ function renderSpoilerBody(loaded, failed){
     });
     const pending = sets.filter(x=>loaded[x.code]===undefined && !failed.has(x.code)).length;
     footHtml = (pending ? `<div class="status" style="margin:8px 0;"><div class="spinner"></div>More sets unfurling…</div>` : '')
-      + (failed.size ? `<p class="hint" style="margin:6px 0 2px;">Couldn't reach ${failed.size} set${failed.size===1?'':'s'} — tap “Check for new spoilers” to retry.</p>` : '');
+      + (failed.size ? `<p class="hint" style="margin:6px 0 2px;">Couldn't reach ${failed.size} set${failed.size===1?'':'s'} — reopen this page to retry.</p>` : '');
     if(!cards.length && !pending){ box.innerHTML = '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
     if(!cards.length){ box.innerHTML = `<div class="status"><div class="spinner"></div></div>`; return; }
   }
@@ -7936,7 +8068,7 @@ function renderCardSheet(d, card, loc, idx){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${isUBCard(card)?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''} · <a href="https://edhrec.com/cards/${encodeURIComponent(String(card.name).split(' // ')[0].toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-'))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">EDHREC ↗</a></div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''} · <a href="https://edhrec.com/cards/${encodeURIComponent(String(card.name).split(' // ')[0].toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-'))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">EDHREC ↗</a></div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
@@ -8485,6 +8617,9 @@ function advancedPanelHtml(){
     <div class="adv-row"><label>Rarity</label><div class="rarity-row">
       ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-rarity="${v}" ${s.searchRarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
     </div></div>
+    <div class="adv-row"><label>Price</label>${priceSliderHtml('srchPr', s.searchEurMin, s.searchEurMax)}
+      <p class="adv-hint">Cardmarket price. The top end is open — leave the right thumb on \u221E for no limit.</p>
+    </div>
     <div class="adv-row"><label>Keyword</label><input id="kwText" type="text" placeholder="e.g. flying, lifelink" value="${escapeHtml(s.searchKeyword)}"></div>
     <div class="adv-row"><label>Flavor Text</label><input id="flavText" type="text" placeholder="e.g. dragon" value="${escapeHtml(s.searchFlavorText)}"></div>
     <div class="adv-row"><label>Artist</label><input id="artistText" type="text" placeholder="e.g. Rebecca Guay" value="${escapeHtml(s.searchArtist)}"></div>
@@ -8624,6 +8759,7 @@ function wireAdvancedPanel(){
   _csHandlers.setSel = v=>{ state.searchSetCode=v; render(); };
   wireCSelects();
   document.querySelectorAll('[data-rarity]').forEach(chk=>chk.addEventListener('change', ()=>{ state.searchRarity[chk.dataset.rarity] = chk.checked; }));
+  wirePriceSlider('srchPr', (mn, mx)=>{ state.searchEurMin = mn; state.searchEurMax = mx; });
   document.getElementById('kwText')?.addEventListener('input', e=>state.searchKeyword=e.target.value);
   document.getElementById('flavText')?.addEventListener('input', e=>state.searchFlavorText=e.target.value);
   document.getElementById('artistText')?.addEventListener('input', e=>state.searchArtist=e.target.value);
@@ -8693,6 +8829,12 @@ function buildAdvancedClause(){
   // Rarity: several ticked boxes mean "any of these", so OR them together
   const rars = Object.keys(state.searchRarity).filter(r=>state.searchRarity[r]);
   if(rars.length) parts.push(rars.length===1 ? `r:${rars[0]}` : '(' + rars.map(r=>`r:${r}`).join(' OR ') + ')');
+
+  // Price range: Scryfall filters on its own Cardmarket price. Only applied
+  // when a thumb has moved — an untouched slider must not exclude the many
+  // cards that carry no EUR price at all.
+  if(state.searchEurMin > 0) parts.push(`eur>=${state.searchEurMin}`);
+  if(state.searchEurMax != null) parts.push(`eur<=${state.searchEurMax}`);
 
   let clause = parts.join(' ');
   // Belt and braces: a clause with an odd number of quotes is guaranteed
@@ -9102,7 +9244,7 @@ function openCardInfo(card, opts){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${isUBCard(card)?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''} · <a href="https://edhrec.com/cards/${encodeURIComponent(String(card.name).split(' // ')[0].toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-'))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">EDHREC ↗</a></div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''} · <a href="https://edhrec.com/cards/${encodeURIComponent(String(card.name).split(' // ')[0].toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-'))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">EDHREC ↗</a></div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
@@ -10595,7 +10737,7 @@ function renderEdhrecSections(box, key, S){
   };
   // Colour strip: how many decks play this theme per colour combination —
   // tap to jump to that combination.
-  const relHtml = (S.rel && S.rel.length) ? `<div class="edh-rel">${S.rel.map((r,i)=>`<button class="edh-rel-chip" data-ri="${i}">${pipsHtml(r.colors, 14)}<span>${escapeHtml(r.label)}</span><b>${r.count.toLocaleString()}</b></button>`).join('')}</div>` : '';
+  const relHtml = (S.rel && S.rel.length) ? `<div class="edh-rel">${S.rel.map((r,i)=>`<button class="edh-rel-chip" data-ri="${i}" title="${escapeHtml(r.label)}">${(r.colors&&r.colors.length)?manaRowSvg(r.colors.join(''),18):manaIconSvg('C',18)}<b>${r.count.toLocaleString()}</b></button>`).join('')}</div>` : '';
   const leaders = S.newCmd.concat(S.topCmd);
   const leaderWire = { onCardTap:(c)=>openAdmiralReco(c) };
   box.innerHTML = `<div class="edh-jump-row"><button class="icon-btn edh-jump" id="edhJump" title="${trS('Jump to section')}">☰</button></div>` + relHtml +
