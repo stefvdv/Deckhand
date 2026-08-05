@@ -908,6 +908,7 @@ main.has-dock{padding-bottom:84px;}
 .cb-sp{background:none;box-shadow:none;font-size:16px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));}
 .cb-own{background:linear-gradient(135deg,#1F9A63,#0E5C3A);font-size:12px;}
 *:has(> .card-badges){position:relative;}
+*:has(> .vg-qty){position:relative;}
 /* Trade calculator */
 .trade-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);}
 .trade-row:last-of-type{border-bottom:none;}
@@ -2448,7 +2449,8 @@ function openHistoryOverlay(d){
       if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); updateDeckMeter(d); }
     }));
   };
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='historyOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='historyOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   pushOverlay('history', ()=>{ document.getElementById('historyOverlay')?.remove(); if(state.screen==='decklist') render(); });
   renderIt();
 }
@@ -3108,15 +3110,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.213';
+const APP_VERSION = '2.51.215';
 const CHANGELOG_NOTES = {
   en: [
-    'Leader pages: the theme chips became two searchable dropdowns \u2014 Theme and Kindred \u2014 like Inspiration, fed by the same play data.',
-    'Picking \u201Cnone\u201D returns to the leader\u2019s main recommendations.'
+    'Theme and Kindred views on leader pages now show EDHREC\u2019s sections (New Cards, Top Cards, \u2026) with the \u2630 jump menu.',
+    'My Collection shows a \u00D7N badge on the card, decklist-style, when you own more than one.'
   ],
   nl: [
-    'Leiderspagina\u2019s: de themachips werden twee doorzoekbare dropdowns \u2014 Thema en Kindred \u2014 zoals Inspiratie, met dezelfde speeldata.',
-    '\u201CGeen\u201D kiezen keert terug naar de hoofdaanbevelingen van de leider.'
+    'Thema- en Kindred-weergaven op leiderspagina\u2019s tonen nu EDHREC-secties (Nieuwe kaarten, Topkaarten, \u2026) met het \u2630 springmenu.',
+    'Mijn Collectie toont een \u00D7N-badge op de kaart, zoals in decklijsten, bij meer dan \u00E9\u00E9n exemplaar.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4433,7 +4435,8 @@ function openInAppPrompt(title, placeholder, initial, onOk){
   // House-style dialog: an app-native look, not the browser popup with its
   // hostname header. Contract: null on cancel, the typed value on OK.
   let el = document.getElementById('inAppPrompt');
-  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='inAppPrompt'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='inAppPrompt'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.style.alignItems='center';
   el.style.zIndex = 200;
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:320px;">
@@ -4457,7 +4460,8 @@ function openInAppConfirm(msg, onResult, o){
   // scrim-tap dismissal for choices where "outside" would be ambiguous.
   o = o || {};
   let el = document.getElementById('inAppConfirm');
-  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='inAppConfirm'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='inAppConfirm'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.style.alignItems='center';
   el.style.zIndex = 200;
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:320px;">
@@ -4490,7 +4494,8 @@ function openFolderMenu(id, anchorEl){
 }
 function openFolderIconPicker(f){
   let el = document.getElementById('iconPicker');
-  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='iconPicker'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='iconPicker'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.style.alignItems='center';
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
     <h4>Folder icon</h4>
@@ -4516,7 +4521,8 @@ function openFolderPicker(d){
 function renderFolderPicker(){
   const d = state._fpDeck; if(!d) return;
   let el = document.getElementById('folderPicker');
-  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='folderPicker'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='folderPicker'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.style.alignItems='center';
   const nav = state._fpNav;
   const here = childFolders(nav);
@@ -4837,7 +4843,7 @@ function collectionPageHtml(){
         </div>
       </div>` : `
       <button class="sr-tile col-tile ${state.colSel && state.colSel.has(_idxOf.get(it))?'csel':''}" data-ci="${_idxOf.get(it)}">
-        <img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}">${state.colSel && state.colSel.has(_idxOf.get(it))?'<span class="csel-mark">✓</span>':''}${collectionMarkHtml(it, _colLegalCodes)}
+        <img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}">${it.qty>1?`<span class="vg-qty">×${it.qty}</span>`:''}${state.colSel && state.colSel.has(_idxOf.get(it))?'<span class="csel-mark">✓</span>':''}${collectionMarkHtml(it, _colLegalCodes)}
         <div class="col-tile-info">
           <div class="l1">${escapeHtml(it.name)}</div>
           <div class="l2">${escapeHtml((it.set||'').toUpperCase())}${it.cn?' #'+escapeHtml(it.cn):''} · ${escapeHtml(it.cond)}${it.binder?' · '+escapeHtml(binderName(it.binder)||''):''}</div>
@@ -5030,7 +5036,8 @@ async function openBinderArtPicker(binder){
   const name = await new Promise(res=>openInAppPrompt('Cover card name', 'Card name…', seed, res));
   if(!name || !name.trim()) return;
   let el = document.getElementById('binderArtOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='binderArtOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='binderArtOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   pushOverlay('binderArt', ()=>{ document.getElementById('binderArtOverlay')?.remove(); });
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar"><button class="icon-btn" id="baClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">Choose Cover Art</div></div>
@@ -5441,7 +5448,8 @@ function wirePrintsDropdown(rootEl, id, onPick){
 function openWantSheet(name){
   pushOverlay('wantSheet', ()=>document.getElementById('wantSheetOverlay')?.remove());
   let el = document.getElementById('wantSheetOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='wantSheetOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='wantSheetOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner" style="max-width:340px;">
     <main style="padding:14px;">
     <div class="panel-card">
@@ -5530,7 +5538,8 @@ function renderColItemSheet(idx){
   const it = state.collection.items[idx];
   if(!it) return;
   let el = document.getElementById('colItemOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='colItemOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='colItemOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   const condName = (COL_CONDS.find(c=>c[0]===it.cond)||['',it.cond])[1];
   el.innerHTML = `<div class="overlay-inner" style="max-width:380px;">
     <main style="padding:14px 14px 30px;">
@@ -5638,7 +5647,8 @@ function renderColItemSheet(idx){
 async function openAddToCollection(card){
   pushOverlay('addColl', ()=>document.getElementById('addCollOverlay')?.remove());
   let el = document.getElementById('addCollOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='addCollOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='addCollOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner" style="max-width:380px;">
     <main style="padding:14px;">
     <div class="panel-card">
@@ -6893,7 +6903,8 @@ async function wireSpoilersPage(){
 async function openShowcase(payload, opts){
   opts = opts || {};
   let el = document.getElementById('showcaseOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='showcaseOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='showcaseOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   // From a link, the back press must land on the app's home page — never exit
   // the browser. CloseWatcher (Chrome 120+) consumes exactly one back press
   // for a modal with no history tricks and no prior interaction needed; the
@@ -8121,7 +8132,8 @@ function openCardActionSheet(d, card, loc, idx){
 function renderCardSheet(d, card, loc, idx){
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   let el = document.getElementById('cardSheetOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
   const _reco = `<button class="ghost-btn" id="csReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>`;
@@ -8364,7 +8376,8 @@ function renderTagEditor(d, card, box){
    and rebuilds the prints link for slim deck copies that lost theirs. */
 async function openPrintingGrid(card, onPick){
   let el = document.getElementById('printOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='printOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='printOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   pushOverlay('printing', ()=>{ document.getElementById('printOverlay')?.remove(); });
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar"><button class="icon-btn" id="ppClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">Choose Printing</div></div>
@@ -9184,8 +9197,8 @@ function openDeckPickPopup(card, mode, refreshFn, pairWith){
     else if(mode==='admiral'){ if(pairWith) setPairValidated(d, [card, pairWith], refreshFn); else setAdmiralValidated(d, card, refreshFn); }
     else { if(pairWith) addPairToDeckValidated(d, [card, pairWith], refreshFn); else addCardToDeckValidated(d, card, refreshFn); }
   };
-  const verb = mode==='maybe' ? 'Add to the Maybeboard of…' : mode==='admiral' ? 'Set as '+fmtName()+(pairWith?'s':'')+' of…' : mode==='reco' ? 'Recommend for which deck?' : 'Add to…';
-  const sub = mode==='reco' ? `${escapeHtml(nm)} — recommendations will stay within the chosen deck's colors` : escapeHtml(nm);
+  const verb = mode==='maybe' ? 'Add to the Maybeboard of…' : mode==='admiral' ? 'Set as '+fmtName()+(pairWith?'s':'')+' of…' : mode==='reco' ? 'Recommendations in which colors?' : 'Add to…';
+  const sub = mode==='reco' ? `${escapeHtml(nm)} — recommendations will stay within the chosen colors` : escapeHtml(nm);
   const el = document.createElement('div');
   el.className = 'deckpick-scrim'; el.id = 'deckPickScrim';
   el.innerHTML = `<div class="deckpick">
@@ -9193,15 +9206,35 @@ function openDeckPickPopup(card, mode, refreshFn, pairWith){
     <p class="dp-sub">${mode==='reco' ? sub : escapeHtml(nm)}</p>
     <div class="deckpick-list">
       ${mode==='reco' && isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card) ? `<button class="dp-row" data-asadmiral="1"><div class="dp-txt">${modeGlyph()} As ${fmtName()}<div class="dp-meta">Build around ${escapeHtml(card.name)} — recommendations in its own colors, pick cards, launch a deck</div></div></button>` : ''}
-      ${mode==='reco' ? `<button class="dp-row" data-anycolors="1"><div class="dp-txt">Any colors<div class="dp-meta">No color restriction</div></div></button>` : ''}
+      ${mode==='reco' ? `<button class="dp-row" data-anycolors="1"><div class="dp-txt">Any colors<div class="dp-meta">No color restriction</div></div></button><div id="recoColorPick"></div>` : ''}
       ${mode!=='reco' ? `<button class="dp-row" data-newdeck="1"><div class="dp-txt">＋ New deck<div class="dp-meta">Create a fresh deck and add ${escapeHtml(nm)} to it</div></div></button>` : ''}
-      ${deckPickRowsHtml()}
+      ${mode!=='reco' ? deckPickRowsHtml() : ''}
     </div>
     <button class="dp-cancel" id="dpCancel">Cancel</button>
   </div>`;
   document.body.appendChild(el);
   el.addEventListener('click', e=>{ if(e.target===el) closeDeckPickPopup(); });
   document.getElementById('dpCancel').addEventListener('click', closeDeckPickPopup);
+  // Recommendations pick their COLORS here, Inspiration-style — count first,
+  // then the exact combination (with the app's mana symbols) — instead of
+  // choosing from existing decks. Tapping a combination opens the reco page
+  // ceilinged to those colors (id<=), like a deck of that identity would.
+  if(mode==='reco'){
+    let pickCount = '2';
+    const paintPick = ()=>{
+      const bp = el.querySelector('#recoColorPick');
+      if(!bp) return;
+      const combos = COLOR_COMBOS[pickCount] || [];
+      bp.innerHTML = `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px;">
+          ${[['1','Monocolored'],['2','2 colors'],['3','3 colors'],['45','4 & 5 colors']].map(([v,l])=>`<button class="chip ${pickCount===v?'active':''}" data-pickcount="${v}">${trS(l)}</button>`).join('')}
+        </div>
+        ${combos.map(cb=>`<button class="dp-row" data-pickcombo="${escapeHtml(cb.key)}"><div class="dp-txt" style="display:flex;align-items:center;gap:9px;">${cb.key==='c' ? manaIconSvg('C',18) : manaRowSvg(cb.key.toUpperCase(),18)}<span>${escapeHtml(cb.label)}</span></div></button>`).join('')}`;
+      bp.querySelectorAll('[data-pickcount]').forEach(b=>b.addEventListener('click', (e)=>{ e.stopPropagation(); pickCount = b.dataset.pickcount; paintPick(); }));
+      bp.querySelectorAll('[data-pickcombo]').forEach(b=>b.addEventListener('click', ()=>{ closeDeckPickPopup(); openCardReco(card, null, b.dataset.pickcombo); }));
+    };
+    paintPick();
+  }
   el.querySelectorAll('.dp-row').forEach(row=>{
     row.addEventListener('click', ()=>{
       if(row.dataset.asadmiral){ closeDeckPickPopup(); openAdmiralReco(card); return; }
@@ -9320,7 +9353,8 @@ function openCardInfo(card, opts){
   if(!opts._replace && document.getElementById('cardSheetOverlay')) opts._replace = true;
   if(!opts._replace) pushOverlay('cardInfo', ()=>{ document.getElementById('cardSheetOverlay')?.remove(); });
   let el = document.getElementById('cardSheetOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
   // cards (basics etc.) stay on the Add side — only a removable main-deck
@@ -9792,7 +9826,8 @@ function oracleTermSet(card){
 async function openSimilarCards(card){
   pushOverlay('similar', ()=>{ document.getElementById('similarOverlay')?.remove(); });
   let el = document.getElementById('similarOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='similarOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='similarOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar"><button class="icon-btn" id="simClose">${ICONS.back}</button><div class="tb-titles"><div class="t1 name2">${escapeHtml(card.name)}</div></div></div>
     <main>
@@ -9874,7 +9909,8 @@ function openTradeAdd(side){
   // added while it was open is on the table the moment it comes down.
   pushOverlay('tradeAdd', ()=>{ document.getElementById('tradeAddOverlay')?.remove(); if(state.screen==='trade') render(); });
   let el = document.getElementById('tradeAddOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='tradeAddOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='tradeAddOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar"><button class="icon-btn" id="taClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">${trS('Add to trade')}</div></div>
     <main>
@@ -11598,13 +11634,15 @@ function themeMatchesCard(theme, card){
 function detectCardThemes(card){
   return BROWSE_THEMES.filter(t=>themeMatchesCard(t, card)).slice(0, 4);
 }
-function openCardReco(card, forDeck){
+function openCardReco(card, forDeck, comboKey){
+  const combo = comboKey ? (Object.values(COLOR_COMBOS).flat().find(c=>c.key===comboKey) || null) : null;
   let el = document.getElementById('cardRecoOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardRecoOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardRecoOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   pushOverlay('cardReco', ()=>{ document.getElementById('cardRecoOverlay')?.remove(); });
   const themes = detectCardThemes(card);
-  const scope = forDeck && forDeck.admiral
-    ? `within ${forDeck.admiral.name}'s colors`
+  const scope = combo ? `within ${combo.label} colors`
+    : (forDeck && forDeck.admiral) ? `within ${forDeck.admiral.name}'s colors`
     : 'any colors';
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar" style="position:relative;">
@@ -11622,13 +11660,15 @@ function openCardReco(card, forDeck){
   </div>`;
   document.getElementById('crBack').addEventListener('click', closeTopOverlay);
   document.getElementById('crImg').addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
-  loadCardReco(card, themes, forDeck || null);
+  loadCardReco(card, themes, forDeck || null, comboKey || null);
 }
-async function loadCardReco(card, themes, forDeck){
+async function loadCardReco(card, themes, forDeck, comboKey){
   // Synergy from Scryfall: we read the card's OWN function tags (what it does)
   // and find other cards that share those roles/themes, ranked by EDHREC
-  // popularity via order:edhrec. The chosen deck sets the colour ceiling.
-  const idClause = (forDeck && forDeck.admiral) ? idClauseForDeck(forDeck) : '';
+  // popularity via order:edhrec. The chosen colors set the ceiling — the
+  // picked combination (id<=) or, from older paths, a deck's identity.
+  const idClause = comboKey ? (comboKey === 'c' ? 'id=c' : 'id<=' + comboKey)
+    : (forDeck && forDeck.admiral) ? idClauseForDeck(forDeck) : '';
   // 1) detect this card's function tags
   const tagMap = await detectOtagsForCards([card]);
   const cardTags = (tagMap[card.name] || []);
@@ -11712,7 +11752,8 @@ async function prefetchBudgetData(d){
 }
 async function openBudgetOverlay(d){
   let el = document.getElementById('budgetOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='budgetOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='budgetOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   pushOverlay('budget', ()=>{ document.getElementById('budgetOverlay')?.remove(); });
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar" style="position:relative;">
@@ -11991,7 +12032,8 @@ function openAdmiralReco(admiral, partner){
     state.reco.loading = false;
   }
   let el = document.getElementById('recoOverlay');
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='recoOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='recoOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   pushOverlay('reco', ()=>{ document.getElementById('recoOverlay')?.remove(); state.reco = null; });
   renderRecoOverlay();
   if(state.reco.loading) loadRecoPool();
@@ -12183,21 +12225,21 @@ async function edhrecCommanderPage(card){
   if(!data) return { names: [], themes: [], sections: [] };
   return { names: edhrecNamesFrom(data), themes: edhrecThemesFrom(data), sections: edhrecSectionsFrom(data) };
 }
-async function edhrecThemeNames(card, themeSlug){
+async function edhrecThemePage(card, themeSlug){
   const data = await edhrecFetchJson('/pages/commanders/' + edhrecSlug(card.name) + '/' + themeSlug + '.json');
-  return data ? edhrecNamesFrom(data) : [];
+  return data ? { names: edhrecNamesFrom(data), sections: edhrecSectionsFrom(data) } : { names: [], sections: [] };
 }
-async function edhrecPairThemeNames(a, b, themeSlug){
+async function edhrecPairThemePage(a, b, themeSlug){
   // The pairing's own theme page, both slug orders; the lead card's solo page
   // is the last resort (many partner halves have no solo page at all).
   for(const sl of [edhrecSlug(a.name)+'-'+edhrecSlug(b.name), edhrecSlug(b.name)+'-'+edhrecSlug(a.name)]){
     const data = await edhrecFetchJson('/pages/commanders/' + sl + '/' + themeSlug + '.json');
     if(data){
       const names = edhrecNamesFrom(data);
-      if(names.length) return names;
+      if(names.length) return { names, sections: edhrecSectionsFrom(data) };
     }
   }
-  return edhrecThemeNames(a, themeSlug);
+  return edhrecThemePage(a, themeSlug);
 }
 async function resolveEdhrecNames(names, keep){
   const rank = new Map(names.map((n,i)=>[n,i]));
@@ -12373,6 +12415,7 @@ async function loadRecoTheme(slug){
   if(R.activeThemeSlug === slug){
     // Tapping the active theme again returns to the leader's main list.
     R.activeThemeSlug = null;
+    R.themeSections = null;
     if(R._mainPool){ R.pool = R._mainPool; }
     renderRecoBody();
     return;
@@ -12382,20 +12425,24 @@ async function loadRecoTheme(slug){
   const box = document.getElementById('recoBody');
   if(box) box.innerHTML = `<div class="status"><div class="spinner"></div>${trS('Charting themed recommendations…')}</div>`;
   try{
-    const names = (R.partner ? await edhrecPairThemeNames(R.admiral, R.partner, slug) : await edhrecThemeNames(R.admiral, slug)).slice(0, 60);
+    const tp = R.partner ? await edhrecPairThemePage(R.admiral, R.partner, slug) : await edhrecThemePage(R.admiral, slug);
+    const names = (tp.names || []).slice(0, 60);
     if(!state.reco || state.reco !== R || R.activeThemeSlug !== slug) return;
     const keep = (c)=> landOk(c) && !isBanned(c) && c.name !== R.admiral.name && (!R.partner || c.name !== R.partner.name);
     const pool = names.length ? await resolveEdhrecNames(names, keep) : [];
     if(!state.reco || state.reco !== R || R.activeThemeSlug !== slug) return;
     if(pool.length >= 8){
       R.pool = pool.slice(0, 180);
+      R.themeSections = tp.sections || [];   // the theme page's own headers, for the sectioned view
     } else {
       toast('No themed play data for this leader.');
       R.activeThemeSlug = null;
+      R.themeSections = null;
       R.pool = R._mainPool || R.pool;
     }
   }catch(e){
     R.activeThemeSlug = null;
+    R.themeSections = null;
     R.pool = R._mainPool || R.pool;
   }
   renderRecoBody();
@@ -12464,10 +12511,13 @@ function renderRecoBody(){
   // menu, and Show-all caps per section. Theme views and synergy fallbacks
   // keep the flat popularity grid.
   const groups = [];
-  if(R.edhrecSourced && !activeTheme && R.sections && R.sections.length >= 2){
+  // Theme views carry EDHREC's own section headers too (New Cards, Top
+  // Cards, Creatures, …) — same layout and ☰ jump menu as the main list.
+  const secSrc = activeTheme ? (R.themeSections || []) : ((R.edhrecSourced && R.sections) || []);
+  if(secSrc.length >= 2){
     const byName = new Map(R.pool.map(c=>[c.name, c]));
     const used = new Set();
-    R.sections.forEach(s=>{
+    secSrc.forEach(s=>{
       const cards = s.names.map(n=>byName.get(n)).filter(c=>c && !used.has(c.name));
       cards.forEach(c=>used.add(c.name));
       if(cards.length) groups.push({ title: trS(s.header), cards });
@@ -12556,7 +12606,8 @@ function openRecoDeckChooser(){
   const R = state.reco;
   if(!R || !R.selected.size) return;
   let el = document.getElementById('deckPickPopup');
-  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='deckPickPopup'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='deckPickPopup'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   const n = R.selected.size;
   el.innerHTML = `<div class="deckpick">
     <h4>Add ${n} card${n>1?'s':''} to…</h4>
@@ -13257,7 +13308,8 @@ function renderLifeOverlay(){
   let el = document.getElementById('lifeOverlay');
   if(!state.lifeOpen){ if(el) el.remove(); return; }
   ensureLifePlayers();
-  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='lifeOverlay'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='lifeOverlay'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar" style="position:relative;">
       <button class="icon-btn" id="lifeBack">${ICONS.back}</button>
@@ -13482,7 +13534,8 @@ function wireTapHold(el, onTap, onHold, holdMs, repeatMs){
 function openSetLifePopup(idx){
   const p = ensureLifePlayers()[idx];
   let el = document.getElementById('setLifePopup');
-  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='setLifePopup'; document.body.appendChild(el); }
+  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='setLifePopup'; }
+  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.style.alignItems = 'center';
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:280px;text-align:center;">
     <h4>${escapeHtml(p.name)}</h4>
