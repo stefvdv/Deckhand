@@ -3169,13 +3169,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.226';
+const APP_VERSION = '2.51.227';
 const CHANGELOG_NOTES = {
   en: [
-    'A back press while the Exit question is showing now closes the app; during any other confirm it presses Cancel.'
+    'Exiting works reliably now: with the Exit question showing, ONE back press closes the app; Cancel keeps you in with all guards restored.'
   ],
   nl: [
-    'Terugdrukken terwijl de afsluitvraag zichtbaar is sluit nu de app; bij elke andere bevestiging drukt het op Annuleren.'
+    'Afsluiten werkt nu betrouwbaar: met de afsluitvraag in beeld sluit \u00E9\u00E9n terugdruk de app; Annuleren houdt je binnen met alle beveiligingen hersteld.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -14075,15 +14075,6 @@ window.addEventListener('pointerdown', ()=>{
 (function(){
   if(typeof CloseWatcher === 'undefined') return;
   let cw = null;
-  const exitNow = ()=>{
-    // The watcher must stand DOWN now, or it would intercept the very
-    // system-back that closes the app after the drain.
-    try{ if(cw && cw.destroy) cw.destroy(); }catch(err){}
-    cw = null;
-    state._exiting = true;
-    try{ const depth = history.length - 1; if(depth > 0) history.go(-depth); }catch(err){}
-    setTimeout(()=>{ try{ window.close(); }catch(err){} }, 180);
-  };
   const arm = ()=>{
     if(cw || state._exiting) return;
     try{ cw = new CloseWatcher(); }catch(e){ cw = null; return; }
@@ -14093,25 +14084,33 @@ window.addEventListener('pointerdown', ()=>{
       // Re-arm IMMEDIATELY: a spent watcher leaves the stack empty, and one
       // activation-less watcher is always permitted then — so SEQUENTIAL
       // hardware presses are each intercepted. (3-button nav sends no
-      // pointer events between presses; waiting for a tap to re-arm let
-      // presses 2..n fall through to raw history, which ran dry one press
-      // early — the "closes on My Stuff" bug.)
+      // pointer events between presses.)
       arm();
-      // The Exit question is already on screen: a second back press IS the
-      // answer — close the app, Android-style.
-      if(state._exitAsk){
-        state._exitAsk = false;
-        try{ document.getElementById('inAppConfirm')?.remove(); }catch(err){}
-        exitNow();
-        return;
-      }
       if(appBackStep(false)) return;
-      // Home floor with nothing open: this press belongs to the watcher, so ask here.
+      // Home floor: PARK FOR EXIT. window.close() is refused for a tab the
+      // app didn't open, so the only reliable exit is the native one — a
+      // system back with nothing in its way. Drain history to the bottom
+      // and stand the watcher down BEFORE asking: while the question is
+      // showing, one hardware back press closes the app natively. Cancel
+      // restores every guard.
       if(state._exitAsk) return;
       state._exitAsk = true;
+      state._exiting = true;   // keeps popstate inert while go() settles
+      try{ if(cw && cw.destroy) cw.destroy(); }catch(err){}
+      cw = null;
+      try{ const depth = history.length - 1; if(depth > 0) history.go(-depth); }catch(err){}
       openInAppConfirm(trS('Exit this app?'), (ok)=>{
         state._exitAsk = false;
-        if(ok) exitNow();
+        if(ok){
+          try{ window.close(); }catch(err){}
+          // Where close() is refused we are already parked at the bottom:
+          // a single system back finishes the job — say so.
+          setTimeout(()=>{ if(!document.hidden){ try{ toast(trS('Press back once more to close.')); }catch(err){} } }, 240);
+        } else {
+          state._exiting = false;
+          arm();   // the Cancel tap carries fresh activation
+          try{ history.pushState({screen:'home'}, '', '#home'); }catch(err){}
+        }
       }, { ok: trS('Exit') });
     };
   };
