@@ -652,7 +652,7 @@ main.has-dock{padding-bottom:84px;}
 .hv-mov{color:var(--brass);}
 .llay{background:none;border:2px solid var(--field-line);border-radius:12px;padding:5px;cursor:pointer;}
 .llay.on{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass);}
-.llay-grid{display:grid;gap:3px;width:62px;height:90px;}
+.llay-grid{display:grid;gap:3px;width:62px;}
 .llay-grid i{background:#f2ede4;border-radius:5px;display:flex;align-items:center;justify-content:center;overflow:hidden;font-style:normal;}
 .llay-grid b{font-size:10px;line-height:1;color:#1a1208;font-family:'JetBrains Mono',monospace;display:block;}
 .llay-n{display:block;text-align:center;font-size:10.5px;color:var(--sub-text);margin-top:4px;}
@@ -3169,19 +3169,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.221';
+const APP_VERSION = '2.51.223';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck names always fit the top bar: font shrinks to fit, wrapping only between words.',
-    'Back can no longer fall out of the app \u2014 every press is caught and walks the ladder or asks to exit.',
-    'Life counter: a player\u2019s \u00B1 change no longer re-pops when someone else\u2019s total is tapped.',
-    'Table layouts now cover 2\u20138 players.'
+    'Slimmer layout picker: four redundant arrangements removed \u2014 just turn the phone for those.'
   ],
   nl: [
-    'Decknamen passen altijd in de bovenbalk: lettergrootte krimpt mee, afbreken alleen tussen woorden.',
-    'Terug kan niet meer uit de app vallen \u2014 elke druk wordt gevangen en volgt de ladder of vraagt om af te sluiten.',
-    'Levensteller: de \u00B1-verandering van een speler popt niet opnieuw op als een ander wordt aangetikt.',
-    'Tafelindelingen dekken nu 2\u20138 spelers.'
+    'Slankere indelingskiezer: vier overbodige opstellingen verwijderd \u2014 draai daarvoor gewoon de telefoon.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3971,25 +3965,27 @@ function navHtml(){
    measuring with the fallback font, which is narrower than Cinzel Decorative,
    so "fits" flipped to overflow once the real font arrived. */
 function fitBrandTitle(){
-  // The deck name must always show FULLY in the top bar: shrink the font
-  // until it fits, wrapping onto a second line ONLY between words (the CSS
-  // now forbids mid-word breaks). A one-word name — Aikidon't — shrinks
-  // until it fits a single line, never split as "AIKIDON' / T".
+  // Every top-bar title must show FULLY: shrink the font until it fits.
+  // Deck names may wrap onto a second line ONLY between words (the CSS
+  // forbids mid-word breaks; a one-word name like Aikidon't simply cannot
+  // wrap, so the width gate shrinks it onto one line). Page words shrink
+  // to a single line. Measurements read the BOX — an inline span reports
+  // scrollWidth 0, which is why the old fitter never shrank anything.
   const box = document.getElementById('brandTitle');
   const inner = document.getElementById('brandTitleInner');
   if(!box || !inner) return;
-  if(!box.classList.contains('two-line')){ box.style.fontSize = ''; state._brandSize = null; return; }
-  const oneWord = !/\s/.test((inner.textContent || '').trim());
-  inner.style.whiteSpace = oneWord ? 'nowrap' : '';
+  const twoLine = box.classList.contains('two-line');
+  const maxLines = twoLine ? 2 : 1;
+  inner.style.fontSize = '';
+  const prevClamp = box.style.webkitLineClamp;
+  box.style.webkitLineClamp = 'unset';   // clamp hides the very overflow we measure
   let size = 14;
   for(; size >= 8.5; size -= 0.5){
     box.style.fontSize = size + 'px';
-    const lineH = size * 1.2;
-    const ok = oneWord
-      ? inner.scrollWidth <= box.clientWidth + 1
-      : (inner.scrollWidth <= box.clientWidth + 1 && inner.scrollHeight <= lineH * 2 + 3);
-    if(ok) break;
+    const lineH = size * 1.3 + 2;
+    if(box.scrollWidth <= box.clientWidth + 1 && box.scrollHeight <= lineH * maxLines + 3) break;
   }
+  box.style.webkitLineClamp = prevClamp;
   state._brandSize = size + 'px';
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>fitBrandTitle());
@@ -13375,14 +13371,10 @@ function checkDefeat(p){
    seat i takes the letter 'abcdef'[i]. */
 const LIFE_LAYOUTS = [
   {id:'2f', count:2, areas:['a','b'],            rot:[180,0]},
-  {id:'2s', count:2, areas:['a b'],              rot:[90,270]},
   {id:'3t', count:3, areas:['a b','c c'],        rot:[90,270,0]},
-  {id:'3f', count:3, areas:['a a','b c'],        rot:[180,90,270]},
   {id:'4q', count:4, areas:['a b','c d'],        rot:[90,270,90,270]},
-  {id:'4e', count:4, areas:['a b','c d'],        rot:[180,180,0,0]},
   {id:'4m', count:4, areas:['a a','b c','d d'],  rot:[180,90,270,0]},
   {id:'5q', count:5, areas:['a b','c d','e e'],  rot:[90,270,90,270,0]},
-  {id:'5f', count:5, areas:['a a','b c','d e'],  rot:[180,90,270,90,270]},
   {id:'6q', count:6, areas:['a b','c d','e f'],  rot:[90,270,90,270,90,270]},
   {id:'6e', count:6, areas:['a b','c d','e f'],  rot:[180,180,90,270,0,0]},
   {id:'6m', count:6, areas:['a a','b c','d e','f f'],      rot:[180,90,270,90,270,0]},
@@ -13394,7 +13386,7 @@ const LIFE_LAYOUTS = [
 function lifeLayout(){
   const L = LIFE_LAYOUTS.find(x=>x.id===state.life.layout);
   if(L && L.count === state.life.count) return L;
-  return LIFE_LAYOUTS.find(x=>x.count === state.life.count) || LIFE_LAYOUTS[4];
+  return LIFE_LAYOUTS.find(x=>x.count === state.life.count) || LIFE_LAYOUTS.find(x=>x.id==='4q');
 }
 function seatRotation(i, count){
   // With the phone lying flat in the middle of the table: two players facing
@@ -13929,10 +13921,12 @@ function renderModal(){
     // where people actually sit.
     const thumb = (lay)=>{
       const tcols = lay.areas[0].split(' ').length;
+      const trows = lay.areas.length;
+      const th = trows * 26 + (trows - 1) * 3;   // taller tables get taller tiles
       const gtA = lay.areas.map(r=>`&quot;${r}&quot;`).join(' ');
       return `<button class="llay ${state.life.layout===lay.id?'on':''}" data-setup-lay="${lay.id}">
-        <span class="llay-grid" style="grid-template-columns:repeat(${tcols},1fr);grid-template-areas:${gtA};">
-          ${lay.rot.map((r,i)=>`<i style="grid-area:${'abcdef'[i]};"><b style="transform:rotate(${r}deg);">40</b></i>`).join('')}
+        <span class="llay-grid" style="grid-template-columns:repeat(${tcols},1fr);grid-template-rows:repeat(${trows},1fr);height:${th}px;grid-template-areas:${gtA};">
+          ${lay.rot.map((r,i)=>`<i style="grid-area:${'abcdefgh'[i]};"><b style="transform:rotate(${r}deg);">${lifeStart()}</b></i>`).join('')}
         </span>
         <span class="llay-n">${lay.count}p</span>
       </button>`;
@@ -13951,7 +13945,7 @@ function renderModal(){
       });
     });
     document.getElementById('startGameBtn').addEventListener('click', ()=>{
-      const lay = LIFE_LAYOUTS.find(x=>x.id===picked) || LIFE_LAYOUTS[4];
+      const lay = LIFE_LAYOUTS.find(x=>x.id===picked) || LIFE_LAYOUTS.find(x=>x.id==='4q');
       state.life.layout = lay.id;
       state.life.count = lay.count;
       state.life.expandedIdx = null;
