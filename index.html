@@ -129,13 +129,42 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 }
 .app > main > .adv-toggle,
 .app > main > div:has(> #colAdvToggle){
-  order:99;position:sticky;bottom:calc(var(--nav-h) + 62px + env(safe-area-inset-bottom));z-index:36;
+  order:99;position:sticky;bottom:calc(var(--nav-h) + 64px + env(safe-area-inset-bottom));z-index:36;
   background:var(--ink);border-top:1px solid var(--line);
   margin:0 -16px !important;padding:8px 16px;
 }
+/* The filter panels are DROP-UP sheets now: fixed above the toggle+search
+   stack, growing upward with their own scroll. Dropdowns INSIDE a sheet
+   expand in flow (a scrolling ancestor would clip absolute panels). */
 .app > main > .adv-panel,
-.app > main > #colAdvBox{order:98;}
+.app > main > #colAdvBox{
+  order:98;position:fixed;left:0;right:0;
+  bottom:calc(var(--nav-h) + 120px + env(safe-area-inset-bottom));
+  max-height:56vh;overflow-y:auto;z-index:37;
+  background:var(--ink);border-top:1px solid var(--line);
+  box-shadow:0 -12px 30px rgba(0,0,0,0.5);
+  padding:12px 16px;margin:0 !important;border-radius:14px 14px 0 0;
+}
+.adv-panel .cselect-panel,
+#colAdvBox .cselect-panel{position:static;margin-top:4px;max-height:240px;}
+/* Inspiration: the dropdown stack rides at the bottom too, and its menus
+   open UPWARD — drop-ups, away from the thumb and the nav. */
+.app > main > .browse-selects{order:99;}
+.browse-selects .cselect-panel{top:auto;bottom:calc(100% + 4px);}
 .app > main > .pin-pill{order:96;}
+/* ---------- the complete flip ---------- */
+/* Inspiration's dropdown stack mirrors the old top-down order: the count
+   select sits NEAREST the bottom search bar, Kindred at the top. */
+.browse-selects{flex-direction:column-reverse;}
+/* Extras reads bottom-up: Life Counter nearest the nav, Share at the top —
+   credits and diagnostics stay pinned at the very bottom of the page. */
+.settings-main{display:flex;flex-direction:column-reverse;}
+.settings-main > p, .settings-main > .settings-card{order:-1;}
+/* Decklist tabs join the bottom stack, riding just above the dock. */
+.app > main > .builder-tabs{
+  order:100;position:sticky;bottom:calc(var(--nav-h) + 52px + env(safe-area-inset-bottom));z-index:36;
+  background:var(--ink);border-top:1px solid var(--line);margin:8px -16px 0;padding:6px 16px 0;
+}
 
 /* ---------- persistent brand banner (symbol + wordmark + tabs), same on every page ---------- */
 :root{ --nav-h: 66px; }
@@ -3233,13 +3262,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.243';
+const APP_VERSION = '2.51.246';
 const CHANGELOG_NOTES = {
   en: [
-    'Search bars and filter toggles moved to the bottom of the screen, pinned above the navigation \u2014 the whole app is one-thumb now.'
+    'Pages open at the BOTTOM now \u2014 controls in reach, scrolling up reveals the rest. The mirror is complete.'
   ],
   nl: [
-    'Zoekbalken en filterknoppen verhuisden naar de onderkant van het scherm, vastgezet boven de navigatie \u2014 de hele app is nu \u00E9\u00E9nduims.'
+    'Pagina\u2019s openen nu ONDERAAN \u2014 knoppen binnen bereik, omhoog scrollen toont de rest. De spiegeling is compleet.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3734,6 +3763,17 @@ function switchPage(p, topnav){
   state.screen = p; state.menuOpen = false; state.openCSelect = null; state.colSel = null;
   pushHistory(p);
   render();
+  scrollToPageFoot();
+}
+function scrollToPageFoot(){
+  // Pages OPEN at the bottom now — controls live there, so every landing
+  // starts at the foot and scrolling UP reveals the rest: the complete
+  // mirror of the old top-down orientation. Double rAF lets layout settle
+  // first; the browser's scroll anchoring then keeps the foot pinned while
+  // late content (images, results) grows above.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    try{ window.scrollTo(0, Math.max(0, document.documentElement.scrollHeight || 0)); }catch(e){}
+  }));
 }
 function pushHistory(screen){
   state._exiting = false;   // navigating again means the exit is off
@@ -5306,6 +5346,7 @@ function openBinderIn(id){
   state.colFilter.binder = id;
   try{ history.pushState({screen:'collection', binder:id}, '', '#collection'); }catch(e){}
   render();
+  scrollToPageFoot();
 }
 /* A binder's cover, once derived, is written down for good — it never shifts
    when cards move, and it survives until the binder is deleted or its art is
@@ -14638,6 +14679,7 @@ function appBackStep(viaHistory){
   if(state.screen === 'decks' && state.folderNav){
     state.folderNav = null;
     render();
+    scrollToPageFoot();
     rearm({screen:'decks'}, '#decks');
     return true;
   }
@@ -14653,6 +14695,7 @@ function appBackStep(viaHistory){
     state.menuOpen = false;
     render();
     state._ladderBack = false;
+    scrollToPageFoot();
     rearm({screen: dest}, '#' + dest);
     return true;
   }
@@ -14661,6 +14704,7 @@ function appBackStep(viaHistory){
     state.screen = 'home'; state.folderNav = null; state.menuOpen = false;
     render();
     state._ladderBack = false;
+    scrollToPageFoot();
     rearm({screen:'home'}, '#home');
     return true;
   }
