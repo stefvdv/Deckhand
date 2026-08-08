@@ -3179,13 +3179,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.233';
+const APP_VERSION = '2.51.234';
 const CHANGELOG_NOTES = {
   en: [
-    'Set views ask Scryfall live for the announced set size \u2014 the previewed count shows as 193/250 the moment the total is published.'
+    'The Set dropdowns in Search and My Collection are searchable now \u2014 type to filter hundreds of sets.'
   ],
   nl: [
-    'Setweergaven vragen Scryfall live om de aangekondigde setgrootte \u2014 het gespoilde aantal toont als 193/250 zodra het totaal bekend is.'
+    'De Set-dropdowns in Zoeken en Mijn Collectie zijn nu doorzoekbaar \u2014 typ om honderden sets te filteren.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4972,7 +4972,7 @@ function collectionPageHtml(){
       const colorOrder = ['W','U','B','R','G','C'];
       return `<div class="panel-card" id="colAdvPanel" style="margin-bottom:12px;">
         <div class="adv-row"><label>Name</label><input id="colFq" class="col-filter-input" placeholder="Card name…" value="${escapeHtml(f.q)}"></div>
-        <div class="adv-row"><label>Set</label>${cselectHtml('colSet', setOpts, f.set, 'All sets')}</div>
+        <div class="adv-row"><label>Set</label>${cselectHtml('colSet', setOpts, f.set, 'All sets', {search:true})}</div>
         <div class="adv-row"><label>Type</label><input id="colTypeText" class="col-filter-input" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(f.type)}"></div>
         <div class="adv-row"><label>Colors</label><div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" data-colcolor="${c}" ${f.colors[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>
           <div class="adv-sub" style="max-width:220px;">${cselectHtml('colCM', [
@@ -8988,7 +8988,7 @@ function advancedPanelHtml(){
     ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<div class="toggle-row" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Include off-color cards')}</div><div style="color:var(--sub-text);font-size:10.5px;margin-top:2px;">${trS('Off — only cards legal in this deck. On — every format-legal card, off-color included.')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
     <div class="adv-row"><label>Card Name</label><input id="advName" type="text" placeholder="Any words in the name" value="${escapeHtml(s.searchName)}"></div>
     <div class="adv-row"><label>Set / Expansion</label>
-      ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name)}))), s.searchSetCode, 'Any Set')}
+      ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name)}))), s.searchSetCode, 'Any Set', {search:true})}
       ${sets.length?'':`<p class="adv-hint">Set list still loading…</p>`}
     </div>
     <div class="adv-row"><label>Oracle Text</label><input id="oracleText" type="text" placeholder="Any text, e.g. draw a card" value="${escapeHtml(s.searchOracleText)}">
