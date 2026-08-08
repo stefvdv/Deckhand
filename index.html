@@ -3184,15 +3184,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.235';
+const APP_VERSION = '2.51.236';
 const CHANGELOG_NOTES = {
   en: [
-    'Previewing sets (The Hobbit, Star Trek, \u2026) are searchable in Commander mode \u2014 pick them in the Set filter and the spoiled cards come back.',
-    'Admiral keeps its law: UB previews join the search once their switch is on.'
+    'Fully spoiled sets say so: 193/193 cards previewed \u2014 the whole set is out \u2014 instead of suggesting more is coming.'
   ],
   nl: [
-    'Sets in previewseizoen (The Hobbit, Star Trek, \u2026) zijn doorzoekbaar in Commander-modus \u2014 kies ze in het Set-filter en de gespoilde kaarten komen terug.',
-    'Admiral houdt zijn wet: UB-previews doen mee in zoeken zodra hun schakelaar aanstaat.'
+    'Volledig gespoilde sets zeggen het ook: 193/193 kaarten gespoild \u2014 de hele set is uit \u2014 in plaats van te suggereren dat er meer komt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6959,13 +6957,25 @@ function renderSpoilerBody(loaded, failed){
     }
     const setTotal = Math.max(rawSet.printed_size || 0, (liveInfo && liveInfo.printed_size) || 0, maxCN);
     headHtml = `<div class="chip-label" style="margin:2px 0 6px;">${escapeHtml(x.name)}${x.ub && !isCmdrMode() ? ' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>' : ''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>`
-      + (gotN ? `<p class="hint" style="margin:0 0 6px;">${gotN}${setTotal>gotN?`/${setTotal}`:''} cards previewed so far.</p>` : '')
+      + (gotN ? `<p class="hint" style="margin:0 0 6px;">${
+          setTotal > 0 && gotN >= setTotal
+            ? `${gotN}/${setTotal} cards previewed — the whole set is out.`
+            : setTotal > 0
+              ? `${gotN}/${setTotal} cards previewed so far.`
+              : `${gotN} cards previewed so far.`
+        }</p>` : '')
       + (x.ub && !isCmdrMode() ? '<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>' : '');
     if(failed.has(active)){ box.innerHTML = headHtml + '<p class="hint">Couldn\'t reach the archive for this set — reopen this page to retry.</p>'; return; }
     // Colour-sorted set view; collector number orders within each colour.
     const cn = c => { const n = parseInt(String(c.collector_number||'').replace(/\D/g,''),10); return isNaN(n) ? 1e9 : n; };
     cards = got.filter(spoilerPlayable).sort((a,b)=> (spoilerColorBucket(a)-spoilerColorBucket(b)) || (cn(a)-cn(b)));
-    footHtml = `<p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed so far.</p>`;
+    footHtml = `<p class="hint" style="margin:6px 0 2px;">${
+      setTotal > 0 && cards.length >= setTotal
+        ? `${cards.length}/${setTotal} cards previewed — the whole set is out.`
+        : setTotal > 0
+          ? `${cards.length}/${setTotal} cards previewed so far.`
+          : `${cards.length} card${cards.length===1?'':'s'} previewed so far.`
+    }</p>`;
   } else {
     // All sets, one feed, newest spoilers first. Scryfall often stops
     // filling previewed_at partway through a season; the old fix filed
