@@ -2959,7 +2959,12 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
     // one query, all sets, official ban list included, lands welcome.
     let base = (baseClause||'').replace(/\s*-t:land/g, '');
     if(opts.restrictSet) base += ' set:'+opts.restrictSet;
-    const q = `${base} legal:commander game:paper -is:digital`.trim();
+    // A previewing set's cards are often still marked not_legal until
+    // release day — demanding legal:commander would hide the very spoilers
+    // being searched for. The format flag returns the moment it releases.
+    let rsPreview = false;
+    try{ rsPreview = !!opts.restrictSet && (currentPreviewSets()||[]).some(x=>x.code===opts.restrictSet); }catch(e){}
+    const q = `${base} ${rsPreview ? '' : 'legal:commander '}game:paper -is:digital`.trim();
     const url = `${SF_BASE}/cards/search?unique=cards&order=${orderParam}&dir=${dir}&q=${encodeURIComponent(q)}`;
     const out = [];
     let next = url, guard = 0;
@@ -3179,13 +3184,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.234';
+const APP_VERSION = '2.51.235';
 const CHANGELOG_NOTES = {
   en: [
-    'The Set dropdowns in Search and My Collection are searchable now \u2014 type to filter hundreds of sets.'
+    'Previewing sets (The Hobbit, Star Trek, \u2026) are searchable in Commander mode \u2014 pick them in the Set filter and the spoiled cards come back.',
+    'Admiral keeps its law: UB previews join the search once their switch is on.'
   ],
   nl: [
-    'De Set-dropdowns in Zoeken en Mijn Collectie zijn nu doorzoekbaar \u2014 typ om honderden sets te filteren.'
+    'Sets in previewseizoen (The Hobbit, Star Trek, \u2026) zijn doorzoekbaar in Commander-modus \u2014 kies ze in het Set-filter en de gespoilde kaarten komen terug.',
+    'Admiral houdt zijn wet: UB-previews doen mee in zoeken zodra hun schakelaar aanstaat.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8982,6 +8989,18 @@ function advancedPanelHtml(){
   const colorOrder = ['W','U','B','R','G','C'];
   const activePool = new Set(activeLegalSetCodes());
   const sets = s.legalSetsMeta ? Object.entries(s.legalSetsMeta).filter(([c])=>activePool.has(c)).sort((a,b)=>a[1].localeCompare(b[1])) : [];
+  // Spoiler-season sets join the picker before release. Commander searches
+  // everything that's previewing (The Hobbit, Star Trek, …); Admiral keeps
+  // its law — a preview appears only once it's in the active pool (in-
+  // universe previews automatically, UB sets via their switch in Extras).
+  try{
+    (currentPreviewSets() || []).forEach(x=>{
+      if(!x || !x.code || sets.some(([c])=>c===x.code)) return;
+      if(!isCmdrMode() && !activePool.has(x.code)) return;
+      sets.push([x.code, x.name]);
+    });
+    sets.sort((a,b)=>a[1].localeCompare(b[1]));
+  }catch(e){}
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
   return `<div class="adv-panel">
     <div class="adv-row" style="margin-bottom:12px;display:flex;gap:8px;"><button class="primary-btn adv-go" style="flex:1;">🔍 Use filters</button><button class="ghost-btn adv-reset" style="flex:1;">Reset filters</button></div>
@@ -9258,7 +9277,8 @@ async function runAdvancedSearch(){
   const clause = buildAdvancedClause();
   state.searchRan = true; state.searchError = false;
   if(!clause && !state.searchSetCode){ document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">Enter a name or set at least one filter.</div>`; return; }
-  if(state.searchSetCode && !activeLegalSetCodes().includes(state.searchSetCode)){
+  const _rsIsPreview = state.searchSetCode && (()=>{ try{ return (currentPreviewSets()||[]).some(x=>x.code===state.searchSetCode); }catch(e){ return false; } })();
+  if(state.searchSetCode && !activeLegalSetCodes().includes(state.searchSetCode) && !(isCmdrMode() && _rsIsPreview)){
     const nm = (state.legalSetsMeta||{})[state.searchSetCode] || 'That set';
     document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">${escapeHtml(nm)} isn't in your card pool right now — switch it on under Extras → Universes Beyond sets, then search again.</div>`;
     return;
