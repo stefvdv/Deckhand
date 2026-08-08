@@ -113,6 +113,29 @@ button{font-family:'Inter';}
 .save-indicator.saving{color:var(--brass);}
 
 main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bottom));}
+/* ---------- inverted controls: search bars & filter toggles live at the
+   BOTTOM, thumb country — moved by flex ORDER, so the DOM (and all wiring)
+   stays untouched. A zero-height spacer with margin-top:auto pushes the
+   cluster to the screen's bottom edge even on short pages; sticky keeps it
+   pinned above the nav while the results scroll beneath. Overlay sheets
+   keep their own layouts (.app > main only). ---------- */
+.app > main{display:flex;flex-direction:column;}
+.app > main::before{content:'';order:97;margin-top:auto;}
+.app > main > .searchbar,
+.app > main > div:has(> #deckFilter){
+  order:100;position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:36;
+  background:var(--ink);border-top:1px solid var(--line);
+  margin:8px -16px 0 !important;padding:10px 16px;
+}
+.app > main > .adv-toggle,
+.app > main > div:has(> #colAdvToggle){
+  order:99;position:sticky;bottom:calc(var(--nav-h) + 62px + env(safe-area-inset-bottom));z-index:36;
+  background:var(--ink);border-top:1px solid var(--line);
+  margin:0 -16px !important;padding:8px 16px;
+}
+.app > main > .adv-panel,
+.app > main > #colAdvBox{order:98;}
+.app > main > .pin-pill{order:96;}
 
 /* ---------- persistent brand banner (symbol + wordmark + tabs), same on every page ---------- */
 :root{ --nav-h: 66px; }
@@ -438,8 +461,8 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .ac-print{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:9px 12px;color:var(--sub-text);font-size:12.5px;cursor:pointer;}
 .ac-print.on{color:var(--ink-text);background:var(--brass-glow);border-left:3px solid var(--brass);}
 .ac-print:last-child{border-bottom:none;}
-.deck-fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + 18px + env(safe-area-inset-bottom));z-index:41;width:54px;height:54px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:26px;font-weight:700;border:none;box-shadow:0 8px 22px rgba(0,0,0,0.45);cursor:pointer;}
-#fabMenu{position:fixed;right:16px;bottom:calc(var(--nav-h) + 80px + env(safe-area-inset-bottom));z-index:42;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;}
+.deck-fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + 76px + env(safe-area-inset-bottom));z-index:41;width:54px;height:54px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:26px;font-weight:700;border:none;box-shadow:0 8px 22px rgba(0,0,0,0.45);cursor:pointer;}
+#fabMenu{position:fixed;right:16px;bottom:calc(var(--nav-h) + 140px + env(safe-area-inset-bottom));z-index:42;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;}
 #fabMenu button{background:none;border:none;color:var(--ink-text);padding:12px 18px;font-size:14px;text-align:left;cursor:pointer;border-bottom:1px solid var(--line);}
 #fabMenu button:last-child{border-bottom:none;}
 .ghost-btn:active{background:var(--hl);}
@@ -3210,13 +3233,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.242';
+const APP_VERSION = '2.51.243';
 const CHANGELOG_NOTES = {
   en: [
-    'Fixed: Sol Ring (and every Admiral-banned staple) wrongly wore a BANNED pill in Commander \u2014 each fleet now consults only its own list.'
+    'Search bars and filter toggles moved to the bottom of the screen, pinned above the navigation \u2014 the whole app is one-thumb now.'
   ],
   nl: [
-    'Opgelost: Sol Ring (en elke Admiral-verboden vaste waarde) droeg onterecht een BANNED-label in Commander \u2014 elke vloot raadpleegt nu alleen zijn eigen lijst.'
+    'Zoekbalken en filterknoppen verhuisden naar de onderkant van het scherm, vastgezet boven de navigatie \u2014 de hele app is nu \u00E9\u00E9nduims.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
