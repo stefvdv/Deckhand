@@ -3184,13 +3184,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.236';
+const APP_VERSION = '2.51.237';
 const CHANGELOG_NOTES = {
   en: [
-    'Fully spoiled sets say so: 193/193 cards previewed \u2014 the whole set is out \u2014 instead of suggesting more is coming.'
+    'Choose Printing offers the \u2728 foil of every printing that has one, priced at Cardmarket\u2019s foil trend; foil-only printings say so.',
+    'Card details link to Cardmarket instead of EDHREC, and spoilers wear their \uD83D\uDD2E mark there too.'
   ],
   nl: [
-    'Volledig gespoilde sets zeggen het ook: 193/193 kaarten gespoild \u2014 de hele set is uit \u2014 in plaats van te suggereren dat er meer komt.'
+    'Versie kiezen biedt de \u2728 foil van elke versie die er een heeft, geprijsd op Cardmarkets foiltrend; foil-only versies zeggen het erbij.',
+    'Kaartdetails linken naar Cardmarket in plaats van EDHREC, en spoilers dragen daar ook hun \uD83D\uDD2E-teken.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8399,7 +8401,7 @@ function renderCardSheet(d, card, loc, idx){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''} · <a href="https://edhrec.com/cards/${encodeURIComponent(String(card.name).split(' // ')[0].toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-'))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">EDHREC ↗</a></div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
@@ -8706,20 +8708,39 @@ async function openPrintingGrid(card, onPick){
       return;
     }
     box.className='';
+    // Foil handling: a printing that exists in foil offers it as its own
+    // pick with Cardmarket's FOIL trend price; a foil-ONLY printing simply
+    // IS the foil. Choosing foil overrides the card's price fields so every
+    // price reader downstream (deck totals, tiles, budget) shows the foil
+    // trend without knowing anything about finishes.
+    const asFoil = (p)=> Object.assign({}, p, { foil: true, prices: { eur: (p.prices && p.prices.eur_foil) || null, eur_foil: (p.prices && p.prices.eur_foil) || null } });
     box.innerHTML = `<div class="sr-grid">${prints.map((p,i)=>{
-      const eur = printEur(p);
-      return `<button class="sr-tile ta-tile" data-i="${i}">
+      const fins = p.finishes || [];
+      const foilOnly = fins.includes('foil') && !fins.includes('nonfoil');
+      const foilEur = p.prices && parseFloat(p.prices.eur_foil);
+      const eur = foilOnly ? (foilEur || printEur(p)) : printEur(p);
+      return `<button class="sr-tile ta-tile" data-i="${i}" data-foilonly="${foilOnly?1:''}">
         <img class="${wbClass(p)}" src="${cardImageMedRaw(p)}" alt="${escapeHtml(p.name)}" loading="lazy">
         <div class="st-body">
           <div class="tp-set">${setIcoHtml(p.set, p.rarity)} ${escapeHtml(p.set_name||p.set)}</div>
-          <div class="tp-sub">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}</div>
-          <div class="st-price st-price-lg">${eur!=null?`€${eur.toFixed(2)}`:'no price listed'}</div>
+          <div class="tp-sub">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}${foilOnly?' · ✨ foil only':''}</div>
+          <div class="st-price st-price-lg">${eur!=null && !isNaN(eur)?`${foilOnly?'✨ ':''}€${eur.toFixed(2)}`:'no price listed'}</div>
+          ${!foilOnly && fins.includes('foil') ? `<button class="ghost-btn pp-foil" data-fi="${i}" style="margin-top:6px;padding:5px 8px;font-size:12px;width:100%;">✨ Foil ${foilEur?`€${foilEur.toFixed(2)}`:'· no price listed'}</button>` : ''}
         </div>
       </button>`;
     }).join('')}</div>`;
+    box.querySelectorAll('.pp-foil').forEach(fb=>{
+      fb.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const chosen = asFoil(prints[+fb.dataset.fi]);
+        closeTopOverlay();                       // pop the chooser only
+        onPick(chosen);
+      });
+    });
     box.querySelectorAll('.ta-tile').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        const chosen = prints[+btn.dataset.i];
+        const p = prints[+btn.dataset.i];
+        const chosen = btn.dataset.foilonly ? asFoil(p) : p;
         closeTopOverlay();                       // pop the chooser only
         onPick(chosen);
       });
@@ -8738,7 +8759,7 @@ function openPrintingPicker(d, card, loc, idx){
     // Picking a printing finishes the errand: close the card sheet too and
     // land back on the deck list, where the confirmation and new art show.
     closeTopOverlay();
-    toast(`Now showing the ${chosen.set_name} printing.`);
+    toast(`Now showing the ${chosen.set_name}${chosen.foil?' ✨ foil':''} printing.`);
     setTimeout(()=>{ try{ render(); }catch(e){} }, 30);
   });
 }
@@ -9816,7 +9837,7 @@ function openCardInfo(card, opts){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🕓 Preview — not yet released':''} · <a href="https://edhrec.com/cards/${encodeURIComponent(String(card.name).split(' // ')[0].toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-'))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">EDHREC ↗</a></div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
@@ -9954,7 +9975,7 @@ function openCardInfo(card, opts){
 function openPrintingBrowse(card, opts){
   openPrintingGrid(card, (chosen)=>{
     setPrintPref(chosen);   // remembered app-wide: every tile shows this printing now
-    toast(`Now showing the ${chosen.set_name} printing.`);
+    toast(`Now showing the ${chosen.set_name}${chosen.foil?' ✨ foil':''} printing.`);
     openCardInfo(chosen, Object.assign({}, opts||{}, { _replace: true, _ppApplied: true }));
   });
 }
