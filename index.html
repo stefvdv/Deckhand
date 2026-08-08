@@ -324,6 +324,8 @@ main{flex:1;padding:16px 16px 28px;}
 .pips-mini{display:flex;gap:3px;align-items:center;}
 .pips-mini svg{display:block;}
 .mb-mini{color:var(--sub-text);font-weight:400;}
+.sp-shelf-ico{display:inline-block;margin-right:6px;vertical-align:-3px;}
+.sp-shelf-ico svg,.sp-shelf-ico img{width:15px;height:15px;display:inline-block;}
 .dock-search{flex:1;min-width:0;background:rgba(10,26,40,0.55);border:1px solid var(--field-line);border-radius:10px;color:var(--text);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:13px;}
 #dockSearchBtn svg{width:16px;height:16px;display:block;}
 .pip{border-radius:50%;font-weight:700;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,0.3);}
@@ -3177,15 +3179,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.231';
+const APP_VERSION = '2.51.233';
 const CHANGELOG_NOTES = {
   en: [
-    'A magnifier in the bottom bar finds cards in the deck and maybeboard as you type.',
-    'Import, Bulk Edit and Export lost their explainer texts; panels still close on a clean save.'
+    'Set views ask Scryfall live for the announced set size \u2014 the previewed count shows as 193/250 the moment the total is published.'
   ],
   nl: [
-    'Een loep in de onderbalk vindt kaarten in het deck en maybeboard terwijl je typt.',
-    'Importeren, Bulk bewerken en Exporteren zijn hun uitlegteksten kwijt; panelen sluiten nog steeds na een schone opslag.'
+    'Setweergaven vragen Scryfall live om de aangekondigde setgrootte \u2014 het gespoilde aantal toont als 193/250 zodra het totaal bekend is.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6932,7 +6932,25 @@ function renderSpoilerBody(loaded, failed){
     // Take the larger of Scryfall's announced size and the highest collector
     // number seen: printed_size can lag during preview season (HOB reported
     // its spoiled count), and a #206 in hand proves the set runs past 193.
-    const setTotal = Math.max(rawSet.printed_size || 0, maxCN);
+    // The weekly sets catalog lags further still — so ask Scryfall's LIVE
+    // set record once per session and repaint when it lands: printed_size
+    // is the announced collector count, filled in as the season matures.
+    state._setInfo = state._setInfo || {};
+    const liveInfo = state._setInfo[active];
+    if(!liveInfo && !(state._setInfoBusy && state._setInfoBusy[active])){
+      (state._setInfoBusy = state._setInfoBusy || {})[active] = true;
+      (async ()=>{
+        try{
+          const res = await sfFetch(SF_BASE + '/sets/' + encodeURIComponent(active), 0, false, false, true);
+          const j = await res.json();
+          state._setInfo[active] = { printed_size: j.printed_size || 0, card_count: j.card_count || 0 };
+        }catch(e){ state._setInfo[active] = { printed_size: 0, card_count: 0 }; }
+        if(state.screen === 'spoilers' && state.spoilerSetFilter === active){
+          try{ renderSpoilerBody(loaded, failed); }catch(err){}
+        }
+      })();
+    }
+    const setTotal = Math.max(rawSet.printed_size || 0, (liveInfo && liveInfo.printed_size) || 0, maxCN);
     headHtml = `<div class="chip-label" style="margin:2px 0 6px;">${escapeHtml(x.name)}${x.ub && !isCmdrMode() ? ' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>' : ''} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>`
       + (gotN ? `<p class="hint" style="margin:0 0 6px;">${gotN}${setTotal>gotN?`/${setTotal}`:''} cards previewed so far.</p>` : '')
       + (x.ub && !isCmdrMode() ? '<p class="hint" style="margin:2px 0 6px;">Playable once its switch is on under Extras → Universes Beyond sets.</p>' : '');
@@ -6942,41 +6960,47 @@ function renderSpoilerBody(loaded, failed){
     cards = got.filter(spoilerPlayable).sort((a,b)=> (spoilerColorBucket(a)-spoilerColorBucket(b)) || (cn(a)-cn(b)));
     footHtml = `<p class="hint" style="margin:6px 0 2px;">${cards.length} card${cards.length===1?'':'s'} previewed so far.</p>`;
   } else {
-    // All sets, one feed, newest spoilers first — no set grouping. Scryfall's
-    // freshest reveals sometimes arrive before their preview date is filled
-    // in, so undated cards in a set that HAS dates inherit its NEWEST date —
-    // they are almost certainly today's batch, and burying them left the
-    // page days behind. A set with no preview dates at all still sinks.
+    // All sets, one feed, newest spoilers first. Scryfall often stops
+    // filling previewed_at partway through a season; the old fix filed
+    // undated top-of-feed cards under "today" — a MOVING target, so the
+    // same cards re-labelled themselves with each new day (the "always the
+    // current date" bug). The truth is pinned instead: the day this app
+    // FIRST SAW a card is recorded once in a small registry and never
+    // changes — the closest client-side stand-in for its real reveal date.
+    // Cards with a genuine previewed_at always use that.
     const withKeys = [];
-    // Cards arrive newest-first (order=spoiled). Scryfall often stops filling
-    // previewed_at partway through a season, and the old rule filed every
-    // later reveal under the set's last KNOWN date — the "stuck on July 30"
-    // effect. Position tells the truth instead: an undated card ABOVE the
-    // newest dated card was revealed after it, so it belongs to today's
-    // shelf; an undated card between dated ones inherits its nearest newer
-    // neighbour. A set with no preview dates at all still sinks to the end.
     const todayKey = new Date().toISOString().slice(0,10);
+    let seen = {};
+    try{ seen = JSON.parse(localStorage.getItem(LS_PREFIX + 'spoilerSeen') || '{}') || {}; }catch(e){ seen = {}; }
+    let seenDirty = false;
+    const liveIds = new Set();
     sets.forEach((x, si)=>{
       const cs = (loaded[x.code]||[]).filter(spoilerPlayable);
-      const hasDates = cs.some(c=>spoilerDateKey(c));
-      let newerDate = null;   // date of the nearest dated card above (newer side)
       cs.forEach((c, ci)=>{
         const own = spoilerDateKey(c);
-        if(own) newerDate = own;
-        withKeys.push({c, k: own || (hasDates ? (newerDate || todayKey) : ''), si, ci});
+        if(c.id) liveIds.add(c.id);
+        if(!own && c.id && !seen[c.id]){ seen[c.id] = todayKey; seenDirty = true; }
+        withKeys.push({c, k: own || (c.id && seen[c.id]) || todayKey, si, ci});
       });
     });
     withKeys.sort((a,b)=> (a.k<b.k?1:a.k>b.k?-1:0) || (a.si-b.si) || (a.ci-b.ci));
     cards = withKeys.map(w=>w.c);
-    // Each preview day gets its own dated shelf, mythicspoiler-style —
-    // only in this all-sets feed; the single-set view stays colour-sorted.
+    // Shelves are per SET per day now: The Hobbit and Star Trek both
+    // spoiling on the 5th get their own dividers, each named and dated.
     feedGroups = [];
     withKeys.forEach(w=>{
-      const k = w.k || '';
-      if(!feedGroups.length || feedGroups[feedGroups.length-1].k !== k) feedGroups.push({ k, cs: [] });
+      const gk = (w.k||'') + '|' + (w.c.set||'');
+      if(!feedGroups.length || feedGroups[feedGroups.length-1].gk !== gk) feedGroups.push({ gk, k: w.k, set: w.c.set, cs: [] });
       feedGroups[feedGroups.length-1].cs.push(w.c);
     });
     const pending = sets.filter(x=>loaded[x.code]===undefined && !failed.has(x.code)).length;
+    // Housekeep the registry only once EVERYTHING is loaded — pruning
+    // against a half-loaded feed would drop pins for late sets and re-mint
+    // them "today", the very drift this registry exists to stop.
+    if(!pending && !failed.size){
+      Object.keys(seen).forEach(id=>{ if(!liveIds.has(id)){ delete seen[id]; seenDirty = true; } });
+    }
+    if(seenDirty){ try{ localStorage.setItem(LS_PREFIX + 'spoilerSeen', JSON.stringify(seen)); }catch(e){} }
     footHtml = (pending ? `<div class="status" style="margin:8px 0;"><div class="spinner"></div>More sets unfurling…</div>` : '')
       + (failed.size ? `<p class="hint" style="margin:6px 0 2px;">Couldn't reach ${failed.size} set${failed.size===1?'':'s'} — reopen this page to retry.</p>` : '');
     if(!cards.length && !pending){ box.innerHTML = '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
@@ -6984,8 +7008,9 @@ function renderSpoilerBody(loaded, failed){
   }
   if(active && !cards.length){ box.innerHTML = headHtml + '<p class="hint">Nothing spoiled yet — check back soon.</p>'; return; }
   const fmtDayHead = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(appLang()==='nl'?'nl-NL':'en-US', {weekday:'long', month:'long', day:'numeric'}); }catch(e){ return d; } };
+  const setNameOf = (code)=>{ const x = sets.find(s=>s.code===code); return x ? x.name : String(code||'').toUpperCase(); };
   const gridHtml = feedGroups
-    ? feedGroups.map(g=>`<div class="chip-label" style="margin:12px 0 6px;">${g.k ? fmtDayHead(g.k) : trS('Date to be announced')}</div><div class="sc-grid">${g.cs.map(tile).join('')}</div>`).join('')
+    ? feedGroups.map(g=>`<div class="chip-label sp-shelf" style="margin:12px 0 6px;">${g.set ? `<span class="sp-shelf-ico">${setIcoHtml(g.set, 'rare')}</span>${escapeHtml(setNameOf(g.set))} — ` : ''}${g.k ? fmtDayHead(g.k) : trS('Date to be announced')}</div><div class="sc-grid">${g.cs.map(tile).join('')}</div>`).join('')
     : `<div class="sc-grid">${cards.map(tile).join('')}</div>`;
   box.innerHTML = headHtml + gridHtml + footHtml;
   box.querySelectorAll('.sc-tile').forEach(b=>{
