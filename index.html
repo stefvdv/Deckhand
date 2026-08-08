@@ -324,6 +324,10 @@ main{flex:1;padding:16px 16px 28px;}
 .pips-mini{display:flex;gap:3px;align-items:center;}
 .pips-mini svg{display:block;}
 .mb-mini{color:var(--sub-text);font-weight:400;}
+.pp-wrap{position:relative;}
+.pp-wrap .sr-tile{width:100%;}
+.pp-foil{position:absolute;top:8px;right:8px;z-index:3;background:rgba(10,22,36,0.88);border:1px solid var(--brass);border-radius:999px;color:var(--brass);font-size:11px;line-height:1;padding:6px 9px;font-family:'JetBrains Mono',monospace;}
+.pp-foil:active{transform:scale(0.94);}
 .sp-shelf-ico{display:inline-block;margin-right:6px;vertical-align:-3px;}
 .sp-shelf-ico svg,.sp-shelf-ico img{width:15px;height:15px;display:inline-block;}
 .dock-search{flex:1;min-width:0;background:rgba(10,26,40,0.55);border:1px solid var(--field-line);border-radius:10px;color:var(--text);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:13px;}
@@ -3184,15 +3188,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.237';
+const APP_VERSION = '2.51.238';
 const CHANGELOG_NOTES = {
   en: [
-    'Choose Printing offers the \u2728 foil of every printing that has one, priced at Cardmarket\u2019s foil trend; foil-only printings say so.',
-    'Card details link to Cardmarket instead of EDHREC, and spoilers wear their \uD83D\uDD2E mark there too.'
+    'Choose Printing keeps its two-column grid: the foil pick is now a small \u2728 pill on the card corner, only where a foil exists.'
   ],
   nl: [
-    'Versie kiezen biedt de \u2728 foil van elke versie die er een heeft, geprijsd op Cardmarkets foiltrend; foil-only versies zeggen het erbij.',
-    'Kaartdetails linken naar Cardmarket in plaats van EDHREC, en spoilers dragen daar ook hun \uD83D\uDD2E-teken.'
+    'Versie kiezen houdt zijn twee kolommen: de foilkeuze is nu een klein \u2728-pilletje op de kaarthoek, alleen waar een foil bestaat.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8714,20 +8716,26 @@ async function openPrintingGrid(card, onPick){
     // price reader downstream (deck totals, tiles, budget) shows the foil
     // trend without knowing anything about finishes.
     const asFoil = (p)=> Object.assign({}, p, { foil: true, prices: { eur: (p.prices && p.prices.eur_foil) || null, eur_foil: (p.prices && p.prices.eur_foil) || null } });
+    // The foil control is a SIBLING pill overlaid on the card corner, never
+    // a button nested in a button — browsers hoist nested buttons out, which
+    // is exactly how the first attempt's foil control escaped its tile and
+    // hijacked a whole grid cell. The tile itself stays untouched.
     box.innerHTML = `<div class="sr-grid">${prints.map((p,i)=>{
       const fins = p.finishes || [];
       const foilOnly = fins.includes('foil') && !fins.includes('nonfoil');
       const foilEur = p.prices && parseFloat(p.prices.eur_foil);
       const eur = foilOnly ? (foilEur || printEur(p)) : printEur(p);
-      return `<button class="sr-tile ta-tile" data-i="${i}" data-foilonly="${foilOnly?1:''}">
-        <img class="${wbClass(p)}" src="${cardImageMedRaw(p)}" alt="${escapeHtml(p.name)}" loading="lazy">
-        <div class="st-body">
-          <div class="tp-set">${setIcoHtml(p.set, p.rarity)} ${escapeHtml(p.set_name||p.set)}</div>
-          <div class="tp-sub">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}${foilOnly?' · ✨ foil only':''}</div>
-          <div class="st-price st-price-lg">${eur!=null && !isNaN(eur)?`${foilOnly?'✨ ':''}€${eur.toFixed(2)}`:'no price listed'}</div>
-          ${!foilOnly && fins.includes('foil') ? `<button class="ghost-btn pp-foil" data-fi="${i}" style="margin-top:6px;padding:5px 8px;font-size:12px;width:100%;">✨ Foil ${foilEur?`€${foilEur.toFixed(2)}`:'· no price listed'}</button>` : ''}
-        </div>
-      </button>`;
+      return `<div class="pp-wrap">
+        <button class="sr-tile ta-tile" data-i="${i}" data-foilonly="${foilOnly?1:''}">
+          <img class="${wbClass(p)}" src="${cardImageMedRaw(p)}" alt="${escapeHtml(p.name)}" loading="lazy">
+          <div class="st-body">
+            <div class="tp-set">${setIcoHtml(p.set, p.rarity)} ${escapeHtml(p.set_name||p.set)}</div>
+            <div class="tp-sub">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}${foilOnly?' · ✨ foil only':''}</div>
+            <div class="st-price st-price-lg">${eur!=null && !isNaN(eur)?`${foilOnly?'✨ ':''}€${eur.toFixed(2)}`:'no price listed'}</div>
+          </div>
+        </button>
+        ${!foilOnly && fins.includes('foil') ? `<button class="pp-foil" data-fi="${i}" title="Choose the foil printing">✨${foilEur?` €${foilEur.toFixed(2)}`:''}</button>` : ''}
+      </div>`;
     }).join('')}</div>`;
     box.querySelectorAll('.pp-foil').forEach(fb=>{
       fb.addEventListener('click', (e)=>{
