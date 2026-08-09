@@ -162,6 +162,8 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 /* Inspiration: the dropdown stack rides at the bottom too, and its menus
    open UPWARD — drop-ups, away from the thumb and the nav. */
 .app > main > .browse-selects{order:99;}
+.app > main > #inspireResults{order:95;}
+.app > main:has(> #inspireResults) > .hint{order:98;}
 .app > main > .browse-hero{order:98;margin:10px 0 34px;}
 .app > main > #twResults{order:95;display:flex;flex-direction:column-reverse;gap:8px;padding-bottom:6px;}
 .app > main:has(> #twResults) > .hint, .app > main:has(> #twResults) > .panel-card{order:98;}
@@ -178,7 +180,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > .pin-pill{order:96;}
 .app > main > .sp-jump{order:99;}
 /* (1) Home packs downward — the foot gap closes. */
-.app > main.home-page{justify-content:flex-end;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+.app > main.home-page{justify-content:flex-end;padding-bottom:calc(var(--nav-h) - 14px + env(safe-area-inset-bottom));}
 /* (3/5) My Stuff: tight foot, FAB low, filter shortened clear of it,
    uniform section rhythm in the reversed column. */
 .app > main:has(> div > #deckFilter){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));gap:12px;}
@@ -393,7 +395,7 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
   box-shadow:0 10px 30px rgba(201,162,75,0.34), inset 0 1px 0 rgba(255,255,255,0.35);
   transition:transform 0.12s, box-shadow 0.12s;
 }
-.home-search-btn svg{width:17px;height:17px;}
+.home-search-btn svg{width:17px;height:17px;stroke:#1a1204;}
 .hsb-anchor{font-size:18px;line-height:1;}
 .home-sub{z-index:1;font-size:11.5px;color:var(--sub-text-2);margin:7px 0 0;letter-spacing:0.3px;}
 .home-search-btn:active{transform:translateY(1px);box-shadow:0 5px 16px rgba(201,162,75,0.3), inset 0 1px 0 rgba(255,255,255,0.35);}
@@ -570,7 +572,7 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .pd{position:relative;}
 .pd-btn{width:100%;display:flex;align-items:center;gap:8px;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:8px;padding:9px 10px;color:var(--ink-text);font-size:12.5px;cursor:pointer;text-align:left;}
 .pd-l{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pd-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:8;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:10px;max-height:230px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,0.5);}
+.pd-panel{position:absolute;left:0;right:0;bottom:calc(100% + 4px);top:auto;z-index:8;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:10px;max-height:230px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,0.5);}
 .pd-opt{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:9px 10px;color:var(--sub-text);font-size:12.5px;cursor:pointer;}
 .pd-opt:last-child{border-bottom:none;}
 .pd-opt.sel{color:var(--ink-text);background:var(--brass-glow);}
@@ -923,6 +925,10 @@ main.has-dock{padding-bottom:84px;}
 .overlay{position:fixed;inset:0;z-index:100;background:var(--ink);display:flex;flex-direction:column;}
 .overlay-inner{max-width:900px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;min-height:0;}
 .overlay main{flex:1;overflow-y:auto;padding-bottom:24px;}
+#recoOverlay main, #similarOverlay main, #printOverlay main, #colAddSheet main,
+#addCollOverlay main, #budgetOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
+#bgBody{display:flex;flex-direction:column-reverse;}
+.budget-trio{display:flex;flex-direction:column-reverse;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:120;display:flex;align-items:flex-end;justify-content:center;}
 @media (min-width:640px){ .modal-backdrop{align-items:center;} }
 .modal-sheet{background:var(--ink-3);border:1px solid var(--line);border-radius:14px 14px 0 0;width:100%;max-width:420px;padding:18px;max-height:80vh;overflow-y:auto;}
@@ -3349,15 +3355,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.260';
+const APP_VERSION = '2.51.261';
 const CHANGELOG_NOTES = {
   en: [
-    'The Trade page turned bottom-up: the verdict and both sides sit by the thumb, and a new search bar digs through your Wants \u2014 tap a hit and it lands on the other side of the table, price and all.',
-    'Deck and binder names in the bottom bar finally scale down for real (the old measurement could be silently fooled; the new one cannot), and the Inspiration crest and title sit a touch higher.'
+    'The complete flip reached the overlay family: recommendations, similar cards, choose-printing, add-to-collection and the Budget page all open at the foot and stack upward \u2014 Budget now shows each pricey card at the bottom with its thrifty stand-ins above it.',
+    'Inspiration opened from a decklist lands at the foot too, printing menus pop UP instead of shoving the page down, the home pages settle a touch lower, and the anchor on Weigh Anchor is finally visible (it was gold on gold).'
   ],
   nl: [
-    'De Ruilpagina is nu bottom-up: het oordeel en beide kanten zitten bij de duim, en een nieuwe zoekbalk graaft door je Wants \u2014 tik op een treffer en die landt aan de overkant van de tafel, prijs en al.',
-    'Deck- en mapnamen in de onderbalk schalen nu \u00e9cht mee (de oude meting kon stil misleid worden; de nieuwe niet), en het embleem en de titel op Inspiratie staan een tikje hoger.'
+    'De complete flip bereikte de overlays: aanbevelingen, vergelijkbare kaarten, versie kiezen, aan-collectie-toevoegen en de Budgetpagina openen allemaal aan de voet en stapelen omhoog \u2014 Budget toont elke dure kaart nu onderaan met de zuinige vervangers erboven.',
+    'Inspiratie geopend vanuit een decklijst landt ook aan de voet, versiemenu\u2019s klappen nu OMHOOG in plaats van de pagina omlaag te duwen, de homepagina\u2019s zakken een tikje, en het anker op Anker lichten is eindelijk zichtbaar (het was goud op goud).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10849,7 +10855,7 @@ async function loadInspiration(d){
   state.inspireCache[cacheKey] = filtered;
   renderInspireFromCache(cacheKey, d);
 }
-function renderInspireFromCache(cacheKey, d){
+function renderInspireFromCache(cacheKey, d, keepScroll){
   const box = document.getElementById('inspireResults');
   const pool = state.inspireCache[cacheKey] || [];
   const inDeck = new Set(d.cards.map(c=>c.name).concat((d.maybeboard||[]).map(c=>c.name)));
@@ -10861,10 +10867,11 @@ function renderInspireFromCache(cacheKey, d){
   if(remaining.length < 15 && !(state.inspireRefilling && state.inspireRefilling[cacheKey])){
     refillInspireCache(cacheKey, d);
   }
-  if(!display.length){ box.innerHTML = `<div class="empty-note">Nothing left to recommend here — you've already added the top picks for this category. Try another one.</div>`; return; }
+  if(!display.length){ box.innerHTML = `<div class="empty-note">Nothing left to recommend here — you've already added the top picks for this category. Try another one.</div>`; if(!keepScroll) scrollToPageFoot(); return; }
   box.innerHTML = `<div class="sr-grid">${display.map(c=>searchRowHtml(c,d)).join('')}</div>`;
-  wireResultButtons(display, d, ()=>renderInspireFromCache(cacheKey, d));
+  wireResultButtons(display, d, ()=>renderInspireFromCache(cacheKey, d, true));
   loadTilePrices(display);
+  if(!keepScroll) scrollToPageFoot();
 }
 async function refillInspireCache(cacheKey, d){
   if(!state.inspireRefilling) state.inspireRefilling = {};
