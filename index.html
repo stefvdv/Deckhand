@@ -927,6 +927,8 @@ main.has-dock{padding-bottom:84px;}
 .overlay main{flex:1;overflow-y:auto;padding-bottom:24px;}
 #recoOverlay main, #similarOverlay main, #printOverlay main, #colAddSheet main,
 #addCollOverlay main, #budgetOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
+#budgetOverlay .overlay-inner, #similarOverlay .overlay-inner{flex-direction:column-reverse;}
+#budgetOverlay .topbar, #similarOverlay .topbar{border-bottom:none;border-top:1px solid var(--line);}
 #bgBody{display:flex;flex-direction:column-reverse;}
 .budget-trio{display:flex;flex-direction:column-reverse;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:120;display:flex;align-items:flex-end;justify-content:center;}
@@ -3355,15 +3357,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.261';
+const APP_VERSION = '2.51.262';
 const CHANGELOG_NOTES = {
   en: [
-    'The complete flip reached the overlay family: recommendations, similar cards, choose-printing, add-to-collection and the Budget page all open at the foot and stack upward \u2014 Budget now shows each pricey card at the bottom with its thrifty stand-ins above it.',
-    'Inspiration opened from a decklist lands at the foot too, printing menus pop UP instead of shoving the page down, the home pages settle a touch lower, and the anchor on Weigh Anchor is finally visible (it was gold on gold).'
+    'Deck tools behave bottom-up now: opening Bulk Edit, Import, Export or Add Cards keeps the page pinned at the foot while the panel unfolds upward.',
+    'Budget Alternatives and Similar Cards completed their flip \u2014 the back button and title moved to the bottom bar, right by the thumb.'
   ],
   nl: [
-    'De complete flip bereikte de overlays: aanbevelingen, vergelijkbare kaarten, versie kiezen, aan-collectie-toevoegen en de Budgetpagina openen allemaal aan de voet en stapelen omhoog \u2014 Budget toont elke dure kaart nu onderaan met de zuinige vervangers erboven.',
-    'Inspiratie geopend vanuit een decklijst landt ook aan de voet, versiemenu\u2019s klappen nu OMHOOG in plaats van de pagina omlaag te duwen, de homepagina\u2019s zakken een tikje, en het anker op Anker lichten is eindelijk zichtbaar (het was goud op goud).'
+    'Deckgereedschap gedraagt zich nu bottom-up: Bulk bewerken, Importeren, Exporteren of Kaarten toevoegen openen houdt de pagina aan de voet geprikt terwijl het paneel omhoog uitvouwt.',
+    'Budgetalternatieven en Vergelijkbare kaarten voltooiden hun flip \u2014 de terugknop en titel verhuisden naar de onderbalk, vlak bij de duim.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8383,6 +8385,7 @@ function wireBuilderBody(d){
       document.getElementById('dlPanelBox').innerHTML = dlPanelHtml(d);
       document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active', x.dataset.panel===state.dlPanel));
       wireDlPanel(d);
+      scrollToPageFoot();
     }));
     document.getElementById('inspireBtn')?.addEventListener('click', ()=>{ state.inspireDeckId = d.id; switchPage('inspiration'); });
     document.getElementById('deckSearchBtn')?.addEventListener('click', ()=>{
