@@ -120,7 +120,15 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    pinned above the nav while the results scroll beneath. Overlay sheets
    keep their own layouts (.app > main only). ---------- */
 .app > main{display:flex;flex-direction:column;}
-.app > main::before{content:'';order:97;margin-top:auto;}
+/* FULLY REVERSED mains: Extras (credits at the top, Life Counter at the
+   thumb) and My Stuff (collection/fleet on top, folders and decks at the
+   bottom by the filter). The .app>main compound (0-1-1) beat a bare class,
+   which is why the earlier .settings-main flip never rendered — these
+   selectors out-rank it. Reversed mains pack at the bottom natively, so
+   the pusher spacer must NOT apply there (it would float content up). */
+.app > main.settings-main,
+.app > main:has(> div > #deckFilter){flex-direction:column-reverse;}
+.app > main:not(.settings-main):not(:has(> div > #deckFilter))::before{content:'';order:97;margin-top:auto;}
 .app > main > .searchbar,
 .app > main > div:has(> #deckFilter){
   order:100;position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:36;
@@ -141,7 +149,8 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
   order:98;position:fixed;left:0;right:0;
   bottom:calc(var(--nav-h) + 120px + env(safe-area-inset-bottom));
   max-height:56vh;overflow-y:auto;z-index:37;
-  background:var(--ink);border-top:1px solid var(--line);
+  display:flex;flex-direction:column-reverse;   /* flipped fields AND starts scrolled at the bottom */
+  border-top:1px solid var(--line);
   box-shadow:0 -12px 30px rgba(0,0,0,0.5);
   padding:12px 16px;margin:0 !important;border-radius:14px 14px 0 0;
 }
@@ -150,12 +159,12 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 /* Inspiration: the dropdown stack rides at the bottom too, and its menus
    open UPWARD — drop-ups, away from the thumb and the nav. */
 .app > main > .browse-selects{order:99;}
+.app > main > .browse-hero{order:98;margin:10px 0 6px;}
+.app > main:has(> .browse-selects){padding-bottom:calc(var(--nav-h) + 6px + env(safe-area-inset-bottom));}
 .browse-selects .cselect-panel{top:auto;bottom:calc(100% + 4px);}
 .app > main > .pin-pill{order:96;}
+.app > main > .sp-jump{order:99;}
 /* ---------- the complete flip ---------- */
-/* Extras reads bottom-up: Life Counter nearest the nav, Share at the top —
-   credits and diagnostics stay pinned at the very bottom of the page. */
-.settings-main{display:flex;flex-direction:column-reverse;}
 /* Decklist tabs join the bottom stack, riding just above the dock. */
 .app > main > .builder-tabs{
   order:100;position:sticky;bottom:calc(var(--nav-h) + 52px + env(safe-area-inset-bottom));z-index:36;
@@ -3258,13 +3267,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.247';
+const APP_VERSION = '2.51.248';
 const CHANGELOG_NOTES = {
   en: [
-    'The reversal actually lands now: Inspiration reads Kindred/Theme/Colors/Count into the search bar, and Extras runs credits-first down to Life Counter at your thumb.'
+    'Extras and My Stuff truly reverse now; Inspiration\u2019s intro sits above Kindred; spoiler set buttons and filter fields flipped to the bottom, in the app\u2019s own colours.'
   ],
   nl: [
-    'De omkering pakt nu echt: Inspiratie leest Kindred/Thema/Kleuren/Aantal richting de zoekbalk, en Extra\u2019s loopt van credits bovenaan tot Levensteller bij je duim.'
+    'Extra\u2019s en Mijn Stuff keren nu echt om; de intro van Inspiratie staat boven Kindred; spoiler-setknoppen en filtervelden klapten naar onderen, in de eigen kleuren van de app.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
