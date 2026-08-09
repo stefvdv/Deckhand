@@ -1037,7 +1037,7 @@ main.has-dock{padding-bottom:84px;}
 .cr-title{font-family:'Cinzel',serif;font-size:17px;color:var(--brass);letter-spacing:.04em;}
 .cr-bar{display:flex;gap:8px;padding:8px 14px 10px;}
 .cr-bar input{flex:1;background:var(--field);border:1px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:10px 12px;font-size:14px;min-width:0;}
-#crBody{flex:1;overflow-y:auto;padding:0 6px 30px;-webkit-overflow-scrolling:touch;}
+#crBody{padding:0 6px 30px;}
 .cr-rule{display:flex;gap:10px;padding:10px 10px;border-bottom:1px solid var(--line);}
 .cr-num{flex:none;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--brass);min-width:52px;padding-top:2px;}
 .cr-txt{font-size:13.5px;line-height:1.55;color:var(--ink-text);white-space:pre-wrap;word-break:break-word;}
@@ -1069,7 +1069,7 @@ main.has-dock{padding-bottom:84px;}
 .cb-ub{background:linear-gradient(135deg,#7B5CD6,#4A2F96);font-size:8.5px;letter-spacing:.02em;}
 .cb-sp{background:none;box-shadow:none;font-size:16px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));}
 .cb-own{background:linear-gradient(135deg,#1F9A63,#0E5C3A);font-size:12px;}
-.cb-foil{background:linear-gradient(135deg,#8B6AE0,#3E2E7A);font-size:11px;}
+.cb-foil{background:none;box-shadow:none;width:auto;height:auto;min-width:0;font-size:15px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.9));}
 *:has(> .card-badges){position:relative;}
 *:has(> .vg-qty){position:relative;}
 /* Trade calculator */
@@ -2326,7 +2326,7 @@ function setPrintPref(chosen){
   const iu = chosen.image_uris || (chosen.card_faces && chosen.card_faces[0] && chosen.card_faces[0].image_uris) || null;
   if(!iu) return;
   const prefs = _printPrefs();
-  const rec = { id: chosen.id, i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
+  const rec = { id: chosen.id, f: !!chosen.foil, i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
   prefs[chosen.name] = rec;
   try{ localStorage.setItem(LS_PREFIX+'printPrefs', JSON.stringify(prefs)); }catch(e){}
   // Already-rendered tiles keep their old art until something repaints them —
@@ -2994,7 +2994,8 @@ function cardBadgesHtml(c){
   if(!isCmdrMode() && isUBCard(c)) b.push('<i class="cb cb-ub" title="Universes Beyond">UB</i>');
   if(isPreviewCard(c)) b.push('<i class="cb cb-sp" title="Spoiler — not yet released">🔮</i>');
   if(ownedNames().has(c.name)) b.push('<i class="cb cb-own" title="In your collection">✓</i>');
-  if(c.foil) b.push('<i class="cb cb-foil" title="Foil printing">✨</i>');
+  const _pf = _printPrefs()[c.name];
+  if(_pf ? _pf.f : c.foil) b.push('<i class="cb cb-foil" title="Foil printing">✨</i>');
   // The flip button for double-faced cards rides along wherever the badge
   // rail is emitted — every grid tile and deck view gets it in one place.
   return (b.length ? `<span class="card-badges">${b.join('')}</span>` : '') + dfcFlipHtml(c);
@@ -3372,17 +3373,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.263';
+const APP_VERSION = '2.51.264';
 const CHANGELOG_NOTES = {
   en: [
-    'Foil printings now wear a \u2728 twinkle on the card art itself, on every tile in the app.',
-    'The \u201cPlayed with\u2026\u201d recommendations page joined the flip: opens at the foot, title bar at the bottom.',
-    'A black box now records the last network requests and any errors \u2014 Extras \u2192 Copy diagnostics includes it, to hunt down loading failures.'
+    'The \u201cPlayed with\u2026\u201d page scrolls as one piece now \u2014 its results no longer live in a separate scroll box.',
+    'The foil twinkle is now just the \u2728 stars on the art, no purple chip \u2014 and switching to a non-foil printing clears it properly, everywhere in the app.'
   ],
   nl: [
-    'Foil-versies dragen nu een \u2728 twinkel op de kaart-art zelf, op elke tegel in de app.',
-    'De pagina \u201cHiermee gespeeld\u201d deed mee met de flip: opent aan de voet, titelbalk onderaan.',
-    'Een zwarte doos registreert nu de laatste netwerkverzoeken en eventuele fouten \u2014 Extra\u2019s \u2192 Kopieer diagnostiek bevat dit, om laadproblemen op te sporen.'
+    'De pagina \u201cHiermee gespeeld\u201d scrolt nu als \u00e9\u00e9n geheel \u2014 de resultaten zitten niet meer in een aparte scrollbox.',
+    'De foil-twinkel is nu alleen de \u2728 sterren op de art, zonder paarse chip \u2014 en wisselen naar een niet-foil versie wist hem netjes, overal in de app.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
