@@ -927,8 +927,8 @@ main.has-dock{padding-bottom:84px;}
 .overlay main{flex:1;overflow-y:auto;padding-bottom:24px;}
 #recoOverlay main, #similarOverlay main, #printOverlay main, #colAddSheet main,
 #addCollOverlay main, #budgetOverlay main, #cardRecoOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
-#budgetOverlay .overlay-inner, #similarOverlay .overlay-inner, #cardRecoOverlay .overlay-inner{flex-direction:column-reverse;}
-#budgetOverlay .topbar, #similarOverlay .topbar, #cardRecoOverlay .topbar{border-bottom:none;border-top:1px solid var(--line);}
+.overlay .overlay-inner{flex-direction:column-reverse;}
+.overlay .topbar{border-bottom:none;border-top:1px solid var(--line);}
 #bgBody{display:flex;flex-direction:column-reverse;}
 .budget-trio{display:flex;flex-direction:column-reverse;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:120;display:flex;align-items:flex-end;justify-content:center;}
@@ -1069,7 +1069,7 @@ main.has-dock{padding-bottom:84px;}
 .cb-ub{background:linear-gradient(135deg,#7B5CD6,#4A2F96);font-size:8.5px;letter-spacing:.02em;}
 .cb-sp{background:none;box-shadow:none;font-size:16px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));}
 .cb-own{background:linear-gradient(135deg,#1F9A63,#0E5C3A);font-size:12px;}
-.cb-foil{background:none;box-shadow:none;width:auto;height:auto;min-width:0;font-size:15px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.9));}
+.foil-star{position:absolute;left:8%;bottom:40%;font-size:19px;font-style:normal;pointer-events:none;z-index:2;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.9));}
 *:has(> .card-badges){position:relative;}
 *:has(> .vg-qty){position:relative;}
 /* Trade calculator */
@@ -2313,6 +2313,16 @@ function _printPrefs(){
   if(!state._printPrefs){
     try{ state._printPrefs = JSON.parse(localStorage.getItem(LS_PREFIX+'printPrefs')||'{}') || {}; }
     catch(e){ state._printPrefs = {}; }
+    // One-time repair: v264 mistook Scryfall's foil AVAILABILITY for a foil
+    // CHOICE and marked half the world foil. Reset to the non-foil default;
+    // explicit foil picks from here on carry their own flag.
+    try{
+      if(!localStorage.getItem(LS_PREFIX+'foilPickFix')){
+        Object.values(state._printPrefs).forEach(r=>{ if(r && r.f) r.f = false; });
+        localStorage.setItem(LS_PREFIX+'printPrefs', JSON.stringify(state._printPrefs));
+        localStorage.setItem(LS_PREFIX+'foilPickFix', '1');
+      }
+    }catch(e){}
   }
   return state._printPrefs;
 }
@@ -2326,7 +2336,7 @@ function setPrintPref(chosen){
   const iu = chosen.image_uris || (chosen.card_faces && chosen.card_faces[0] && chosen.card_faces[0].image_uris) || null;
   if(!iu) return;
   const prefs = _printPrefs();
-  const rec = { id: chosen.id, f: !!chosen.foil, i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
+  const rec = { id: chosen.id, f: !!chosen._foilPick, i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
   prefs[chosen.name] = rec;
   try{ localStorage.setItem(LS_PREFIX+'printPrefs', JSON.stringify(prefs)); }catch(e){}
   // Already-rendered tiles keep their old art until something repaints them —
@@ -2994,11 +3004,14 @@ function cardBadgesHtml(c){
   if(!isCmdrMode() && isUBCard(c)) b.push('<i class="cb cb-ub" title="Universes Beyond">UB</i>');
   if(isPreviewCard(c)) b.push('<i class="cb cb-sp" title="Spoiler — not yet released">🔮</i>');
   if(ownedNames().has(c.name)) b.push('<i class="cb cb-own" title="In your collection">✓</i>');
-  const _pf = _printPrefs()[c.name];
-  if(_pf ? _pf.f : c.foil) b.push('<i class="cb cb-foil" title="Foil printing">✨</i>');
+
   // The flip button for double-faced cards rides along wherever the badge
   // rail is emitted — every grid tile and deck view gets it in one place.
-  return (b.length ? `<span class="card-badges">${b.join('')}</span>` : '') + dfcFlipHtml(c);
+  const _pf = _printPrefs()[c.name];
+  const _isFoil = _pf ? !!_pf.f : !!c._foilPick;
+  return (b.length ? `<span class="card-badges">${b.join('')}</span>` : '')
+    + (_isFoil ? '<i class="foil-star" title="Foil printing">✨</i>' : '')
+    + dfcFlipHtml(c);
 }
 /* Old scans have square white corners; the CSS clips every card image to the
    real card corner radius so corners read dark like the physical card — except
@@ -3373,15 +3386,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.264';
+const APP_VERSION = '2.51.265';
 const CHANGELOG_NOTES = {
   en: [
-    'The \u201cPlayed with\u2026\u201d page scrolls as one piece now \u2014 its results no longer live in a separate scroll box.',
-    'The foil twinkle is now just the \u2728 stars on the art, no purple chip \u2014 and switching to a non-foil printing clears it properly, everywhere in the app.'
+    'Foil, fixed for real: the app confused \u201cexists in foil\u201d with \u201cchosen as foil\u201d, so half the world twinkled. Everything resets to non-foil; only an explicit foil pick (or a foil-only printing) shows the \u2728 \u2014 now larger, sitting on the art itself.',
+    'Every overlay header moved to the bottom \u2014 card view, recommendations, printings, all of them: back button and title by the thumb. And the Trade search gained a \u2715 to clear it.'
   ],
   nl: [
-    'De pagina \u201cHiermee gespeeld\u201d scrolt nu als \u00e9\u00e9n geheel \u2014 de resultaten zitten niet meer in een aparte scrollbox.',
-    'De foil-twinkel is nu alleen de \u2728 sterren op de art, zonder paarse chip \u2014 en wisselen naar een niet-foil versie wist hem netjes, overal in de app.'
+    'Foil, nu \u00e9cht gefikst: de app verwarde \u201cbestaat in foil\u201d met \u201cgekozen als foil\u201d, dus half de wereld twinkelde. Alles staat weer op niet-foil; alleen een bewuste foil-keuze (of een versie die alleen in foil bestaat) toont de \u2728 \u2014 nu groter, op de art zelf.',
+    'Elke overlay-kop verhuisde naar beneden \u2014 kaartweergave, aanbevelingen, versies, allemaal: terugknop en titel bij de duim. En de Ruil-zoekbalk kreeg een \u2715 om te wissen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9047,7 +9060,7 @@ async function openPrintingGrid(card, onPick){
     // IS the foil. Choosing foil overrides the card's price fields so every
     // price reader downstream (deck totals, tiles, budget) shows the foil
     // trend without knowing anything about finishes.
-    const asFoil = (p)=> Object.assign({}, p, { foil: true, prices: { eur: (p.prices && p.prices.eur_foil) || null, eur_foil: (p.prices && p.prices.eur_foil) || null } });
+    const asFoil = (p)=> Object.assign({}, p, { foil: true, _foilPick: true, prices: { eur: (p.prices && p.prices.eur_foil) || null, eur_foil: (p.prices && p.prices.eur_foil) || null } });
     // The foil control is a SIBLING pill overlaid on the card corner, never
     // a button nested in a button — browsers hoist nested buttons out, which
     // is exactly how the first attempt's foil control escaped its tile and
@@ -9099,7 +9112,7 @@ function openPrintingPicker(d, card, loc, idx){
     // Picking a printing finishes the errand: close the card sheet too and
     // land back on the deck list, where the confirmation and new art show.
     closeTopOverlay();
-    toast(`Now showing the ${chosen.set_name}${chosen.foil?' ✨ foil':''} printing.`);
+    toast(`Now showing the ${chosen.set_name}${chosen._foilPick?' ✨ foil':''} printing.`);
     setTimeout(()=>{ try{ render(); }catch(e){} }, 30);
   });
 }
@@ -10323,7 +10336,7 @@ function openCardInfo(card, opts){
 function openPrintingBrowse(card, opts){
   openPrintingGrid(card, (chosen)=>{
     setPrintPref(chosen);   // remembered app-wide: every tile shows this printing now
-    toast(`Now showing the ${chosen.set_name}${chosen.foil?' ✨ foil':''} printing.`);
+    toast(`Now showing the ${chosen.set_name}${chosen._foilPick?' ✨ foil':''} printing.`);
     openCardInfo(chosen, Object.assign({}, opts||{}, { _replace: true, _ppApplied: true }));
   });
 }
@@ -10498,7 +10511,7 @@ function tradePageHtml(){
       ${missing?`<p class="hint" style="margin:6px 0 0;">${trS('Some cards have no listed price and count as €0.00.')}</p>`:''}
       ${(state.trade.a.length||state.trade.b.length)?`<button class="primary-btn" id="tradeConfirm" style="width:100%;margin-top:10px;">✓ ${trS('Confirm trade')}</button><button class="ghost-btn" id="tradeClear" style="width:100%;margin-top:8px;color:var(--danger);border-color:var(--danger);">${trS('Clear trade')}</button>`:''}
     </div>
-    <div class="searchbar"><input id="twQ" enterkeyhint="search" placeholder="${trS('Search your wants…')}" value="${escapeHtml(state._twQ||'')}" autocomplete="off"><button id="twGo">${trS('Search')}</button></div>
+    <div class="searchbar"><input id="twQ" enterkeyhint="search" placeholder="${trS('Search your wants…')}" value="${escapeHtml(state._twQ||'')}" autocomplete="off"><button id="twGo">${trS('Search')}</button><button id="twClear" title="✕">✕</button></div>
   </main>`;
 }
 function wireTradePage(){
@@ -10528,6 +10541,11 @@ function wireTradePage(){
     twQ.addEventListener('input', renderWants);
     twQ.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); twQ.blur(); renderWants(); } });
     document.getElementById('twGo')?.addEventListener('click', renderWants);
+    document.getElementById('twClear')?.addEventListener('click', ()=>{
+      twQ.value = ''; state._twQ = '';
+      if(twBox) twBox.innerHTML = '';
+      twQ.blur();
+    });
     if((state._twQ||'').length >= 2) renderWants();
   }
   document.querySelectorAll('[data-tradeadd]').forEach(b=>b.addEventListener('click', ()=>openTradeAdd(b.dataset.tradeadd)));
