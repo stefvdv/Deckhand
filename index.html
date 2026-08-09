@@ -150,7 +150,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
   bottom:calc(var(--nav-h) + 120px + env(safe-area-inset-bottom));
   max-height:56vh;overflow-y:auto;z-index:37;
   display:flex;flex-direction:column-reverse;   /* flipped fields AND starts scrolled at the bottom */
-  border-top:1px solid var(--line);
+  background:var(--panel);border-top:1px solid var(--line);
   box-shadow:0 -12px 30px rgba(0,0,0,0.5);
   padding:12px 16px;margin:0 !important;border-radius:14px 14px 0 0;
 }
@@ -164,12 +164,50 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .browse-selects .cselect-panel{top:auto;bottom:calc(100% + 4px);}
 .app > main > .pin-pill{order:96;}
 .app > main > .sp-jump{order:99;}
+/* (1) Home packs downward — the foot gap closes. */
+.app > main.home-page{justify-content:flex-end;padding-bottom:calc(var(--nav-h) + 10px + env(safe-area-inset-bottom));}
+/* (3/5) My Stuff: tight foot, FAB low, filter shortened clear of it,
+   uniform section rhythm in the reversed column. */
+.app > main:has(> div > #deckFilter){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));gap:12px;}
+.app > main:has(> div > #deckFilter) > div:has(> #deckFilter){order:0;padding-right:88px;}
+.app > main:has(> div > #deckFilter) > *:not(.searchbar){margin-top:0;margin-bottom:0;}
+/* (4) Collection reversed: automatic folders up top, binders by the thumb;
+   controls stay at the very bottom; row shortened for the low FAB. */
+.app > main:has(> #colAdvBox){flex-direction:column-reverse;padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));}
+.app > main:has(> #colAdvBox) > .searchbar{order:0;padding-right:88px;}
+.app > main:has(> #colAdvBox) > div:has(> #colAdvToggle){order:0;}
+/* (6) Search page: explainer just above the random card, RANDOM below it. */
+.app > main > #searchResultsBox{order:95;}
+.app > main > .cotd{order:96;}
+#cotdBox{display:flex;flex-direction:column-reverse;align-items:center;gap:8px;}
+.searchbar > button{min-height:44px;box-sizing:border-box;}
+/* (7) Inspiration results read upward: most popular at the bottom. */
+#browseResults .insp-grid, #bsNameResults .insp-grid,
+#browseResults .sr-grid, #bsNameResults .sr-grid{display:flex;flex-wrap:wrap-reverse;gap:10px;}
+#browseResults .insp-grid > *, #bsNameResults .insp-grid > *,
+#browseResults .sr-grid > *, #bsNameResults .sr-grid > *{flex:0 0 calc(50% - 5px);min-width:0;}
+/* (8) Spoiler feed reads upward: newest day at the bottom. */
+.sp-feed{display:flex;flex-direction:column-reverse;}
+/* (9) The card sheet flips: rulings on top, oracle beneath it, the card
+   with its chevrons above the buttons, buttons at the thumb. */
+.overlay-inner > main.card-detail{display:flex;flex-direction:column;}
+main.card-detail > .detail-sec:has(#csRulings){order:0;}
+main.card-detail > .detail-sec:has(#sheetOracle){order:1;}
+main.card-detail > div[style*="text-align:center"]{order:8;}
+main.card-detail > #csTagBox{order:9;}
+main.card-detail > div:nth-child(2){order:10;}
 /* ---------- the complete flip ---------- */
 /* Decklist tabs join the bottom stack, riding just above the dock. */
+/* Tabs sit DIRECTLY on the nav; the dock rides on the tabs — fixed with
+   matched heights so the two bars touch and nothing peeks through. */
 .app > main > .builder-tabs{
-  order:100;position:sticky;bottom:calc(var(--nav-h) + 52px + env(safe-area-inset-bottom));z-index:36;
-  background:var(--ink);border-top:1px solid var(--line);margin:8px -16px 0;padding:6px 16px 0;
+  position:fixed;left:0;right:0;top:auto;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  z-index:41;margin:0;padding:5px 14px;height:44px;box-sizing:border-box;
+  background:var(--ink);border-top:1px solid var(--line);
 }
+#builderBody{display:flex;flex-direction:column-reverse;}
+#decklistBox{display:flex;flex-direction:column-reverse;}
+main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bottom)) !important;}
 
 /* ---------- persistent brand banner (symbol + wordmark + tabs), same on every page ---------- */
 :root{ --nav-h: 66px; }
@@ -495,8 +533,8 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .ac-print{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:9px 12px;color:var(--sub-text);font-size:12.5px;cursor:pointer;}
 .ac-print.on{color:var(--ink-text);background:var(--brass-glow);border-left:3px solid var(--brass);}
 .ac-print:last-child{border-bottom:none;}
-.deck-fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + 76px + env(safe-area-inset-bottom));z-index:41;width:54px;height:54px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:26px;font-weight:700;border:none;box-shadow:0 8px 22px rgba(0,0,0,0.45);cursor:pointer;}
-#fabMenu{position:fixed;right:16px;bottom:calc(var(--nav-h) + 140px + env(safe-area-inset-bottom));z-index:42;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;}
+.deck-fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + 10px + env(safe-area-inset-bottom));z-index:41;width:54px;height:54px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:26px;font-weight:700;border:none;box-shadow:0 8px 22px rgba(0,0,0,0.45);cursor:pointer;}
+#fabMenu{position:fixed;right:16px;bottom:calc(var(--nav-h) + 74px + env(safe-area-inset-bottom));z-index:42;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;}
 #fabMenu button{background:none;border:none;color:var(--ink-text);padding:12px 18px;font-size:14px;text-align:left;cursor:pointer;border-bottom:1px solid var(--line);}
 #fabMenu button:last-child{border-bottom:none;}
 .ghost-btn:active{background:var(--hl);}
@@ -533,7 +571,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .ib svg{width:16px;height:16px;color:currentColor;opacity:0.92;}
 .dl-adm-empty{aspect-ratio:63/88;border:2px dashed var(--line);border-radius:4.75% / 3.5%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--sub-text-2);font-size:12px;cursor:pointer;}
 /* Bottom dock: fixed status bar with cycling info sets */
-.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--ink);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
+.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--ink);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
 .dk-arr{background:none;border:1px solid var(--line);border-radius:8px;color:var(--sub-text);width:30px;height:34px;cursor:pointer;flex:none;font-size:13px;}
 .dk-mid{flex:1;display:flex;align-items:center;gap:8px;justify-content:center;font-size:12.5px;color:var(--sub-text);white-space:nowrap;overflow:hidden;min-width:0;}
 .dk-count{background:none;border:none;color:var(--ink-text);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:12.5px;cursor:pointer;padding:0;}
@@ -3267,13 +3305,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.248';
+const APP_VERSION = '2.51.249';
 const CHANGELOG_NOTES = {
   en: [
-    'Extras and My Stuff truly reverse now; Inspiration\u2019s intro sits above Kindred; spoiler set buttons and filter fields flipped to the bottom, in the app\u2019s own colours.'
+    'Nine-point polish of the flip: home packs down; decklists read upward with tabs on the nav and the dock on the tabs; collection and My Stuff tightened with a low \uFF0B; search gained a \u2716 and its random card leads its button; Inspiration and spoiler results read upward; card sheets flipped, buttons at the thumb.'
   ],
   nl: [
-    'Extra\u2019s en Mijn Stuff keren nu echt om; de intro van Inspiratie staat boven Kindred; spoiler-setknoppen en filtervelden klapten naar onderen, in de eigen kleuren van de app.'
+    'Negenpunts-polijst van de omkering: home zakt aan; decklijsten lezen omhoog met tabs op de balk en de dock op de tabs; collectie en Mijn Stuff strakker met een lage \uFF0B; zoeken kreeg een \u2716 en de willekeurige kaart staat boven zijn knop; Inspiratie- en spoilerresultaten lezen omhoog; kaartbladen omgeklapt, knoppen bij de duim.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5104,7 +5142,7 @@ function collectionPageHtml(){
           <div class="l2" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((it.set||'').toUpperCase())}${it.cn?' #'+escapeHtml(it.cn):''} · ${escapeHtml(it.cond)}</span>${it.eur!=null?`<span style="color:var(--brass);font-family:'JetBrains Mono',monospace;flex:none;">€${(it.eur*it.qty).toFixed(2)}</span>`:''}</div>
         </div>
       </button>`).join('')}</div>`
-    : `<div class="empty-note" style="margin-top:20px;">${wantsMode ? 'Nothing on the Wants list — every card in your decks is in your collection.' : (!f.binder && state.collection.items.length && !colFilterActive()) ? 'Every card is tucked into a binder — open All cards below to see the whole collection at once.' : state.collection.items.length?'Nothing matches these filters.':'Your collection is empty. Search above, or use "Add to collection" on any card in the app.'}</div>`}
+    : `<div class="empty-note" style="margin-top:20px;">${wantsMode ? 'Nothing on the Wants list — every card in your decks is in your collection.' : (!f.binder && state.collection.items.length && !colFilterActive()) ? '' : state.collection.items.length?'Nothing matches these filters.':'Your collection is empty. Search above, or use "Add to collection" on any card in the app.'}</div>`}
     ${state.colSel && state.colSel.size ? `<button class="deck-fab col-sel-fab ${f.binder?'solo':''}" id="colSelFab" title="Selected cards">✓ ${Array.from(state.colSel).reduce((a,i)=>a + ((state.collection.items[i]||{}).qty||1), 0)}</button>` : ''}
   </main>`;
 }
@@ -7170,9 +7208,10 @@ function renderSpoilerBody(loaded, failed){
   const fmtDayHead = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(appLang()==='nl'?'nl-NL':'en-US', {weekday:'long', month:'long', day:'numeric'}); }catch(e){ return d; } };
   const setNameOf = (code)=>{ const x = sets.find(s=>s.code===code); return x ? x.name : String(code||'').toUpperCase(); };
   const gridHtml = feedGroups
-    ? feedGroups.map(g=>`<div class="chip-label sp-shelf" style="margin:12px 0 6px;">${g.set ? `<span class="sp-shelf-ico">${setIcoHtml(g.set, 'rare')}</span>${escapeHtml(setNameOf(g.set))} — ` : ''}${g.k ? fmtDayHead(g.k) : trS('Date to be announced')}</div><div class="sc-grid">${g.cs.map(tile).join('')}</div>`).join('')
+    ? `<div class="sp-feed">${feedGroups.map(g=>`<div class="sp-group"><div class="chip-label sp-shelf" style="margin:12px 0 6px;">${g.set ? `<span class="sp-shelf-ico">${setIcoHtml(g.set, 'rare')}</span>${escapeHtml(setNameOf(g.set))} — ` : ''}${g.k ? fmtDayHead(g.k) : trS('Date to be announced')}</div><div class="sc-grid">${g.cs.map(tile).join('')}</div></div>`).join('')}</div>`
     : `<div class="sc-grid">${cards.map(tile).join('')}</div>`;
   box.innerHTML = headHtml + gridHtml + footHtml;
+  if(state.screen === 'spoilers') scrollToPageFoot();
   box.querySelectorAll('.sc-tile').forEach(b=>{
     b.addEventListener('click', ()=>{
       const card = cards.find(c=>c.name===b.dataset.spn && (c.set||'')===b.dataset.spset) || cards.find(c=>c.name===b.dataset.spn);
@@ -8553,6 +8592,7 @@ function renderCardSheet(d, card, loc, idx){
   </div>`;
 
   document.getElementById('csClose').addEventListener('click', closeTopOverlay);
+  { const _m = el.querySelector('main'); if(_m) requestAnimationFrame(()=>{ _m.scrollTop = _m.scrollHeight; }); }
   document.getElementById('dcImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'dcImg');
   document.getElementById('csChangePrinting').addEventListener('click', ()=>openPrintingPicker(d, card, loc, idx));
@@ -9151,7 +9191,7 @@ function searchPageHtml(){
     ${pinned
       ? `<div class="pin-pill"><span class="pp-txt">Adding straight to <strong>${escapeHtml(pinned.name)}</strong></span><button id="unpinBtn" title="Stop adding to this deck">✕</button></div>`
       : ''}
-    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}"><button id="runSearchBtn">Search</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
+    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}"><button id="runSearchBtn">Search</button><button id="qClearBtn" title="Clear search and filters" style="flex:none;padding:0 14px;">✕</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
     <button class="adv-toggle ${state.advOpen?'open':''}" id="advToggle">Advanced filters <span class="car">▾</span></button>
     ${state.advOpen ? advancedPanelHtml() : ''}
     <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
@@ -9265,6 +9305,12 @@ function wireSearchPage(){
     state.advOpen = false;   // collapse the filter menu, then run the search
     render();
     runAdvancedSearch();     // name bar and any set filters, same as Use filters
+  });
+  document.getElementById('qClearBtn')?.addEventListener('click', ()=>{
+    // Same broom as Inspiration's ✕: name, filters, and results all cleared.
+    state.searchName = ''; state.searchRan = false; state.searchResults = [];
+    resetSearchFilters(); state.advOpen = false;
+    render(); scrollToPageFoot();
   });
   document.getElementById('spoilersBtn')?.addEventListener('click', ()=>switchPage('spoilers'));
   document.getElementById('advToggle').addEventListener('click', ()=>{ state.advOpen=!state.advOpen; render(); });
@@ -10010,6 +10056,7 @@ function openCardInfo(card, opts){
     </main>
   </div>`;
   document.getElementById('csClose').addEventListener('click', closeTopOverlay);
+  { const _m = el.querySelector('main'); if(_m) requestAnimationFrame(()=>{ _m.scrollTop = _m.scrollHeight; }); }
   document.getElementById('ciImg').addEventListener('click', ()=>showPreview(colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'ciImg');
   document.getElementById('ciReco')?.addEventListener('click', ()=>{
