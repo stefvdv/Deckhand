@@ -143,7 +143,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 }
 /* The Advanced-filters bar is the BUTTON itself — it keeps its field face
    (the cross-fleet blue in Commander mode), not the page ink. */
-.app > main > .adv-toggle{background:var(--field);border-color:var(--field-line);border-top:1px solid var(--field-line);}
+.app > main > .adv-toggle{background:var(--field);border-color:var(--field-line);border-top:1px solid var(--field-line);display:block;width:auto;}
 /* The filter panels are DROP-UP sheets now: fixed above the toggle+search
    stack, growing upward with their own scroll. Dropdowns INSIDE a sheet
    expand in flow (a scrolling ancestor would clip absolute panels). */
@@ -172,7 +172,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > .pin-pill{order:96;}
 .app > main > .sp-jump{order:99;}
 /* (1) Home packs downward — the foot gap closes. */
-.app > main.home-page{justify-content:flex-end;padding-bottom:calc(var(--nav-h) + 10px + env(safe-area-inset-bottom));}
+.app > main.home-page{justify-content:flex-end;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
 /* (3/5) My Stuff: tight foot, FAB low, filter shortened clear of it,
    uniform section rhythm in the reversed column. */
 .app > main:has(> div > #deckFilter){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));gap:12px;}
@@ -598,7 +598,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .deck-dock .menu-pop{position:absolute;bottom:56px;right:8px;top:auto;}
 main.has-dock{padding-bottom:84px;}
 .admiral-tile{max-width:118px;}
-.vg-card{position:relative;cursor:pointer;overflow:hidden;border-radius:4.75% / 3.5%;border:1px solid var(--line);background:#0a0a0c;}
+.vg-card{position:relative;cursor:pointer;overflow:hidden;border-radius:4.75% / 3.5%;border:1px solid var(--line);background:#0a0a0c;aspect-ratio:63/88;}
 .vg-qty{position:absolute;top:10px;right:8px;background:rgba(10,10,12,0.85);color:#fff;font-weight:800;font-size:13px;padding:3px 8px;border-radius:7px;border:1px solid rgba(255,255,255,0.25);z-index:2;pointer-events:none;}
 /* The scans carry Magic's printed border (~4% per side); zoom-crop it away so
    the art and frame fill the tile — the gold rim lives on the tile itself. */
@@ -3327,15 +3327,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.251';
+const APP_VERSION = '2.51.252';
 const CHANGELOG_NOTES = {
   en: [
-    'Category words moved to the FOOT of their cards: Creatures, Instants and every other decklist header now sit under their group, and the New/Top/theme titles on recommendation pages pin to the bottom edge while their section scrolls.',
-    'Fresh app icons: a true half-and-half of both fleets \u2014 the Admiral anchor on navy and the Commander swords on dark red, split on the same diagonal the launch screen wears.'
+    'Decklists now truly open at the foot: card tiles reserve their real height before the images load, so the landing scroll can\u2019t be left behind \u2014 and switching Decklist/Stats/Deck Log tabs lands at the foot too.',
+    'My Stuff: the Admiral/Commander fleet and My Collection tiles now carry their name UNDER the tile, like every other shelf.',
+    'The Advanced-filters bar is centred again (it was hugging the left edge), and the home page lost the spare gap under its big button.'
   ],
   nl: [
-    'Categoriewoorden verhuisden naar de VOET van hun kaarten: Wezens, Instants en elke andere decklijst-kop staan nu onder hun groep, en de Nieuwe/Top/thematitels op aanbevelingspagina\u2019s blijven aan de onderrand plakken terwijl hun sectie scrolt.',
-    'Nieuwe app-iconen: een echte helft-om-helft van beide vloten \u2014 het Admiral-anker op marineblauw en de Commander-zwaarden op donkerrood, gedeeld langs dezelfde diagonaal als het startscherm.'
+    'Decklijsten openen nu \u00e9cht aan de voet: kaarttegels reserveren hun echte hoogte v\u00f3\u00f3r de afbeeldingen laden, dus de landingsscroll kan niet meer achterblijven \u2014 en wisselen tussen Decklijst/Stats/Decklog landt ook aan de voet.',
+    'Mijn Stuff: de Admiral/Commander-vloot en Mijn Collectie dragen hun naam nu ONDER de tegel, net als elke andere plank.',
+    'De balk Geavanceerde filters staat weer gecentreerd (hij hing tegen de linkerrand), en de homepagina verloor de overtollige ruimte onder de grote knop.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4622,8 +4624,8 @@ function homeHtml(){
          ${(!favTiles&&!folderTiles&&!deckTiles&&nav)?`<div class="empty-note">This folder is empty.</div>`:''}
          ${(!favTiles&&!folderTiles&&!deckTiles&&!collected.length&&!nav&&otherMode.length)?`<div class="empty-note">No ${isCmdrMode()?'Commander':'Admiral'} decks yet — start a new fleet above. Your ${isCmdrMode()?'Admiral':'Commander'} decks are waiting below.</div>`:''}
          ${(!searching && !nav) ? `<div style="display:grid;grid-template-columns:${otherMode.length?'1fr 1fr':'1fr'};gap:12px;margin-top:20px;">
-           ${otherMode.length ? `<div><div class="section-label">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid" style="grid-template-columns:1fr;">${otherFmtTileHtml(otherMode.length)}</div></div>` : ''}
-           <div><div class="section-label">My Collection</div><div class="deck-grid" style="grid-template-columns:1fr;">${collectionFolderTileHtml()}</div></div>
+           ${otherMode.length ? `<div style="display:flex;flex-direction:column-reverse;"><div class="section-label">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid" style="grid-template-columns:1fr;">${otherFmtTileHtml(otherMode.length)}</div></div>` : ''}
+           <div style="display:flex;flex-direction:column-reverse;"><div class="section-label">My Collection</div><div class="deck-grid" style="grid-template-columns:1fr;">${collectionFolderTileHtml()}</div></div>
          </div>` : ''}
        ` :
        searching ? `<div class="empty-note">No decks match “${escapeHtml(state.deckFilter)}”.</div>` :
@@ -7557,7 +7559,7 @@ function wireDecklistPage(){
   }
   const d = getDeck(state.activeDeckId);
   if(!d) { wireNeedDeck(); return; }
-  document.querySelectorAll('.b-tab').forEach(b=>b.addEventListener('click', ()=>{ state.builderTab=b.dataset.btab; state.dlPanel=null; renderBuilderBody(d); syncTabsUI(); }));
+  document.querySelectorAll('.b-tab').forEach(b=>b.addEventListener('click', ()=>{ state.builderTab=b.dataset.btab; state.dlPanel=null; renderBuilderBody(d); syncTabsUI(); scrollToPageFoot(); }));
   wireMeterRow(d);
   refreshLegality(d);
   renderBuilderBody(d);
