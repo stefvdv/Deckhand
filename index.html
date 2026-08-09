@@ -501,7 +501,8 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .panel-h{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;}
 
 /* ---------- categorized decklist ---------- */
-.cat-group{margin-bottom:6px;}
+.cat-group{margin-bottom:6px;display:flex;flex-direction:column-reverse;}
+.cat-group > .cat-head{border-bottom:none;border-top:1px solid var(--line);}
 .cat-head{display:flex;align-items:center;gap:8px;padding:8px 2px;cursor:pointer;border-bottom:1px solid var(--line);}
 .cat-head .t{font-family:'Cinzel',serif;font-size:12.5px;color:var(--brass);text-transform:uppercase;letter-spacing:0.5px;flex:1;}
 .cat-head .n{font-size:11px;color:var(--sub-text);font-family:'JetBrains Mono',monospace;}
@@ -1073,12 +1074,13 @@ main.has-dock{padding-bottom:84px;}
 /* The current section's name rides just below the top bar; the next
    section's label pushes it out — classic sticky headers, scoped per
    section. Solid backing so it stays readable over the tiles. */
-.edh-sec > .section-label{position:sticky;top:66px;z-index:5;background:var(--bg,#2A1014);padding:6px 2px;}
+.edh-sec{display:flex;flex-direction:column;}
+.edh-sec > .section-label{order:10;position:sticky;top:auto;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:5;background:var(--ink);padding:6px 2px;}
 /* Overlays scroll inside <main>, whose top edge already sits under the
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
-.overlay main .edh-sec > .section-label{top:0;}
-#recoOverlay .edh-sec > .section-label{top:var(--reco-sticky, 0px) !important;z-index:6;}
+.overlay main .edh-sec > .section-label{top:auto;bottom:0;}
+#recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;}
 #recoOverlay .edh-jump-row{top:calc(var(--reco-sticky, 0px) + 4px) !important;z-index:7;}
 .edh-jump-row{top:70px;}
 .reco-theme-banner{width:fit-content;margin:0 auto 8px;padding:6px 14px;border:1px solid var(--brass);border-radius:999px;color:var(--brass);font-size:13px;font-weight:600;text-align:center;}
@@ -3325,21 +3327,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.250';
+const APP_VERSION = '2.51.251';
 const CHANGELOG_NOTES = {
   en: [
-    'Spoilers: each day\u2019s date shelf now sits UNDER its cards, and a set\u2019s name, release date and preview count moved to the foot of its page.',
-    'Every card grid now reads upward \u2014 search results, decklists, My Stuff, collection, binders, printings and recommendations start at the bottom (A, most popular, most recent by the thumb) and climb.',
-    'Fresh search results open at the foot of the page.',
-    'Inspiration: the welcome text steps aside as soon as results show, and the Commander fleet now opens with \u201CFind Your Commander\u201D.',
-    'The Advanced-filters bar finally wears its field blue.'
+    'Category words moved to the FOOT of their cards: Creatures, Instants and every other decklist header now sit under their group, and the New/Top/theme titles on recommendation pages pin to the bottom edge while their section scrolls.',
+    'Fresh app icons: a true half-and-half of both fleets \u2014 the Admiral anchor on navy and the Commander swords on dark red, split on the same diagonal the launch screen wears.'
   ],
   nl: [
-    'Spoilers: de datumbalk van elke dag staat nu ONDER zijn kaarten, en de naam, releasedatum en previewtelling van een set verhuisden naar de voet van de pagina.',
-    'Elk kaartenraster leest nu omhoog \u2014 zoekresultaten, decklijsten, Mijn Stuff, collectie, mappen, versies en aanbevelingen beginnen onderaan (A, populairst, meest recent bij de duim) en klimmen op.',
-    'Verse zoekresultaten openen aan de voet van de pagina.',
-    'Inspiratie: de welkomsttekst wijkt zodra er resultaten zijn, en de Commander-vloot opent nu met \u201CVind je Commander\u201D.',
-    'De balk Geavanceerde filters draagt eindelijk zijn veldblauw.'
+    'Categoriewoorden verhuisden naar de VOET van hun kaarten: Wezens, Instants en elke andere decklijst-kop staan nu onder hun groep, en de Nieuwe/Top/thematitels op aanbevelingspagina\u2019s blijven aan de onderrand plakken terwijl hun sectie scrolt.',
+    'Nieuwe app-iconen: een echte helft-om-helft van beide vloten \u2014 het Admiral-anker op marineblauw en de Commander-zwaarden op donkerrood, gedeeld langs dezelfde diagonaal als het startscherm.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
