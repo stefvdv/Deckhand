@@ -103,11 +103,15 @@ button{font-family:'Inter';}
 @media (prefers-reduced-motion:reduce){ .compass svg{animation:none;} }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 .brand-txt{pointer-events:none;font-family:'Cinzel Decorative','Cinzel',serif;font-size:14px;letter-spacing:0.6px;color:var(--brass);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto;cursor:default;}
-.brand-txt.two-line{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2;align-self:center;max-height:calc(var(--nav-h) - 10px);word-break:keep-all;overflow-wrap:normal;}
+.page-cap{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;gap:10px;background:var(--ink);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 6px) 12px 6px;box-sizing:border-box;min-height:44px;}
+.page-cap .brand-txt{text-align:left;}
+.page-cap #capBack{flex:none;}
+.app > main{padding-top:calc(56px + env(safe-area-inset-top)) !important;}
+.brand-txt.two-line{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2;align-self:center;max-height:40px;word-break:keep-all;overflow-wrap:normal;}
 .brand-txt.editable{pointer-events:auto;cursor:pointer;text-decoration:underline dotted rgba(201,162,75,0.4);text-underline-offset:4px;}
-.brand-banner .brand-txt.swap{animation:brandSwap 0.3s ease;}
+.page-cap .brand-txt.swap{animation:brandSwap 0.3s ease;}
 @keyframes brandSwap{from{opacity:0;transform:translateY(4px) scale(0.92);}to{opacity:1;transform:none;}}
-@media (prefers-reduced-motion:reduce){ .brand-banner .brand-txt{animation:none;} }
+@media (prefers-reduced-motion:reduce){ .page-cap .brand-txt{animation:none;} }
 .spacer{flex:1;min-width:0;}
 .save-indicator{font-size:10px;color:var(--sub-text-2);white-space:nowrap;font-family:'JetBrains Mono',monospace;flex:0 0 auto;}
 .save-indicator.saving{color:var(--brass);}
@@ -1069,7 +1073,7 @@ main.has-dock{padding-bottom:84px;}
 .cb-ub{background:linear-gradient(135deg,#7B5CD6,#4A2F96);font-size:8.5px;letter-spacing:.02em;}
 .cb-sp{background:none;box-shadow:none;font-size:16px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));}
 .cb-own{background:linear-gradient(135deg,#1F9A63,#0E5C3A);font-size:12px;}
-.foil-star{position:absolute;left:8%;bottom:40%;font-size:19px;font-style:normal;pointer-events:none;z-index:2;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.9));}
+.foil-star{position:absolute;left:8%;bottom:47%;font-size:19px;font-style:normal;pointer-events:none;z-index:2;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.9));}
 *:has(> .card-badges){position:relative;}
 *:has(> .vg-qty){position:relative;}
 /* Trade calculator */
@@ -2348,6 +2352,13 @@ function setPrintPref(chosen){
       const cur = img.getAttribute('src') || '';
       img.src = /\/small\//.test(cur) ? (rec.i.s || rec.i.n) : (rec.i.n || rec.i.s);
       if(img.dataset && img.dataset.preview) img.dataset.preview = rec.i.n || rec.i.s;
+      // the foil star follows the choice live, in place
+      const tile = img.parentElement;
+      if(tile){
+        const star = tile.querySelector(':scope > .foil-star');
+        if(rec.f && !star){ const i = document.createElement('i'); i.className = 'foil-star'; i.title = 'Foil printing'; i.textContent = '✨'; tile.appendChild(i); }
+        else if(!rec.f && star){ star.remove(); }
+      }
     });
   }catch(e){}
 }
@@ -3386,15 +3397,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.265';
+const APP_VERSION = '2.51.267';
 const CHANGELOG_NOTES = {
   en: [
-    'Foil, fixed for real: the app confused \u201cexists in foil\u201d with \u201cchosen as foil\u201d, so half the world twinkled. Everything resets to non-foil; only an explicit foil pick (or a foil-only printing) shows the \u2728 \u2014 now larger, sitting on the art itself.',
-    'Every overlay header moved to the bottom \u2014 card view, recommendations, printings, all of them: back button and title by the thumb. And the Trade search gained a \u2715 to clear it.'
+    'The bottom bar split in two: a Decks tab (the deckbox) for your deck folders, and a Collection tab (the ring binder) for binders, all cards, wants and trading. The My Collection tile left the Decks page \u2014 it has its own home now.'
   ],
   nl: [
-    'Foil, nu \u00e9cht gefikst: de app verwarde \u201cbestaat in foil\u201d met \u201cgekozen als foil\u201d, dus half de wereld twinkelde. Alles staat weer op niet-foil; alleen een bewuste foil-keuze (of een versie die alleen in foil bestaat) toont de \u2728 \u2014 nu groter, op de art zelf.',
-    'Elke overlay-kop verhuisde naar beneden \u2014 kaartweergave, aanbevelingen, versies, allemaal: terugknop en titel bij de duim. En de Ruil-zoekbalk kreeg een \u2715 om te wissen.'
+    'De onderbalk splitste in twee\u00ebn: een Decks-tab (het deckdoosje) voor je deckmappen, en een Collectie-tab (de ringmap) voor mappen, alle kaarten, wants en ruilen. De Mijn Collectie-tegel verliet de Decks-pagina \u2014 die heeft nu een eigen thuis.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3813,7 +3822,8 @@ function identityStripCss(colors){
 }
 const ICONS = {
   tag: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.6"/></svg>`,
-  decks: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h6l2 2h10v10H3z"/></svg>`,
+  decks: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="9.5" rx="1.6"/><path d="M7 10.5V6.5h5v4"/><path d="M11 10.5V8.2h5.5v2.3"/></svg>`,
+  binder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="1.8"/><path d="M8.6 3.5v17"/><circle cx="6.8" cy="8" r="0.9"/><circle cx="6.8" cy="12" r="0.9"/><circle cx="6.8" cy="16" r="0.9"/><rect x="11.2" y="7" width="5.2" height="4.6" rx="0.8"/></svg>`,
   collection: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="7" width="13" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-1"/></svg>`,
   coins: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="6.5" rx="7" ry="3"/><path d="M5 6.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5M5 11.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg>`,
   spark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.2 6.1L20 12l-5.8 2.9L12 21l-2.2-6.1L4 12l5.8-2.9z"/></svg>`,
@@ -4167,12 +4177,13 @@ function renderInner(){
 }
 function navHtml(){
   const items = [
-    {k:'decks', l:'My Stuff', i:ICONS.decks},
+    {k:'decks', l:'Decks', i:ICONS.decks},
+    {k:'collection', l:'Collection', i:ICONS.binder},
     {k:'search', l:'Search', i:ICONS.search},
     {k:'browse', l:'Inspiration', i:ICONS.inspire},
     {k:'settings', l:'Extras', i:ICONS.settings}
   ];
-  const titles = { home: isCmdrMode() ? 'COMMANDER' : 'ADMIRAL', decks:'MY STUFF', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', trade:'TRADE', collection:'MY COLLECTION' };
+  const titles = { home: isCmdrMode() ? 'COMMANDER' : 'ADMIRAL', decks:'DECKS', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', trade:'TRADE', collection:'MY COLLECTION' };
   let title = titles[state.screen] || 'ADMIRAL';
   let editable = false;
   if(state.screen === 'decklist'){
@@ -4185,10 +4196,12 @@ function navHtml(){
     // to the binder overview.
     title = '‹ ' + (state.colFilter.binder==='__wants__' ? trS('Wants') : state.colFilter.binder==='__all__' ? trS('All cards') : (binderName(state.colFilter.binder) || 'Binder'));
   }
-  const activeKey = (state.screen === 'collection' || state.screen === 'decklist') ? 'decks' : state.screen === 'trade' ? 'decks' : state.screen;
-  return `<div class="brand-banner">
-    <div class="compass ${state.screen==='home'?'active':''}" id="homeBtn" title="Home">${compassSvg()}</div>
+  const activeKey = state.screen === 'decklist' ? 'decks' : (state.screen === 'trade') ? 'collection' : state.screen;
+  return `<div class="page-cap">
     <div class="brand-txt ${editable?'editable':''} ${(state.screen==='decklist'||state.screen==='collection')?'two-line':''}" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner" ${(state.screen==='decklist'||state.screen==='collection')?'':'style="white-space:nowrap;"'}>${escapeHtml(title)}</span></div>
+    <button class="icon-btn" id="capBack" aria-label="Back" title="Back">${ICONS.back}</button>
+  </div><div class="brand-banner">
+    <div class="compass ${state.screen==='home'?'active':''}" id="homeBtn" title="Home">${compassSvg()}</div>
     <div class="spacer"></div>
     <div class="banner-tabs">${items.map(it=>`<button class="banner-tab ${activeKey===it.k?'active':''}" data-page="${it.k}" title="${it.l}" aria-label="${it.l}">${it.i}</button>`).join('')}</div>
   </div>`;
@@ -4239,6 +4252,9 @@ function fitBrandTitle(){
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>fitBrandTitle());
 window.addEventListener('resize', fitBrandTitle);
+document.addEventListener('click', (e)=>{
+  if(e.target && e.target.closest && e.target.closest('#capBack')){ try{ history.back(); }catch(_){} }
+});
 /* Drop-up menus and sheets dismiss on a downward swipe on their header —
    headers never scroll, so the gesture can't fight content scrolling. */
 (function(){
@@ -4724,9 +4740,8 @@ function homeHtml(){
          ${collected.length ? `<div class="section-label">♥ Collected</div><div class="deck-grid">${collected.map(deckTileHtml).join('')}</div>` : ''}
          ${(!favTiles&&!folderTiles&&!deckTiles&&nav)?`<div class="empty-note">This folder is empty.</div>`:''}
          ${(!favTiles&&!folderTiles&&!deckTiles&&!collected.length&&!nav&&otherMode.length)?`<div class="empty-note">No ${isCmdrMode()?'Commander':'Admiral'} decks yet — start a new fleet above. Your ${isCmdrMode()?'Admiral':'Commander'} decks are waiting below.</div>`:''}
-         ${(!searching && !nav) ? `<div style="display:grid;grid-template-columns:${otherMode.length?'1fr 1fr':'1fr'};gap:12px;margin-top:20px;">
-           ${otherMode.length ? `<div style="display:flex;flex-direction:column-reverse;"><div class="section-label">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid" style="grid-template-columns:1fr;">${otherFmtTileHtml(otherMode.length)}</div></div>` : ''}
-           <div style="display:flex;flex-direction:column-reverse;"><div class="section-label">My Collection</div><div class="deck-grid" style="grid-template-columns:1fr;">${collectionFolderTileHtml()}</div></div>
+         ${(!searching && !nav && otherMode.length) ? `<div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:20px;">
+           <div style="display:flex;flex-direction:column-reverse;"><div class="section-label">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid">${otherFmtTileHtml(otherMode.length)}</div></div>
          </div>` : ''}
        ` :
        searching ? `<div class="empty-note">No decks match “${escapeHtml(state.deckFilter)}”.</div>` :
