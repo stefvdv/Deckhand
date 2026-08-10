@@ -3405,17 +3405,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.268';
+const APP_VERSION = '2.51.269';
 const CHANGELOG_NOTES = {
   en: [
-    'One header to rule them all: every page and overlay now carries its name centered at the TOP with the back button on the left \u2014 folder pages show the folder\u2019s own name, the breadcrumb retired, and the Similar/Played-with titles turned gold like the rest.',
-    'Collection card view: Manage copy made way for Add one, Remove one and Change printing, laid out like the deck sheet. The Rules page moved its search to the bottom with the intro text mid-screen.',
-    'Streaming loads steady: chunks arriving above your view (Inspiration, Spoilers, everywhere) no longer shove the page \u2014 the scroll compensates to the pixel.'
+    'Spoilers, finally serene: arriving sets AND the \u201cmore sets unfurling\u201d notice now materialise above your view, off-screen, and the page no longer re-jumps to the foot on every arrival.',
+    'Change printing from a collection card no longer closes itself on the first try, and it re-opens the card on your chosen printing like everywhere else.'
   ],
   nl: [
-    '\u00c9\u00e9n kop voor alles: elke pagina en overlay draagt zijn naam nu gecentreerd BOVENIN met de terugknop links \u2014 folderpagina\u2019s tonen de foldernaam zelf, het kruimelpad ging met pensioen, en de titels van Vergelijkbaar/Hiermee gespeeld werden goud zoals de rest.',
-    'Collectie-kaartweergave: Beheer exemplaar maakte plaats voor Voeg \u00e9\u00e9n toe, Verwijder \u00e9\u00e9n en Verander versie, ingedeeld zoals het decksheet. De Regelspagina verplaatste zijn zoekbalk naar beneden met de introtekst in het midden.',
-    'Stromende ladingen stabiel: blokken die boven je beeld binnenkomen (Inspiratie, Spoilers, overal) duwen de pagina niet meer weg \u2014 de scroll compenseert tot op de pixel.'
+    'Spoilers, eindelijk sereen: binnenkomende sets \u00c9N de melding \u201cmeer sets ontvouwen\u201d verschijnen nu boven je beeld, buiten schermbereik, en de pagina springt niet meer bij elke aankomst naar de voet.',
+    'Versie wisselen vanuit een collectiekaart sluit zichzelf niet meer bij de eerste poging, en heropent de kaart op je gekozen versie zoals overal elders.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7412,12 +7410,14 @@ function _renderSpoilerBodyCore(loaded, failed){
   const fmtDayHead = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(appLang()==='nl'?'nl-NL':'en-US', {weekday:'long', month:'long', day:'numeric'}); }catch(e){ return d; } };
   const setNameOf = (code)=>{ const x = sets.find(s=>s.code===code); return x ? x.name : String(code||'').toUpperCase(); };
   const gridHtml = feedGroups
-    ? `<div class="sp-feed">${feedGroups.map(g=>`<div class="sp-group"><div class="chip-label sp-shelf" style="margin:6px 0 12px;">${g.set ? `<span class="sp-shelf-ico">${setIcoHtml(g.set, 'rare')}</span>${escapeHtml(setNameOf(g.set))} — ` : ''}${g.k ? fmtDayHead(g.k) : trS('Date to be announced')}</div><div class="sc-grid">${g.cs.map(tile).join('')}</div></div>`).join('')}</div>`
+    ? `<div class="sp-feed">${feedGroups.map(g=>`<div class="sp-group"><div class="chip-label sp-shelf" style="margin:6px 0 12px;">${g.set ? `<span class="sp-shelf-ico">${setIcoHtml(g.set, 'rare')}</span>${escapeHtml(setNameOf(g.set))} — ` : ''}${g.k ? fmtDayHead(g.k) : trS('Date to be announced')}</div><div class="sc-grid">${g.cs.map(tile).join('')}</div></div>`).join('')}${footHtml}</div>`
     : `<div class="sc-grid">${cards.map(tile).join('')}</div>`;
   // Set view: the shelf (set name, release date, preview count) sits at the
   // FOOT, under the cards — release dates live at the bottom everywhere now.
-  box.innerHTML = active ? (gridHtml + headHtml) : (headHtml + gridHtml + footHtml);
-  if(state.screen === 'spoilers') scrollToPageFoot();
+  box.innerHTML = active ? (gridHtml + headHtml) : (headHtml + gridHtml);
+  // Pin the foot once per visit - streamed repaints rely on the scroll
+  // compensation instead of re-jumping, which was the residual flicker.
+  if(state.screen === 'spoilers' && !box.dataset.footPinned){ box.dataset.footPinned = '1'; scrollToPageFoot(); }
   box.querySelectorAll('.sc-tile').forEach(b=>{
     b.addEventListener('click', ()=>{
       const card = cards.find(c=>c.name===b.dataset.spn && (c.set||'')===b.dataset.spset) || cards.find(c=>c.name===b.dataset.spn);
@@ -10293,7 +10293,7 @@ function openCardInfo(card, opts){
     toast(`${it.name} — now ×${it.qty}`);
   });
   document.getElementById('ciPrint2')?.addEventListener('click', ()=>{
-    openPrintingGrid(card, (chosen)=>{
+    setTimeout(()=>openPrintingGrid(card, (chosen)=>{
       const it = state.collection.items[colIdx]; if(!it) return;
       const iu = chosen.image_uris || (chosen.card_faces && chosen.card_faces[0] && chosen.card_faces[0].image_uris) || {};
       it.set = chosen.set || it.set;
@@ -10305,7 +10305,8 @@ function openCardInfo(card, opts){
       setPrintPref(chosen);
       saveCollection(); state._colDirty = true;
       toast(`Now showing the ${chosen.set_name}${chosen._foilPick?' ✨ foil':''} printing.`);
-    });
+      openCardInfo(chosen, { colIdx: colIdx, _replace: true, _ppApplied: true });
+    }), 40);
   });
   document.getElementById('ciPrint')?.addEventListener('click', ()=>openPrintingBrowse(card, opts));
   document.getElementById('ciSimilar')?.addEventListener('click', ()=>openSimilarCards(card));
