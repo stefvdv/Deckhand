@@ -84,7 +84,12 @@ button{font-family:'Inter';}
   padding:12px 16px; display:flex; align-items:center; gap:10px; min-height:56px;
 }
 .tb-titles{display:flex;flex-direction:column;line-height:1.15;min-width:0;flex:1;}
-.tb-titles .t1{font-family:'Cinzel',serif;font-size:15.5px;color:var(--ink-text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#crOverlay .cr-head{order:1;}
+#crOverlay #crBody{order:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;min-height:0;}
+#crOverlay #crBody > *{flex:0 0 auto;}
+#crOverlay #crBody > .hint:only-child{margin:auto 14px;text-align:center;}
+#crOverlay .cr-bar{order:3;border-top:1px solid var(--line);padding-bottom:calc(10px + env(safe-area-inset-bottom));}
+.tb-titles .t1{font-family:'Cinzel Decorative','Cinzel',serif;font-size:14.5px;color:var(--brass);font-weight:700;letter-spacing:0.6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tb-titles .t1.name2{font-size:13px;line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;overflow-wrap:anywhere;}
 .reco-admiral .ra-hint{font-size:11.5px;color:var(--sub-text);margin-top:8px;letter-spacing:0.3px;}
 .reco-themes{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 0 10px;}
@@ -103,9 +108,9 @@ button{font-family:'Inter';}
 @media (prefers-reduced-motion:reduce){ .compass svg{animation:none;} }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 .brand-txt{pointer-events:none;font-family:'Cinzel Decorative','Cinzel',serif;font-size:14px;letter-spacing:0.6px;color:var(--brass);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto;cursor:default;}
-.page-cap{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;gap:10px;background:var(--ink);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 6px) 12px 6px;box-sizing:border-box;min-height:44px;}
-.page-cap .brand-txt{text-align:left;}
-.page-cap #capBack{flex:none;}
+.page-cap{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--ink);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 6px) 46px 6px;box-sizing:border-box;min-height:44px;}
+.page-cap .brand-txt{text-align:center;flex:0 1 auto;}
+.page-cap #capBack{position:absolute;left:10px;top:50%;transform:translateY(-50%);}
 .app > main{padding-top:calc(56px + env(safe-area-inset-top)) !important;}
 .brand-txt.two-line{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2;align-self:center;max-height:40px;word-break:keep-all;overflow-wrap:normal;}
 .brand-txt.editable{pointer-events:auto;cursor:pointer;text-decoration:underline dotted rgba(201,162,75,0.4);text-underline-offset:4px;}
@@ -931,8 +936,11 @@ main.has-dock{padding-bottom:84px;}
 .overlay main{flex:1;overflow-y:auto;padding-bottom:24px;}
 #recoOverlay main, #similarOverlay main, #printOverlay main, #colAddSheet main,
 #addCollOverlay main, #budgetOverlay main, #cardRecoOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
-.overlay .overlay-inner{flex-direction:column-reverse;}
-.overlay .topbar{border-bottom:none;border-top:1px solid var(--line);}
+.overlay .topbar{position:relative;justify-content:center;}
+.overlay .topbar > .icon-btn:first-child{position:absolute;left:10px;top:50%;transform:translateY(-50%);}
+.overlay .topbar > button:not(:first-child){position:absolute;right:10px;top:50%;transform:translateY(-50%);}
+.overlay .topbar .brand-txt{flex:0 1 auto;max-width:calc(100% - 108px);text-align:center;}
+.overlay .topbar .tb-titles{flex:0 1 auto;max-width:calc(100% - 108px);text-align:center;align-items:center;}
 #bgBody{display:flex;flex-direction:column-reverse;}
 .budget-trio{display:flex;flex-direction:column-reverse;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:120;display:flex;align-items:flex-end;justify-content:center;}
@@ -3397,13 +3405,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.267';
+const APP_VERSION = '2.51.268';
 const CHANGELOG_NOTES = {
   en: [
-    'The bottom bar split in two: a Decks tab (the deckbox) for your deck folders, and a Collection tab (the ring binder) for binders, all cards, wants and trading. The My Collection tile left the Decks page \u2014 it has its own home now.'
+    'One header to rule them all: every page and overlay now carries its name centered at the TOP with the back button on the left \u2014 folder pages show the folder\u2019s own name, the breadcrumb retired, and the Similar/Played-with titles turned gold like the rest.',
+    'Collection card view: Manage copy made way for Add one, Remove one and Change printing, laid out like the deck sheet. The Rules page moved its search to the bottom with the intro text mid-screen.',
+    'Streaming loads steady: chunks arriving above your view (Inspiration, Spoilers, everywhere) no longer shove the page \u2014 the scroll compensates to the pixel.'
   ],
   nl: [
-    'De onderbalk splitste in twee\u00ebn: een Decks-tab (het deckdoosje) voor je deckmappen, en een Collectie-tab (de ringmap) voor mappen, alle kaarten, wants en ruilen. De Mijn Collectie-tegel verliet de Decks-pagina \u2014 die heeft nu een eigen thuis.'
+    '\u00c9\u00e9n kop voor alles: elke pagina en overlay draagt zijn naam nu gecentreerd BOVENIN met de terugknop links \u2014 folderpagina\u2019s tonen de foldernaam zelf, het kruimelpad ging met pensioen, en de titels van Vergelijkbaar/Hiermee gespeeld werden goud zoals de rest.',
+    'Collectie-kaartweergave: Beheer exemplaar maakte plaats voor Voeg \u00e9\u00e9n toe, Verwijder \u00e9\u00e9n en Verander versie, ingedeeld zoals het decksheet. De Regelspagina verplaatste zijn zoekbalk naar beneden met de introtekst in het midden.',
+    'Stromende ladingen stabiel: blokken die boven je beeld binnenkomen (Inspiratie, Spoilers, overal) duwen de pagina niet meer weg \u2014 de scroll compenseert tot op de pixel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4185,6 +4197,10 @@ function navHtml(){
   ];
   const titles = { home: isCmdrMode() ? 'COMMANDER' : 'ADMIRAL', decks:'DECKS', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', trade:'TRADE', collection:'MY COLLECTION' };
   let title = titles[state.screen] || 'ADMIRAL';
+  if(state.screen === 'decks' && state.folderNav){
+    const _p = state.folderNav === '__otherfmt__' ? [{name: isCmdrMode() ? 'Admiral decks' : 'Commander decks'}] : folderPath(state.folderNav);
+    if(_p.length) title = _p[_p.length - 1].name;
+  }
   let editable = false;
   if(state.screen === 'decklist'){
     const d = getDeck(state.activeDeckId);
@@ -4198,8 +4214,8 @@ function navHtml(){
   }
   const activeKey = state.screen === 'decklist' ? 'decks' : (state.screen === 'trade') ? 'collection' : state.screen;
   return `<div class="page-cap">
-    <div class="brand-txt ${editable?'editable':''} ${(state.screen==='decklist'||state.screen==='collection')?'two-line':''}" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner" ${(state.screen==='decklist'||state.screen==='collection')?'':'style="white-space:nowrap;"'}>${escapeHtml(title)}</span></div>
     <button class="icon-btn" id="capBack" aria-label="Back" title="Back">${ICONS.back}</button>
+    <div class="brand-txt ${editable?'editable':''} ${(state.screen==='decklist'||state.screen==='collection')?'two-line':''}" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner" ${(state.screen==='decklist'||state.screen==='collection')?'':'style="white-space:nowrap;"'}>${escapeHtml(title)}</span></div>
   </div><div class="brand-banner">
     <div class="compass ${state.screen==='home'?'active':''}" id="homeBtn" title="Home">${compassSvg()}</div>
     <div class="spacer"></div>
@@ -4717,7 +4733,7 @@ function homeHtml(){
   const collected = (searching || nav) ? [] : state.decksIndex.filter(d=>inMode(d) && d.collected && (d.folderId||null)===null);
   const shownFolders = (searching || otherView) ? [] : childFolders(nav);
   const path = (nav && nav !== '__otherfmt__') ? folderPath(nav) : [];
-  const crumb = nav === '__otherfmt__' ? `<div class="folder-crumb"><button data-gofolder="root">${isCmdrMode()?'⚔':anchorSvg(12)} My Decks</button><span class="fc-sep">›</span><span class="fc-cur">${isCmdrMode()?'Admiral':'Commander'} decks</span></div>` : nav ? `<div class="folder-crumb"><button data-gofolder="root">${modeGlyph()} My Decks</button>${path.map((f,i)=>`<span class="fc-sep">›</span>${i===path.length-1?`<span class="fc-cur">${escapeHtml(f.name)}</span>`:`<button data-gofolder="${f.id}">${escapeHtml(f.name)}</button>`}`).join('')}</div>` : '';
+  const crumb = '';
   const favTiles = favs.map(deckTileHtml).join('');
   const folderTiles = shownFolders.map(folderTileHtml).join('');
   const deckTiles = shownDecks.map(deckTileHtml).join('');
@@ -7279,6 +7295,16 @@ function spoilerDateKey(c){
 const SPOILER_SKIP_LAYOUTS = new Set(['token','double_faced_token','emblem','art_series']);
 function spoilerPlayable(c){ return !SPOILER_SKIP_LAYOUTS.has(c.layout); }
 function renderSpoilerBody(loaded, failed){
+  // Full repaints land while sets stream in; keep the view rock-steady by
+  // compensating the scroll for any height change above it.
+  const _se = document.scrollingElement || document.documentElement;
+  const _box0 = document.getElementById('spBody');
+  const _above = _box0 ? _box0.getBoundingClientRect().top < 0 : false;
+  const _h0 = _se.scrollHeight;
+  try{ return _renderSpoilerBodyCore(loaded, failed); }
+  finally{ if(_above){ const _dh = _se.scrollHeight - _h0; if(_dh) _se.scrollTop += _dh; } }
+}
+function _renderSpoilerBodyCore(loaded, failed){
   const box = document.getElementById('spBody');
   if(!box) return;
   const sets = currentPreviewSets();
@@ -10218,10 +10244,12 @@ function openCardInfo(card, opts){
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
           ${colIdx!=null ? `
-          <button class="ghost-btn" id="ciColl" style="width:100%;"><span class="ib">${ICONS.manage}</span>${trS('Manage copy')}</button>
+          <button class="ghost-btn" id="ciAddOne" style="width:100%;color:var(--brass);border-color:var(--brass);">＋ ${trS('Add one')}</button>
           <button class="ghost-btn" id="ciReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>
-          <button class="ghost-btn" id="ciShare" style="width:100%;"><span class="ib">${ICONS.share}</span>${trS('Share')}</button>
+          <button class="ghost-btn" id="ciRemOne" style="width:100%;color:var(--danger);border-color:var(--danger);">− ${trS('Remove one')}</button>
           <button class="ghost-btn" id="ciSimilar" style="width:100%;"><span class="ib">${ICONS.similar}</span>${trS('Similar cards')}</button>
+          <button class="ghost-btn" id="ciShare" style="width:100%;"><span class="ib">${ICONS.share}</span>${trS('Share')}</button>
+          <button class="ghost-btn" id="ciPrint2" style="width:100%;"><span class="ib">${ICONS.swap}</span>${trS('Change printing')}</button>
           ` : `
           <button class="ghost-btn" id="ciAdd" style="width:100%;color:var(--brass);border-color:var(--brass);" ${isBanned(card)?'disabled':''}>${isBanned(card) ? 'Banned in Admiral' : pinned ? (pinnedHasCard() ? `− Remove from ${escapeHtml(pinned.name)}` : `+ Add to ${escapeHtml(pinned.name)}`) : `${modeGlyph()} ${trS('Add to Deck')}`}</button>
           <button class="ghost-btn" id="ciReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>
@@ -10247,6 +10275,38 @@ function openCardInfo(card, opts){
     else openCardReco(card, null);
   });
   document.getElementById('ciColl')?.addEventListener('click', ()=>{ if(colIdx!=null) openColItemSheet(colIdx); else openAddToCollection(card); });
+  document.getElementById('ciAddOne')?.addEventListener('click', ()=>{
+    const it = state.collection.items[colIdx]; if(!it) return;
+    it.qty = (it.qty || 1) + 1; saveCollection(); state._colDirty = true;
+    toast(`${it.name} — now ×${it.qty}`);
+  });
+  document.getElementById('ciRemOne')?.addEventListener('click', ()=>{
+    const it = state.collection.items[colIdx]; if(!it) return;
+    it.qty = (it.qty || 1) - 1;
+    if(it.qty <= 0){
+      state.collection.items.splice(colIdx, 1);
+      saveCollection(); state._colDirty = true;
+      toast(`${it.name} removed from your collection.`);
+      closeTopOverlay(); return;
+    }
+    saveCollection(); state._colDirty = true;
+    toast(`${it.name} — now ×${it.qty}`);
+  });
+  document.getElementById('ciPrint2')?.addEventListener('click', ()=>{
+    openPrintingGrid(card, (chosen)=>{
+      const it = state.collection.items[colIdx]; if(!it) return;
+      const iu = chosen.image_uris || (chosen.card_faces && chosen.card_faces[0] && chosen.card_faces[0].image_uris) || {};
+      it.set = chosen.set || it.set;
+      it.set_name = chosen.set_name || it.set_name;
+      it.cn = chosen.collector_number || it.cn;
+      if(iu.normal || iu.small) it.img = iu.normal || iu.small;
+      const pe = chosen.prices && (chosen._foilPick ? (chosen.prices.eur_foil || chosen.prices.eur) : chosen.prices.eur);
+      if(pe != null) it.eur = parseFloat(pe);
+      setPrintPref(chosen);
+      saveCollection(); state._colDirty = true;
+      toast(`Now showing the ${chosen.set_name}${chosen._foilPick?' ✨ foil':''} printing.`);
+    });
+  });
   document.getElementById('ciPrint')?.addEventListener('click', ()=>openPrintingBrowse(card, opts));
   document.getElementById('ciSimilar')?.addEventListener('click', ()=>openSimilarCards(card));
   document.getElementById('ciShare')?.addEventListener('click', (e)=>{
@@ -10387,7 +10447,11 @@ function pagedGrid(box, items, tileHtml, afterChunk, opts){
     const upto = Math.min(items.length, shown + firstStep);
     firstStep = pageSize;
     const chunk = items.slice(shown, upto);
+    const _se = document.scrollingElement || document.documentElement;
+    const _above = grid.getBoundingClientRect().top < 0;
+    const _h0 = _se.scrollHeight;
     grid.insertAdjacentHTML('beforeend', chunk.map((it,k)=>tileHtml(it, shown+k)).join(''));
+    if(_above){ const _dh = _se.scrollHeight - _h0; if(_dh > 0) _se.scrollTop += _dh; }
     shown = upto;
     if(afterChunk) afterChunk(chunk, items.slice(0, shown));
     if(shown >= items.length && (!opts.stream || items._complete)) done();
