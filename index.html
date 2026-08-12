@@ -1156,7 +1156,7 @@ main.has-dock{padding-bottom:84px;}
 .glog-tally-h{font-size:11px;color:var(--sub-text);text-transform:uppercase;letter-spacing:.03em;margin-right:2px;}
 .glog-tag{background:rgba(217,164,65,0.12);border:1px solid rgba(217,164,65,0.4);color:var(--brass);border-radius:8px;padding:3px 8px;font-size:12px;}
 .glog-tag.weak{background:rgba(200,90,90,0.10);border-color:rgba(200,90,90,0.45);color:#d98c8c;}
-.glog-list{margin-top:8px;display:flex;flex-direction:column;}
+.glog-list{margin-top:8px;display:flex;flex-direction:column-reverse;}
 .glog-row{display:flex;gap:10px;align-items:flex-start;padding:7px 2px;border-top:1px solid var(--line);}
 .glog-res{flex:none;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
 .glog-res.w{background:rgba(120,190,120,0.15);color:#8fd08f;border:1px solid rgba(120,190,120,0.4);}
@@ -1257,7 +1257,7 @@ main.has-dock{padding-bottom:84px;}
 .life-panel h4{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 8px;}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;gap:10px;}
 .toggle-row:last-child{border-bottom:none;}
-.history-list{max-height:220px;overflow-y:auto;font-size:11.5px;color:var(--sub-text);}
+.history-list{max-height:220px;overflow-y:auto;font-size:11.5px;color:var(--sub-text);display:flex;flex-direction:column-reverse;}
 .history-list div{padding:5px 0;border-bottom:1px solid var(--line);}
 .history-list div:last-child{border-bottom:none;}
 
@@ -3405,15 +3405,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.269';
+const APP_VERSION = '2.51.271';
 const CHANGELOG_NOTES = {
   en: [
-    'Spoilers, finally serene: arriving sets AND the \u201cmore sets unfurling\u201d notice now materialise above your view, off-screen, and the page no longer re-jumps to the foot on every arrival.',
-    'Change printing from a collection card no longer closes itself on the first try, and it re-opens the card on your chosen printing like everywhere else.'
+    'Bottom-up audit: the last two stragglers joined the flip \u2014 the deck\u2019s Play Log now lists the newest game at the foot, and the Life Counter\u2019s history reads newest-at-the-bottom, opening there like a proper log.'
   ],
   nl: [
-    'Spoilers, eindelijk sereen: binnenkomende sets \u00c9N de melding \u201cmeer sets ontvouwen\u201d verschijnen nu boven je beeld, buiten schermbereik, en de pagina springt niet meer bij elke aankomst naar de voet.',
-    'Versie wisselen vanuit een collectiekaart sluit zichzelf niet meer bij de eerste poging, en heropent de kaart op je gekozen versie zoals overal elders.'
+    'Bottom-up-inspectie: de laatste twee achterblijvers deden mee met de flip \u2014 het Speellog van een deck toont het nieuwste potje nu aan de voet, en de geschiedenis van de Levensteller leest nieuwste-onderaan en opent daar, zoals een echt logboek.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10456,14 +10454,21 @@ function pagedGrid(box, items, tileHtml, afterChunk, opts){
     shown = upto;
     if(afterChunk) afterChunk(chunk, items.slice(0, shown));
     if(shown >= items.length && (!opts.stream || items._complete)) done();
-    else if(sentinel) box.appendChild(sentinel);   // keep it below the newest tiles
+    else if(sentinel) seatSentinel();   // keep it at the loading edge
+  };
+  const seatSentinel = ()=>{
+    if(!sentinel) return;
+    let rev = false;
+    try{ rev = getComputedStyle(grid).flexWrap === 'wrap-reverse'; }catch(e){}
+    if(rev) box.insertBefore(sentinel, grid);   // edge = visual top
+    else box.appendChild(sentinel);             // edge = visual bottom
   };
   if((items.length > pageSize || opts.stream) && 'IntersectionObserver' in window){
     sentinel = document.createElement('div');
     sentinel.style.cssText = 'height:1px;';
     io = new IntersectionObserver(entries=>{ if(entries.some(e=>e.isIntersecting)) renderMore(); }, {rootMargin:'900px'});
     renderMore();
-    if(sentinel){ box.appendChild(sentinel); io.observe(sentinel); }
+    if(sentinel){ seatSentinel(); io.observe(sentinel); }
   } else {
     while(shown < items.length) renderMore();
   }
