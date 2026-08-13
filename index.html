@@ -676,7 +676,7 @@ main.has-dock{padding-bottom:84px;}
    gutters so each image is as large as possible (see mythicspoiler-style grid). */
 #spMainPage .sc-grid{gap:2px;}
 .sc-grid > *{flex:0 0 calc((100% - 16px)/3);min-width:0;}
-#spMainPage .sc-grid > *{flex-basis:calc((100% - 4px)/3);}
+#spMainPage .sc-grid > *{flex-basis:calc((100% - 2px)/2);}
 .sp-jump-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:56px;height:56px;background:var(--field);border:1px solid var(--field-line);border-radius:10px;cursor:pointer;padding:6px 4px;}
 .sp-jump-btn:active{background:var(--hl);}
 .sp-jump-btn.active{border-color:var(--brass);background:var(--hl);}
@@ -3405,13 +3405,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.271';
+const APP_VERSION = '2.51.272';
 const CHANGELOG_NOTES = {
   en: [
-    'Bottom-up audit: the last two stragglers joined the flip \u2014 the deck\u2019s Play Log now lists the newest game at the foot, and the Life Counter\u2019s history reads newest-at-the-bottom, opening there like a proper log.'
+    'The Spoilers page now shows truly NEW cards only \u2014 anything with an earlier printing in another set (a reprint) stays out of the feed.',
+    'Spoiler cards render two per row now, the same size as every other results page.'
   ],
   nl: [
-    'Bottom-up-inspectie: de laatste twee achterblijvers deden mee met de flip \u2014 het Speellog van een deck toont het nieuwste potje nu aan de voet, en de geschiedenis van de Levensteller leest nieuwste-onderaan en opent daar, zoals een echt logboek.'
+    'De Spoilerspagina toont nu alleen \u00e9cht NIEUWE kaarten \u2014 alles met een eerdere versie in een andere set (een herdruk) blijft uit de feed.',
+    'Spoilerkaarten staan nu met twee per rij, even groot als op elke andere resultatenpagina.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7248,7 +7250,9 @@ async function fetchWholeSet(code, fresh){
       const r = await sfFetch(url, 0, false, true);
       if(!r.ok) break;
       const d = await r.json();
-      (d.data||[]).forEach(c=>out.push(c));
+      // Spoilers mean NEW cards: Scryfall marks anything with an earlier
+      // printing as a reprint - those don't belong in the feed.
+      (d.data||[]).forEach(c=>{ if(!c.reprint) out.push(c); });
       url = d.has_more ? d.next_page : null;
     }catch(e){ break; }   // keep whatever pages arrived
   }
