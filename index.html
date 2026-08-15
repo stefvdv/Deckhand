@@ -112,6 +112,8 @@ button{font-family:'Inter';}
 .page-cap{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--ink);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 6px) 46px 6px;box-sizing:border-box;min-height:44px;}
 .page-cap .brand-txt{text-align:center;flex:0 1 auto;}
 .page-cap #capBack{position:absolute;left:10px;top:50%;transform:translateY(-50%);}
+.page-cap .cap-note{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:10.5px;color:var(--brass);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.page-cap:has(.cap-note) .brand-txt{max-width:calc(100% - 150px);}
 .app > main{padding-top:calc(56px + env(safe-area-inset-top)) !important;}
 .brand-txt.two-line{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2;align-self:center;max-height:40px;word-break:keep-all;overflow-wrap:normal;}
 .brand-txt.editable{pointer-events:auto;cursor:pointer;text-decoration:underline dotted rgba(201,162,75,0.4);text-underline-offset:4px;}
@@ -1746,6 +1748,8 @@ document.addEventListener('click', (e)=>{
     if(box) box.style.display = 'none';
     const t = document.getElementById('colAdvToggle');
     if(t) t.innerHTML = 'Advanced filter ▾';
+    const cv = document.getElementById('colChev');
+    if(cv) cv.textContent = '▾';
   }
 });
 
@@ -3435,15 +3439,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.277';
+const APP_VERSION = '2.51.278';
 const CHANGELOG_NOTES = {
   en: [
-    'Explainer paragraphs became little \u24d8 buttons \u2014 tags, Budget, Choose Printing and Trade now show a compact i; tap it and the explanation appears as a toast.',
-    'The recommendations picker grew thumbs: the section burger stays fixed bottom-left through any scroll, the type line hugs the true bottom edge without a gap, and \u201cAdd to deck\u201d became the standard big + at the bottom-right that appears the moment you select cards.'
+    'The old Advanced-filter bars are gone for good \u2014 the chevron inside each search box is the only door now \u2014 and the collection\u2019s card count and value moved up into the top bar, to the right of the page name.'
   ],
   nl: [
-    'Uitlegteksten werden kleine \u24d8-knoppen \u2014 tags, Budget, Versie kiezen en Ruilen tonen nu een compacte i; tik erop en de uitleg verschijnt als melding.',
-    'De aanbevelingenkiezer kreeg duimen: de sectieknop blijft linksonder vast staan bij elk scrollen, de typebalk sluit gapless aan op de onderrand, en \u201cAan deck toevoegen\u201d werd de vertrouwde grote + rechtsonder die verschijnt zodra je kaarten selecteert.'
+    'De oude Geavanceerd-filterbalken zijn definitief weg \u2014 het pijltje in elk zoekveld is nu de enige ingang \u2014 en het kaartaantal en de waarde van de collectie verhuisden naar de bovenbalk, rechts van de paginanaam.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4195,8 +4197,9 @@ function render(){
 }
 function renderInner(){
   const root = document.getElementById('root');
-  const nav = navHtml();
+  state._capNote = '';                        // pages may set it while building
   let body = pageBodyHtml(state.screen);
+  const nav = navHtml();
   root.innerHTML = `<div class="app">${nav}${body}</div>`;
 
   try{
@@ -4245,6 +4248,7 @@ function navHtml(){
   return `<div class="page-cap">
     <button class="icon-btn" id="capBack" aria-label="Back" title="Back">${ICONS.back}</button>
     <div class="brand-txt ${editable?'editable':''} ${(state.screen==='decklist'||state.screen==='collection')?'two-line':''}" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner" ${(state.screen==='decklist'||state.screen==='collection')?'':'style="white-space:nowrap;"'}>${escapeHtml(title)}</span></div>
+    ${state._capNote ? `<span class="cap-note">${state._capNote}</span>` : ''}
   </div><div class="brand-banner">
     <div class="compass ${state.screen==='home'?'active':''}" id="homeBtn" title="Home">${compassSvg()}</div>
     <div class="spacer"></div>
@@ -5285,10 +5289,7 @@ function collectionPageHtml(){
   const totalEur = wantsMode ? items.reduce((a,it)=>a+(it.eur||0),0) : _statItems.reduce((a,it)=>a+(it.eur||0)*it.qty,0);
   return `<main>
     <div class="searchbar" style="margin-bottom:8px;"><input id="colSearchQ" enterkeyhint="search" placeholder="${(f.binder && f.binder!=='__all__' && f.binder!=='__wants__') ? trS('Search this binder…') : trS('Search collection…')}" value="${escapeHtml(f.q||'')}" autocomplete="off" style="padding-right:36px;"><button class="in-chev" id="colChev" title="${trS('Advanced filter')}">${state.colAdvOpen?'▴':'▾'}</button><button id="colSearchBtn">${trS('Search')}</button><button id="tradeBtn" title="Trade calculator" style="flex:none;padding:0 13px;font-size:17px;">⚖</button></div>
-    <div class="action-row" style="margin-bottom:8px;align-items:center;">
-      <button class="ghost-btn" id="colAdvToggle" style="display:none;">Advanced filter ${state.colAdvOpen?'▴':'▾'}</button>
-      <span style="flex:1;text-align:right;font-size:12.5px;color:var(--sub-text);white-space:nowrap;">${totalQty} cards · <span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">€${totalEur.toFixed(2)}</span></span>
-    </div>
+    ${(state._capNote = totalQty + ' · €' + totalEur.toFixed(2), '')}
     <div id="colAdvBox" style="${state.colAdvOpen?'':'display:none;'}">${(()=>{
       const sets = Array.from(new Map(state.collection.items.map(it=>[it.set, it.set_name||it.set])).entries())
         .sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
@@ -5688,12 +5689,7 @@ function wireCollectionPage(){
     document.getElementById('fabAddCard').addEventListener('click', ()=>{ close(); openColAddCardSheet(); });
     document.getElementById('fabImport').addEventListener('click', ()=>{ close(); openCollectionImport(); });
   });
-  document.getElementById('colChev')?.addEventListener('click', (e)=>{
-    const b = e.currentTarget;
-    document.getElementById('colAdvToggle')?.click();
-    if(b) b.textContent = state.colAdvOpen ? '▴' : '▾';
-  });
-  document.getElementById('colAdvToggle')?.addEventListener('click', ()=>{
+  document.getElementById('colChev')?.addEventListener('click', ()=>{
     // Toggle the panel in place — a full page render (thousands of grid
     // tiles) just to show or hide this box is what made it laggy.
     state.colAdvOpen = !state.colAdvOpen;
@@ -5701,6 +5697,8 @@ function wireCollectionPage(){
     if(box) box.style.display = state.colAdvOpen ? '' : 'none';
     const t = document.getElementById('colAdvToggle');
     if(t) t.innerHTML = 'Advanced filter ' + (state.colAdvOpen ? '▴' : '▾');
+    const cv = document.getElementById('colChev');
+    if(cv) cv.textContent = state.colAdvOpen ? '▴' : '▾';
   });
   _csHandlers['colSet'] = v=>{ state.colFilter.set = v; csRerender(); };
   _csHandlers['colCM'] = v=>{ state.colFilter.colorMode = v; csRerender(); };
@@ -9470,7 +9468,6 @@ function searchPageHtml(){
       ? `<div class="pin-pill"><span class="pp-txt">Adding straight to <strong>${escapeHtml(pinned.name)}</strong></span><button id="unpinBtn" title="Stop adding to this deck">✕</button></div>`
       : ''}
     <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}" style="padding-right:36px;"><button class="in-chev" id="qChev" title="${trS('Advanced filters')}">${state.advOpen?'▴':'▾'}</button><button id="runSearchBtn">Search</button><button id="qClearBtn" title="Clear search and filters" style="flex:none;padding:0 14px;">✕</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
-    <button class="adv-toggle ${state.advOpen?'open':''}" id="advToggle">Advanced filters <span class="car">▾</span></button>
     ${state.advOpen ? advancedPanelHtml() : ''}
     <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
     <div class="cotd" id="cotdBox" ${state.searchRan?'style="display:none;"':''}></div>
@@ -9591,8 +9588,7 @@ function wireSearchPage(){
     render(); scrollToPageFoot();
   });
   document.getElementById('spoilersBtn')?.addEventListener('click', ()=>switchPage('spoilers'));
-  document.getElementById('advToggle').addEventListener('click', ()=>{ state.advOpen=!state.advOpen; render(); });
-  document.getElementById('qChev')?.addEventListener('click', ()=>document.getElementById('advToggle')?.click());
+  document.getElementById('qChev')?.addEventListener('click', ()=>{ state.advOpen = !state.advOpen; render(); });
   if(state.advOpen) wireAdvancedPanel();
   if(state.searchRan) renderSearchResultsBox();
   loadCardOfTheDay();
@@ -15211,6 +15207,8 @@ function appBackStep(viaHistory){
     if(box) box.style.display = 'none';
     const t = document.getElementById('colAdvToggle');
     if(t) t.innerHTML = 'Advanced filter \u25BE';
+    const cv = document.getElementById('colChev');
+    if(cv) cv.textContent = '\u25BE';
     rearm({screen: state.screen, folder: state.folderNav||null}, '#'+state.screen);
     return true;
   }
