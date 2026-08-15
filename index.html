@@ -84,6 +84,7 @@ button{font-family:'Inter';}
   padding:12px 16px; display:flex; align-items:center; gap:10px; min-height:56px;
 }
 .tb-titles{display:flex;flex-direction:column;line-height:1.15;min-width:0;flex:1;}
+#printOverlay main > *{flex:0 0 auto;}
 #crOverlay .cr-head{order:1;}
 #crOverlay #crBody{order:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;min-height:0;}
 #crOverlay #crBody > *{flex:0 0 auto;}
@@ -334,6 +335,9 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .tag-add-row{display:flex;gap:6px;}
 .tag-add-row input{flex:1;min-width:0;background:var(--ink-2);border:1px solid var(--line);border-radius:8px;color:var(--ink-text);padding:9px 10px;font-size:13px;}
 .tag-add-row input:focus{outline:none;border-color:var(--brass);}
+.tag-drop{max-height:200px;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:2px;padding:6px;}
+.tag-drop button{background:none;border:none;color:var(--ink-text);text-align:left;padding:8px 10px;font-size:13px;border-radius:6px;cursor:pointer;}
+.tag-drop button:active{background:var(--brass-glow);color:var(--brass);}
 .tag-suggest{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
 .tag-sugg{background:var(--ink-2);border:1px dashed var(--line);color:var(--sub-text);border-radius:12px;padding:3px 9px;font-size:11px;cursor:pointer;}
 .tag-sugg:hover{border-style:solid;border-color:var(--brass);color:var(--brass);}
@@ -464,7 +468,8 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .pp-foil:active{transform:scale(0.94);}
 .sp-shelf-ico{display:inline-block;margin-right:6px;vertical-align:-3px;}
 .sp-shelf-ico svg,.sp-shelf-ico img{width:15px;height:15px;display:inline-block;}
-.dock-search{flex:1;min-width:0;background:rgba(10,26,40,0.55);border:1px solid var(--field-line);border-radius:10px;color:var(--text);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:13px;}
+.dock-search{flex:1;min-width:0;background:rgba(10,26,40,0.55);border:1px solid var(--field-line);border-radius:10px;color:var(--text);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:13px;-webkit-appearance:none;appearance:none;}
+.dock-search:focus{outline:none;border-color:var(--brass);}
 #dockSearchBtn svg{width:16px;height:16px;display:block;}
 .pip{border-radius:50%;font-weight:700;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,0.3);}
 .pip.sm{width:14px;height:14px;font-size:8px;}
@@ -683,6 +688,8 @@ main.has-dock{padding-bottom:84px;}
 .sp-jump-btn .set-ico{height:20px !important;max-width:30px !important;}
 .sp-jump-code{font-size:8.5px;font-family:'JetBrains Mono',monospace;color:var(--sub-text);letter-spacing:0.4px;}
 .adv-toggle{background:var(--field);border:1px solid var(--field-line);color:var(--sub-text);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;margin-bottom:10px;width:100%;text-align:left;}
+.adv-toggle{display:none;}
+.in-chev{flex:none;width:30px;margin-left:-38px;z-index:2;background:none;border:none;color:var(--sub-text);font-size:12px;padding:0;cursor:pointer;}
 .adv-toggle .car{float:right;transition:transform 0.2s;}
 .adv-toggle.open .car{transform:rotate(180deg);}
 .adv-panel{background:var(--ink-2);border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;}
@@ -936,7 +943,7 @@ main.has-dock{padding-bottom:84px;}
 .overlay main{flex:1;overflow-y:auto;padding-bottom:24px;}
 #recoOverlay main, #similarOverlay main, #printOverlay main, #colAddSheet main,
 #addCollOverlay main, #budgetOverlay main, #cardRecoOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
-.overlay .topbar{position:relative;justify-content:center;}
+.overlay .topbar{position:relative;justify-content:center;padding-left:54px;padding-right:54px;box-sizing:border-box;min-height:50px;}
 .overlay .topbar > .icon-btn:first-child{position:absolute;left:10px;top:50%;transform:translateY(-50%);}
 .overlay .topbar > button:not(:first-child){position:absolute;right:10px;top:50%;transform:translateY(-50%);}
 .overlay .topbar .brand-txt{flex:0 1 auto;max-width:calc(100% - 108px);text-align:center;}
@@ -1081,6 +1088,11 @@ main.has-dock{padding-bottom:84px;}
 .cb-ub{background:linear-gradient(135deg,#7B5CD6,#4A2F96);font-size:8.5px;letter-spacing:.02em;}
 .cb-sp{background:none;box-shadow:none;font-size:16px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));}
 .cb-own{background:linear-gradient(135deg,#1F9A63,#0E5C3A);font-size:12px;}
+.swipe-ghost{position:fixed;top:50%;left:50%;margin-left:-34vw;width:68vw;aspect-ratio:63/88;object-fit:cover;border-radius:4.75%/3.5%;z-index:130;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,0.55);opacity:0;transform:translate(200vw,-50%);background:#0a0a0c;}
+.edge-flash{position:fixed;top:0;bottom:0;width:4px;z-index:135;background:var(--brass);pointer-events:none;animation:edgeFlash 0.32s ease-out forwards;}
+.edge-flash.left{left:0;}
+.edge-flash.right{right:0;}
+@keyframes edgeFlash{from{opacity:0.85;}to{opacity:0;}}
 .foil-star{position:absolute;left:8%;bottom:47%;font-size:19px;font-style:normal;pointer-events:none;z-index:2;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.9));}
 *:has(> .card-badges){position:relative;}
 *:has(> .vg-qty){position:relative;}
@@ -2778,6 +2790,12 @@ function removeCardTag(d, name, tag){
   const list = hides[name] || (hides[name]=[]);
   if(!list.some(x=>x.toLowerCase()===tag.toLowerCase())) list.push(tag);
 }
+function allAppTags(){
+  // every tag on any card, anywhere in the app (tags are stored globally)
+  const set = new Set();
+  try{ Object.values(ensureGlobalTags()).forEach(arr=>(arr||[]).forEach(t=>set.add(t))); }catch(e){}
+  return Array.from(set).sort((a,b)=>a.localeCompare(b));
+}
 function allDeckTags(d){
   // every tag visible on any card in this deck (admiral + main + maybeboard)
   const set = new Set();
@@ -3405,15 +3423,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.272';
+const APP_VERSION = '2.51.276';
 const CHANGELOG_NOTES = {
   en: [
-    'The Spoilers page now shows truly NEW cards only \u2014 anything with an earlier printing in another set (a reprint) stays out of the feed.',
-    'Spoiler cards render two per row now, the same size as every other results page.'
+    'Tags grew up: the editor is now a single box \u2014 type a new tag, or pick from a drop-up of every tag you\u2019ve ever used anywhere in the app, filtered as you type. And the hardware back button closes the tag editor instead of the whole card.'
   ],
   nl: [
-    'De Spoilerspagina toont nu alleen \u00e9cht NIEUWE kaarten \u2014 alles met een eerdere versie in een andere set (een herdruk) blijft uit de feed.',
-    'Spoilerkaarten staan nu met twee per rij, even groot als op elke andere resultatenpagina.'
+    'Tags werden volwassen: de editor is nu \u00e9\u00e9n veld \u2014 typ een nieuwe tag, of kies uit een opklaplijst van elke tag die je ooit ergens in de app gebruikte, gefilterd terwijl je typt. En de hardware-terugknop sluit de tageditor in plaats van de hele kaart.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3951,11 +3967,11 @@ function pushOverlay(id, closeFn, defer){
    Home · My Decks · Search · Inspiration · Extras. Deliberately strict —
    a clearly horizontal, decisive swipe only — so vertical scrolling, grids,
    dropdowns and controls are never hijacked. */
-const PAGE_STRIP = ['home','decks','search','browse','settings'];
+const PAGE_STRIP = ['home','decks','collection','search','browse','settings'];
 // My Collection lives under My Stuff, so it rides the strip at the 'decks'
 // position — swiping there works like My Stuff, and swiping back returns to
 // My Stuff rather than the collection.
-const stripScreen = (s)=> s === 'collection' ? 'decks' : s;
+const stripScreen = (s)=> s === 'trade' ? 'collection' : s;
 (function(){
   /* Launcher-style page strip: once a horizontal drag is unmistakable, the
      current page follows the finger and the destination page rides in beside
@@ -4015,6 +4031,7 @@ const stripScreen = (s)=> s === 'collection' ? 'decks' : s;
       try{ navigator.vibrate && navigator.vibrate(8); }catch(err){}
       setTimeout(()=>{
         switchPage(tgt, true);   // a swipe between main pages starts a fresh ladder, like the top bar
+        setTimeout(scrollToPageFoot, 220);   // late content (covers, prices) can lift the foot — re-pin once settled
         cleanup();
       }, dur);
     } else {
@@ -5253,9 +5270,9 @@ function collectionPageHtml(){
   const totalQty = wantsMode ? items.length : _statItems.reduce((a,it)=>a+it.qty,0);
   const totalEur = wantsMode ? items.reduce((a,it)=>a+(it.eur||0),0) : _statItems.reduce((a,it)=>a+(it.eur||0)*it.qty,0);
   return `<main>
-    <div class="searchbar" style="margin-bottom:8px;"><input id="colSearchQ" enterkeyhint="search" placeholder="${(f.binder && f.binder!=='__all__' && f.binder!=='__wants__') ? trS('Search this binder…') : trS('Search collection…')}" value="${escapeHtml(f.q||'')}" autocomplete="off"><button id="colSearchBtn">${trS('Search')}</button><button id="tradeBtn" title="Trade calculator" style="flex:none;padding:0 13px;font-size:17px;">⚖</button></div>
+    <div class="searchbar" style="margin-bottom:8px;"><input id="colSearchQ" enterkeyhint="search" placeholder="${(f.binder && f.binder!=='__all__' && f.binder!=='__wants__') ? trS('Search this binder…') : trS('Search collection…')}" value="${escapeHtml(f.q||'')}" autocomplete="off" style="padding-right:36px;"><button class="in-chev" id="colChev" title="${trS('Advanced filter')}">${state.colAdvOpen?'▴':'▾'}</button><button id="colSearchBtn">${trS('Search')}</button><button id="tradeBtn" title="Trade calculator" style="flex:none;padding:0 13px;font-size:17px;">⚖</button></div>
     <div class="action-row" style="margin-bottom:8px;align-items:center;">
-      <button class="ghost-btn" id="colAdvToggle" style="flex:0 0 50%;">Advanced filter ${state.colAdvOpen?'▴':'▾'}</button>
+      <button class="ghost-btn" id="colAdvToggle" style="display:none;">Advanced filter ${state.colAdvOpen?'▴':'▾'}</button>
       <span style="flex:1;text-align:right;font-size:12.5px;color:var(--sub-text);white-space:nowrap;">${totalQty} cards · <span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">€${totalEur.toFixed(2)}</span></span>
     </div>
     <div id="colAdvBox" style="${state.colAdvOpen?'':'display:none;'}">${(()=>{
@@ -5656,6 +5673,11 @@ function wireCollectionPage(){
     });
     document.getElementById('fabAddCard').addEventListener('click', ()=>{ close(); openColAddCardSheet(); });
     document.getElementById('fabImport').addEventListener('click', ()=>{ close(); openCollectionImport(); });
+  });
+  document.getElementById('colChev')?.addEventListener('click', (e)=>{
+    const b = e.currentTarget;
+    document.getElementById('colAdvToggle')?.click();
+    if(b) b.textContent = state.colAdvOpen ? '▴' : '▾';
   });
   document.getElementById('colAdvToggle')?.addEventListener('click', ()=>{
     // Toggle the panel in place — a full page render (thousands of grid
@@ -6297,7 +6319,7 @@ function deckMeterHtml(d){
   if(set === 0){
     mid = state.dlSearchOpen
       ? `<input id="dockSearchInput" class="dock-search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off"><button class="dk-count" id="dockSearchClose" style="flex:none;">✕</button>`
-      : `<button class="dk-count ${over||errors?'bad':''}" id="dockMainCount" title="Tap for deck check">Main ${total}/${deckTotal(d)}${issues.length?' ⚠':''}</button><span>·</span><button class="dk-count" id="dockMaybeBtn">Maybe ${d.maybeboard.length}</button><button class="dk-count" id="dockSearchBtn" title="${trS('Find in deck…')}" style="flex:none;padding:5px 9px;">${ICONS.search}</button>`;
+      : `<button class="dk-count ${over||errors?'bad':''}" id="dockMainCount" title="Tap for deck check">Main ${total}/${deckTotal(d)}${issues.length?' ⚠':''}</button><span>·</span><button class="dk-count" id="dockMaybeBtn">Maybe ${d.maybeboard.length}</button><button class="dk-count" id="dockSearchBtn" title="${trS('Find in deck…')}" style="flex:none;padding:5px 9px;">${ICONS.search}</button><button class="dk-count" id="dockCatJump" title="Next category" style="flex:none;padding:5px 10px;">↑</button>`;
   } else if(set === 1){
     const m = dockCachedSum(deckLeaders(d).concat(d.cards));
     const b = dockCachedSum(d.maybeboard);
@@ -8691,6 +8713,15 @@ function refreshLegality(d){
 function wireMeterRow(d){
   document.getElementById('menuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); state.menuOpen=!state.menuOpen; updateDeckMeter(d); });
   document.querySelectorAll('.dk-type').forEach(b=>b.addEventListener('click', ()=>toast(b.dataset.tt)));
+  document.getElementById('dockCatJump')?.addEventListener('click', ()=>{
+    // Cycle upward through the deck's category heads (Creatures, Instants,
+    // Sorceries …) — DOM order IS the visual bottom-up order, so ++ climbs.
+    const heads = Array.from(document.querySelectorAll('.cat-group > .cat-head'));
+    if(!heads.length) return;
+    state._catJump = ((state._catJump != null ? state._catJump : -1) + 1) % heads.length;
+    try{ heads[state._catJump].scrollIntoView({behavior:'smooth', block:'center'}); }
+    catch(e){ heads[state._catJump].scrollIntoView(); }
+  });
   document.getElementById('dockSearchBtn')?.addEventListener('click', ()=>{
     state.dlSearchOpen = true; state._dlSearchFocus = true;
     updateDeckMeter(d);
@@ -8805,7 +8836,7 @@ function renderCardSheet(d, card, loc, idx){
   document.getElementById('dcImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'dcImg');
   document.getElementById('csChangePrinting').addEventListener('click', ()=>openPrintingPicker(d, card, loc, idx));
-  document.getElementById('csSimilar')?.addEventListener('click', ()=>openSimilarCards(card));
+  document.getElementById('csSimilar')?.addEventListener('click', ()=>openSimilarCards(card, true));
   document.getElementById('csReco')?.addEventListener('click', ()=>openCardReco(card, d));
   document.getElementById('csShare')?.addEventListener('click', (e)=>{
     e.stopPropagation();
@@ -8816,8 +8847,15 @@ function renderCardSheet(d, card, loc, idx){
   });
   document.getElementById('csTags')?.addEventListener('click', ()=>{
     const box = document.getElementById('csTagBox');
-    if(box.dataset.open==='1'){ box.dataset.open='0'; box.innerHTML=''; return; }
+    if(!box) return;
+    if(box.dataset.open==='1'){
+      const top = state.overlayStack[state.overlayStack.length-1];
+      if(top && top.id === 'tagBox') closeTopOverlay();
+      else { box.dataset.open='0'; box.innerHTML=''; }
+      return;
+    }
     box.dataset.open='1';
+    pushOverlay('tagBox', ()=>{ const b = document.getElementById('csTagBox'); if(b){ b.dataset.open='0'; b.innerHTML=''; } });
     renderTagEditor(d, card, box);
   });
   document.getElementById('csToMaybe')?.addEventListener('click', ()=>{
@@ -8963,15 +9001,15 @@ async function loadRulings(card){
 }
 function renderTagEditor(d, card, box){
   const tags = getCardTags(d, card.name);
-  const existing = allDeckTags(d).filter(t=>!tags.some(x=>x.toLowerCase()===t.toLowerCase()));
+  const existing = allAppTags().filter(t=>!tags.some(x=>x.toLowerCase()===t.toLowerCase()));
   box.innerHTML = `<div class="tag-editor">
     <div class="detail-h" style="margin-top:0;">Tags on this card</div>
     <div class="tag-chips">${tags.length ? tags.map(t=>`<span class="tag-chip">${escapeHtml(t)}<button data-rmtag="${encodeURIComponent(t)}">×</button></span>`).join('') : '<span class="tag-none">No tags yet.</span>'}</div>
-    <div class="tag-add-row">
-      <input id="tagInput" type="text" placeholder="Add a tag…" maxlength="24">
+    <div class="tag-add-row" style="position:relative;">
+      <input id="tagInput" type="text" placeholder="Add or pick a tag…" maxlength="24" autocomplete="off">
+      <div class="pd-panel tag-drop" id="tagDrop" hidden></div>
       <button class="ghost-btn" id="tagAddBtn" style="width:auto;flex:0 0 auto;padding:9px 14px;">Add</button>
     </div>
-    ${existing.length?`<div class="tag-suggest"><span class="tag-none">Used in this deck:</span> ${existing.map(t=>`<button class="tag-sugg" data-addtag="${encodeURIComponent(t)}">${escapeHtml(t)}</button>`).join('')}</div>`:''}
     <p class="hint" style="margin:10px 0 0;">Tags follow a card into all your decks; removing one hides it in this deck only. Sort the decklist by <strong>Tags</strong> to group cards by them.</p>
   </div>`;
   const refresh = ()=>{ scheduleSave(d); renderTagEditor(d, card, box); refreshDecklistBox(d); };
@@ -8983,6 +9021,24 @@ function renderTagEditor(d, card, box){
     else { toast('That tag is already on this card.'); input.value=''; }
   };
   box.querySelector('#tagAddBtn').addEventListener('click', commit);
+  // drop-UP of every tag in the app, filtered live as you type
+  const drop = box.querySelector('#tagDrop');
+  const renderDrop = ()=>{
+    if(!drop) return;
+    const q = (input.value || '').trim().toLowerCase();
+    const hits = existing.filter(t=>!q || t.toLowerCase().includes(q)).slice(0, 40);
+    if(!hits.length){ drop.hidden = true; return; }
+    drop.innerHTML = hits.map(t=>`<button type="button" data-picktag="${encodeURIComponent(t)}">${escapeHtml(t)}</button>`).join('');
+    drop.hidden = false;
+    drop.querySelectorAll('[data-picktag]').forEach(b=>b.addEventListener('mousedown', (ev)=>{
+      ev.preventDefault();   // fire before the input's blur hides the panel
+      const t = decodeURIComponent(b.dataset.picktag);
+      if(addCardTag(d, card.name, t)) refresh();
+    }));
+  };
+  input.addEventListener('focus', renderDrop);
+  input.addEventListener('input', renderDrop);
+  input.addEventListener('blur', ()=>setTimeout(()=>{ if(drop) drop.hidden = true; }, 150));
   input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
   box.querySelectorAll('[data-rmtag]').forEach(b=>b.addEventListener('click', ()=>{
     removeCardTag(d, card.name, decodeURIComponent(b.dataset.rmtag)); refresh();
@@ -9400,7 +9456,7 @@ function searchPageHtml(){
     ${pinned
       ? `<div class="pin-pill"><span class="pp-txt">Adding straight to <strong>${escapeHtml(pinned.name)}</strong></span><button id="unpinBtn" title="Stop adding to this deck">✕</button></div>`
       : ''}
-    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}"><button id="runSearchBtn">Search</button><button id="qClearBtn" title="Clear search and filters" style="flex:none;padding:0 14px;">✕</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
+    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}" style="padding-right:36px;"><button class="in-chev" id="qChev" title="${trS('Advanced filters')}">${state.advOpen?'▴':'▾'}</button><button id="runSearchBtn">Search</button><button id="qClearBtn" title="Clear search and filters" style="flex:none;padding:0 14px;">✕</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
     <button class="adv-toggle ${state.advOpen?'open':''}" id="advToggle">Advanced filters <span class="car">▾</span></button>
     ${state.advOpen ? advancedPanelHtml() : ''}
     <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
@@ -9523,6 +9579,7 @@ function wireSearchPage(){
   });
   document.getElementById('spoilersBtn')?.addEventListener('click', ()=>switchPage('spoilers'));
   document.getElementById('advToggle').addEventListener('click', ()=>{ state.advOpen=!state.advOpen; render(); });
+  document.getElementById('qChev')?.addEventListener('click', ()=>document.getElementById('advToggle')?.click());
   if(state.advOpen) wireAdvancedPanel();
   if(state.searchRan) renderSearchResultsBox();
   loadCardOfTheDay();
@@ -10065,7 +10122,23 @@ function closeDeckPickPopup(){ document.getElementById('deckPickScrim')?.remove(
    Same details as the decklist card sheet (printing, price, Oracle text,
    rulings) for cards tapped anywhere outside a deck — search results, browse,
    inspiration. Offers an add button instead of deck-editing actions. */
-function attachSwipeNav(el, onNext, onPrev){
+function attachSwipeNav(el, onNext, onPrev, meta){
+  meta = meta || {};
+  const can = (dir)=> dir === 'next' ? (meta.canNext ? !!meta.canNext() : true) : (meta.canPrev ? !!meta.canPrev() : true);
+  const peek = (dir)=>{ try{ return dir === 'next' ? (meta.peekNext && meta.peekNext()) : (meta.peekPrev && meta.peekPrev()); }catch(e){ return null; } };
+  const ghostEl = ()=>{
+    let g = el._swipeGhost;
+    if(!g){ g = document.createElement('img'); g.className = 'swipe-ghost'; g.alt = ''; el.appendChild(g); el._swipeGhost = g; }
+    return g;
+  };
+  const killGhost = ()=>{ if(el._swipeGhost){ el._swipeGhost.remove(); el._swipeGhost = null; } };
+  const edgeFlash = (side)=>{
+    const fl = document.createElement('div');
+    fl.className = 'edge-flash ' + side;
+    el.appendChild(fl);
+    setTimeout(()=>fl.remove(), 340);
+    try{ navigator.vibrate && navigator.vibrate(14); }catch(err){}
+  };
   /* Card sheets slide like the main pages now: the sheet follows the finger
      while dragging, commits with a glide-out past the threshold (the next
      card glides in from the opposite side), and snaps back on a short drag.
@@ -10094,12 +10167,24 @@ function attachSwipeNav(el, onNext, onPrev){
     const m = paneEl();
     const W0 = window.innerWidth || 360;
     if(!which){                                             // short drag: snap home
+      const g0 = el._swipeGhost;
+      if(g0){
+        g0.style.transition = 'transform 150ms ease-out, opacity 150ms ease-out';
+        g0.style.opacity = '0';
+        setTimeout(killGhost, 170);
+      }
       if(m){
         m.style.transition = 'transform 150ms ease-out, opacity 150ms ease-out';
         m.style.transform = 'translateX(0)'; m.style.opacity = '1';
         setTimeout(()=>{ if(m){ m.style.transition=''; m.style.transform=''; m.style.opacity=''; m.style.willChange=''; } }, 170);
       }
       return;
+    }
+    const gC = el._swipeGhost;
+    if(gC){
+      gC.style.transition = 'transform 150ms ease-in';
+      gC.style.transform = 'translate(0px, -50%)';
+      setTimeout(killGhost, 200);
     }
     const out = which === 'next' ? -1 : 1;
     el._slideInDir = -out;
@@ -10159,24 +10244,42 @@ function attachSwipeNav(el, onNext, onPrev){
       } else return;
     }
     e.preventDefault();                                     // the sheet owns this gesture now
-    curDx = dx;
+    const dirW = dx < 0 ? 'next' : 'prev';
+    const allowed = can(dirW);
+    const useDx = allowed ? dx : dx * 0.3;                  // the end of the chain pushes back
+    curDx = useDx;
     const m = paneEl();
     if(m){
-      m.style.transform = `translateX(${dx}px)`;
-      m.style.opacity = String(Math.max(0.4, 1 - Math.abs(dx) / W * 0.8));
+      m.style.transform = `translateX(${useDx}px)`;
+      m.style.opacity = String(Math.max(0.4, 1 - Math.abs(useDx) / W * 0.8));
     }
+    if(allowed){
+      const src = peek(dirW);
+      if(src){
+        const g = ghostEl();
+        if(g.getAttribute('src') !== src) g.src = src;
+        g.style.transform = `translate(${(dx < 0 ? W : -W) + dx}px, -50%)`;
+        g.style.opacity = '1';
+      }
+    } else killGhost();
   };
   const te = (e)=>{
     if(engaged){
       const thr = Math.min(120, W * 0.28);
-      slideCommit(curDx < -thr ? 'next' : curDx > thr ? 'prev' : null);
+      const want = curDx < -thr ? 'next' : curDx > thr ? 'prev' : null;
+      if(want && !can(want)){ edgeFlash(want === 'next' ? 'right' : 'left'); slideCommit(null); }
+      else slideCommit(want);
       armed = false; engaged = false;
       return;
     }
     if(!armed) return; armed = false;
     const t = e.changedTouches && e.changedTouches[0]; if(!t) return;
     const dx = t.clientX - sx, dy = t.clientY - sy;
-    if(Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.4) slideCommit(dx < 0 ? 'next' : 'prev');
+    if(Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.4){
+      const want2 = dx < 0 ? 'next' : 'prev';
+      if(!can(want2)){ edgeFlash(want2 === 'next' ? 'right' : 'left'); return; }
+      slideCommit(want2);
+    }
   };
   const tc = ()=>{ if(engaged) slideCommit(null); armed = false; engaged = false; };
   el.addEventListener('touchstart', ts, {passive:true});
@@ -10370,7 +10473,16 @@ function openCardInfo(card, opts){
       try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
       openCardInfo(pool[n], Object.assign({}, opts, { poolIdx: n, _replace: true }));
     };
-    attachSwipeNav(el, ()=>go(1), ()=>go(-1));
+    const peekIdx = (dir)=>{
+      let n = pi + dir;
+      while(n >= 0 && n < pool.length && pool[n].name === card.name) n += dir;
+      return (n < 0 || n >= pool.length) ? -1 : n;
+    };
+    attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
+      canNext: ()=>peekIdx(1) >= 0, canPrev: ()=>peekIdx(-1) >= 0,
+      peekNext: ()=>{ const n = peekIdx(1); return n >= 0 ? cardImageMed(pool[n]) : null; },
+      peekPrev: ()=>{ const n = peekIdx(-1); return n >= 0 ? cardImageMed(pool[n]) : null; }
+    });
   }
   // From Wants the pool is a list of names, resolved one card at a time —
   // exact same chevrons and swipe, with wantName tracking the shown card so
@@ -10387,7 +10499,11 @@ function openCardInfo(card, opts){
       try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
       openCollectionCard(cpool[n], cpool);
     };
-    attachSwipeNav(el, ()=>go(1), ()=>go(-1));
+    attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
+      canNext: ()=>ci0 + 1 < cpool.length, canPrev: ()=>ci0 - 1 >= 0,
+      peekNext: ()=>{ const it = state.collection.items[cpool[ci0 + 1]]; return it ? it.img : null; },
+      peekPrev: ()=>{ const it = state.collection.items[cpool[ci0 - 1]]; return it ? it.img : null; }
+    });
   }
   const wpool = (!pool && !cpool && Array.isArray(opts.wantPool)) ? opts.wantPool : null;
   if(wpool && wpool.length > 1){
@@ -10404,7 +10520,9 @@ function openCardInfo(card, opts){
         if(r.ok && _cardSheetGen === myGen) openCardInfo(await r.json(), Object.assign({}, opts, { wantName: wpool[n], wantIdx: n, _replace: true }));
       }catch(e){}
     };
-    attachSwipeNav(el, ()=>go(1), ()=>go(-1));
+    attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
+      canNext: ()=>wi + 1 < wpool.length, canPrev: ()=>wi - 1 >= 0
+    });
   }
 }
 
@@ -10768,6 +10886,53 @@ function shareCardLink(card){
    the card DOES (same engine as Budget alternatives, minus the price cap),
    and EDHREC play-rank orders every result. Colored cards stay inside their
    own identity; colorless cards compete across all identities. */
+/* Weighted PHRASE features: the specific rules-text patterns that define a
+   card's JOB (Stef's priority one). Weight = specificity; q = a Scryfall
+   search finding other cards that share the feature, used to build text
+   candidate pools so even cards without curated tags find true cousins. */
+const PHRASE_FEATS = [
+  { k:'gy-to-hand',     w:6, re:/return[^.]{0,60}from (your|a) graveyard to (your|its owner's) hand/, q:'o:"from your graveyard to your hand"' },
+  { k:'reanimate',      w:6, re:/return[^.]{0,60}from (your|a) graveyard[^.]{0,50}battlefield/, q:'o:"from your graveyard" o:"the battlefield"' },
+  { k:'spells-matter',  w:4, re:/instant (or|and) sorcery/, q:'o:"instant or sorcery"' },
+  { k:'counterspell',   w:6, re:/counter target/, q:'o:"counter target"' },
+  { k:'tutor',          w:5, re:/search your library/, q:'o:"search your library"' },
+  { k:'wipe',           w:6, re:/destroy all|exile all|each creature gets -|deals? \d+ damage to each creature/, q:'(o:"destroy all creatures" or o:"exile all creatures" or o:"damage to each creature")' },
+  { k:'removal-destroy',w:3, re:/destroy target/, q:'o:"destroy target"' },
+  { k:'removal-exile',  w:3, re:/exile target/, q:'o:"exile target"' },
+  { k:'bounce',         w:4, re:/return target[^.]{0,50}to (its|their) owner's hand/, q:'o:"to its owner\'s hand"' },
+  { k:'draw-matters',   w:5, re:/whenever you draw|whenever an opponent draws/, q:'(o:"whenever you draw" or o:"whenever an opponent draws")' },
+  { k:'draw',           w:2, re:/draws? (a|two|three|x|that many) cards?/, q:'o:"draw a card"' },
+  { k:'mill',           w:5, re:/\bmills? |puts? the top [^.]{0,30}library into (their|your|his or her) graveyard/, q:'o:mill' },
+  { k:'tokens',         w:3, re:/creates? [^.]{0,40}token/, q:'o:create o:token' },
+  { k:'counters-grow',  w:3, re:/\+1\/\+1 counter/, q:'o:"+1/+1 counter"' },
+  { k:'proliferate',    w:6, re:/proliferate/, q:'o:proliferate' },
+  { k:'ramp',           w:4, re:/add \{|search your library for (a|up to two) (basic )?land/, q:'(o:"add {c}" or o:"basic land card")' },
+  { k:'sac-outlet',     w:4, re:/sacrifice (a|another) creature/, q:'o:"sacrifice a creature"' },
+  { k:'discard',        w:3, re:/discards? (a|two|that) card/, q:'o:discard' },
+  { k:'lifegain',       w:2, re:/gains? \d+ life|gain that much life/, q:'o:gain o:life' },
+  { k:'drain',          w:3, re:/loses? \d+ life/, q:'o:"loses" o:"life"' },
+  { k:'dies-trigger',   w:3, re:/when(ever)? [^.]{0,40}dies/, q:'o:dies' },
+  { k:'cast-trigger',   w:3, re:/whenever you cast/, q:'o:"whenever you cast"' },
+  { k:'attack-trigger', w:2, re:/whenever [^.]{0,40}attacks/, q:'o:whenever o:attacks' },
+  { k:'copy',           w:5, re:/copy target|create a copy/, q:'o:"copy target"' },
+  { k:'blink',          w:5, re:/exile [^.]{0,60}return (it|that card) to the battlefield/, q:'o:exile o:"return it to the battlefield"' },
+  { k:'extra-turn',     w:6, re:/extra turn/, q:'o:"extra turn"' },
+  { k:'landfall',       w:5, re:/landfall|whenever a land (you control )?enters/, q:'o:"whenever a land"' },
+  { k:'etb',            w:1, re:/when(ever)? [^.]{0,40}enters/, q:null }
+];
+function phraseFeats(card){
+  const faces = (card.card_faces && card.card_faces.length) ? card.card_faces : [card];
+  const t = faces.map(f=>f.oracle_text||'').join(' ').toLowerCase().replace(/\u2019/g, "'");
+  const out = [];
+  for(const f of PHRASE_FEATS){ if(f.re.test(t)) out.push(f); }
+  return out;
+}
+function phraseOverlapWeight(srcFeats, cand){
+  const ck = new Set(phraseFeats(cand).map(f=>f.k));
+  let p = 0;
+  srcFeats.forEach(f=>{ if(ck.has(f.k)) p += f.w; });
+  return p;
+}
 /* Shared MTG-language vocabulary: keywords, zones, and game verbs. Pure
    client-side string matching on candidates already in hand — adds no
    network time to Similar cards. */
@@ -10779,7 +10944,7 @@ function oracleTermSet(card){
   for(const k of MTG_LANG) if(t.includes(k)) s.add(k);
   return s;
 }
-async function openSimilarCards(card){
+async function openSimilarCards(card, colorScope){
   pushOverlay('similar', ()=>{ document.getElementById('similarOverlay')?.remove(); });
   let el = document.getElementById('similarOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='similarOverlay'; }
@@ -10800,26 +10965,34 @@ async function openSimilarCards(card){
     const f = frontFace(card);
     const isLand = /\bLand\b/.test(f.type_line||'');
     const ci = card.color_identity || [];
-    const idClause = ci.length ? ('id<=' + ci.join('').toLowerCase() + ' ') : '';
+    const idClause = (colorScope && ci.length) ? ('id<=' + ci.join('').toLowerCase() + ' ') : '';
     let ranked = [], typeFallback = false;
     if(isLand){
       const r = await searchAndVerifyLegal((idClause + 't:land').trim(), 'edhrec', 80).catch(()=>({results:[]}));
       ranked = ((r&&r.results)||[]).filter(x=>!isBanned(x) && x.name!==card.name);
     }else{
+      const srcFeats = phraseFeats(card);
       const m = await detectOtagsForCards([card]);
       const tags = (m[card.name]||[]).slice(0, 6);
-      if(tags.length){
+      // Candidate pools, in Stef's priority order: TEXT features first (the
+      // exact rules-language the card uses), curated function tags second.
+      const queries = [];
+      srcFeats.filter(f=>f.q).sort((a,b)=>b.w-a.w).slice(0, 3)
+        .forEach(f=>queries.push(['txt:'+f.k, (idClause + f.q).trim()]));
+      tags.forEach(tag=>queries.push(['otag:'+tag, (idClause + 'otag:' + tag).trim()]));
+      if(queries.length){
         const pools = {};
-        await runLimited(tags, async (tag)=>{
+        await runLimited(queries, async (pair)=>{
           try{
-            const r = await searchAndVerifyLegal((idClause + 'otag:' + tag).trim(), 'edhrec', 60);
-            pools[tag] = ((r&&r.results)||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
-          }catch(e){ pools[tag] = []; }
+            const r = await searchAndVerifyLegal(pair[1], 'edhrec', 60);
+            pools[pair[0]] = ((r&&r.results)||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
+          }catch(e){ pools[pair[0]] = []; }
         }, 3);
-        // Rank: shared function tags first, then shared MTG-language wording
-        // (whenever / opponent / draw / pay …), then EDHREC play order — so
-        // the closest cousins surface first and the strongest of them lead.
+        // Rank: shared weighted TEXT features first (the card's actual job),
+        // then shared curated tags (pool hits), then shared MTG-language
+        // wording, then same primary type, then EDHREC play order.
         const srcTerms = oracleTermSet(card);
+        const srcType = (f.type_line||'').split('—')[0].trim();
         const cand = new Map();
         Object.values(pools).forEach(arr=>arr.forEach((x,i)=>{
           if(x.name === card.name) return;
@@ -10828,11 +11001,14 @@ async function openSimilarCards(card){
           else cand.set(x.name, { x, n: 1, best: i });
         }));
         cand.forEach(e=>{
+          e.p = phraseOverlapWeight(srcFeats, e.x);
           let o = 0; const ts = oracleTermSet(e.x);
           srcTerms.forEach(k=>{ if(ts.has(k)) o++; });
           e.o = o;
+          const xt = (frontFace(e.x).type_line||'').split('—')[0].trim();
+          e.t = (srcType && xt === srcType) ? 1 : 0;
         });
-        ranked = Array.from(cand.values()).sort((a,b)=> (b.n - a.n) || ((b.o||0) - (a.o||0)) || (a.best - b.best)).map(e=>e.x);
+        ranked = Array.from(cand.values()).sort((a,b)=> (b.p - a.p) || (b.n - a.n) || ((b.o||0) - (a.o||0)) || ((b.t||0) - (a.t||0)) || (a.best - b.best)).map(e=>e.x);
       }
       if(!ranked.length){
         // No curated tags for this one — fall back to its closest kin by type.
@@ -12941,6 +13117,7 @@ async function loadBudgetAlternatives(d){
       // cousins surface first and the strongest of them lead. Cheaper wins
       // the final tie.
       const srcTerms = oracleTermSet(c);
+      const srcFeatsB = phraseFeats(c);
       const cand = new Map();
       myTags.forEach(t=>(tagPools[t]||[]).forEach((x,i)=>{
         const e = cand.get(x.name);
@@ -12955,9 +13132,10 @@ async function loadBudgetAlternatives(d){
         let n = 0; myTags.forEach(t=>{ if(tx.has(t)) n++; });
         let o = 0; const ts = oracleTermSet(x);
         srcTerms.forEach(k=>{ if(ts.has(k)) o++; });
-        // Lexicographic fold into one sortable number: tags dominate, oracle
-        // overlap breaks tag ties, play order breaks those, price last.
-        scored.push([ n*1e9 + o*1e6 + (999 - Math.min(best,999))*1e3 + (999 - Math.min(Math.round(pv*10),999)), x ]);
+        const p = phraseOverlapWeight(srcFeatsB, x);
+        // Lexicographic fold: shared TEXT features dominate (the card's job),
+        // curated tags second, wording third, play order, price last.
+        scored.push([ p*1e12 + n*1e9 + o*1e6 + (999 - Math.min(best,999))*1e3 + (999 - Math.min(Math.round(pv*10),999)), x ]);
       }
     } else {
       // No curated tags found for this card: fall back to the played-staples
@@ -12969,6 +13147,7 @@ async function loadBudgetAlternatives(d){
         const pv = priceOf(x);
         if(pv===null || pv > ceiling) continue;
         let sc = 0;
+        sc += phraseOverlapWeight(phraseFeats(c), x) * 2;   // the job first
         if(primaryTypeOf(x)===ptype) sc += 3;
         const tx = themesOf(x);
         let shared = 0; mine.forEach(k=>{ if(tx.has(k)) shared++; });
