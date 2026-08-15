@@ -335,6 +335,7 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .tag-add-row{display:flex;gap:6px;}
 .tag-add-row input{flex:1;min-width:0;background:var(--ink-2);border:1px solid var(--line);border-radius:8px;color:var(--ink-text);padding:9px 10px;font-size:13px;}
 .tag-add-row input:focus{outline:none;border-color:var(--brass);}
+.info-i{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--sub-text);color:var(--sub-text);background:none;font-size:11px;font-style:italic;font-family:Georgia,serif;padding:0;margin-left:6px;vertical-align:middle;cursor:pointer;flex:none;line-height:1;}
 .tag-drop{max-height:200px;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:2px;padding:6px;}
 .tag-drop button{background:none;border:none;color:var(--ink-text);text-align:left;padding:8px 10px;font-size:13px;border-radius:6px;cursor:pointer;}
 .tag-drop button:active{background:var(--brass-glow);color:var(--brass);}
@@ -1130,9 +1131,13 @@ main.has-dock{padding-bottom:84px;}
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
 .overlay main .edh-sec > .section-label{top:auto;bottom:0;}
-#recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;}
-#recoOverlay .edh-jump-row{top:calc(var(--reco-sticky, 0px) + 4px) !important;z-index:7;}
+#recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px calc(7px + env(safe-area-inset-bottom));}
+#recoOverlay main{padding-bottom:0;}
+#recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);margin:0;padding:8px 0 calc(8px + env(safe-area-inset-bottom));}
+#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(18px + env(safe-area-inset-bottom));left:14px;right:auto;justify-content:flex-start;z-index:140;height:auto;}
 .edh-jump-row{top:70px;}
+.reco-fab{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--brass);color:#1a1204;font-size:26px;font-weight:800;border:none;z-index:140;box-shadow:0 6px 18px rgba(0,0,0,0.5);cursor:pointer;}
+.reco-fab .fab-n{position:absolute;top:-4px;right:-4px;background:var(--ink);color:var(--brass);border:1px solid var(--brass);border-radius:999px;font-size:11px;padding:1px 6px;font-weight:700;}
 .reco-theme-banner{width:fit-content;margin:0 auto 8px;padding:6px 14px;border:1px solid var(--brass);border-radius:999px;color:var(--brass);font-size:13px;font-weight:600;text-align:center;}
 #tileMenuPop{max-height:70vh;overflow-y:auto;}
 .edh-rel{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-top:10px;-webkit-overflow-scrolling:touch;}
@@ -2790,6 +2795,13 @@ function removeCardTag(d, name, tag){
   const list = hides[name] || (hides[name]=[]);
   if(!list.some(x=>x.toLowerCase()===tag.toLowerCase())) list.push(tag);
 }
+function infoBtnHtml(text){
+  return `<button type="button" class="info-i" data-info="${encodeURIComponent(text)}" aria-label="Info">i</button>`;
+}
+document.addEventListener('click', (e)=>{
+  const b = e.target && e.target.closest && e.target.closest('.info-i');
+  if(b){ e.stopPropagation(); try{ toast(decodeURIComponent(b.dataset.info || '')); }catch(err){} }
+});
 function allAppTags(){
   // every tag on any card, anywhere in the app (tags are stored globally)
   const set = new Set();
@@ -3423,13 +3435,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.276';
+const APP_VERSION = '2.51.277';
 const CHANGELOG_NOTES = {
   en: [
-    'Tags grew up: the editor is now a single box \u2014 type a new tag, or pick from a drop-up of every tag you\u2019ve ever used anywhere in the app, filtered as you type. And the hardware back button closes the tag editor instead of the whole card.'
+    'Explainer paragraphs became little \u24d8 buttons \u2014 tags, Budget, Choose Printing and Trade now show a compact i; tap it and the explanation appears as a toast.',
+    'The recommendations picker grew thumbs: the section burger stays fixed bottom-left through any scroll, the type line hugs the true bottom edge without a gap, and \u201cAdd to deck\u201d became the standard big + at the bottom-right that appears the moment you select cards.'
   ],
   nl: [
-    'Tags werden volwassen: de editor is nu \u00e9\u00e9n veld \u2014 typ een nieuwe tag, of kies uit een opklaplijst van elke tag die je ooit ergens in de app gebruikte, gefilterd terwijl je typt. En de hardware-terugknop sluit de tageditor in plaats van de hele kaart.'
+    'Uitlegteksten werden kleine \u24d8-knoppen \u2014 tags, Budget, Versie kiezen en Ruilen tonen nu een compacte i; tik erop en de uitleg verschijnt als melding.',
+    'De aanbevelingenkiezer kreeg duimen: de sectieknop blijft linksonder vast staan bij elk scrollen, de typebalk sluit gapless aan op de onderrand, en \u201cAan deck toevoegen\u201d werd de vertrouwde grote + rechtsonder die verschijnt zodra je kaarten selecteert.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9003,14 +9017,13 @@ function renderTagEditor(d, card, box){
   const tags = getCardTags(d, card.name);
   const existing = allAppTags().filter(t=>!tags.some(x=>x.toLowerCase()===t.toLowerCase()));
   box.innerHTML = `<div class="tag-editor">
-    <div class="detail-h" style="margin-top:0;">Tags on this card</div>
+    <div class="detail-h" style="margin-top:0;">Tags on this card ${infoBtnHtml('Tags follow a card into all your decks; removing one hides it in this deck only. Sort the decklist by Tags to group cards by them.')}</div>
     <div class="tag-chips">${tags.length ? tags.map(t=>`<span class="tag-chip">${escapeHtml(t)}<button data-rmtag="${encodeURIComponent(t)}">×</button></span>`).join('') : '<span class="tag-none">No tags yet.</span>'}</div>
     <div class="tag-add-row" style="position:relative;">
       <input id="tagInput" type="text" placeholder="Add or pick a tag…" maxlength="24" autocomplete="off">
       <div class="pd-panel tag-drop" id="tagDrop" hidden></div>
       <button class="ghost-btn" id="tagAddBtn" style="width:auto;flex:0 0 auto;padding:9px 14px;">Add</button>
     </div>
-    <p class="hint" style="margin:10px 0 0;">Tags follow a card into all your decks; removing one hides it in this deck only. Sort the decklist by <strong>Tags</strong> to group cards by them.</p>
   </div>`;
   const refresh = ()=>{ scheduleSave(d); renderTagEditor(d, card, box); refreshDecklistBox(d); };
   const input = box.querySelector('#tagInput');
@@ -9088,7 +9101,7 @@ async function openPrintingGrid(card, onPick){
     <div class="topbar"><button class="icon-btn" id="ppClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">Choose Printing</div></div>
     <main>
       <button class="ghost-btn" id="ppCustom" style="width:100%;margin:2px 0 4px;">📷 ${trS('Use your own image…')}</button>
-      <p class="hint" style="margin:0 0 12px;">${trS('Camera or any image file — it becomes this card\'s picture everywhere in the app. Picking a real printing below puts things back.')}</p>
+      <p class="hint" style="margin:0 0 12px;text-align:center;">${infoBtnHtml(trS('Camera or any image file — it becomes this card\'s picture everywhere in the app. Picking a real printing below puts things back.'))}</p>
       <input type="file" id="ppCustomFile" accept="image/*" style="display:none;">
       <div id="ppList" class="status"><div class="spinner"></div>Loading printings…</div>
     </main>
@@ -10710,7 +10723,7 @@ function tradePageHtml(){
   </div>`;
   return `<main>
     <div id="twResults"></div>
-    <p class="hint">${trS('Cardmarket trend prices — pick the exact printing when adding a card.')}</p>
+    <p class="hint">Cardmarket ${infoBtnHtml(trS('Cardmarket trend prices — pick the exact printing when adding a card.'))}</p>
     ${sideCard('a', nl?'Ik':'Me', totA)}
     ${sideCard('b', nl?'Jij':'You', totB)}
     <div class="panel-card" style="text-align:center;">
@@ -12994,7 +13007,7 @@ async function loadBudgetAlternatives(d){
   const box = document.getElementById('bgBody');
   if(!box) return;
   if(!priced.length){ box.innerHTML = `<div class="empty-note">No cards at €5 or more in this deck — ${isCmdrMode()?'it\'s already built thrifty.':'this crew is already sailing cheap.'}</div>`; return; }
-  box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €5 or more, each with two thriftier stand-ins for the same job. Tap + to swap one in.</p>`;
+  box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €5+ ${infoBtnHtml('Every card at €5 or more gets two thriftier stand-ins for the same job. Tap + to swap one in.')}</p>`;
   // Build ONE shared candidate pool up front — EDHREC's dedicated budget page
   // for this commander (real play data) plus the most-played cheap cards in
   // identity, fetched in parallel — then match every pricey card against it
@@ -13262,7 +13275,6 @@ function renderRecoOverlay(){
     <div class="topbar" style="position:relative;">
       <button class="icon-btn" id="recoBack">${ICONS.back}</button>
       <div class="tb-titles"><div class="t1 name2">${escapeHtml(R.admiral.name)}${R.partner?` & ${escapeHtml(R.partner.name)}`:''}</div></div>
-      <button class="reco-create" id="recoCreate" ${n?'':'disabled'}>＋ Add to deck${n?` (${n})`:''}</button>
     </div>
     <main>
       <div class="reco-admiral">
@@ -13279,7 +13291,16 @@ function renderRecoOverlay(){
   document.getElementById('recoAdmImg').addEventListener('click', ()=>showPreview(cardImageLarge(R.admiral), R.admiral.border_color==='white'));
   const p2 = document.getElementById('recoAdmImg2');
   if(p2) p2.addEventListener('click', ()=>showPreview(cardImageLarge(R.partner), R.partner.border_color==='white'));
-  document.getElementById('recoCreate').addEventListener('click', openRecoDeckChooser);
+  if(!document.getElementById('recoCreate')){
+    const fb = document.createElement('button');
+    fb.id = 'recoCreate'; fb.className = 'reco-fab';
+    el.appendChild(fb);
+  }
+  { const fb = document.getElementById('recoCreate');
+    const n0 = R.selected ? R.selected.size : 0;
+    fb.hidden = !n0;
+    fb.innerHTML = `＋${n0?`<span class="fab-n">${n0}</span>`:''}`;
+    fb.onclick = openRecoDeckChooser; }
   tuneRecoStickyLabels();
   if(!R.loading) renderRecoBody();
 }
@@ -13763,8 +13784,7 @@ function renderRecoBody(){
         tile.classList.toggle('selected', R.selected.has(name));
         const btn = document.getElementById('recoCreate');
         const n = R.selected.size;
-        btn.disabled = !n;
-        btn.innerHTML = `＋ Add to deck${n?` (${n})`:''}`;
+        if(btn){ btn.hidden = !n; btn.innerHTML = `＋${n?`<span class="fab-n">${n}</span>`:''}`; }
       });
     });
   }
