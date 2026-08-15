@@ -255,9 +255,9 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
   height:calc(var(--nav-h) + env(safe-area-inset-bottom));
   background:color-mix(in srgb, var(--ink) 97%, transparent); backdrop-filter:blur(8px);
   border-top:1px solid var(--line);border-bottom:none;
-  display:flex;align-items:center;gap:8px;padding:0 12px env(safe-area-inset-bottom);overflow:hidden;max-width:100%;
+  display:flex;align-items:center;gap:6px;padding:0 8px env(safe-area-inset-bottom);overflow:hidden;max-width:100%;
 }
-.banner-tabs{display:flex;gap:7px;flex:0 0 auto;}
+.banner-tabs{display:flex;gap:6px;flex:0 0 auto;}
 .banner-tab{
   display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--line);color:var(--sub-text);
   width:44px;height:44px;border-radius:11px;cursor:pointer;flex:0 0 auto;
@@ -267,6 +267,10 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .banner-tab svg{width:23px;height:23px;flex:0 0 auto;}
 .banner-tab span{display:inline-block;}
 .banner-tab.active{color:var(--brass);background:var(--brass-glow);border-color:var(--line);}
+/* The back button wears the CROSS-fleet field colors — admiral blue while
+   sailing Commander, commander red while sailing Admiral — so it reads as
+   its own kind of button among the plain navigation tabs. */
+.brand-banner #capBack{background:var(--field);border-color:var(--field-line);}
 .overlay .topbar{top:0;}
 
 /* ---------- deck selector (used on decklist/search/inspiration) ---------- */
@@ -3450,25 +3454,19 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.280';
+const APP_VERSION = '2.51.281';
 const CHANGELOG_NOTES = {
   en: [
-    'The back button moved to the bottom bar, between the Home compass and the tabs \u2014 thumb country, like everything else.',
-    'Page names in the top bar are larger, still shrinking to fit when a long deck name needs the room.',
-    'Search: the gap under the search bar is closed to match the other pages, and the box keeps its quiet blue edge instead of a permanent brass glow.',
-    'My Collection: the advanced-filter arrow works again \u2014 the tap that opened the panel was closing it in the same breath.',
-    'Advanced filters lost their Use/Reset buttons: the Search button applies them, and the back button first sweeps the filters clean, then closes the panel.',
-    'Spoilers: the set buttons stack bottom-up \u2014 a spill-over row rises above a full bottom row instead of dangling under it.',
-    'Inspiration: the search box simply says \u201cSearch by card name\u201d.'
+    'Deck pages draw again \u2014 the deck value in the top bar tripped over its own number and crashed the whole screen. The value now appears once every card\u2019s price is known, same as on the deck tiles.',
+    'The back button wears the cross-fleet colors \u2014 admiral blue while sailing Commander, commander red while sailing Admiral \u2014 so it stands apart from the plain navigation tabs.',
+    'The bottom bar breathes tighter so all six buttons fit \u2014 the Extras gear no longer falls off the edge.',
+    'Search: the \u2715 button is gone and the search bar claims its space \u2014 the back button already sweeps filters clean.'
   ],
   nl: [
-    'De terugknop is verhuisd naar de onderbalk, tussen het Home-kompas en de tabbladen \u2014 duimland, net als de rest.',
-    'Paginanamen in de bovenbalk zijn groter, en krimpen nog steeds mee wanneer een lange decknaam de ruimte nodig heeft.',
-    'Zoeken: het gat onder de zoekbalk is gedicht zoals op de andere pagina\u2019s, en het vak houdt zijn rustige blauwe rand in plaats van een permanente messing gloed.',
-    'Mijn Collectie: het pijltje voor geavanceerde filters werkt weer \u2014 de tik die het paneel opende, sloot het in dezelfde adem weer.',
-    'Geavanceerde filters zijn hun knoppen kwijt: de Zoek-knop past ze toe, en de terugknop veegt eerst de filters schoon en sluit daarna het paneel.',
-    'Spoilers: de setknoppen stapelen van onderaf \u2014 een overloop-rij stijgt boven een volle onderste rij uit in plaats van eronder te bungelen.',
-    'Inspiratie: het zoekvak zegt simpelweg \u201cZoek op kaartnaam\u201d.'
+    'Deckpagina\u2019s tekenen weer \u2014 de deckwaarde in de bovenbalk struikelde over zijn eigen getal en liet het hele scherm crashen. De waarde verschijnt nu zodra elke kaartprijs bekend is, net als op de decktegels.',
+    'De terugknop draagt de kruisvloot-kleuren \u2014 admiral-blauw in Commander, commander-rood in Admiral \u2014 zodat hij zich onderscheidt van de gewone navigatieknoppen.',
+    'De onderbalk ademt strakker zodat alle zes knoppen passen \u2014 het Extra\u2019s-tandwiel valt niet meer van de rand.',
+    'Zoeken: de \u2715-knop is weg en de zoekbalk pakt de ruimte \u2014 de terugknop veegt de filters al schoon.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6389,7 +6387,7 @@ function decklistPageHtml(){
   const d = getDeck(state.activeDeckId);
   if(!d) return `<main>${needDeckHtml('No deck open yet. Choose or create one from My Stuff.')}</main>`;
   const _dv = deckPriceFromCache(d);
-  if(_dv != null) state._capNote = '€' + _dv.toFixed(2);
+  if(_dv && _dv.complete) state._capNote = fmtEur(_dv.total);
   return `
   <main class="has-dock">
     <div class="builder-tabs">
@@ -9507,7 +9505,7 @@ function searchPageHtml(){
     ${pinned
       ? `<div class="pin-pill"><span class="pp-txt">Adding straight to <strong>${escapeHtml(pinned.name)}</strong></span><button id="unpinBtn" title="Stop adding to this deck">✕</button></div>`
       : ''}
-    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}" style="padding-right:36px;"><button class="in-chev" id="qChev" title="${trS('Advanced filters')}">${state.advOpen?'▴':'▾'}</button><button id="runSearchBtn">Search</button><button id="qClearBtn" title="Clear search and filters" style="flex:none;padding:0 14px;">✕</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
+    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}" style="padding-right:36px;"><button class="in-chev" id="qChev" title="${trS('Advanced filters')}">${state.advOpen?'▴':'▾'}</button><button id="runSearchBtn">Search</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
     ${state.advOpen ? advancedPanelHtml() : ''}
     <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
     <div class="cotd" id="cotdBox" ${state.searchRan?'style="display:none;"':''}></div>
@@ -9615,12 +9613,6 @@ function wireSearchPage(){
     state.advOpen = false;   // collapse the filter menu, then run the search
     render();
     runAdvancedSearch();     // name bar and any set filters, same as Use filters
-  });
-  document.getElementById('qClearBtn')?.addEventListener('click', ()=>{
-    // Same broom as Inspiration's ✕: name, filters, and results all cleared.
-    state.searchName = ''; state.searchRan = false; state.searchResults = [];
-    resetSearchFilters(); state.advOpen = false;
-    render(); scrollToPageFoot();
   });
   document.getElementById('spoilersBtn')?.addEventListener('click', ()=>switchPage('spoilers'));
   document.getElementById('qChev')?.addEventListener('click', ()=>{ state.advOpen = !state.advOpen; render(); });
