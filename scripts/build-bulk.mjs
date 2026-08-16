@@ -50,6 +50,39 @@ export async function bulkIndex(fetchImpl){
   return by;
 }
 
+/* ---- find the download link, whatever Scryfall calls it today ----
+   The index schema has drifted before (the JSONL migration). Try every
+   plausible shape; if none fits, dump the whole entry into the log so
+   the failing run documents the real schema for the next fix. */
+export function downloadUrlOf(item){
+  if(!item) return null;
+  if(typeof item.download_uri === 'string') return item.download_uri;
+  if(typeof item.download_url === 'string') return item.download_url;
+  if(item.download_uris && typeof item.download_uris === 'object'){
+    const vals = Object.values(item.download_uris).filter(v=>typeof v === 'string');
+    const jsonl = vals.find(v=>v.includes('jsonl'));
+    if(jsonl) return jsonl;
+    if(vals.length) return vals[0];
+  }
+  if(Array.isArray(item.files)){
+    for(const fl of item.files){
+      if(!fl) continue;
+      if(typeof fl.download_uri === 'string') return fl.download_uri;
+      if(typeof fl.url === 'string') return fl.url;
+      if(typeof fl.uri === 'string' && /^https?:/.test(fl.uri)) return fl.uri;
+    }
+  }
+  return null;
+}
+export function requireDownloadUrl(item, label){
+  const u = downloadUrlOf(item);
+  if(u) return u;
+  console.error(`Could not find a download link on the ${label} bulk entry.`);
+  console.error('Here is the full entry Scryfall sent — this tells us their new schema:');
+  console.error(JSON.stringify(item, null, 2));
+  throw new Error(`No download link found for ${label} — see the entry dump above.`);
+}
+
 /* ---- stream any bulk download as one JSON object per yield ----
    Handles every shape Scryfall has served: a pretty-printed JSON
    array (one object per line with trailing commas), plain JSONL,
@@ -152,13 +185,15 @@ async function writeJsonlGz(path, lines){
 async function main(){
   console.log('Fetching bulk-data index…');
   const idx = await bulkIndex();
-  console.log('Oracle Cards:', idx.oracle_cards.download_uri);
-  console.log('Rulings:     ', idx.rulings.download_uri);
+  const oracleUrl  = requireDownloadUrl(idx.oracle_cards, 'Oracle Cards');
+  const rulingsUrl = requireDownloadUrl(idx.rulings, 'Rulings');
+  console.log('Oracle Cards:', oracleUrl);
+  console.log('Rulings:     ', rulingsUrl);
 
   // Oracle Cards — stream, trim, count, write
   let oracleCount = 0, skipped = 0;
   const oracleOut = [];
-  for await (const card of bulkLines(idx.oracle_cards.download_uri)){
+  for await (const card of bulkLines(oracleUrl)){
     const t = trimCard(card);
     if(!t){ skipped++; continue; }
     oracleOut.push(JSON.stringify(t) + '\n');
@@ -171,7 +206,7 @@ async function main(){
   // Rulings — group by oracle_id, write
   const rmap = new Map();
   let rulingCount = 0;
-  for await (const r of bulkLines(idx.rulings.download_uri)){
+  for await (const r of bulkLines(rulingsUrl)){
     groupRuling(rmap, r);
     rulingCount++;
   }
@@ -196,4 +231,4 @@ async function main(){
 const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
 if(runDirectly && !process.env.BULK_NO_MAIN){
   main().catch(e=>{ console.error(e); process.exit(1); });
-}
+     }
