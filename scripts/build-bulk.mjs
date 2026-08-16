@@ -130,4 +130,70 @@ export function trimCard(c){
   if(c.rarity) o.r = c.rarity;
   if(c.legalities && c.legalities.commander) o.lg = c.legalities.commander;
   if(cheapest != null && !Number.isNaN(cheapest)) o.eur = cheapest;
-  if(eurf != null && !Number.isNaN(eurf)) o
+  if(eurf != null && !Number.isNaN(eurf)) o.eurf = eurf;
+  if(c.edhrec_rank) o.rk = c.edhrec_rank;
+  if(c.game_changer) o.gc = 1;
+  if(c.card_faces && c.card_faces.length) o.f = c.card_faces.map(trimFace);
+  return o;
+}
+
+export function groupRuling(map, r){
+  if(!r || !r.oracle_id || !r.comment) return;
+  let a = map.get(r.oracle_id);
+  if(!a){ a = []; map.set(r.oracle_id, a); }
+  a.push({ d: r.published_at || '', c: r.comment });
+}
+
+async function writeJsonlGz(path, lines){
+  await pipeline(Readable.from(lines), createGzip({ level: 9 }), createWriteStream(path));
+}
+
+/* ---- main ---- */
+async function main(){
+  console.log('Fetching bulk-data index…');
+  const idx = await bulkIndex();
+  console.log('Oracle Cards:', idx.oracle_cards.download_uri);
+  console.log('Rulings:     ', idx.rulings.download_uri);
+
+  // Oracle Cards — stream, trim, count, write
+  let oracleCount = 0, skipped = 0;
+  const oracleOut = [];
+  for await (const card of bulkLines(idx.oracle_cards.download_uri)){
+    const t = trimCard(card);
+    if(!t){ skipped++; continue; }
+    oracleOut.push(JSON.stringify(t) + '\n');
+    oracleCount++;
+  }
+  if(oracleCount < 25000) throw new Error(`Sanity check failed: only ${oracleCount} oracle cards — refusing to publish a broken file.`);
+  await writeJsonlGz(`${OUT_DIR}/oracle-slim.jsonl.gz`, oracleOut);
+  console.log(`oracle-slim.jsonl.gz: ${oracleCount} cards (${skipped} skipped)`);
+
+  // Rulings — group by oracle_id, write
+  const rmap = new Map();
+  let rulingCount = 0;
+  for await (const r of bulkLines(idx.rulings.download_uri)){
+    groupRuling(rmap, r);
+    rulingCount++;
+  }
+  if(rulingCount < 20000) throw new Error(`Sanity check failed: only ${rulingCount} rulings — refusing to publish a broken file.`);
+  const rulingLines = (function*(){
+    for(const [oid, arr] of rmap) yield JSON.stringify({ o: oid, r: arr }) + '\n';
+  })();
+  await writeJsonlGz(`${OUT_DIR}/rulings-slim.jsonl.gz`, rulingLines);
+  console.log(`rulings-slim.jsonl.gz: ${rulingCount} rulings on ${rmap.size} cards`);
+
+  // Manifest — the app polls this tiny file to know when to refresh
+  const meta = {
+    format: 1,
+    built: new Date().toISOString(),
+    oracle:  { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at },
+    rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at }
+  };
+  await writeFile(`${OUT_DIR}/bulk-meta.json`, JSON.stringify(meta, null, 2) + '\n');
+  console.log('bulk-meta.json written. Done.');
+}
+
+const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
+if(runDirectly && !process.env.BULK_NO_MAIN){
+  main().catch(e=>{ console.error(e); process.exit(1); });
+}
