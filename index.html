@@ -3101,7 +3101,15 @@ function dfcBackFace(card){
   const f = card && card.card_faces;
   if(!f || f.length < 2) return null;
   const pick = (im)=> im && (im.normal || im.large || im.png) || null;
-  const front = pick(f[0].image_uris), back = pick(f[1].image_uris);
+  let front = pick(f[0].image_uris), back = pick(f[1].image_uris);
+  // Slimmed deck/collection copies and local-database cards carry no face
+  // art — but every two-faced card's front and back live at fixed CDN paths
+  // derived from its Scryfall id, so the flip button never goes missing.
+  if((!front || !back) && card.id && /^(transform|modal_dfc|reversible_card|double_faced_token)$/.test(card.layout || '')){
+    const u = (side)=>'https://cards.scryfall.io/normal/' + side + '/' + card.id[0] + '/' + card.id[1] + '/' + card.id + '.jpg';
+    front = front || u('front');
+    back  = back  || u('back');
+  }
   return (front && back) ? { front, back } : null;
 }
 function dfcFlipHtml(c){
@@ -3497,15 +3505,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.294';
+const APP_VERSION = '2.51.295';
 const CHANGELOG_NOTES = {
   en: [
-    'Similar cards and Budget Alternatives run on a new heart: a curated index of ~130 magic words (hand, look, destroy, token, upkeep\u2026). Ranking now follows four strict steps \u2014 shared words (all > most > some, rare words counting extra), then shared function tags, then colors, then EDHREC play \u2014 with price as Budget\u2019s final tiebreak under its ceiling.',
-    'In Commander mode both pages also sweep the entire local card database: every legal, identity-fitting card sharing even one word with yours joins the running \u2014 complete, instant after the first pass, and it works offline. Admiral keeps its verified live pools (its legality can\u2019t be checked offline) but ranks them by the same four steps.'
+    'Double-faced cards show their flip button on every page now \u2014 saved deck and collection copies (and cards from the local database) carry no face art, so the button quietly vanished after a reload; both faces are now derived from the card\u2019s Scryfall id, which never goes missing.',
+    'Fixed the first-open flicker on Similar cards: the card sheet\u2019s background price/printing re-render re-planted itself on top of the freshly opened Similar page, hiding it. A background re-render now keeps its place in the overlay stack.'
   ],
   nl: [
-    'Vergelijkbare kaarten en Budgetalternatieven draaien op een nieuw hart: een samengestelde index van ~130 magic-woorden (hand, look, destroy, token, upkeep\u2026). De rangschikking volgt nu vier strikte stappen \u2014 gedeelde woorden (alle > meeste > enkele, zeldzame woorden tellen extra), dan gedeelde functietags, dan kleuren, dan EDHREC-speeldata \u2014 met prijs als laatste beslisser onder het Budgetplafond.',
-    'In Commander-modus doorzoeken beide pagina\u2019s ook de complete lokale kaartendatabase: elke legale, kleurpassende kaart die \u00e9\u00e9n woord met de jouwe deelt doet mee \u2014 volledig, direct na de eerste ronde, en het werkt offline. Admiral houdt zijn geverifieerde live-pools (die legaliteit is offline niet te controleren) maar rangschikt ze volgens dezelfde vier stappen.'
+    'Dubbelzijdige kaarten tonen hun draaiknop nu op elke pagina \u2014 opgeslagen deck- en collectiekopie\u00ebn (en kaarten uit de lokale database) dragen geen art per zijde, waardoor de knop na een herlaadbeurt stilletjes verdween; beide zijden worden nu afgeleid uit het Scryfall-id van de kaart, dat nooit ontbreekt.',
+    'De flikkering bij de eerste keer Vergelijkbare kaarten is opgelost: de achtergrond-herteking van het kaartvenster (prijs/druk) plantte zichzelf b\u00f3venop de net geopende Vergelijkbaar-pagina en verborg die. Een achtergrond-herteking houdt nu zijn plek in de overlay-stapel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8912,7 +8920,13 @@ function renderCardSheet(d, card, loc, idx){
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   let el = document.getElementById('cardSheetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; }
-  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
+  // (Re)append only when this sheet is new or already on top — a background
+  // price/printing re-render must never climb above overlays opened later
+  // (the Similar page vanished behind exactly that on its first open).
+  {
+    const _ovs = document.querySelectorAll('body > .overlay');
+    if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el)) document.body.appendChild(el);
+  }
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
   const _reco = `<button class="ghost-btn" id="csReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>`;
@@ -10545,7 +10559,13 @@ function openCardInfo(card, opts){
   if(!opts._replace) pushOverlay('cardInfo', ()=>{ document.getElementById('cardSheetOverlay')?.remove(); });
   let el = document.getElementById('cardSheetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; }
-  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
+  // (Re)append only when this sheet is new or already on top — a background
+  // price/printing re-render must never climb above overlays opened later
+  // (the Similar page vanished behind exactly that on its first open).
+  {
+    const _ovs = document.querySelectorAll('body > .overlay');
+    if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el)) document.body.appendChild(el);
+  }
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
   // cards (basics etc.) stay on the Add side — only a removable main-deck
