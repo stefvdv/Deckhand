@@ -970,6 +970,7 @@ main.has-dock{padding-bottom:84px;}
 .overlay .topbar > button:not(:first-child){position:absolute;right:10px;top:50%;transform:translateY(-50%);}
 .overlay .topbar .brand-txt{flex:0 1 auto;max-width:100%;text-align:center;}
 .overlay .topbar .tb-titles{flex:0 1 auto;max-width:100%;text-align:center;align-items:center;}
+.overlay .topbar .sheet-title{font-size:18px;}
 /* Card sheets stop ABOVE the app's own bottom nav: the real navigation —
    back button in its usual place — stays visible and tappable beneath the
    sheet, and the card's name caps the sheet up top like any page name.
@@ -3496,17 +3497,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.290';
+const APP_VERSION = '2.51.291';
 const CHANGELOG_NOTES = {
   en: [
-    'New engine under the deck: the app now mirrors the weekly trimmed Scryfall data (33k+ cards and all rulings) from its own domain into local storage \u2014 downloaded and parsed quietly in the background, one breath at a time, always yielding to whatever you\u2019re doing.',
-    'First two consumers, invisible but faster: card RULINGS now come from the local database instantly (and offline), with the live Scryfall path as fallback for brand-new cards \u2014 and the Commander BAN LIST fills from disk the moment the app starts, while the live fetch keeps it current between weekly refreshes.',
-    'Nothing visual changed \u2014 this release is all motor. Prices, search, and Similar/Budget move onto the local data in the coming releases.'
+    'Collection and binders now sort by card name into the bottom-up grid \u2014 A starts at the foot where the page lands, and the alphabet climbs, like everywhere else in the app. (The grid direction was already reversed; the cards just arrived unsorted, so the direction depended on how they happened to be added.)',
+    'Card names on a card sheet wrap to two lines and shrink to fit instead of being cut off with \u2026 \u2014 and page names on every page may now wrap to two lines too before the letters get smaller.'
   ],
   nl: [
-    'Nieuwe motor onder het dek: de app spiegelt nu de wekelijks getrimde Scryfall-data (33k+ kaarten en alle rulings) van zijn eigen domein naar lokale opslag \u2014 stilletjes op de achtergrond gedownload en verwerkt, \u00e9\u00e9n ademteug tegelijk, altijd wijkend voor wat jij aan het doen bent.',
-    'De eerste twee afnemers, onzichtbaar maar sneller: RULINGS komen nu direct (en offline) uit de lokale database, met het live Scryfall-pad als vangnet voor gloednieuwe kaarten \u2014 en de Commander-BANLIJST vult zich vanaf schijf zodra de app start, terwijl het live ophalen hem tussen de wekelijkse verversingen actueel houdt.',
-    'Niets visueels veranderd \u2014 deze release is puur motor. Prijzen, zoeken en Vergelijkbaar/Budget verhuizen in de komende releases naar de lokale data.'
+    'Collectie en mappen sorteren nu op kaartnaam in het bottom-up raster \u2014 A begint aan de voet waar de pagina landt, en het alfabet klimt, zoals overal in de app. (De rasterrichting was al omgekeerd; de kaarten kwamen alleen ongesorteerd binnen, dus de richting hing af van hoe ze toevallig waren toegevoegd.)',
+    'Kaartnamen op een kaartvenster lopen door naar twee regels en krimpen passend in plaats van afgekapt met \u2026 \u2014 en paginanamen mogen op elke pagina nu ook naar twee regels voordat de letters kleiner worden.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4336,7 +4335,7 @@ function navHtml(){
   }
   const activeKey = state.screen === 'decklist' ? 'decks' : (state.screen === 'trade') ? 'collection' : state.screen;
   return `<div class="page-cap">
-    <div class="brand-txt ${editable?'editable':''} ${(state.screen==='decklist'||state.screen==='collection')?'two-line':''}" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner" ${(state.screen==='decklist'||state.screen==='collection')?'':'style="white-space:nowrap;"'}>${escapeHtml(title)}</span></div>
+    <div class="brand-txt ${editable?'editable':''} two-line" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner">${escapeHtml(title)}</span></div>
     ${state._capNote ? `<span class="cap-note">${state._capNote}</span>` : ''}
   </div><div class="brand-banner">
     <div class="compass ${state.screen==='home'?'active':''}" id="homeBtn" title="Home">${compassSvg()}</div>
@@ -5376,7 +5375,13 @@ function collectionPageHtml(){
   const f = state.colFilter;
   const wantsMode = f.binder === '__wants__';
   const _colLegalCodes = new Set((activeLegalSetCodes()||[]).map(c=>String(c).toLowerCase()));
-  const items = wantsMode ? computeWants().filter(it=>colMatch(it, _colLegalCodes)) : colFilteredItems();
+  // The grid is bottom-up (wrap-reverse), but the items arrived in raw
+  // insertion order, so the visual direction depended on how cards happened
+  // to be added. A deterministic ascending name sort puts A at the FOOT
+  // where the page lands, with the alphabet climbing — bottom-up like the
+  // rest of the app.
+  const items = (wantsMode ? computeWants().filter(it=>colMatch(it, _colLegalCodes)) : colFilteredItems())
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
   const _idxOf = new Map(state.collection.items.map((x,i)=>[x,i]));
   // The front page shows loose cards only, but its header keeps counting the
   // WHOLE collection — "3341 cards · €…" stays the truth about what you own.
@@ -8925,7 +8930,7 @@ function renderCardSheet(d, card, loc, idx){
   }
 
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><div class="brand-txt" style="font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
+    <div class="topbar"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
@@ -8940,6 +8945,7 @@ function renderCardSheet(d, card, loc, idx){
   </div>`;
 
   pinSheetToFoot(el);
+  requestAnimationFrame(()=>fitSheetTitle(el.querySelector('.topbar .sheet-title')));
   document.getElementById('dcImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'dcImg');
   document.getElementById('csChangePrinting').addEventListener('click', ()=>openPrintingPicker(d, card, loc, idx));
@@ -10256,6 +10262,38 @@ function pinSheetToFoot(root){
   m.querySelectorAll('img').forEach(im=>{ if(!im.complete) im.addEventListener('load', pin, {once:true}); });
   setTimeout(()=>{ done = true; try{ ro && ro.disconnect(); }catch(e){} }, 1600);
 }
+/* Greedy word-wrap line count at one font size; Infinity when a single
+   word can never fit the width. Pure — the unit tests run it dry. */
+function _wrapLineCount(words, avail, measureAt){
+  let lines = 1, cur = '';
+  for(const w of words){
+    if(measureAt(w) > avail) return Infinity;
+    const t = cur ? cur + ' ' + w : w;
+    if(measureAt(t) <= avail){ cur = t; continue; }
+    lines++; cur = w;
+  }
+  return lines;
+}
+/* Card-sheet titles get the page-cap treatment: wrap to two lines first,
+   shrink second (canvas metrics, floor 10px) — never a mid-name ellipsis. */
+function fitSheetTitle(box){
+  if(!box) return;
+  const text = (box.textContent || '').trim();
+  if(!text) return;
+  const avail = box.clientWidth - 2;
+  if(avail <= 0) return;
+  const cs = getComputedStyle(box);
+  const ls = parseFloat(cs.letterSpacing) || 0;
+  const canvas = fitSheetTitle._c || (fitSheetTitle._c = document.createElement('canvas'));
+  const ctx = canvas.getContext('2d');
+  const words = text.split(/\s+/).filter(Boolean);
+  let size = 18;
+  for(; size >= 10; size -= 0.5){
+    const m = (t)=>{ ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${size}px ${cs.fontFamily}`; return ctx.measureText(t).width + ls * Math.max(0, t.length - 1); };
+    if(_wrapLineCount(words, avail, m) <= 2) break;
+  }
+  box.style.fontSize = size + 'px';
+}
 function attachSwipeNav(el, onNext, onPrev, meta){
   meta = meta || {};
   const can = (dir)=> dir === 'next' ? (meta.canNext ? !!meta.canNext() : true) : (meta.canPrev ? !!meta.canPrev() : true);
@@ -10502,7 +10540,7 @@ function openCardInfo(card, opts){
   // copy flips the button to Remove.
   const pinnedHasCard = ()=> !!(pinned && pinned.cards.some(x=>x.name===card.name) && !allowsDuplicates(card));
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><div class="brand-txt" style="font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
+    <div class="topbar"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
@@ -10534,6 +10572,7 @@ function openCardInfo(card, opts){
     </main>
   </div>`;
   pinSheetToFoot(el);
+  requestAnimationFrame(()=>fitSheetTitle(el.querySelector('.topbar .sheet-title')));
   document.getElementById('ciImg').addEventListener('click', ()=>showPreview(colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'ciImg');
   document.getElementById('ciReco')?.addEventListener('click', ()=>{
