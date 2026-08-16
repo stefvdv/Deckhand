@@ -182,7 +182,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > .browse-selects{order:99;}
 .app > main > #inspireResults{order:95;}
 .app > main:has(> #inspireResults) > .hint{order:98;}
-.app > main > .browse-hero{order:98;margin:10px 0 34px;}
+.app > main > .browse-hero{order:98;margin:10px 0 80px;}
 .app > main > #twResults{order:95;display:flex;flex-direction:column-reverse;gap:8px;padding-bottom:6px;}
 .app > main:has(> #twResults) > .hint, .app > main:has(> #twResults) > .panel-card{order:98;}
 .tw-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
@@ -970,12 +970,11 @@ main.has-dock{padding-bottom:84px;}
 .overlay .topbar > button:not(:first-child){position:absolute;right:10px;top:50%;transform:translateY(-50%);}
 .overlay .topbar .brand-txt{flex:0 1 auto;max-width:100%;text-align:center;}
 .overlay .topbar .tb-titles{flex:0 1 auto;max-width:100%;text-align:center;align-items:center;}
-/* Card sheets are bottom-up like the rest of the app: the name bar sits at
-   the foot (stacked background sheets — cardSheetOverlay_bg… — included),
-   and its back button wears the cross-fleet field colors, matching the nav
-   bar's back button. */
-[id^="cardSheetOverlay"] .overlay-inner > .topbar{order:2;border-top:1px solid var(--line);border-bottom:none;padding-bottom:env(safe-area-inset-bottom);}
-[id^="cardSheetOverlay"] #csClose{background:var(--field);border-color:var(--field-line);}
+/* Card sheets stop ABOVE the app's own bottom nav: the real navigation —
+   back button in its usual place — stays visible and tappable beneath the
+   sheet, and the card's name caps the sheet up top like any page name.
+   Stacked background sheets (cardSheetOverlay_bg…) get the same window. */
+[id^="cardSheetOverlay"]{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
 #bgBody{display:flex;flex-direction:column-reverse;}
 .budget-trio{display:flex;flex-direction:column-reverse;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:120;display:flex;align-items:flex-end;justify-content:center;}
@@ -1879,6 +1878,20 @@ async function ensureCmdrBans(force){
   }
   const fresh = state.cmdrBans && state.cmdrBans.names && state.cmdrBans.names.length && Date.now() - (state.cmdrBans.t||0) < 24*60*60*1000;
   if(fresh && !force) return;
+  // Local-first seed: the weekly bulk file already knows every card's
+  // Commander legality — fill an empty list instantly from disk, stamped
+  // with the bulk BUILD time so the live Scryfall fetch below still runs
+  // and keeps the list current between Mondays.
+  if(!state.cmdrBans || !state.cmdrBans.names || !state.cmdrBans.names.length){
+    try{
+      const seed = await bulkKvGet('bannedCommander');
+      if(seed && Array.isArray(seed.names) && seed.names.length > 20){
+        state.cmdrBans = { t: seed.t || 0, names: seed.names.slice().sort((a,b)=>a.localeCompare(b)) };
+        try{ localStorage.setItem(LS_PREFIX+'cmdrBans', JSON.stringify(state.cmdrBans)); }catch(e){}
+        if(state.screen === 'settings') render();
+      }
+    }catch(e){}
+  }
   if(_cmdrBansLoading) return;
   _cmdrBansLoading = true;
   try{
@@ -1889,7 +1902,9 @@ async function ensureCmdrBans(force){
     let guard = 0;
     while(next && guard < 6){
       guard++;
-      const r = await sfFetch(next, 0, true);
+      // Forced = the person is waiting for it: front lane, no 90s-expiry
+      // starvation behind background price/spoiler traffic.
+      const r = await sfFetch(next, 0, !force);
       if(!r.ok){ break; }
       const d = await r.json();
       (d.data||[]).forEach(c=>{ if(c && c.name) names.add(c.name.split(' // ')[0]); });
@@ -2782,6 +2797,22 @@ function loadGlobalTags(){
 }
 function saveGlobalTags(){ try{ localStorage.setItem(LS_PREFIX+'globalTags', JSON.stringify(state.globalTags||{})); }catch(e){ warnStorageOnce(); } }
 function ensureGlobalTags(){ if(!state.globalTags) state.globalTags = loadGlobalTags(); return state.globalTags; }
+/* Most-recently-administered order for the tag picker: every successful add
+   (or un-hide) stamps the tag. Own storage key — existing keys untouched. */
+function tagRecency(){
+  if(!state._tagRecency){
+    try{ state._tagRecency = JSON.parse(localStorage.getItem(LS_PREFIX+'tagRecency')||'{}') || {}; }
+    catch(e){ state._tagRecency = {}; }
+  }
+  return state._tagRecency;
+}
+function touchTagRecency(t){
+  try{
+    const m = tagRecency();
+    m[(t||'').toLowerCase()] = Date.now();
+    localStorage.setItem(LS_PREFIX+'tagRecency', JSON.stringify(m));
+  }catch(e){}
+}
 /* One-time migration: fold every deck's old per-deck tags into the registry */
 function migrateTagsToGlobal(){
   try{
@@ -2816,6 +2847,7 @@ function addCardTag(d, name, tag){
   if(wasHidden){ hides[name] = hides[name].filter(x=>x.toLowerCase()!==t.toLowerCase()); if(!hides[name].length) delete hides[name]; }
   if(already && !wasHidden) return false;   // visible here already
   if(!already){ list.push(t); saveGlobalTags(); }
+  touchTagRecency(t);
   return true;
 }
 function removeCardTag(d, name, tag){
@@ -3464,15 +3496,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.287';
+const APP_VERSION = '2.51.290';
 const CHANGELOG_NOTES = {
   en: [
-    'Budget Alternatives now hunts candidates the way Similar cards does: it searches Scryfall for the pricey card\u2019s own rules language first, then its curated function tags \u2014 it no longer falls back to \u201cany popular cheap card of the same type\u201d when the tags come up empty.',
-    'The rules-language vocabulary learned two missing phrases \u2014 \u201cchoose new targets\u201d and \u201cwithout paying its mana cost\u201d \u2014 so redirect and free-cast spells like Deflecting Swat finally find their true cheap cousins, on the Budget page and in Similar cards alike.'
+    'New engine under the deck: the app now mirrors the weekly trimmed Scryfall data (33k+ cards and all rulings) from its own domain into local storage \u2014 downloaded and parsed quietly in the background, one breath at a time, always yielding to whatever you\u2019re doing.',
+    'First two consumers, invisible but faster: card RULINGS now come from the local database instantly (and offline), with the live Scryfall path as fallback for brand-new cards \u2014 and the Commander BAN LIST fills from disk the moment the app starts, while the live fetch keeps it current between weekly refreshes.',
+    'Nothing visual changed \u2014 this release is all motor. Prices, search, and Similar/Budget move onto the local data in the coming releases.'
   ],
   nl: [
-    'Budgetalternatieven jaagt nu op kandidaten zoals Vergelijkbare kaarten dat doet: eerst zoekt het op Scryfall naar de eigen regeltekst van de dure kaart, daarna op de gecureerde functietags \u2014 het valt niet meer terug op \u201celke populaire goedkope kaart van hetzelfde type\u201d wanneer de tags niets opleveren.',
-    'Het regeltekst-vocabulaire leerde twee ontbrekende frasen \u2014 \u201cchoose new targets\u201d en \u201cwithout paying its mana cost\u201d \u2014 zodat redirect- en gratis-spreuken zoals Deflecting Swat eindelijk hun echte goedkope neven vinden, op de Budgetpagina \u00e9n bij Vergelijkbare kaarten.'
+    'Nieuwe motor onder het dek: de app spiegelt nu de wekelijks getrimde Scryfall-data (33k+ kaarten en alle rulings) van zijn eigen domein naar lokale opslag \u2014 stilletjes op de achtergrond gedownload en verwerkt, \u00e9\u00e9n ademteug tegelijk, altijd wijkend voor wat jij aan het doen bent.',
+    'De eerste twee afnemers, onzichtbaar maar sneller: RULINGS komen nu direct (en offline) uit de lokale database, met het live Scryfall-pad als vangnet voor gloednieuwe kaarten \u2014 en de Commander-BANLIJST vult zich vanaf schijf zodra de app start, terwijl het live ophalen hem tussen de wekelijkse verversingen actueel houdt.',
+    'Niets visueels veranderd \u2014 deze release is puur motor. Prijzen, zoeken en Vergelijkbaar/Budget verhuizen in de komende releases naar de lokale data.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3949,6 +3983,9 @@ function searchFiltersActive(){
     || s.searchSort !== 'name' || s.searchSortDir !== 'asc');
 }
 function switchPage(p, topnav){
+  // Navigation is absolute: a nav-bar jump dismisses any overlays still
+  // floating (card sheets leave the nav bar exposed and tappable now).
+  dismissAllOverlays();
   // A tap on the top navigation bar starts a FRESH ladder — back from there
   // goes straight home, never through whatever came before.
   if(topnav) state.navLadder = ['home'];
@@ -4172,6 +4209,16 @@ function closeTopOverlay(){
   }
   try{ history.back(); } // popstate runs the closeFn
   catch(e){ const t = state.overlayStack.pop(); if(t) t.closeFn(); }
+}
+/* Synchronous sweep used by nav-bar jumps: run every overlay's closeFn
+   directly and drop the entries. Their history entries stay behind as
+   inert pops — the state-driven ladder re-arms on every press (same
+   pattern as the binder's inert entry), so back keeps behaving. */
+function dismissAllOverlays(){
+  while(state.overlayStack && state.overlayStack.length){
+    const t = state.overlayStack.pop();
+    try{ t.closeFn(); }catch(e){}
+  }
 }
 function goBack(){
   try{ history.back(); }catch(e){ switchPage('decks'); }
@@ -8878,7 +8925,7 @@ function renderCardSheet(d, card, loc, idx){
   }
 
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><button class="icon-btn" id="csClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
+    <div class="topbar"><div class="brand-txt" style="font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
@@ -8892,7 +8939,6 @@ function renderCardSheet(d, card, loc, idx){
     </main>
   </div>`;
 
-  document.getElementById('csClose').addEventListener('click', closeTopOverlay);
   pinSheetToFoot(el);
   document.getElementById('dcImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'dcImg');
@@ -9030,6 +9076,22 @@ async function loadRulings(card){
   const gen = _cardSheetGen;
   const box = document.getElementById('csRulings');
   if(!box) return;
+  // Local-first: the weekly bulk rulings answer instantly and offline. If
+  // the local database can't answer within a heartbeat (first build of the
+  // in-memory index, or a card newer than the weekly file), the live
+  // Scryfall path below takes over unchanged.
+  try{
+    const loc = await Promise.race([
+      bulkRulingsFor(card),
+      new Promise(r=>setTimeout(()=>r('timeout'), 400))
+    ]);
+    if(Array.isArray(loc)){
+      if(gen !== _cardSheetGen) return;
+      const live = document.getElementById('csRulings');
+      if(live) live.innerHTML = rulingsHtmlFrom(loc.map(x=>({ published_at: x.d, comment: x.c })));
+      return;
+    }
+  }catch(e){}
   // Deck copies are slimmed and lose rulings_uri — but they keep their id,
   // so the rulings link is rebuilt from it. As a last resort (very old
   // saves without an id) the card is resolved by exact name.
@@ -9067,7 +9129,12 @@ async function loadRulings(card){
 }
 function renderTagEditor(d, card, box){
   const tags = getCardTags(d, card.name);
-  const existing = allAppTags().filter(t=>!tags.some(x=>x.toLowerCase()===t.toLowerCase()));
+  const rec = tagRecency();
+  // Most recently administered first — with the drop-up's column-reverse,
+  // that puts the freshest tag right next to the input.
+  const existing = allAppTags()
+    .filter(t=>!tags.some(x=>x.toLowerCase()===t.toLowerCase()))
+    .sort((a,b)=> (rec[b.toLowerCase()]||0) - (rec[a.toLowerCase()]||0) || a.localeCompare(b));
   box.innerHTML = `<div class="tag-editor">
     <div class="detail-h" style="margin-top:0;">Tags on this card ${infoBtnHtml('Tags follow a card into all your decks; removing one hides it in this deck only. Sort the decklist by Tags to group cards by them.')}</div>
     <div class="tag-chips">${tags.length ? tags.map(t=>`<span class="tag-chip">${escapeHtml(t)}<button data-rmtag="${encodeURIComponent(t)}">×</button></span>`).join('') : '<span class="tag-none">No tags yet.</span>'}</div>
@@ -10435,7 +10502,7 @@ function openCardInfo(card, opts){
   // copy flips the button to Remove.
   const pinnedHasCard = ()=> !!(pinned && pinned.cards.some(x=>x.name===card.name) && !allowsDuplicates(card));
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><button class="icon-btn" id="csClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
+    <div class="topbar"><div class="brand-txt" style="font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
@@ -10466,7 +10533,6 @@ function openCardInfo(card, opts){
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
     </main>
   </div>`;
-  document.getElementById('csClose').addEventListener('click', closeTopOverlay);
   pinSheetToFoot(el);
   document.getElementById('ciImg').addEventListener('click', ()=>showPreview(colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'ciImg');
@@ -14249,7 +14315,7 @@ function wireSettingsPage(){
     else { render(); enableI18n(); try{ translateTree(document.body); }catch(err){} }
     toast(code === 'nl' ? 'Taal opgeslagen.' : 'Language saved.');
   }));
-  if(isCmdrMode()) ensureCmdrBans();
+  if(isCmdrMode()) ensureCmdrBans(!((state.cmdrBans||{}).names||[]).length);
   document.querySelectorAll('[data-mode-choice]').forEach(b=>b.addEventListener('click', ()=>{
     if(setAppMode(b.dataset.modeChoice === 'commander' ? 'commander' : 'admiral')) render();
   }));
@@ -14332,7 +14398,7 @@ function wireSettingsPage(){
       const key = row.dataset.expand==='rules' ? 'settingsRulesOpen' : 'settingsBanOpen';
       state[key] = !state[key];
       document.getElementById(row.dataset.expand==='rules'?'rulesBody':'banBody').classList.toggle('collapsed');
-      if(row.dataset.expand==='bans' && isCmdrMode() && (!state.cmdrBans || !state.cmdrBans.names || !state.cmdrBans.names.length)) ensureCmdrBans(true);
+      if(row.dataset.expand==='banlist' && isCmdrMode() && (!state.cmdrBans || !state.cmdrBans.names || !state.cmdrBans.names.length)) ensureCmdrBans(true);
     });
   });
   document.getElementById('ubRow')?.addEventListener('click', ()=>{
@@ -15439,6 +15505,275 @@ loadSettings().then(render);
 /* iOS pinch-zoom still fires gesture events even with user-scalable=no,
    and the attempted zoom is what was shoving parts of the page offscreen.
    Blocking the gesture (and double-tap zoom) keeps the layout anchored. */
+/* ================= LOCAL BULK DATABASE =================
+   The weekly GitHub Action publishes trimmed Scryfall data next to
+   index.html (oracle-slim.jsonl.gz, rulings-slim.jsonl.gz, bulk-meta.json).
+   This engine mirrors those files into IndexedDB and serves them to the
+   rest of the app — rulings and the Commander ban list first; more
+   consumers follow in later releases. Pure motor: no page changes.
+   Ground rules:
+   • the files come from our OWN Netlify domain — the Scryfall API queue
+     is never touched, and Scryfall itself is downloaded from once a week
+     by GitHub, not by phones;
+   • the same user-always-wins gating as the image warmer: parsing yields
+     long breaths whenever the person is touching the app, and the warmer
+     stands down entirely while a sync runs;
+   • its own database 'admiral-bulkdb', kv store, RAW values with one
+     writer — the qcache double-wrap lesson applies. */
+let _bulkSyncing = false;
+let _bulkDbP = null;
+function bulkDbOpen(){
+  if(_bulkDbP) return _bulkDbP;
+  _bulkDbP = new Promise((res)=>{
+    try{
+      const req = indexedDB.open('admiral-bulkdb', 1);
+      req.onupgradeneeded = ()=>{ try{ req.result.createObjectStore('kv'); }catch(e){} };
+      req.onsuccess = ()=>res(req.result);
+      req.onerror = ()=>res(null);
+    }catch(e){ res(null); }
+  });
+  return _bulkDbP;
+}
+async function bulkKvGet(key){
+  try{
+    const db = await bulkDbOpen(); if(!db) return null;
+    return await new Promise((res)=>{
+      const rq = db.transaction('kv').objectStore('kv').get(key);
+      rq.onsuccess = ()=>res(rq.result === undefined ? null : rq.result);
+      rq.onerror = ()=>res(null);
+    });
+  }catch(e){ return null; }
+}
+async function bulkKvSet(key, value){
+  try{
+    const db = await bulkDbOpen(); if(!db) return false;
+    return await new Promise((res)=>{
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(value, key);
+      tx.oncomplete = ()=>res(true);
+      tx.onerror = ()=>res(false);
+      tx.onabort = ()=>res(false);
+    });
+  }catch(e){ return false; }
+}
+/* Line feed: splits streamed text into JSONL objects, carrying partial
+   lines across chunk boundaries. Pure — the unit tests run it dry. */
+function bulkLineFeed(onLine){
+  let carry = '';
+  return {
+    push(text){
+      const all = carry + text;
+      const lines = all.split('\n');
+      carry = lines.pop();
+      for(const ln of lines){ const t = ln.trim(); if(t) onLine(JSON.parse(t)); }
+    },
+    end(){ const t = carry.trim(); carry = ''; if(t) onLine(JSON.parse(t)); }
+  };
+}
+function _bulkYield(){
+  // A long breath while the person is actively using the app.
+  const busy = (Date.now() - _warmLastInput) < 2500;
+  return new Promise(r=>setTimeout(r, busy ? 180 : 0));
+}
+async function _bulkStreamJsonl(url, onLine){
+  const res = await fetch(url);
+  if(!res.ok || !res.body) throw new Error('bulk fetch HTTP ' + res.status + ' for ' + url);
+  const reader = res.body.pipeThrough(new DecompressionStream('gzip')).getReader();
+  const dec = new TextDecoder();
+  const feed = bulkLineFeed(onLine);
+  let n = 0;
+  for(;;){
+    const {done, value} = await reader.read();
+    if(value) feed.push(dec.decode(value, {stream:true}));
+    if(done){ feed.push(dec.decode()); feed.end(); break; }
+    if(++n % 4 === 0) await _bulkYield();
+  }
+}
+const BULK_CHUNK = 2000;
+async function bulkSyncCheck(){
+  if(_bulkSyncing) return;
+  try{
+    if(!('DecompressionStream' in window)) return;
+    if(navigator.onLine === false || document.hidden) return;
+    const conn = navigator.connection;
+    if(conn && conn.saveData) return;
+    let remote = null;
+    try{
+      const r = await fetch('bulk-meta.json', {cache:'no-store'});
+      if(!r.ok) return;                          // files not published (yet)
+      remote = await r.json();
+    }catch(e){ return; }
+    if(!remote || !remote.built) return;
+    const local = await bulkKvGet('meta');
+    if(local && local.built === remote.built) return;   // already current
+    _bulkSyncing = true;                        // the image warmer stands down
+    _noteInputListeners();
+    sfJournal('bulkdb: sync start ' + remote.built);
+    const cards = [];
+    await _bulkStreamJsonl('oracle-slim.jsonl.gz', (c)=>cards.push(c));
+    if(remote.oracle && remote.oracle.count && cards.length < remote.oracle.count * 0.9)
+      throw new Error('oracle stream came up short: ' + cards.length);
+    const ruls = [];
+    await _bulkStreamJsonl('rulings-slim.jsonl.gz', (r)=>ruls.push(r));
+    if(remote.rulings && remote.rulings.cards && ruls.length < remote.rulings.cards * 0.9)
+      throw new Error('rulings stream came up short: ' + ruls.length);
+    // Write chunks first, meta LAST — an interrupted sync stays invisible
+    // and simply redoes the work next session.
+    let ci = 0;
+    for(let i = 0; i < cards.length; i += BULK_CHUNK){ await bulkKvSet('cards:' + (ci++), cards.slice(i, i + BULK_CHUNK)); await _bulkYield(); }
+    let ri = 0;
+    for(let i = 0; i < ruls.length; i += BULK_CHUNK){ await bulkKvSet('rul:' + (ri++), ruls.slice(i, i + BULK_CHUNK)); await _bulkYield(); }
+    if(local){
+      for(let k = ci; k < (local.cardChunks || 0); k++) await bulkKvSet('cards:' + k, null);
+      for(let k = ri; k < (local.rulChunks || 0); k++) await bulkKvSet('rul:' + k, null);
+    }
+    await bulkKvSet('bannedCommander', { t: Date.parse(remote.built) || 0, names: bulkBannedNamesFrom(cards) });
+    await bulkKvSet('meta', { built: remote.built, cardChunks: ci, rulChunks: ri, cards: cards.length, rulingCards: ruls.length, savedAt: Date.now() });
+    _bulkIdx = null; _bulkLoadP = null;         // rebuilt lazily from the new data
+    sfJournal('bulkdb: synced ' + cards.length + ' cards, ' + ruls.length + ' ruling sets');
+  }catch(e){
+    console.warn('bulk sync failed', e);
+    try{ sfJournal('bulkdb: sync FAILED ' + (e && e.message || e)); }catch(err){}
+  }finally{
+    _bulkSyncing = false;
+  }
+}
+/* Derived once per sync so the ban seed never needs the full index. */
+function bulkBannedNamesFrom(cards){
+  const out = new Set();
+  cards.forEach(c=>{ if(c && c.lg === 'banned' && c.n) out.add(String(c.n).split(' // ')[0]); });
+  return Array.from(out);
+}
+/* ---- lazy in-memory index (built on first use, kept for the session) ---- */
+let _bulkIdx = null, _bulkLoadP = null;
+function bulkIndexReady(){
+  if(_bulkIdx) return Promise.resolve(_bulkIdx);
+  if(_bulkLoadP) return _bulkLoadP;
+  _bulkLoadP = (async ()=>{
+    const meta = await bulkKvGet('meta');
+    if(!meta || !meta.cardChunks){ _bulkLoadP = null; return null; }
+    const byName = new Map(), rulByOid = new Map();
+    for(let i = 0; i < meta.cardChunks; i++){
+      const arr = await bulkKvGet('cards:' + i);
+      if(Array.isArray(arr)) arr.forEach(c=>{
+        if(!c || !c.n) return;
+        const full = String(c.n).toLowerCase();
+        if(!byName.has(full)) byName.set(full, c);
+        const front = full.split(' // ')[0];
+        if(front && !byName.has(front)) byName.set(front, c);
+      });
+      await _bulkYield();
+    }
+    for(let i = 0; i < meta.rulChunks; i++){
+      const arr = await bulkKvGet('rul:' + i);
+      if(Array.isArray(arr)) arr.forEach(x=>{ if(x && x.o) rulByOid.set(x.o, x.r || []); });
+      await _bulkYield();
+    }
+    _bulkIdx = { built: meta.built, byName, rulByOid };
+    return _bulkIdx;
+  })();
+  return _bulkLoadP;
+}
+async function bulkCardByName(name){
+  const ix = await bulkIndexReady();
+  if(!ix || !name) return null;
+  return ix.byName.get(String(name).toLowerCase()) || null;
+}
+/* Tri-state, pure for testing: an array (possibly empty) is an
+   authoritative local answer; undefined means "can't say — ask the
+   live API" (no database, or a card newer than the weekly file). */
+function _bulkRulingsDecide(ix, card){
+  if(!ix || !card) return undefined;
+  const nameKey = card.name ? String(card.name).toLowerCase() : null;
+  if(card.oracle_id){
+    if(ix.rulByOid.has(card.oracle_id)) return ix.rulByOid.get(card.oracle_id);
+    return (nameKey && ix.byName.has(nameKey)) ? [] : undefined;
+  }
+  if(!nameKey) return undefined;
+  const c = ix.byName.get(nameKey);
+  if(!c) return undefined;
+  if(c.o && ix.rulByOid.has(c.o)) return ix.rulByOid.get(c.o);
+  return [];
+}
+async function bulkRulingsFor(card){
+  const ix = await bulkIndexReady();
+  return _bulkRulingsDecide(ix, card);
+}
+window.addEventListener('load', ()=>{ setTimeout(bulkSyncCheck, 5000); });
+
+/* ---------------- IDLE IMAGE WARMER ----------------
+   Quietly fills the browser's HTTP cache with the images the person is most
+   likely to look at: the open deck's list first, then every other deck,
+   then the collection tiles, and finally the open deck's sheet-size art.
+   HARD RULES — the user always wins:
+   • one image at a time, a breath (250ms) between each;
+   • nothing moves until 2.5s after the last touch/key/scroll;
+   • stands down whenever the fast Scryfall lane has work (something the
+     user just tapped), when the app is hidden, offline, or Data Saver is on;
+   • images come from Scryfall's CDN — the rate-limited API queue is never
+     touched, so warming can never delay rulings, prices, or searches. */
+let _warmLastInput = Date.now();
+let _warmStarted = false;
+let _inputListenersOn = false;
+function _noteInputListeners(){
+  if(_inputListenersOn) return; _inputListenersOn = true;
+  const note = ()=>{ _warmLastInput = Date.now(); };
+  ['touchstart','pointerdown','keydown','wheel','scroll'].forEach(ev=>{
+    try{ window.addEventListener(ev, note, {passive:true, capture:true}); }catch(e){}
+  });
+}
+function buildWarmQueue(){
+  const seen = new Set(), urls = [];
+  const push = (u)=>{ if(u && typeof u === 'string' && !u.startsWith('data:') && !seen.has(u)){ seen.add(u); urls.push(u); } };
+  const act = getDeck(state.activeDeckId);
+  const decks = [];
+  if(act) decks.push(act);
+  (state.decksIndex||[]).forEach(d=>{ if(!act || d.id !== act.id) decks.push(d); });
+  decks.forEach(d=>{ try{ deckLeaders(d).concat(d.cards||[], d.maybeboard||[]).forEach(c=>push(cardImage(c))); }catch(e){} });
+  ((state.collection||{}).items||[]).forEach(it=>{ if(it) push(it.img); });
+  if(act){ try{ deckLeaders(act).concat(act.cards||[]).forEach(c=>push(cardImageLarge(c))); }catch(e){} }
+  return urls;
+}
+function _warmGateClosed(){
+  const conn = navigator.connection;
+  const apiBusy = !!(typeof _sfQ === 'object' && _sfQ && _sfQ.hi && _sfQ.hi.length);
+  return _bulkSyncing || document.hidden || navigator.onLine === false || !!(conn && conn.saveData) ||
+         apiBusy || (Date.now() - _warmLastInput) < 2500;
+}
+function startImageWarmer(){
+  if(_warmStarted) return; _warmStarted = true;
+  _noteInputListeners();
+  const warmed = new Set();
+  let queue = [];
+  let colSeen = (((state.collection||{}).items)||[]).length > 0;
+  let idlePolls = 0;
+  const refill = ()=>{ try{ queue = buildWarmQueue().filter(u=>!warmed.has(u)); }catch(e){ queue = []; } };
+  refill();
+  const step = ()=>{
+    if(!queue.length){
+      // The collection loads from IndexedDB and can appear after the first
+      // build — refill once when it lands, then the session's pass is done.
+      const haveCol = (((state.collection||{}).items)||[]).length > 0;
+      if(!colSeen && haveCol){ colSeen = true; refill(); }
+      if(!queue.length){
+        if(colSeen || ++idlePolls > 60) return;   // finished (or nothing to wait for)
+        setTimeout(step, 10000); return;
+      }
+    }
+    if(_warmGateClosed()){ setTimeout(step, 1500); return; }
+    const u = queue.shift();
+    warmed.add(u);
+    let done = false;
+    const next = ()=>{ if(done) return; done = true; setTimeout(step, 250); };
+    const im = new Image();
+    im.onload = next; im.onerror = next;
+    im.src = u;
+    setTimeout(next, 15000);   // a hung load never stalls the queue
+  };
+  setTimeout(step, 8000);      // let boot and the first page settle first
+}
+window.addEventListener('load', ()=>{ setTimeout(startImageWarmer, 8000); });
+
 // Register the service worker for offline/app-like behavior — only when
 // hosted (service workers don't exist for file:// pages, and the app must
 // keep working when shared as a bare file).
