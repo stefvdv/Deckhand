@@ -3497,15 +3497,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.291';
+const APP_VERSION = '2.51.292';
 const CHANGELOG_NOTES = {
   en: [
-    'Collection and binders now sort by card name into the bottom-up grid \u2014 A starts at the foot where the page lands, and the alphabet climbs, like everywhere else in the app. (The grid direction was already reversed; the cards just arrived unsorted, so the direction depended on how they happened to be added.)',
-    'Card names on a card sheet wrap to two lines and shrink to fit instead of being cut off with \u2026 \u2014 and page names on every page may now wrap to two lines too before the letters get smaller.'
+    'Extras \u2192 Data Sources gained a permanent \ud83d\udccb Copy diagnostics button \u2014 it copies the app version, the local card database\u2019s status, and the network black-box journal in one go. A Local card database row shows what\u2019s on disk and how fresh it is.',
+    'Card images now SURVIVE app updates: the image cache was version-named, so every release quietly threw away all cached card art and re-downloaded it. The cache lives in its own permanent home now \u2014 warmed decks and collection keep working offline straight through updates. (One last re-warm happens after this update itself.)'
   ],
   nl: [
-    'Collectie en mappen sorteren nu op kaartnaam in het bottom-up raster \u2014 A begint aan de voet waar de pagina landt, en het alfabet klimt, zoals overal in de app. (De rasterrichting was al omgekeerd; de kaarten kwamen alleen ongesorteerd binnen, dus de richting hing af van hoe ze toevallig waren toegevoegd.)',
-    'Kaartnamen op een kaartvenster lopen door naar twee regels en krimpen passend in plaats van afgekapt met \u2026 \u2014 en paginanamen mogen op elke pagina nu ook naar twee regels voordat de letters kleiner worden.'
+    'Extra\u2019s \u2192 Databronnen heeft nu een permanente \ud83d\udccb Kopieer diagnostiek-knop \u2014 die kopieert de appversie, de status van de lokale kaartendatabase en het netwerk-zwarte-doos-journaal in \u00e9\u00e9n keer. Een rij Lokale kaartendatabase toont wat er op schijf staat en hoe vers het is.',
+    'Kaartafbeeldingen OVERLEVEN nu app-updates: de afbeeldingscache droeg een versienaam, dus elke release gooide stilletjes alle gecachte kaart-art weg en downloadde alles opnieuw. De cache woont nu in zijn eigen vaste huis \u2014 voorgeladen decks en collectie blijven offline werken, dwars door updates heen. (Na deze update zelf volgt \u00e9\u00e9n laatste heropwarmronde.)'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11995,14 +11995,38 @@ function dataSourcesHtml(){
     { id:'types', n:'Creature types',           t: ctT },
     { id:'ban',   n:'Bans & Game Changers',     t: null, note: trS('live, per card') },
     { id:'price', n:'Prices',                   t: null, note: trS('24h per card') },
+    { id:'bulk',  n:'Local card database',      t: null,
+      note: state._bulkMetaCache ? (state._bulkMetaCache.cards + ' cards · ' + _srcAge(state._bulkMetaCache.savedAt)) : '—' },
   ];
   return rows.map(r=>`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;">
     <span style="flex:1;">${escapeHtml(r.n)}</span>
     <span style="color:var(--sub-text-2);">${r.note ? r.note : _srcAge(r.t)}</span>
     ${(r.id==='sets'||r.id==='tags'||r.id==='types') ? `<button class="icon-btn" data-srcrefresh="${r.id}" style="flex:none;width:28px;height:28px;font-size:12px;">↻</button>` : ''}
-  </div>`).join('');
+  </div>`).join('') + `<button class="ghost-btn" id="sfDiagCopy" style="width:100%;margin-top:8px;padding:7px 12px;font-size:12px;">📋 ${trS('Copy diagnostics')}</button>`;
 }
 function wireDataSources(){
+  // The Local card database row reads IndexedDB (async) — fill it once
+  // known and redraw this one card, then rebind its buttons.
+  if(!state._bulkMetaCache){
+    bulkKvGet('meta').then(m=>{
+      if(!m || state._bulkMetaCache) return;
+      state._bulkMetaCache = m;
+      const body = document.getElementById('dataSourcesBody');
+      if(body){ body.innerHTML = dataSourcesHtml(); wireDataSources(); }
+    });
+  }
+  document.getElementById('sfDiagCopy')?.addEventListener('click', async ()=>{
+    let bulk = 'bulkdb: not synced yet';
+    try{
+      const m = await bulkKvGet('meta');
+      if(m) bulk = 'bulkdb: ' + m.cards + ' cards, ' + m.rulingCards + ' ruling sets · built ' + m.built + ' · saved ' + new Date(m.savedAt || 0).toISOString();
+    }catch(e){}
+    const text = ['Admirals & Commanders v' + APP_VERSION, bulk, '--- network journal (newest last) ---']
+      .concat((_sfLog && _sfLog.length) ? _sfLog : ['(empty)']).join('\n');
+    navigator.clipboard?.writeText(text)
+      .then(()=>toast(trS('Copied.')))
+      .catch(()=>toast(trS('Could not copy — select the text above instead.')));
+  });
   document.querySelectorAll('[data-srcrefresh]').forEach(b=>b.addEventListener('click', async ()=>{
     const id = b.dataset.srcrefresh;
     b.disabled = true; b.textContent = '…';
@@ -15669,6 +15693,7 @@ async function bulkSyncCheck(){
     await bulkKvSet('bannedCommander', { t: Date.parse(remote.built) || 0, names: bulkBannedNamesFrom(cards) });
     await bulkKvSet('meta', { built: remote.built, cardChunks: ci, rulChunks: ri, cards: cards.length, rulingCards: ruls.length, savedAt: Date.now() });
     _bulkIdx = null; _bulkLoadP = null;         // rebuilt lazily from the new data
+    state._bulkMetaCache = null;                // Data Sources re-reads the new meta
     sfJournal('bulkdb: synced ' + cards.length + ' cards, ' + ruls.length + ' ruling sets');
   }catch(e){
     console.warn('bulk sync failed', e);
