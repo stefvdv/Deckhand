@@ -2900,7 +2900,7 @@ let _sfWorking = false, _sfGen = 0, _sfBeat = 0;
 /* Black box: the last network outcomes and JS errors, readable via
    Extras -> Copy diagnostics. When "nothing loads", this says why. */
 const _sfLog = [];
-function sfJournal(line){ try{ _sfLog.push(new Date().toISOString().slice(11, 19) + ' ' + line); if(_sfLog.length > 16) _sfLog.shift(); }catch(e){} }
+function sfJournal(line){ try{ _sfLog.push(new Date().toISOString().slice(11, 19) + ' ' + line); if(_sfLog.length > 30) _sfLog.shift(); }catch(e){} }
 window.addEventListener('error', (e)=>{
   sfJournal('JS-ERROR ' + (e.message || '') + ' @' + String(e.filename || '').split('/').pop() + ':' + (e.lineno || 0));
   try{ toast('⚠ ' + (e.message || 'Something broke')); }catch(_){}
@@ -3505,13 +3505,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.296';
+const APP_VERSION = '2.51.297';
 const CHANGELOG_NOTES = {
   en: [
-    'The flip button truly rides every double-faced card now. Two culprits fixed: the Similar cards grid never emitted the badge rail at all, and the spoiler/card-grid tiles wrapped it inside a button \u2014 HTML splits a button nested in a button, tearing the flip control out of the tile. Similar tiles also show the UB/spoiler/owned badges now.'
+    'The magic-word index learned the evasion family \u2014 fear, intimidate, skulk, shadow \u2014 so cards like Abyssal Nocturnus bind to their true kin by the keyword that defines them, not just by common words like \u201cdiscard\u201d.',
+    'Every Similar cards run now writes its arithmetic into the diagnostics journal (Extras \u2192 Data Sources \u2192 \ud83d\udccb): how many magic words the card has, how many candidates came from the live pools, and how many the local database added \u2014 or the word ABSENT when the local database hasn\u2019t synced, which is the first thing to check when results look unchanged.'
   ],
   nl: [
-    'De draaiknop rijdt nu echt op elke dubbelzijdige kaart mee. Twee boosdoeners opgelost: het raster van Vergelijkbare kaarten toonde de badgerail helemaal niet, en de spoiler-/kaartrastertegels wikkelden hem in een knop \u2014 HTML splitst een knop genest in een knop, waardoor de draaiknop uit de tegel scheurde. Vergelijkbaar-tegels tonen nu ook de UB-/spoiler-/bezitsbadges.'
+    'De magic-woordindex leerde de ontwijkingsfamilie \u2014 fear, intimidate, skulk, shadow \u2014 zodat kaarten als Abyssal Nocturnus zich aan hun echte verwanten binden via het sleutelwoord dat ze definieert, niet alleen via gewone woorden als \u201cdiscard\u201d.',
+    'Elke run van Vergelijkbare kaarten schrijft zijn rekensom nu in het diagnostiekjournaal (Extra\u2019s \u2192 Databronnen \u2192 \ud83d\udccb): hoeveel magic-woorden de kaart heeft, hoeveel kandidaten uit de live-pools kwamen en hoeveel de lokale database toevoegde \u2014 of het woord ABSENT wanneer de lokale database niet gesynchroniseerd is, h\u00e9t eerste controlepunt wanneer resultaten onveranderd lijken.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11149,7 +11151,7 @@ const MAGIC_WORDS = (()=>{
     /* targeting & scope */  'target','each','all','any','another','random','opponent','player','controller','owner','control',
     /* resources & stats */  'mana','life','damage','treasure','clue','food','blood','energy','poison','power','toughness','loyalty','top','bottom','extra',
     /* timing */             'whenever','when','beginning','upkeep','combat','turn','phase','attack','block',
-    /* keywords */           'flying','deathtouch','lifelink','haste','vigilance','trample','menace','reach','defender','hexproof','ward','indestructible','flash','prowess','landfall','cascade','cycling','flashback','first strike','double strike'
+    /* keywords */           'flying','deathtouch','lifelink','haste','vigilance','trample','menace','reach','defender','hexproof','ward','indestructible','flash','prowess','landfall','cascade','cycling','flashback','first strike','double strike','fear','intimidate','skulk','shadow'
   ];
   const out = words.map(w=>({ k: w, re: _mwRegex(w) }));
   // The two senses of "counter" are opposite worlds — Counterspell is no
@@ -11392,9 +11394,12 @@ async function openSimilarCards(card, colorScope){
           if(key.startsWith('otag:')) e.tags.add(key.slice(5));
         }));
         const srcWords = magicWordSet(card);
+        const _poolCand = cand.size;
+        let _corpusOk = false;
         if(isCmdrMode()){
           try{
             const ix = await bulkIndexReady();
+            _corpusOk = !!(ix && ix.cards && ix.cards.length);
             const ciSet = (colorScope && ci.length) ? new Set(ci.map(x=>String(x).toUpperCase())) : null;
             _bulkSweep(ix, card, srcWords, ciSet, null, card.name).forEach(bc=>{
               if(cand.has(bc.n) || isBanned({name: bc.n})) return;
@@ -11403,6 +11408,8 @@ async function openSimilarCards(card, colorScope){
             });
           }catch(e){}
         }
+        sfJournal('similar: ' + card.name + ' · words[' + srcWords.size + '] pools:' + _poolCand
+          + (isCmdrMode() ? (' corpus:' + (_corpusOk ? '+' + (cand.size - _poolCand) : 'ABSENT')) : ' corpus:admiral-off'));
         const weights = await magicWordWeights();
         cand.forEach(e=>{
           e.s = similarityScore(card, e.x, { srcWords, weights, srcTags: tags,
