@@ -3505,15 +3505,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.297';
+const APP_VERSION = '2.51.298';
 const CHANGELOG_NOTES = {
   en: [
-    'The magic-word index learned the evasion family \u2014 fear, intimidate, skulk, shadow \u2014 so cards like Abyssal Nocturnus bind to their true kin by the keyword that defines them, not just by common words like \u201cdiscard\u201d.',
-    'Every Similar cards run now writes its arithmetic into the diagnostics journal (Extras \u2192 Data Sources \u2192 \ud83d\udccb): how many magic words the card has, how many candidates came from the live pools, and how many the local database added \u2014 or the word ABSENT when the local database hasn\u2019t synced, which is the first thing to check when results look unchanged.'
+    'Fixed the tangled layers when browsing Similar cards in depth: opening a second Similar page (through a card sheet from the first) silently overwrote the first page\u2019s content, so backing up showed the wrong list and even the wrong card art. An earlier Similar page now steps aside intact \u2014 every back press peels exactly one layer, in order.',
+    'Card sheets opened from a Similar list now carry the whole list as their pool: chevrons on the sides and swiping walk you through the results, just like spoiler and collection sheets.'
   ],
   nl: [
-    'De magic-woordindex leerde de ontwijkingsfamilie \u2014 fear, intimidate, skulk, shadow \u2014 zodat kaarten als Abyssal Nocturnus zich aan hun echte verwanten binden via het sleutelwoord dat ze definieert, niet alleen via gewone woorden als \u201cdiscard\u201d.',
-    'Elke run van Vergelijkbare kaarten schrijft zijn rekensom nu in het diagnostiekjournaal (Extra\u2019s \u2192 Databronnen \u2192 \ud83d\udccb): hoeveel magic-woorden de kaart heeft, hoeveel kandidaten uit de live-pools kwamen en hoeveel de lokale database toevoegde \u2014 of het woord ABSENT wanneer de lokale database niet gesynchroniseerd is, h\u00e9t eerste controlepunt wanneer resultaten onveranderd lijken.'
+    'De verstrikte lagen bij diep bladeren door Vergelijkbare kaarten zijn ontward: een tweede Vergelijkbaar-pagina openen (via een kaartvenster vanuit de eerste) overschreef stilletjes de inhoud van de eerste, waardoor terugbladeren de verkeerde lijst en zelfs de verkeerde kaart-art toonde. Een eerdere Vergelijkbaar-pagina stapt nu intact opzij \u2014 elke terugdruk pelt precies \u00e9\u00e9n laag, op volgorde.',
+    'Kaartvensters geopend vanuit een Vergelijkbaar-lijst dragen nu de hele lijst als hun pool: pijltjes aan de zijkanten en vegen lopen je door de resultaten, net als bij spoiler- en collectievensters.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11335,6 +11335,25 @@ function oracleTermSet(card){
   return s;
 }
 async function openSimilarCards(card, colorScope){
+  // A Similar page opened OVER an earlier Similar page (via a card sheet in
+  // between) must not hijack the earlier one's element — the singleton
+  // reuse replaced the first list's content with the second's, so backing
+  // up showed the wrong list on the wrong card. The earlier page steps
+  // aside under a private id (its inner ids stripped so async writers and
+  // lookups can't reach into it), its stack entry re-bound to its own
+  // element — the same dance stacked card sheets already do.
+  {
+    const ex = document.getElementById('similarOverlay');
+    const topId = state.overlayStack.length ? state.overlayStack[state.overlayStack.length-1].id : null;
+    if(ex && topId !== 'similar'){
+      window._simBgSeq = (window._simBgSeq || 0) + 1;
+      ex.id = 'similarOverlay_bg' + window._simBgSeq;
+      ex.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+      const bgEl = ex;
+      const oldEntry = state.overlayStack.slice().reverse().find(e=>e.id==='similar');
+      if(oldEntry) oldEntry.closeFn = ()=>{ try{ bgEl.remove(); }catch(e){} };
+    }
+  }
   pushOverlay('similar', ()=>{ document.getElementById('similarOverlay')?.remove(); });
   let el = document.getElementById('similarOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='similarOverlay'; }
@@ -11436,7 +11455,7 @@ async function openSimilarCards(card, colorScope){
         <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
       </div>`).join('')}</div>`;
-    box.querySelectorAll('.sim-tile').forEach(btn=>btn.addEventListener('click', ()=>openCardInfo(ranked[+btn.dataset.i])));
+    box.querySelectorAll('.sim-tile').forEach(btn=>btn.addEventListener('click', ()=>openCardInfo(ranked[+btn.dataset.i], { pool: ranked, poolIdx: +btn.dataset.i })));
     loadTilePrices(ranked);
   }catch(e){
     const box = document.getElementById('simBody');
