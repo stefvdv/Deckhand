@@ -350,6 +350,10 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .tag-add-row input:focus{outline:none;border-color:var(--brass);}
 .info-i{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--sub-text);color:var(--sub-text);background:none;font-size:11px;font-style:italic;font-family:Georgia,serif;padding:0;margin-left:6px;vertical-align:middle;cursor:pointer;flex:none;line-height:1;}
 .tag-drop{max-height:200px;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:2px;padding:6px;}
+/* An author display rule beats the `hidden` attribute's built-in
+   display:none — without this guard the drop-up never actually hides and
+   squats on top of the tag chips. */
+.tag-drop[hidden]{display:none;}
 .tag-drop button{background:none;border:none;color:var(--ink-text);text-align:left;padding:8px 10px;font-size:13px;border-radius:6px;cursor:pointer;}
 .tag-drop button:active{background:var(--brass-glow);color:var(--brass);}
 .tag-suggest{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
@@ -3460,17 +3464,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.284';
+const APP_VERSION = '2.51.287';
 const CHANGELOG_NOTES = {
   en: [
-    'On a deck\u2019s Stats page, the back button (hardware or on-screen) first closes any opened mana-value or color card lists, then returns to the Decklist tab, and only then leaves the page \u2014 the Deck Log tab steps back to the Decklist the same way.',
-    'Card sheets are bottom-up now: the card-name bar sits at the foot of the screen, back button at your thumb.',
-    'That card-sheet back button wears the cross-fleet colors too \u2014 admiral blue in Commander, commander red in Admiral.'
+    'Budget Alternatives now hunts candidates the way Similar cards does: it searches Scryfall for the pricey card\u2019s own rules language first, then its curated function tags \u2014 it no longer falls back to \u201cany popular cheap card of the same type\u201d when the tags come up empty.',
+    'The rules-language vocabulary learned two missing phrases \u2014 \u201cchoose new targets\u201d and \u201cwithout paying its mana cost\u201d \u2014 so redirect and free-cast spells like Deflecting Swat finally find their true cheap cousins, on the Budget page and in Similar cards alike.'
   ],
   nl: [
-    'Op de Stats-pagina van een deck sluit de terugknop (hardware of op het scherm) eerst geopende manawaarde- of kleurkaartlijsten, keert dan terug naar het Decklist-tabblad, en verlaat pas daarna de pagina \u2014 het Deck Log-tabblad stapt op dezelfde manier terug naar de Decklist.',
-    'Kaartvensters zijn nu bottom-up: de balk met de kaartnaam zit onderaan het scherm, de terugknop bij je duim.',
-    'Ook die terugknop draagt de kruisvloot-kleuren \u2014 admiral-blauw in Commander, commander-rood in Admiral.'
+    'Budgetalternatieven jaagt nu op kandidaten zoals Vergelijkbare kaarten dat doet: eerst zoekt het op Scryfall naar de eigen regeltekst van de dure kaart, daarna op de gecureerde functietags \u2014 het valt niet meer terug op \u201celke populaire goedkope kaart van hetzelfde type\u201d wanneer de tags niets opleveren.',
+    'Het regeltekst-vocabulaire leerde twee ontbrekende frasen \u2014 \u201cchoose new targets\u201d en \u201cwithout paying its mana cost\u201d \u2014 zodat redirect- en gratis-spreuken zoals Deflecting Swat eindelijk hun echte goedkope neven vinden, op de Budgetpagina \u00e9n bij Vergelijkbare kaarten.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10194,6 +10196,22 @@ function attachSwipeNav(el, onNext, onPrev, meta){
   const ghostEl = ()=>{
     let g = el._swipeGhost;
     if(!g){ g = document.createElement('img'); g.className = 'swipe-ghost'; g.alt = ''; el.appendChild(g); el._swipeGhost = g; }
+    // Ride at the SAME height as the card on the sheet: center the ghost on
+    // the hero image and match its width, so the incoming card lines up
+    // edge-for-edge with the one leaving. Mid-screen stays the fallback,
+    // and the anchor is clamped so a far-scrolled hero can't drag the
+    // preview off the screen.
+    const hero = el.querySelector('.card-detail img');
+    if(hero){
+      const r = hero.getBoundingClientRect();
+      if(r.height > 40 && r.width > 40){
+        const vh = window.innerHeight || 640;
+        const cy = Math.min(vh - 120, Math.max(120, r.top + r.height / 2));
+        g.style.top = cy + 'px';
+        g.style.width = r.width + 'px';
+        g.style.marginLeft = (-r.width / 2) + 'px';
+      }
+    }
     return g;
   };
   const killGhost = ()=>{ if(el._swipeGhost){ el._swipeGhost.remove(); el._swipeGhost = null; } };
@@ -10995,6 +11013,8 @@ const PHRASE_FEATS = [
   { k:'copy',           w:5, re:/copy target|create a copy/, q:'o:"copy target"' },
   { k:'blink',          w:5, re:/exile [^.]{0,60}return (it|that card) to the battlefield/, q:'o:exile o:"return it to the battlefield"' },
   { k:'extra-turn',     w:6, re:/extra turn/, q:'o:"extra turn"' },
+  { k:'redirect',       w:6, re:/choose new targets?|change the targets? of/, q:'o:"choose new targets"' },
+  { k:'free-spell',     w:5, re:/without paying (its|their) mana costs?/, q:'o:"without paying its mana cost"' },
   { k:'landfall',       w:5, re:/landfall|whenever a land (you control )?enters/, q:'o:"whenever a land"' },
   { k:'etb',            w:1, re:/when(ever)? [^.]{0,40}enters/, q:null }
 ];
@@ -13012,8 +13032,8 @@ async function openBudgetOverlay(d){
 /* Oracle tags (Scryfall Tagger) we probe for. One batched query per tag
    identifies which of the deck's pricey cards carry it — then budget picks
    must share those very tags (removal begets removal). */
-const BUDGET_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate'];
-const BUDGET_TAG_LABELS = { removal:'Removal', boardwipe:'Board Wipe', counterspell:'Counterspell', ramp:'Ramp', tutor:'Tutor', burn:'Burn', lifegain:'Lifegain', mill:'Mill', discard:'Discard', draw:'Card Draw', reanimate:'Reanimation', protection:'Protection', 'token-generator':'Tokens', 'sacrifice-outlet':'Sac Outlet', 'graveyard-hate':'Grave Hate' };
+const BUDGET_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate','redirect'];
+const BUDGET_TAG_LABELS = { removal:'Removal', boardwipe:'Board Wipe', counterspell:'Counterspell', ramp:'Ramp', tutor:'Tutor', burn:'Burn', lifegain:'Lifegain', mill:'Mill', discard:'Discard', draw:'Card Draw', reanimate:'Reanimation', protection:'Protection', 'token-generator':'Tokens', 'sacrifice-outlet':'Sac Outlet', 'graveyard-hate':'Grave Hate', redirect:'Redirect' };
 /* Oracle tags are near-static (Tagger curates functions, not prices), so the
    per-card tag map persists for a week. It's a few kilobytes of names and
    short strings — parsed lazily on first use, written debounced, invisible to
@@ -13174,6 +13194,26 @@ async function loadBudgetAlternatives(d){
     const ptype = primaryTypeOf(c);
     const ceiling = Math.max(1.5, Math.min(5, v * 0.35));
     const scored = [];
+    // TEXT-feature pools — the same first-priority signal Similar cards
+    // trusts (the exact rules language the card uses), under the budget
+    // ceiling. Cached per feature+identity, so cards sharing language share
+    // the one search across the whole page and across reopenings.
+    const srcFeatsB = land ? [] : phraseFeats(c);
+    const featPools = [];
+    const featQs = land ? [] : srcFeatsB.filter(f=>f.q).sort((a,b)=>b.w-a.w).slice(0, 2);
+    if(featQs.length){
+      await runLimited(featQs, async (f)=>{
+        const ck = idClause + '|txt:' + f.k;
+        if(!poolCache[ck]){
+          try{
+            const r = await searchAndVerifyLegal((idClause + ' eur<=5 ' + f.q).trim(), 'edhrec', 40);
+            poolCache[ck] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !isBanned(x));
+          }catch(e){ poolCache[ck] = []; }
+        }
+        featPools.push(poolCache[ck]);
+      }, 2);
+      if(!document.getElementById('bgBody')) return;   // overlay closed while fetching
+    }
     if(land){
       // Lands answer lands: same identity, cheapest, most played — with a nudge
       // toward lands that make the same colours this one did.
@@ -13188,16 +13228,20 @@ async function loadBudgetAlternatives(d){
         sc -= i * 0.01;                                           // earlier = more played
         scored.push([sc, x]);
       }
-    } else if(myTags.length){
+    } else if(myTags.length || featPools.some(a=>a.length)){
       // Same ranking as Similar cards, under the budget ceiling: most shared
       // curated tags first, then shared MTG-language wording (whenever /
       // opponent / draw / pay …), then EDHREC play order — the closest cheap
       // cousins surface first and the strongest of them lead. Cheaper wins
       // the final tie.
       const srcTerms = oracleTermSet(c);
-      const srcFeatsB = phraseFeats(c);
       const cand = new Map();
       myTags.forEach(t=>(tagPools[t]||[]).forEach((x,i)=>{
+        const e = cand.get(x.name);
+        if(e){ e.best = Math.min(e.best, i); }
+        else cand.set(x.name, { x, best: i });
+      }));
+      featPools.forEach(arr=>arr.forEach((x,i)=>{
         const e = cand.get(x.name);
         if(e){ e.best = Math.min(e.best, i); }
         else cand.set(x.name, { x, best: i });
