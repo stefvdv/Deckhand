@@ -56,6 +56,7 @@ export async function bulkIndex(fetchImpl){
    the failing run documents the real schema for the next fix. */
 export function downloadUrlOf(item){
   if(!item) return null;
+   if(typeof item.jsonl_download_uri === 'string') return item.jsonl_download_uri;
   if(typeof item.download_uri === 'string') return item.download_uri;
   if(typeof item.download_url === 'string') return item.download_url;
   if(item.download_uris && typeof item.download_uris === 'object'){
