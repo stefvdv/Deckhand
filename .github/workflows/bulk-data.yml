@@ -1,0 +1,51 @@
+# Weekly Scryfall bulk-data refresh for Admirals & Commanders MTG.
+#
+# Every Monday at 03:20 UTC (and on demand via the Actions tab's
+# "Run workflow" button) this downloads Scryfall's Oracle Cards and
+# Rulings bulk files, trims them to only the fields the app uses,
+# and commits the three small outputs to the repo root — Netlify
+# then deploys them next to index.html:
+#
+#   oracle-slim.jsonl.gz    rulings-slim.jsonl.gz    bulk-meta.json
+#
+# Scryfall sees ONE download per week, from GitHub's machines.
+# The job refuses to commit when the outputs look broken (the
+# script's sanity checks throw), so a bad Scryfall day can never
+# overwrite last week's good files.
+
+name: Weekly Scryfall bulk data
+
+on:
+  schedule:
+    - cron: '20 3 * * 1'   # Mondays, 03:20 UTC
+  workflow_dispatch: {}     # manual "Run workflow" button
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build the trimmed bulk files
+        run: node scripts/build-bulk.mjs
+
+      - name: Commit & push when changed
+        run: |
+          git config user.name "bulk-data-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add oracle-slim.jsonl.gz rulings-slim.jsonl.gz bulk-meta.json
+          if git diff --cached --quiet; then
+            echo "No changes this week."
+            exit 0
+          fi
+          git commit -m "Weekly Scryfall bulk data refresh"
+          git push
