@@ -976,6 +976,9 @@ main.has-dock{padding-bottom:84px;}
    sheet, and the card's name caps the sheet up top like any page name.
    Stacked background sheets (cardSheetOverlay_bg…) get the same window. */
 [id^="cardSheetOverlay"]{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+/* Over another overlay there is no reachable nav bar beneath — the sheet
+   covers the full height so the page below can't peek through at the foot. */
+[id^="cardSheetOverlay"].sheet-over-overlay{bottom:0;}
 #bgBody{display:flex;flex-direction:column-reverse;}
 .budget-trio{display:flex;flex-direction:column-reverse;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:120;display:flex;align-items:flex-end;justify-content:center;}
@@ -3505,15 +3508,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.298';
+const APP_VERSION = '2.51.299';
 const CHANGELOG_NOTES = {
   en: [
-    'Fixed the tangled layers when browsing Similar cards in depth: opening a second Similar page (through a card sheet from the first) silently overwrote the first page\u2019s content, so backing up showed the wrong list and even the wrong card art. An earlier Similar page now steps aside intact \u2014 every back press peels exactly one layer, in order.',
-    'Card sheets opened from a Similar list now carry the whole list as their pool: chevrons on the sides and swiping walk you through the results, just like spoiler and collection sheets.'
+    'Similar cards and Budget Alternatives now lead with EDHREC itself: cards that appear on the source card\u2019s own EDHREC page (its synergy company) rank first, then the magic-word tiers, then EDHREC\u2019s on-page order, tags, colors, play data, and price. One week-cached fetch per card \u2014 offline or for brand-new cards the ranking simply stands as before.',
+    'A card sheet opened on top of another page (Similar, Recommendations\u2026) now covers the full height \u2014 the page beneath no longer peeks through at the foot where the nav bar would be.'
   ],
   nl: [
-    'De verstrikte lagen bij diep bladeren door Vergelijkbare kaarten zijn ontward: een tweede Vergelijkbaar-pagina openen (via een kaartvenster vanuit de eerste) overschreef stilletjes de inhoud van de eerste, waardoor terugbladeren de verkeerde lijst en zelfs de verkeerde kaart-art toonde. Een eerdere Vergelijkbaar-pagina stapt nu intact opzij \u2014 elke terugdruk pelt precies \u00e9\u00e9n laag, op volgorde.',
-    'Kaartvensters geopend vanuit een Vergelijkbaar-lijst dragen nu de hele lijst als hun pool: pijltjes aan de zijkanten en vegen lopen je door de resultaten, net als bij spoiler- en collectievensters.'
+    'Vergelijkbare kaarten en Budgetalternatieven laten nu EDHREC zelf voorop gaan: kaarten die op de eigen EDHREC-pagina van de bronkaart staan (haar synergiegezelschap) komen eerst, daarna de magic-woordniveaus, dan EDHREC\u2019s volgorde op die pagina, tags, kleuren, speeldata en prijs. \u00c9\u00e9n week-gecachete ophaalactie per kaart \u2014 offline of bij gloednieuwe kaarten blijft de rangschikking gewoon zoals hij was.',
+    'Een kaartvenster geopend b\u00f3venop een andere pagina (Vergelijkbaar, Aanbevelingen\u2026) bedekt nu de volledige hoogte \u2014 de pagina eronder gluurt niet meer door aan de voet waar de navigatiebalk zou zitten.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8926,6 +8929,8 @@ function renderCardSheet(d, card, loc, idx){
   {
     const _ovs = document.querySelectorAll('body > .overlay');
     if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el)) document.body.appendChild(el);
+    el.classList.toggle('sheet-over-overlay',
+      Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
@@ -10565,6 +10570,8 @@ function openCardInfo(card, opts){
   {
     const _ovs = document.querySelectorAll('body > .overlay');
     if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el)) document.body.appendChild(el);
+    el.classList.toggle('sheet-over-overlay',
+      Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
@@ -11217,6 +11224,30 @@ function colorIdOf(c){
   if(typeof c.ci === 'string') return c.ci;
   return (c.color_identity || []).join('');
 }
+/* The source card's own EDHREC page: every card EDHREC lists alongside it
+   (synergy lists first, then the rest), as name → position. One fetch,
+   week-cached like every EDHREC page; absence (offline, brand-new card,
+   page missing) returns an empty map and the ranking stands unchanged. */
+async function edhrecPageNames(card){
+  try{
+    const data = await edhrecFetchJson('/pages/cards/' + edhrecSlug(card.name) + '.json');
+    const out = new Map();
+    const takeList = (L)=>{ for(const cv of ((L && L.cardviews) || [])){ const n = cv && cv.name; if(n && !out.has(n)) out.set(n, out.size); } };
+    const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
+    lists.filter(L=>/synergy/i.test(String(L.tag || L.header || ''))).forEach(takeList);
+    lists.forEach(takeList);
+    if(!out.size){
+      // defensive walk — EDHREC has moved cardviews around before
+      (function walk(o, d){
+        if(!o || typeof o !== 'object' || d > 6) return;
+        if(Array.isArray(o.cardviews)) takeList(o);
+        for(const k in o) walk(o[k], d + 1);
+      })(data, 0);
+    }
+    out.delete(card.name);
+    return out;
+  }catch(e){ return new Map(); }
+}
 function similarityScore(src, cand, opts){
   const o = opts || {};
   const sw = o.srcWords || magicWordSet(src);
@@ -11231,11 +11262,19 @@ function similarityScore(src, cand, opts){
     : (cci === '' || sci === '' || [...cci].some(ch=>sci.includes(ch))) ? 1 : 0;
   const pop = cand.edhrec_rank || cand.rk
     || (o.fallbackPop != null ? 1e6 + o.fallbackPop : 999999);
-  return { wTier: _tier(shared, sw.size), wWeight, shared,
+  let eHit = 0, eIdx = 99999;
+  if(o.eMap && o.eMap.size){
+    const nm = cand.name || cand.n;
+    if(nm && o.eMap.has(nm)){ eHit = 1; eIdx = o.eMap.get(nm); }
+  }
+  return { eHit, eIdx, wTier: _tier(shared, sw.size), wWeight, shared,
            tTier: _tier(tShared, st.length), tShared, colorScore, pop };
 }
 function cmpSimilarity(a, b){
-  return (b.s.wTier - a.s.wTier) || (b.s.wWeight - a.s.wWeight)
+  // Stef's order: sharing the source card's own EDHREC page leads, then the
+  // word tiers, then EDHREC's on-page position, tags, colors, play, price.
+  return (b.s.eHit - a.s.eHit) || (b.s.wTier - a.s.wTier) || (b.s.wWeight - a.s.wWeight)
+      || (a.s.eIdx - b.s.eIdx)
       || (b.s.tTier - a.s.tTier) || (b.s.tShared - a.s.tShared)
       || (b.s.colorScore - a.s.colorScore) || (a.s.pop - b.s.pop)
       || ((a.s.eur || 0) - (b.s.eur || 0));
@@ -11381,6 +11420,7 @@ async function openSimilarCards(card, colorScope){
       ranked = ((r&&r.results)||[]).filter(x=>!isBanned(x) && x.name!==card.name);
     }else{
       const srcFeats = phraseFeats(card);
+      const _eMapP = edhrecPageNames(card);   // in flight while the pools load
       const m = await detectOtagsForCards([card]);
       const tags = (m[card.name]||[]).slice(0, 6);
       // Candidate pools, in Stef's priority order: TEXT features first (the
@@ -11428,10 +11468,12 @@ async function openSimilarCards(card, colorScope){
           }catch(e){}
         }
         sfJournal('similar: ' + card.name + ' · words[' + srcWords.size + '] pools:' + _poolCand
-          + (isCmdrMode() ? (' corpus:' + (_corpusOk ? '+' + (cand.size - _poolCand) : 'ABSENT')) : ' corpus:admiral-off'));
+          + (isCmdrMode() ? (' corpus:' + (_corpusOk ? '+' + (cand.size - _poolCand) : 'ABSENT')) : ' corpus:admiral-off')
+          + ' edh:' + eMap.size);
         const weights = await magicWordWeights();
+        const eMap = await _eMapP;
         cand.forEach(e=>{
-          e.s = similarityScore(card, e.x, { srcWords, weights, srcTags: tags,
+          e.s = similarityScore(card, e.x, { srcWords, weights, srcTags: tags, eMap,
             tagHas: (cc, t)=>e.tags.has(t), fallbackPop: e.best });
         });
         ranked = Array.from(cand.values()).sort(cmpSimilarity).slice(0, 60).map(e=>e.x);
@@ -13608,13 +13650,14 @@ async function loadBudgetAlternatives(d){
         }catch(e){}
       }
       const weightsB = await magicWordWeights();
+      const eMapB = await edhrecPageNames(c);
       for(const e of cand.values()){
         const x = e.x;
         if(inDeck.has(x.name)) continue;
         const pv = priceOf(x);
         if(pv===null || pv > ceiling) continue;
         const tagsHave = candTags[x.name] || e.tags || new Set();
-        const sc = similarityScore(c, x, { srcWords: srcWordsB, weights: weightsB,
+        const sc = similarityScore(c, x, { srcWords: srcWordsB, weights: weightsB, eMap: eMapB,
           srcTags: myTags, tagHas: (cc, t)=>tagsHave.has(t), fallbackPop: e.best });
         sc.eur = pv;
         scored.push({ s: sc, x });
