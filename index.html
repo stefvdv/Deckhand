@@ -966,6 +966,12 @@ main.has-dock{padding-bottom:84px;}
 .overlay .topbar > button:not(:first-child){position:absolute;right:10px;top:50%;transform:translateY(-50%);}
 .overlay .topbar .brand-txt{flex:0 1 auto;max-width:100%;text-align:center;}
 .overlay .topbar .tb-titles{flex:0 1 auto;max-width:100%;text-align:center;align-items:center;}
+/* Card sheets are bottom-up like the rest of the app: the name bar sits at
+   the foot (stacked background sheets — cardSheetOverlay_bg… — included),
+   and its back button wears the cross-fleet field colors, matching the nav
+   bar's back button. */
+[id^="cardSheetOverlay"] .overlay-inner > .topbar{order:2;border-top:1px solid var(--line);border-bottom:none;padding-bottom:env(safe-area-inset-bottom);}
+[id^="cardSheetOverlay"] #csClose{background:var(--field);border-color:var(--field-line);}
 #bgBody{display:flex;flex-direction:column-reverse;}
 .budget-trio{display:flex;flex-direction:column-reverse;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:120;display:flex;align-items:flex-end;justify-content:center;}
@@ -3454,13 +3460,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.282';
+const APP_VERSION = '2.51.284';
 const CHANGELOG_NOTES = {
   en: [
-    'Card names in a card sheet\u2019s top bar were cut short with room to spare \u2014 the bar reserved space for its corner buttons twice. The name now uses the full width between them.'
+    'On a deck\u2019s Stats page, the back button (hardware or on-screen) first closes any opened mana-value or color card lists, then returns to the Decklist tab, and only then leaves the page \u2014 the Deck Log tab steps back to the Decklist the same way.',
+    'Card sheets are bottom-up now: the card-name bar sits at the foot of the screen, back button at your thumb.',
+    'That card-sheet back button wears the cross-fleet colors too \u2014 admiral blue in Commander, commander red in Admiral.'
   ],
   nl: [
-    'Kaartnamen in de bovenbalk van een kaartvenster werden afgekapt terwijl er ruimte over was \u2014 de balk reserveerde de plek voor zijn hoekknoppen dubbel. De naam gebruikt nu de volle breedte ertussen.'
+    'Op de Stats-pagina van een deck sluit de terugknop (hardware of op het scherm) eerst geopende manawaarde- of kleurkaartlijsten, keert dan terug naar het Decklist-tabblad, en verlaat pas daarna de pagina \u2014 het Deck Log-tabblad stapt op dezelfde manier terug naar de Decklist.',
+    'Kaartvensters zijn nu bottom-up: de balk met de kaartnaam zit onderaan het scherm, de terugknop bij je duim.',
+    'Ook die terugknop draagt de kruisvloot-kleuren \u2014 admiral-blauw in Commander, commander-rood in Admiral.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8260,6 +8270,10 @@ function wireStatsTab(d){
     renderBuilderBody(d);   // refresh the stats view (and its history card)
   }));
   let selectedCmc = null;
+  // The back handler sweeps open drill-downs via this hook — the selection
+  // marker lives in this closure, so clearing innerHTML alone would leave
+  // the next tap on the same column thinking it was still open.
+  { const cd = document.getElementById('curveDetail'); if(cd) cd._clear = ()=>{ selectedCmc = null; cd.innerHTML = ''; }; }
   const curveCards = {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
   // Shared membership rule with the rendered curve — see countsForCurve.
   d.cards.forEach(c=>{
@@ -8313,6 +8327,7 @@ function wireStatsTab(d){
       new Set(pm).forEach(k=>{ if(prodCards[k]) prodCards[k].push(c); });
     });
     let msSel = null;
+    { const md = document.getElementById('msDetail'); if(md) md._clear = ()=>{ msSel = null; md.innerHTML = ''; }; }
     const NAME = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', GEN:'Generic', C:'Colorless' };
     const show = (key, cards, label)=>{
       const b = document.getElementById('msDetail');
@@ -8876,7 +8891,7 @@ function renderCardSheet(d, card, loc, idx){
   </div>`;
 
   document.getElementById('csClose').addEventListener('click', closeTopOverlay);
-  { const _m = el.querySelector('main'); if(_m) requestAnimationFrame(()=>{ _m.scrollTop = _m.scrollHeight; }); }
+  pinSheetToFoot(el);
   document.getElementById('dcImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'dcImg');
   document.getElementById('csChangePrinting').addEventListener('click', ()=>openPrintingPicker(d, card, loc, idx));
@@ -8978,7 +8993,12 @@ function renderCardSheet(d, card, loc, idx){
       try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
       renderCardSheet(d, swPool[order[n]], loc, order[n]);
     };
-    attachSwipeNav(el, ()=>go(1), ()=>go(-1));
+    const peekPos = (dir)=>{ const n = pos + dir; return (pos < 0 || n < 0 || n >= order.length) ? -1 : n; };
+    attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
+      canNext: ()=>peekPos(1) >= 0, canPrev: ()=>peekPos(-1) >= 0,
+      peekNext: ()=>{ const n = peekPos(1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; },
+      peekPrev: ()=>{ const n = peekPos(-1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; }
+    });
   }
 }
 /* Every render of a card sheet bumps this generation counter. Async loaders
@@ -10142,6 +10162,31 @@ function closeDeckPickPopup(){ document.getElementById('deckPickScrim')?.remove(
    Same details as the decklist card sheet (printing, price, Oracle text,
    rulings) for cards tapped anywhere outside a deck — search results, browse,
    inspiration. Offers an add button instead of deck-editing actions. */
+/* Open at the foot — and hold it there. A single scroll pin lands before
+   the card image and rulings arrive; when they do, the page grows and the
+   foot is lost (only on a card's FIRST view in a session — afterwards the
+   caches make the heights stable, which is why the second visit behaved).
+   So: pin now, re-pin as each image finishes and whenever a section grows,
+   and let go the moment the user touches the page or after 1.6s. */
+function pinSheetToFoot(root){
+  const m = root.querySelector('.overlay-inner > main') || root.querySelector('main');
+  if(!m) return;
+  let userMoved = false, done = false;
+  const release = ()=>{ userMoved = true; };
+  m.addEventListener('touchstart', release, {passive:true, once:true});
+  m.addEventListener('wheel', release, {passive:true, once:true});
+  const pin = ()=>{ if(!userMoved && !done) m.scrollTop = m.scrollHeight; };
+  requestAnimationFrame(pin);
+  let ro = null;
+  if(window.ResizeObserver){
+    try{
+      ro = new ResizeObserver(pin);
+      Array.from(m.children).forEach(c=>ro.observe(c));
+    }catch(e){ ro = null; }
+  }
+  m.querySelectorAll('img').forEach(im=>{ if(!im.complete) im.addEventListener('load', pin, {once:true}); });
+  setTimeout(()=>{ done = true; try{ ro && ro.disconnect(); }catch(e){} }, 1600);
+}
 function attachSwipeNav(el, onNext, onPrev, meta){
   meta = meta || {};
   const can = (dir)=> dir === 'next' ? (meta.canNext ? !!meta.canNext() : true) : (meta.canPrev ? !!meta.canPrev() : true);
@@ -10186,6 +10231,10 @@ function attachSwipeNav(el, onNext, onPrev, meta){
   function slideCommit(which){
     const m = paneEl();
     const W0 = window.innerWidth || 360;
+    if(which && !can(which)){                               // end of the chain: flash, never glide out
+      edgeFlash(which === 'next' ? 'right' : 'left');
+      which = null;
+    }
     if(!which){                                             // short drag: snap home
       const g0 = el._swipeGhost;
       if(g0){
@@ -10257,7 +10306,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     const dx = t.clientX - sx, dy = t.clientY - sy;
     if(!engaged){
       if(Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx)){ armed = false; return; }   // scrolling wins
-      if(Math.abs(dx) > 22 && Math.abs(dx) > 1.5 * Math.abs(dy)){
+      if(Math.abs(dx) > 16 && Math.abs(dx) > 1.5 * Math.abs(dy)){
         engaged = true;
         const m = paneEl();
         if(m){ m.style.willChange = 'transform'; m.style.transition = 'none'; }
@@ -10285,17 +10334,16 @@ function attachSwipeNav(el, onNext, onPrev, meta){
   };
   const te = (e)=>{
     if(engaged){
-      const thr = Math.min(120, W * 0.28);
+      const thr = Math.min(90, W * 0.22);
       const want = curDx < -thr ? 'next' : curDx > thr ? 'prev' : null;
-      if(want && !can(want)){ edgeFlash(want === 'next' ? 'right' : 'left'); slideCommit(null); }
-      else slideCommit(want);
+      slideCommit(want);                                  // the end guard inside flashes when out of cards
       armed = false; engaged = false;
       return;
     }
     if(!armed) return; armed = false;
     const t = e.changedTouches && e.changedTouches[0]; if(!t) return;
     const dx = t.clientX - sx, dy = t.clientY - sy;
-    if(Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.4){
+    if(Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4){
       const want2 = dx < 0 ? 'next' : 'prev';
       if(!can(want2)){ edgeFlash(want2 === 'next' ? 'right' : 'left'); return; }
       slideCommit(want2);
@@ -10307,6 +10355,16 @@ function attachSwipeNav(el, onNext, onPrev, meta){
   el.addEventListener('touchend', te, {passive:true});
   el.addEventListener('touchcancel', tc, {passive:true});
   el._swipeNavHandlers = { ts, tm, te, tc };
+  // Warm both neighbors' art in the browser cache so the ghost has pixels on
+  // the very FIRST drag — without this the image only starts loading mid-
+  // gesture and the preview shows as an empty dark slab.
+  setTimeout(()=>{
+    ['next','prev'].forEach(d=>{
+      if(!can(d)) return;
+      const u = peek(d);
+      if(u){ const im = new Image(); im.src = u; }
+    });
+  }, 250);
 }
 function openCardInfo(card, opts){
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
@@ -10391,7 +10449,7 @@ function openCardInfo(card, opts){
     </main>
   </div>`;
   document.getElementById('csClose').addEventListener('click', closeTopOverlay);
-  { const _m = el.querySelector('main'); if(_m) requestAnimationFrame(()=>{ _m.scrollTop = _m.scrollHeight; }); }
+  pinSheetToFoot(el);
   document.getElementById('ciImg').addEventListener('click', ()=>showPreview(colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card), card.border_color==='white'));
   applyLocalizedSheetImage(card, 'ciImg');
   document.getElementById('ciReco')?.addEventListener('click', ()=>{
@@ -15273,6 +15331,26 @@ function appBackStep(viaHistory){
   if(state.openCSelect){
     state.openCSelect = null; try{ csRerender(); }catch(err){}
     rearm({screen: state.screen, folder: state.folderNav||null}, '#'+state.screen);
+    return true;
+  }
+  // Stats drill-downs (a tapped mana-value column, color symbol, or
+  // production bar) consume the back press first: one press sweeps them
+  // all closed. The on-screen back button rides the same ladder.
+  if(state.screen === 'decklist' && state.builderTab === 'stats'){
+    const open = ['curveDetail','msDetail'].map(id=>document.getElementById(id)).filter(b=>b && b.innerHTML.trim());
+    if(open.length){
+      open.forEach(b=>{ if(b._clear) b._clear(); else b.innerHTML = ''; });
+      rearm({screen: state.screen}, '#'+state.screen);
+      return true;
+    }
+  }
+  // On Stats or Deck Log, back returns to the Decklist tab before leaving
+  // the page; only from the Decklist tab does back climb the page ladder.
+  if(state.screen === 'decklist' && state.builderTab !== 'list'){
+    state.builderTab = 'list'; state.dlPanel = null;
+    const d = getDeck(state.activeDeckId);
+    if(d){ try{ renderBuilderBody(d); syncTabsUI(); scrollToPageFoot(); }catch(err){} }
+    rearm({screen: state.screen}, '#'+state.screen);
     return true;
   }
   // Inside a My Stuff folder, back first climbs out of the folder.
