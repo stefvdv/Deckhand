@@ -321,4 +321,4 @@ async function main(){
 const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
 if(runDirectly && !process.env.BULK_NO_MAIN){
   main().catch(e=>{ console.error(e); console.error(e && e.stack || ''); process.exit(1); });
-}
+     }
