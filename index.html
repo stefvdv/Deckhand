@@ -3527,13 +3527,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.301';
+const APP_VERSION = '2.51.303';
 const CHANGELOG_NOTES = {
   en: [
-    'Similar cards works again \u2014 the crash capture caught its own culprit on the first try: a diagnostics line added in the EDHREC update read a value one line before it existed, so every Similar run tripped over itself and showed the connection note. Order restored.'
+    'The tag picker now recommends: a card\u2019s own Scryfall function tags sit first in the drop-up (right by the input, marked \u2699), followed by the full tag catalog \u2014 yours and Scryfall\u2019s \u2014 alphabetically. A new \u25b4 button opens the whole list upward; typing still filters it. Picking a recommendation makes it a real tag of yours, so untagged decks can be tagged in a few taps.'
   ],
   nl: [
-    'Vergelijkbare kaarten werkt weer \u2014 de crashregistratie ving haar eigen boosdoener bij de eerste poging: een diagnostiekregel uit de EDHREC-update las een waarde \u00e9\u00e9n regel voordat die bestond, waardoor elke Vergelijkbaar-run over zichzelf struikelde en de verbindingsmelding toonde. Volgorde hersteld.'
+    'De tagkiezer beveelt nu aan: de eigen Scryfall-functietags van een kaart staan vooraan in het uitklapmenu (direct bij het invoerveld, gemarkeerd met \u2699), gevolgd door de volledige tagcatalogus \u2014 die van jou en die van Scryfall \u2014 alfabetisch. Een nieuwe \u25b4-knop opent de hele lijst omhoog; typen filtert nog steeds. Een aanbeveling kiezen maakt er een echte tag van jou van, zodat ongetagde decks in een paar tikken getagd zijn.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9135,10 +9135,18 @@ async function loadRulings(card){
   // in-memory index, or a card newer than the weekly file), the live
   // Scryfall path below takes over unchanged.
   try{
-    const loc = await Promise.race([
+    let loc = await Promise.race([
       bulkRulingsFor(card),
       new Promise(r=>setTimeout(()=>r('timeout'), 400))
     ]);
+    if(loc === 'timeout' && _bulkLoadP){
+      // Sync day: the fresh weekly build just invalidated the in-memory
+      // index. Waiting out its rebuild beats joining a busy network queue.
+      loc = await Promise.race([
+        bulkRulingsFor(card),
+        new Promise(r=>setTimeout(()=>r('timeout'), 5000))
+      ]);
+    }
     if(Array.isArray(loc)){
       if(gen !== _cardSheetGen) return;
       const live = document.getElementById('csRulings');
@@ -9181,19 +9189,48 @@ async function loadRulings(card){
     if(live) live.innerHTML = `<div class="empty-note" style="padding:10px 0;">Couldn't load rulings — check your connection.</div>`;
   }
 }
+/* The picker's option list, Stef's order: this card's own Scryfall tags
+   first (DOM-first = at the BOTTOM of the column-reverse drop-up, right by
+   the input, marked ⚙), then everything else — the full Scryfall catalog
+   plus the person's own tags — alphabetically. Pure for testing. */
+function buildTagPickerList(applied, autoTags, userTags, catalog){
+  const low = new Set(applied.map(t=>t.toLowerCase()));
+  const seen = new Set();
+  const out = [];
+  (autoTags || []).forEach(t=>{
+    const k = String(t).toLowerCase();
+    if(low.has(k) || seen.has(k)) return;
+    seen.add(k); out.push({ t: String(t), auto: true });
+  });
+  const rest = [];
+  (userTags || []).concat(catalog || []).forEach(t=>{
+    const k = String(t).toLowerCase();
+    if(low.has(k) || seen.has(k)) return;
+    seen.add(k); rest.push(String(t));
+  });
+  rest.sort((a, b)=>a.localeCompare(b));
+  rest.forEach(t=>out.push({ t, auto: false }));
+  return out;
+}
 function renderTagEditor(d, card, box){
   const tags = getCardTags(d, card.name);
-  const rec = tagRecency();
-  // Most recently administered first — with the drop-up's column-reverse,
-  // that puts the freshest tag right next to the input.
-  const existing = allAppTags()
-    .filter(t=>!tags.some(x=>x.toLowerCase()===t.toLowerCase()))
-    .sort((a,b)=> (rec[b.toLowerCase()]||0) - (rec[a.toLowerCase()]||0) || a.localeCompare(b));
+  // This card's Scryfall tags: the persistent probe cache answers
+  // instantly; otherwise the (now local-first) detector fills it and the
+  // list re-sorts in place the moment it knows.
+  let autoTags = (loadOtagCache()[card.name] || []).slice();
+  if(!loadOtagCache()[card.name]){
+    detectOtagsForCards([card]).then(m=>{
+      autoTags = (m[card.name] || []).slice();
+      if(box.isConnected) renderDrop();
+    }).catch(()=>{});
+  }
+  const existingList = ()=>buildTagPickerList(getCardTags(d, card.name), autoTags, allAppTags(), BUDGET_OTAGS);
   box.innerHTML = `<div class="tag-editor">
     <div class="detail-h" style="margin-top:0;">Tags on this card ${infoBtnHtml('Tags follow a card into all your decks; removing one hides it in this deck only. Sort the decklist by Tags to group cards by them.')}</div>
     <div class="tag-chips">${tags.length ? tags.map(t=>`<span class="tag-chip">${escapeHtml(t)}<button data-rmtag="${encodeURIComponent(t)}">×</button></span>`).join('') : '<span class="tag-none">No tags yet.</span>'}</div>
     <div class="tag-add-row" style="position:relative;">
       <input id="tagInput" type="text" placeholder="Add or pick a tag…" maxlength="24" autocomplete="off">
+      <button class="ghost-btn" id="tagCatChev" title="Browse all tags" style="width:auto;flex:0 0 auto;padding:9px 12px;">▴</button>
       <div class="pd-panel tag-drop" id="tagDrop" hidden></div>
       <button class="ghost-btn" id="tagAddBtn" style="width:auto;flex:0 0 auto;padding:9px 14px;">Add</button>
     </div>
@@ -9212,9 +9249,9 @@ function renderTagEditor(d, card, box){
   const renderDrop = ()=>{
     if(!drop) return;
     const q = (input.value || '').trim().toLowerCase();
-    const hits = existing.filter(t=>!q || t.toLowerCase().includes(q)).slice(0, 40);
+    const hits = existingList().filter(e=>!q || e.t.toLowerCase().includes(q)).slice(0, 60);
     if(!hits.length){ drop.hidden = true; return; }
-    drop.innerHTML = hits.map(t=>`<button type="button" data-picktag="${encodeURIComponent(t)}">${escapeHtml(t)}</button>`).join('');
+    drop.innerHTML = hits.map(e=>`<button type="button" data-picktag="${encodeURIComponent(e.t)}">${e.auto ? '⚙ ' : ''}${escapeHtml(e.t)}</button>`).join('');
     drop.hidden = false;
     drop.querySelectorAll('[data-picktag]').forEach(b=>b.addEventListener('mousedown', (ev)=>{
       ev.preventDefault();   // fire before the input's blur hides the panel
@@ -9222,6 +9259,11 @@ function renderTagEditor(d, card, box){
       if(addCardTag(d, card.name, t)) refresh();
     }));
   };
+  box.querySelector('#tagCatChev').addEventListener('click', ()=>{
+    if(!drop.hidden){ drop.hidden = true; return; }
+    input.focus();
+    renderDrop();
+  });
   input.addEventListener('focus', renderDrop);
   input.addEventListener('input', renderDrop);
   input.addEventListener('blur', ()=>setTimeout(()=>{ if(drop) drop.hidden = true; }, 150));
@@ -13468,8 +13510,25 @@ function saveOtagCache(){
 async function detectOtagsForCards(cards, bg){
   const cache = loadOtagCache();
   const byName = {}; cards.forEach(c=>{ byName[c.name] = cache[c.name] ? cache[c.name].slice() : []; });
-  const need = cards.filter(c=>!cache[c.name]);
+  let need = cards.filter(c=>!cache[c.name]);
   if(!need.length) return byName;
+  // Local-first: the weekly tags file answers instantly for every card it
+  // knows — the probe convoy below only rides for cards newer than the
+  // file (or until the file first syncs).
+  try{
+    const ix = await bulkIndexReady();
+    if(ix && ix.tagByOid){
+      const still = [];
+      for(const c of need){
+        const t = _localTagsDecide(ix, c);
+        if(Array.isArray(t)){ byName[c.name] = t.slice(); cache[c.name] = t.slice(); }
+        else still.push(c);
+      }
+      if(still.length !== need.length) saveOtagCache();
+      need = still;
+      if(!need.length) return byName;
+    }
+  }catch(e){}
   // Chunked so the query URL stays well inside Scryfall's length limit even
   // when a deck has many pricey cards.
   const groups = chunkArr(need, 22);
@@ -15991,11 +16050,21 @@ async function bulkSyncCheck(){
       for(let k = ci; k < (local.cardChunks || 0); k++) await bulkKvSet('cards:' + k, null);
       for(let k = ri; k < (local.rulChunks || 0); k++) await bulkKvSet('rul:' + k, null);
     }
+    // ---- oracle tags: optional third file. Absent until the weekly
+    // Action learns to build it — a 404 here is simply "not yet". ----
+    let ti = 0, tagCount = 0;
+    try{
+      const tagRecs = [];
+      await _bulkStreamJsonl('tags-slim.jsonl.gz', (r)=>tagRecs.push(r));
+      for(let i = 0; i < tagRecs.length; i += BULK_CHUNK){ await bulkKvSet('tag:' + (ti++), tagRecs.slice(i, i + BULK_CHUNK)); await _bulkYield(); }
+      tagCount = tagRecs.length;
+    }catch(e){ ti = 0; tagCount = 0; }
+    if(local){ for(let k = ti; k < (local.tagChunks || 0); k++) await bulkKvSet('tag:' + k, null); }
     await bulkKvSet('bannedCommander', { t: Date.parse(remote.built) || 0, names: bulkBannedNamesFrom(cards) });
-    await bulkKvSet('meta', { built: remote.built, cardChunks: ci, rulChunks: ri, cards: cards.length, rulingCards: ruls.length, savedAt: Date.now() });
+    await bulkKvSet('meta', { built: remote.built, cardChunks: ci, rulChunks: ri, tagChunks: ti, cards: cards.length, rulingCards: ruls.length, tagCards: tagCount, savedAt: Date.now() });
     _bulkIdx = null; _bulkLoadP = null;         // rebuilt lazily from the new data
     state._bulkMetaCache = null;                // Data Sources re-reads the new meta
-    sfJournal('bulkdb: synced ' + cards.length + ' cards, ' + ruls.length + ' ruling sets');
+    sfJournal('bulkdb: synced ' + cards.length + ' cards, ' + ruls.length + ' ruling sets, ' + tagCount + ' tag sets');
   }catch(e){
     console.warn('bulk sync failed', e);
     try{ sfJournal('bulkdb: sync FAILED ' + (e && e.message || e)); }catch(err){}
@@ -16035,7 +16104,15 @@ function bulkIndexReady(){
       if(Array.isArray(arr)) arr.forEach(x=>{ if(x && x.o) rulByOid.set(x.o, x.r || []); });
       await _bulkYield();
     }
-    _bulkIdx = { built: meta.built, byName, rulByOid, cards: cardsArr };
+    const tagByOid = (meta.tagChunks > 0) ? new Map() : null;
+    if(tagByOid){
+      for(let i = 0; i < meta.tagChunks; i++){
+        const arr = await bulkKvGet('tag:' + i);
+        if(Array.isArray(arr)) arr.forEach(x=>{ if(x && x.o) tagByOid.set(x.o, x.g || []); });
+        await _bulkYield();
+      }
+    }
+    _bulkIdx = { built: meta.built, byName, rulByOid, cards: cardsArr, tagByOid };
     return _bulkIdx;
   })();
   return _bulkLoadP;
@@ -16064,6 +16141,22 @@ function _bulkRulingsDecide(ix, card){
 async function bulkRulingsFor(card){
   const ix = await bulkIndexReady();
   return _bulkRulingsDecide(ix, card);
+}
+/* Tri-state like rulings: an array is an authoritative local answer (the
+   card's app-relevant tags, possibly none); undefined means the tags file
+   isn't synced or the card is newer than it — probe the live API then. */
+function _localTagsDecide(ix, card){
+  if(!ix || !ix.tagByOid || !card) return undefined;
+  let oid = card.oracle_id || null;
+  const nameKey = card.name ? String(card.name).toLowerCase() : null;
+  if(!oid && nameKey){
+    const c = ix.byName.get(nameKey);
+    if(!c) return undefined;
+    oid = c.o || null;
+  }
+  if(!oid) return undefined;
+  if(card.oracle_id && !(nameKey && ix.byName.has(nameKey)) && !ix.tagByOid.has(oid)) return undefined;
+  return ix.tagByOid.get(oid) || [];
 }
 window.addEventListener('load', ()=>{ setTimeout(bulkSyncCheck, 5000); });
 
