@@ -11,6 +11,9 @@
      rulings-slim.jsonl.gz   one {o, r:[{d,c}]} line per oracle_id
      bulk-meta.json          tiny manifest the app can poll cheaply
 
+   Plus, when Scryfall's index offers it, an optional fourth:
+     tags-slim.jsonl.gz      one {o, g:[tags]} line per tagged card
+
    The phone never touches the raw 148 MB — all trimming happens
    on GitHub's machines, and Scryfall sees ONE download a week.
 
@@ -47,6 +50,8 @@ export async function bulkIndex(fetchImpl){
   const by = {};
   (d.data || []).forEach(x => { by[x.type] = x; });
   if(!by.oracle_cards || !by.rulings) throw new Error('bulk-data index is missing oracle_cards or rulings');
+  // Oracle Tags is optional — Scryfall added it recently and may rename it.
+  by._tags = by.oracle_tags || by['oracle-tags'] || by.otags || null;
   return by;
 }
 
@@ -56,7 +61,7 @@ export async function bulkIndex(fetchImpl){
    the failing run documents the real schema for the next fix. */
 export function downloadUrlOf(item){
   if(!item) return null;
-   if(typeof item.jsonl_download_uri === 'string') return item.jsonl_download_uri;
+  if(typeof item.jsonl_download_uri === 'string') return item.jsonl_download_uri;
   if(typeof item.download_uri === 'string') return item.download_uri;
   if(typeof item.download_url === 'string') return item.download_url;
   if(item.download_uris && typeof item.download_uris === 'object'){
@@ -171,6 +176,21 @@ export function trimCard(c){
   return o;
 }
 
+/* Only the tags the app actually consults — everything else is trimmed. */
+export const APP_TAGS = new Set(['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate','redirect','peek']);
+/* The Oracle Tags payload shape is young and undocumented — accept every
+   plausible form: {oracle_id, tags:[...]}, one-tag-per-line {oracle_id, tag},
+   tags as strings or as {name} objects. Returns null for unusable rows. */
+export function tagRecordOf(rec){
+  if(!rec || typeof rec !== 'object') return null;
+  const oid = rec.oracle_id || rec.oid || null;
+  if(!oid) return null;
+  let tags = rec.tags || rec.otags || rec.tag || rec.name;
+  if(tags == null) return null;
+  if(!Array.isArray(tags)) tags = [tags];
+  const keep = tags.map(t=>String((t && t.name) || t).toLowerCase().trim()).filter(t=>APP_TAGS.has(t));
+  return { o: oid, g: keep };
+}
 export function groupRuling(map, r){
   if(!r || !r.oracle_id || !r.comment) return;
   let a = map.get(r.oracle_id);
@@ -218,12 +238,47 @@ async function main(){
   await writeJsonlGz(`${OUT_DIR}/rulings-slim.jsonl.gz`, rulingLines);
   console.log(`rulings-slim.jsonl.gz: ${rulingCount} rulings on ${rmap.size} cards`);
 
+  // Oracle Tags — optional third file. Problems here never sink the job:
+  // oracle + rulings always publish, tags simply wait a week.
+  let tagCards = 0;
+  try{
+    if(!idx._tags){
+      console.log('No oracle_tags entry in the bulk index — skipping the tags file.');
+    }else{
+      const tagsUrl = requireDownloadUrl(idx._tags, 'Oracle Tags');
+      console.log('Oracle Tags: ', tagsUrl);
+      const tmap = new Map();
+      let raw = 0; const samples = [];
+      for await (const rec of bulkLines(tagsUrl)){
+        raw++;
+        if(samples.length < 2) samples.push(JSON.stringify(rec).slice(0, 300));
+        const t = tagRecordOf(rec);
+        if(!t || !t.g.length) continue;
+        let g = tmap.get(t.o);
+        if(!g){ g = new Set(); tmap.set(t.o, g); }
+        t.g.forEach(x=>g.add(x));
+      }
+      if(tmap.size < 1000){
+        console.log(`Tags parsed thin (${tmap.size} tagged of ${raw} rows) — refusing to publish. Sample rows:`);
+        samples.forEach(x=>console.log('  ', x));
+      }else{
+        const lines = (function*(){ for(const [oid, g] of tmap) yield JSON.stringify({ o: oid, g: Array.from(g) }) + '\n'; })();
+        await writeJsonlGz(`${OUT_DIR}/tags-slim.jsonl.gz`, lines);
+        tagCards = tmap.size;
+        console.log(`tags-slim.jsonl.gz: ${tagCards} tagged cards (from ${raw} rows)`);
+      }
+    }
+  }catch(e){
+    console.log('Oracle Tags step failed — continuing without it:', e && e.message || e);
+  }
+
   // Manifest — the app polls this tiny file to know when to refresh
   const meta = {
     format: 1,
     built: new Date().toISOString(),
     oracle:  { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at },
-    rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at }
+    rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at },
+    tags:    { cards: tagCards }
   };
   await writeFile(`${OUT_DIR}/bulk-meta.json`, JSON.stringify(meta, null, 2) + '\n');
   console.log('bulk-meta.json written. Done.');
@@ -232,4 +287,4 @@ async function main(){
 const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
 if(runDirectly && !process.env.BULK_NO_MAIN){
   main().catch(e=>{ console.error(e); process.exit(1); });
-     }
+                    }
