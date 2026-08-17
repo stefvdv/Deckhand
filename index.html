@@ -3528,13 +3528,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.306';
+const APP_VERSION = '2.51.308';
 const CHANGELOG_NOTES = {
   en: [
-    'Rulings never abandon the local database anymore: when the in-memory index is still warming up (first use of a session, sync day, or the phone was backgrounded mid-dive), rulings now wait for the local answer instead of falling into a possibly-jammed network queue \u2014 the exact stall the diagnostics journal caught. Slow local answers are journaled for the record.'
+    'The diagnostics header now counts tag sets alongside cards and rulings (\u201cbulkdb: 33174 cards, 19893 ruling sets, 15xxx tag sets\u201d), and the Local card database row in Data Sources marks when tags are on disk \u2014 one glance now answers \u201care my tags local yet?\u201d.'
   ],
   nl: [
-    'Rulings laten de lokale database nooit meer in de steek: wanneer de geheugenindex nog aan het opwarmen is (eerste gebruik van een sessie, synchronisatiedag, of de telefoon ging halverwege naar de achtergrond), wachten rulings nu op het lokale antwoord in plaats van in een mogelijk verstopte netwerkwachtrij te vallen \u2014 precies de blokkade die het diagnostiekjournaal ving. Trage lokale antwoorden worden voor de zekerheid gejournaliseerd.'
+    'De diagnostiekkop telt nu ook tagsets naast kaarten en rulings (\u201cbulkdb: 33174 cards, 19893 ruling sets, 15xxx tag sets\u201d), en de rij Lokale kaartendatabase in Databronnen markeert wanneer tags op schijf staan \u2014 \u00e9\u00e9n blik beantwoordt nu \u201czijn mijn tags al lokaal?\u201d.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10645,6 +10645,11 @@ function openCardInfo(card, opts){
   if(!opts._replace && _existingSheet && !_sheetOnTop){
     window._sheetBgSeq = (window._sheetBgSeq || 0) + 1;
     _existingSheet.id = 'cardSheetOverlay_bg' + window._sheetBgSeq;
+    // Its inner ids go too — with two sheets stacked, getElementById found
+    // the HIDDEN one first: the new sheet's rulings wrote into an invisible
+    // element and its buttons wired themselves to the wrong sheet (the
+    // exact cure stacked Similar pages already received).
+    _existingSheet.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
     const bgEl = _existingSheet;
     const oldEntry = state.overlayStack.slice().reverse().find(e=>e.id==='cardInfo' || e.id==='cardSheet');
     if(oldEntry) oldEntry.closeFn = ()=>{ try{ bgEl.remove(); }catch(e){} };
@@ -12354,7 +12359,7 @@ function dataSourcesHtml(){
     { id:'ban',   n:'Bans & Game Changers',     t: null, note: trS('live, per card') },
     { id:'price', n:'Prices',                   t: null, note: trS('24h per card') },
     { id:'bulk',  n:'Local card database',      t: null,
-      note: state._bulkMetaCache ? (state._bulkMetaCache.cards + ' cards · ' + _srcAge(state._bulkMetaCache.savedAt)) : '—' },
+      note: state._bulkMetaCache ? (state._bulkMetaCache.cards + ' cards' + (state._bulkMetaCache.tagCards ? ' · tags' : '') + ' · ' + _srcAge(state._bulkMetaCache.savedAt)) : '—' },
   ];
   return rows.map(r=>`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;">
     <span style="flex:1;">${escapeHtml(r.n)}</span>
@@ -12377,7 +12382,7 @@ function wireDataSources(){
     let bulk = 'bulkdb: not synced yet';
     try{
       const m = await bulkKvGet('meta');
-      if(m) bulk = 'bulkdb: ' + m.cards + ' cards, ' + m.rulingCards + ' ruling sets · built ' + m.built + ' · saved ' + new Date(m.savedAt || 0).toISOString();
+      if(m) bulk = 'bulkdb: ' + m.cards + ' cards, ' + m.rulingCards + ' ruling sets, ' + (m.tagCards || 0) + ' tag sets · built ' + m.built + ' · saved ' + new Date(m.savedAt || 0).toISOString();
     }catch(e){}
     const text = ['Admirals & Commanders v' + APP_VERSION, bulk, '--- network journal (newest last) ---']
       .concat((_sfLog && _sfLog.length) ? _sfLog : ['(empty)']).join('\n');
