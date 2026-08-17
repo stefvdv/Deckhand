@@ -181,7 +181,7 @@ export function trimCard(c){
 }
 
 /* Only the tags the app actually consults — everything else is trimmed. */
-export const APP_TAGS = new Set(['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate','redirect','peek']);
+export const APP_TAGS = new Set(['removal','creature-removal','artifact-removal','enchantment-removal','planeswalker-removal','spot-removal','boardwipe','edict','bounce','mass-bounce','tuck','exile','fight','bite','burn','sweep-damage','counterspell','soft-counterspell','tax-counterspell','redirect','land-destruction','mass-land-destruction','threaten','sacrifice-outlet','forced-sacrifice','stifle','ramp','mana-rock','mana-dork','ritual','land-ramp','extra-lands','cost-reduction','mana-doubler','mana-sink','untapper','treasure','gold','mana-fixing','lands-matter','landfall-payoff','cheat-into-play','free-spell','alternative-cost','x-spell','draw','cantrip','card-advantage','wheel','impulse','looting','rummage','tutor','creature-tutor','land-tutor','artifact-tutor','enchantment-tutor','instant-tutor','sorcery-tutor','equipment-tutor','aura-tutor','planeswalker-tutor','battle-tutor','topdeck','peek','reveal','draw-engine','draw-punisher','extra-card','mill','self-mill','discard','madness-enabler','reanimate','recursion','regrowth','graveyard-hate','self-recursion','delve-fodder','escape-enabler','token-generator','treasure-token','clue','food','blood-token','token-doubler','populate','anthem','overrun','pump','counters-matter','plus-one-counter','proliferate','counter-doubler','charge-counter','experience-counter','poison','infect','protection','hexproof-granter','indestructible-granter','phase-out','fog','prevent-damage','lifegain','lifegain-payoff','stax','tax','hatebear','silence','rule-of-law','pillowfort','no-attack','ward-granter','totem-armor','regenerate','damage-doubler','extra-combat','extra-attack','evasion','unblockable','menace-granter','flying-granter','trample-granter','deathtouch-granter','first-strike-granter','double-strike-granter','lure','vigilance-granter','haste-granter','attack-trigger','combat-trick','blink','flicker','clone','copy-spell','copy-permanent','copy-trigger','untap-engine','sacrifice-fodder','aristocrats','death-trigger','enter-the-battlefield','leaves-the-battlefield','cast-trigger','spellslinger','enrage-enabler','self-sacrifice','goad','monarch','initiative','group-hug','group-slug','voting','tempting-offer','join-forces','curse','donate','redirect-attack','council','wincon','alternate-win','extra-turn','infinite-combo','combo-piece','commander-damage','voltron','equipment-matters','aura-matters','vehicle','big-mana','finisher','game-ender','chaos']);
 /* The Oracle Tags bulk file turned out to be a DICTIONARY — 4,500+ rows
    defining which tags exist (label, description, hierarchy), with no card
    memberships at all. So it feeds the browsable tags-index.json, while the
@@ -198,14 +198,25 @@ export function tagDictEntry(rec){
 export async function tagMembers(tag, fetchImpl, delayMs){
   const f = fetchImpl || fetch;
   const oids = new Set();
+  const wait = (ms)=>new Promise(res=>setTimeout(res, ms));
   let url = 'https://api.scryfall.com/cards/search?unique=cards&q=' + encodeURIComponent('otag:' + tag);
+  let retries = 0;
   for(let page = 0; url && page < 60; page++){
     const r = await f(url, UA);
+    if(r.status === 429 || r.status >= 500){
+      // Rate-limited or hiccuping: breaking here silently TRUNCATED the
+      // memberships (the 3,850-card mystery). Breathe and retry instead.
+      if(++retries > 5){ console.log(`  otag:${tag}: giving up after repeated ${r.status}s at page ${page}`); break; }
+      await wait(2000 * retries);
+      page--;                                          // same page again
+      continue;
+    }
     if(!r.ok) break;                                   // 404 = tag has no cards
+    retries = 0;
     const d = await r.json();
     (d.data || []).forEach(c=>{ if(c && c.oracle_id) oids.add(c.oracle_id); });
     url = d.has_more ? d.next_page : null;
-    if(url) await new Promise(res=>setTimeout(res, delayMs == null ? 150 : delayMs));
+    if(url) await wait(delayMs == null ? 250 : delayMs);
   }
   return oids;
 }
