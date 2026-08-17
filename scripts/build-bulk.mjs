@@ -19,7 +19,7 @@
 
    The phone never touches the raw 148 MB — all trimming happens
    on GitHub's machines, and Scryfall sees one bulk download plus
-   ~150 polite search pages a week, total.
+   the weekly tag sweep, politely paced and throttle-patient.
 
    Field legend for oracle-slim lines (absent = empty/false):
      n  name                id  scryfall id (drives image URLs)
@@ -35,9 +35,9 @@
      rk edhrec_rank         gc  1 when game_changer
      f  card_faces, each {name, mc, tl, ot, c, pw, tg}
    ============================================================ */
-import { createGunzip, createGzip } from 'node:zlib';
+import { createGunzip, createGzip, gunzipSync } from 'node:zlib';
 import { createWriteStream } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import readline from 'node:readline';
@@ -186,8 +186,7 @@ export const APP_TAGS = new Set(['removal','creature-removal','artifact-removal'
    defining which tags exist (label, description, hierarchy), with no card
    memberships at all. So it feeds the browsable tags-index.json, while the
    memberships are gathered the other way round: one paged Scryfall search
-   per APP_TAG, run weekly from this machine — ~150 polite requests total
-   instead of 17 per card per phone. */
+   per APP_TAG, run weekly from this machine. */
 export function tagDictEntry(rec){
   if(!rec || typeof rec !== 'object') return null;
   if(rec.type && rec.type !== 'oracle') return null;   // art tags stay out
@@ -195,7 +194,7 @@ export function tagDictEntry(rec){
   if(!slug) return null;
   return { slug: String(slug), description: rec.description ? String(rec.description) : '' };
 }
-export async function tagMembers(tag, fetchImpl, delayMs){
+export async function tagMembers(tag, fetchImpl, delayMs, budget){
   const f = fetchImpl || fetch;
   const oids = new Set();
   const wait = (ms)=>new Promise(res=>setTimeout(res, ms));
@@ -203,20 +202,26 @@ export async function tagMembers(tag, fetchImpl, delayMs){
   let retries = 0;
   for(let page = 0; url && page < 60; page++){
     const r = await f(url, UA);
-    if(r.status === 429 || r.status >= 500){
-      // Rate-limited or hiccuping: breaking here silently TRUNCATED the
-      // memberships (the 3,850-card mystery). Breathe and retry instead.
-      if(++retries > 5){ console.log(`  otag:${tag}: giving up after repeated ${r.status}s at page ${page}`); break; }
-      await wait(2000 * retries);
-      page--;                                          // same page again
+    if(!r.ok && r.status !== 404){
+      // 429, 403, 5xx — all of it is the throttle talking, and its windows
+      // are LONG. Short backoffs burned retries and zeroed REAL tags
+      // (boardwipe, lifegain, token-generator...). Wait a full minute,
+      // then longer — within the run's overall patience budget.
+      const pause = 60000 + 30000 * retries;
+      if(++retries > 8 || (budget && (budget.ms -= pause) < 0)){
+        console.log(`  otag:${tag}: throttled out (last ${r.status}) at page ${page}${budget && budget.ms < 0 ? ' — patience budget spent' : ''}`);
+        break;
+      }
+      await wait(pause);
+      page--;
       continue;
     }
-    if(!r.ok) break;                                   // 404 = tag has no cards
+    if(!r.ok) break;                                   // a TRUE 404: the tag has no cards
     retries = 0;
     const d = await r.json();
     (d.data || []).forEach(c=>{ if(c && c.oracle_id) oids.add(c.oracle_id); });
     url = d.has_more ? d.next_page : null;
-    if(url) await wait(delayMs == null ? 250 : delayMs);
+    if(url) await wait(delayMs == null ? 500 : delayMs);
   }
   return oids;
 }
@@ -296,8 +301,11 @@ async function main(){
   let tagCards = 0;
   try{
     const tmap = new Map();
+    // One hour of cumulative throttle-waiting for the whole run — beyond
+    // that, remaining tags pass and the ratchet below protects the data.
+    const budget = { ms: 60 * 60000 };
     for(const tag of APP_TAGS){
-      const oids = await tagMembers(tag);
+      const oids = await tagMembers(tag, undefined, undefined, budget);
       oids.forEach(oid=>{
         let g = tmap.get(oid);
         if(!g){ g = new Set(); tmap.set(oid, g); }
@@ -305,8 +313,12 @@ async function main(){
       });
       console.log(`  otag:${tag} → ${oids.size} cards`);
     }
-    if(tmap.size < 1000){
-      console.log(`Tag memberships came up thin (${tmap.size} cards) — refusing to publish.`);
+    // Ratchet: a throttled, thinner run must never erase last week's file.
+    let prevCount = 0;
+    try{ prevCount = gunzipSync(await readFile(`${OUT_DIR}/tags-slim.jsonl.gz`)).toString('utf-8').split('\n').filter(Boolean).length; }catch(e){}
+    if(tmap.size < 1000 || tmap.size < prevCount * 0.8){
+      console.log(`Tag memberships thinner than the previous run (${tmap.size} vs ${prevCount}) — keeping the previous file.`);
+      tagCards = prevCount;
     }else{
       const lines = (function*(){ for(const [oid, g] of tmap) yield JSON.stringify({ o: oid, g: Array.from(g) }) + '\n'; })();
       await writeJsonlGz(`${OUT_DIR}/tags-slim.jsonl.gz`, lines);
@@ -332,4 +344,4 @@ async function main(){
 const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
 if(runDirectly && !process.env.BULK_NO_MAIN){
   main().catch(e=>{ console.error(e); console.error(e && e.stack || ''); process.exit(1); });
-     }
+                                 }
