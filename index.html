@@ -3528,13 +3528,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.308';
+const APP_VERSION = '2.51.309';
 const CHANGELOG_NOTES = {
   en: [
-    'The diagnostics header now counts tag sets alongside cards and rulings (\u201cbulkdb: 33174 cards, 19893 ruling sets, 15xxx tag sets\u201d), and the Local card database row in Data Sources marks when tags are on disk \u2014 one glance now answers \u201care my tags local yet?\u201d.'
+    'The tag catalog grows from 17 to ~170 curated Scryfall function tags (fine-grained removal, mana categories, tutors by type, politics, win conditions\u2026). The deck-card tag picker inherits all of it \u2014 richer \u2699 recommendations and a fuller browsable shelf \u2014 and Similar/Budget rank tag overlap straight from the local database now, complete and instant, with pool fetches capped so pages stay fast. Live probing for brand-new cards stays on the core 17.',
+    'Note: the richer tags appear after the updated weekly builder runs once and the app resyncs \u2014 until then everything keeps working on the current set.'
   ],
   nl: [
-    'De diagnostiekkop telt nu ook tagsets naast kaarten en rulings (\u201cbulkdb: 33174 cards, 19893 ruling sets, 15xxx tag sets\u201d), en de rij Lokale kaartendatabase in Databronnen markeert wanneer tags op schijf staan \u2014 \u00e9\u00e9n blik beantwoordt nu \u201czijn mijn tags al lokaal?\u201d.'
+    'De tagcatalogus groeit van 17 naar ~170 samengestelde Scryfall-functietags (fijnmazige removal, manacategorie\u00ebn, tutors per type, politiek, wincondities\u2026). De tagkiezer van deckkaarten erft alles \u2014 rijkere \u2699-aanbevelingen en een vollere bladerplank \u2014 en Vergelijkbaar/Budget rangschikken tagoverlap nu rechtstreeks uit de lokale database, volledig en direct, met begrensde pool-ophaalacties zodat pagina\u2019s snel blijven. Live peilen voor gloednieuwe kaarten blijft op de kern-17.',
+    'Let op: de rijkere tags verschijnen nadat de bijgewerkte wekelijkse bouwer \u00e9\u00e9n keer heeft gedraaid en de app hersynchroniseert \u2014 tot die tijd blijft alles werken op de huidige set.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11515,7 +11517,8 @@ async function openSimilarCards(card, colorScope){
       const srcFeats = phraseFeats(card);
       const _eMapP = edhrecPageNames(card);   // in flight while the pools load
       const m = await detectOtagsForCards([card]);
-      const tags = (m[card.name]||[]).slice(0, 6);
+      const tagsAll = (m[card.name]||[]);
+      const tags = tagsAll.slice(0, 6);
       // Candidate pools, in Stef's priority order: TEXT features first (the
       // exact rules-language the card uses), curated function tags second.
       const queries = [];
@@ -11570,8 +11573,9 @@ async function openSimilarCards(card, colorScope){
           + ' edh:' + (_eRaced === 'late' ? 'late' : eMap.size));
         const weights = await magicWordWeights();
         cand.forEach(e=>{
-          e.s = similarityScore(card, e.x, { srcWords, weights, srcTags: tags, eMap,
-            tagHas: (cc, t)=>e.tags.has(t), fallbackPop: e.best });
+          e.s = similarityScore(card, e.x, { srcWords, weights, srcTags: tagsAll, eMap,
+            tagHas: (cc, t)=>{ const l = localTagSetSync(cc); return (l ? l.has(t) : false) || e.tags.has(t); },
+            fallbackPop: e.best });
         });
         ranked = Array.from(cand.values()).sort(cmpSimilarity).slice(0, 60).map(e=>e.x);
       }
@@ -13524,7 +13528,14 @@ async function openBudgetOverlay(d){
 /* Oracle tags (Scryfall Tagger) we probe for. One batched query per tag
    identifies which of the deck's pricey cards carry it — then budget picks
    must share those very tags (removal begets removal). */
-const BUDGET_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate','redirect','peek'];
+/* The Stef-approved full tag catalog (~170): the weekly Action gathers
+   memberships for ALL of these; the picker's catalog shelf, the ⚙
+   recommendations, and Similar/Budget's tag ranking read them locally.
+   Dead slugs cost one weekly request and self-report as "→ 0 cards". */
+const BUDGET_OTAGS = ['removal','creature-removal','artifact-removal','enchantment-removal','planeswalker-removal','spot-removal','boardwipe','edict','bounce','mass-bounce','tuck','exile','fight','bite','burn','sweep-damage','counterspell','soft-counterspell','tax-counterspell','redirect','land-destruction','mass-land-destruction','threaten','sacrifice-outlet','forced-sacrifice','stifle','ramp','mana-rock','mana-dork','ritual','land-ramp','extra-lands','cost-reduction','mana-doubler','mana-sink','untapper','treasure','gold','mana-fixing','lands-matter','landfall-payoff','cheat-into-play','free-spell','alternative-cost','x-spell','draw','cantrip','card-advantage','wheel','impulse','looting','rummage','tutor','creature-tutor','land-tutor','artifact-tutor','enchantment-tutor','instant-tutor','sorcery-tutor','equipment-tutor','aura-tutor','planeswalker-tutor','battle-tutor','topdeck','peek','reveal','draw-engine','draw-punisher','extra-card','mill','self-mill','discard','madness-enabler','reanimate','recursion','regrowth','graveyard-hate','self-recursion','delve-fodder','escape-enabler','token-generator','treasure-token','clue','food','blood-token','token-doubler','populate','anthem','overrun','pump','counters-matter','plus-one-counter','proliferate','counter-doubler','charge-counter','experience-counter','poison','infect','protection','hexproof-granter','indestructible-granter','phase-out','fog','prevent-damage','lifegain','lifegain-payoff','stax','tax','hatebear','silence','rule-of-law','pillowfort','no-attack','ward-granter','totem-armor','regenerate','damage-doubler','extra-combat','extra-attack','evasion','unblockable','menace-granter','flying-granter','trample-granter','deathtouch-granter','first-strike-granter','double-strike-granter','lure','vigilance-granter','haste-granter','attack-trigger','combat-trick','blink','flicker','clone','copy-spell','copy-permanent','copy-trigger','untap-engine','sacrifice-fodder','aristocrats','death-trigger','enter-the-battlefield','leaves-the-battlefield','cast-trigger','spellslinger','enrage-enabler','self-sacrifice','goad','monarch','initiative','group-hug','group-slug','voting','tempting-offer','join-forces','curse','donate','redirect-attack','council','wincon','alternate-win','extra-turn','infinite-combo','combo-piece','commander-damage','voltron','equipment-matters','aura-matters','vehicle','big-mana','finisher','game-ender','chaos'];
+/* Live probing (cards newer than the weekly file) stays on the core 17 —
+   probing 170 tags per unknown card would resurrect the convoy tenfold. */
+const CORE_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate','redirect','peek'];
 const BUDGET_TAG_LABELS = { removal:'Removal', boardwipe:'Board Wipe', counterspell:'Counterspell', ramp:'Ramp', tutor:'Tutor', burn:'Burn', lifegain:'Lifegain', mill:'Mill', discard:'Discard', draw:'Card Draw', reanimate:'Reanimation', protection:'Protection', 'token-generator':'Tokens', 'sacrifice-outlet':'Sac Outlet', 'graveyard-hate':'Grave Hate', redirect:'Redirect', peek:'Peek' };
 /* Oracle tags are near-static (Tagger curates functions, not prices), so the
    per-card tag map persists for a week. It's a few kilobytes of names and
@@ -13572,7 +13583,7 @@ async function detectOtagsForCards(cards, bg){
   const groups = chunkArr(need, 22);
   for(const group of groups){
     const nameClause = '(' + group.map(c=>exactNameClause(c.name)).join(' or ') + ')';
-    await runLimited(BUDGET_OTAGS, async (tag)=>{
+    await runLimited(CORE_OTAGS, async (tag)=>{
       try{
         const res = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent(nameClause + ' otag:' + tag)}`, 0, !!bg);
         if(!res.ok) return;   // 404 = none of them carry this tag
@@ -13659,7 +13670,9 @@ async function loadBudgetAlternatives(d){
   const landPriced = priced.filter(p=>isLandC(p.c));
   const nonLandPriced = priced.filter(p=>!isLandC(p.c));
   const otagByName = nonLandPriced.length ? await detectOtagsForCards(nonLandPriced.map(p=>p.c)) : {};
-  const tagUnion = new Set(); Object.values(otagByName).forEach(a=>a.forEach(t=>tagUnion.add(t)));
+  // Pools are candidate SOURCES only now (scoring reads local tags), so
+  // the fetch fan-out caps at each card's first four tags.
+  const tagUnion = new Set(); Object.values(otagByName).forEach(a=>a.slice(0, 4).forEach(t=>tagUnion.add(t)));
   // Pools are identity-scoped, not deck-scoped — cache them for the session so
   // reopening this page (any deck in the same colours) skips the searches.
   const poolCache = (state._budgetPoolCache = state._budgetPoolCache || {});
@@ -13697,7 +13710,7 @@ async function loadBudgetAlternatives(d){
     if(!trio.isConnected) continue;
     const land = isLandC(c);
     const myTags = land ? [] : (otagByName[c.name] || []);
-    const roleLabel = land ? 'Land' : myTags.map(t=>BUDGET_TAG_LABELS[t]||t).join(', ');
+    const roleLabel = land ? 'Land' : myTags.slice(0, 4).map(t=>BUDGET_TAG_LABELS[t] || t.replace(/-/g, ' ').replace(/\b\w/g, ch=>ch.toUpperCase())).join(', ');
     const prEl = trio.querySelector('.bs-pr');
     if(prEl && roleLabel) prEl.textContent = `${fmtEur(v)} · ${roleLabel}`;
     const ptype = primaryTypeOf(c);
@@ -13773,7 +13786,9 @@ async function loadBudgetAlternatives(d){
         if(pv===null || pv > ceiling) continue;
         const tagsHave = candTags[x.name] || e.tags || new Set();
         const sc = similarityScore(c, x, { srcWords: srcWordsB, weights: weightsB, eMap: eMapB,
-          srcTags: myTags, tagHas: (cc, t)=>tagsHave.has(t), fallbackPop: e.best });
+          srcTags: myTags,
+          tagHas: (cc, t)=>{ const l = localTagSetSync(cc); return (l ? l.has(t) : false) || tagsHave.has(t); },
+          fallbackPop: e.best });
         sc.eur = pv;
         scored.push({ s: sc, x });
       }
@@ -16179,6 +16194,23 @@ function _bulkRulingsDecide(ix, card){
 async function bulkRulingsFor(card){
   const ix = await bulkIndexReady();
   return _bulkRulingsDecide(ix, card);
+}
+/* A candidate's own tags, synchronously, from the already-loaded index —
+   complete local tag scoring instead of depending on which pools happened
+   to be fetched. Null when the tags file (or index) isn't there. */
+function localTagSetSync(cardish){
+  if(!cardish) return null;
+  if(cardish._ltg !== undefined) return cardish._ltg;
+  const ix = _bulkIdx;
+  if(!ix || !ix.tagByOid){ return (cardish._ltg = null); }
+  let oid = cardish.oracle_id || cardish.o || null;
+  if(!oid && (cardish.name || cardish.n)){
+    const c = ix.byName.get(String(cardish.name || cardish.n).toLowerCase());
+    if(c) oid = c.o || null;
+  }
+  if(!oid) return (cardish._ltg = null);
+  const g = ix.tagByOid.get(oid);
+  return (cardish._ltg = (g && g.length) ? new Set(g) : new Set());
 }
 /* Tri-state like rulings: an array is an authoritative local answer (the
    card's app-relevant tags, possibly none); undefined means the tags file
