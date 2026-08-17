@@ -4,18 +4,22 @@
    ============================================================
    Runs on GitHub Actions (see .github/workflows/bulk-data.yml).
    Downloads the official Oracle Cards and Rulings bulk files,
-   keeps only the fields the app uses, and writes three files
-   into the repo root (deployed by Netlify next to index.html):
+   keeps only the fields the app uses, and writes into the repo
+   root (deployed by Netlify next to index.html):
 
      oracle-slim.jsonl.gz    one trimmed card per line
      rulings-slim.jsonl.gz   one {o, r:[{d,c}]} line per oracle_id
      bulk-meta.json          tiny manifest the app can poll cheaply
 
-   Plus, when Scryfall's index offers it, an optional fourth:
-     tags-slim.jsonl.gz      one {o, g:[tags]} line per tagged card
+   Plus two optional tag artifacts (problems here never sink the job):
+     tags-index.json         every oracle tag Scryfall knows, browsable
+     tags-slim.jsonl.gz      one {o, g:[tags]} line per tagged card,
+                             gathered by ONE paged search per app tag
+                             from this machine — phones never probe.
 
    The phone never touches the raw 148 MB — all trimming happens
-   on GitHub's machines, and Scryfall sees ONE download a week.
+   on GitHub's machines, and Scryfall sees one bulk download plus
+   ~150 polite search pages a week, total.
 
    Field legend for oracle-slim lines (absent = empty/false):
      n  name                id  scryfall id (drives image URLs)
@@ -178,18 +182,32 @@ export function trimCard(c){
 
 /* Only the tags the app actually consults — everything else is trimmed. */
 export const APP_TAGS = new Set(['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','token-generator','sacrifice-outlet','graveyard-hate','redirect','peek']);
-/* The Oracle Tags payload shape is young and undocumented — accept every
-   plausible form: {oracle_id, tags:[...]}, one-tag-per-line {oracle_id, tag},
-   tags as strings or as {name} objects. Returns null for unusable rows. */
-export function tagRecordOf(rec){
+/* The Oracle Tags bulk file turned out to be a DICTIONARY — 4,500+ rows
+   defining which tags exist (label, description, hierarchy), with no card
+   memberships at all. So it feeds the browsable tags-index.json, while the
+   memberships are gathered the other way round: one paged Scryfall search
+   per APP_TAG, run weekly from this machine — ~150 polite requests total
+   instead of 17 per card per phone. */
+export function tagDictEntry(rec){
   if(!rec || typeof rec !== 'object') return null;
-  const oid = rec.oracle_id || rec.oid || null;
-  if(!oid) return null;
-  let tags = rec.tags || rec.otags || rec.tag || rec.name;
-  if(tags == null) return null;
-  if(!Array.isArray(tags)) tags = [tags];
-  const keep = tags.map(t=>String((t && t.name) || t).toLowerCase().trim()).filter(t=>APP_TAGS.has(t));
-  return { o: oid, g: keep };
+  if(rec.type && rec.type !== 'oracle') return null;   // art tags stay out
+  const slug = rec.slug || rec.label;
+  if(!slug) return null;
+  return { slug: String(slug), description: rec.description ? String(rec.description) : '' };
+}
+export async function tagMembers(tag, fetchImpl, delayMs){
+  const f = fetchImpl || fetch;
+  const oids = new Set();
+  let url = 'https://api.scryfall.com/cards/search?unique=cards&q=' + encodeURIComponent('otag:' + tag);
+  for(let page = 0; url && page < 60; page++){
+    const r = await f(url, UA);
+    if(!r.ok) break;                                   // 404 = tag has no cards
+    const d = await r.json();
+    (d.data || []).forEach(c=>{ if(c && c.oracle_id) oids.add(c.oracle_id); });
+    url = d.has_more ? d.next_page : null;
+    if(url) await new Promise(res=>setTimeout(res, delayMs == null ? 150 : delayMs));
+  }
+  return oids;
 }
 export function groupRuling(map, r){
   if(!r || !r.oracle_id || !r.comment) return;
@@ -238,38 +256,54 @@ async function main(){
   await writeJsonlGz(`${OUT_DIR}/rulings-slim.jsonl.gz`, rulingLines);
   console.log(`rulings-slim.jsonl.gz: ${rulingCount} rulings on ${rmap.size} cards`);
 
-  // Oracle Tags — optional third file. Problems here never sink the job:
-  // oracle + rulings always publish, tags simply wait a week.
-  let tagCards = 0;
+  // Oracle Tags, part 1: the DICTIONARY — every tag Scryfall knows, with
+  // its description, published as browsable tags-index.json. Optional;
+  // problems here never sink the job.
+  let tagIndexCount = 0;
   try{
     if(!idx._tags){
-      console.log('No oracle_tags entry in the bulk index — skipping the tags file.');
+      console.log('No oracle_tags entry in the bulk index — skipping the tag dictionary.');
     }else{
       const tagsUrl = requireDownloadUrl(idx._tags, 'Oracle Tags');
-      console.log('Oracle Tags: ', tagsUrl);
-      const tmap = new Map();
-      let raw = 0; const samples = [];
+      console.log('Oracle Tags dictionary:', tagsUrl);
+      const dict = [];
       for await (const rec of bulkLines(tagsUrl)){
-        raw++;
-        if(samples.length < 2) samples.push(JSON.stringify(rec).slice(0, 300));
-        const t = tagRecordOf(rec);
-        if(!t || !t.g.length) continue;
-        let g = tmap.get(t.o);
-        if(!g){ g = new Set(); tmap.set(t.o, g); }
-        t.g.forEach(x=>g.add(x));
+        const e = tagDictEntry(rec);
+        if(e) dict.push(e);
       }
-      if(tmap.size < 1000){
-        console.log(`Tags parsed thin (${tmap.size} tagged of ${raw} rows) — refusing to publish. Sample rows:`);
-        samples.forEach(x=>console.log('  ', x));
-      }else{
-        const lines = (function*(){ for(const [oid, g] of tmap) yield JSON.stringify({ o: oid, g: Array.from(g) }) + '\n'; })();
-        await writeJsonlGz(`${OUT_DIR}/tags-slim.jsonl.gz`, lines);
-        tagCards = tmap.size;
-        console.log(`tags-slim.jsonl.gz: ${tagCards} tagged cards (from ${raw} rows)`);
-      }
+      dict.sort((a, b)=>a.slug.localeCompare(b.slug));
+      await writeFile(`${OUT_DIR}/tags-index.json`, JSON.stringify(dict, null, 1) + '\n');
+      tagIndexCount = dict.length;
+      console.log(`tags-index.json: ${tagIndexCount} oracle tags (browse it on the site)`);
     }
   }catch(e){
-    console.log('Oracle Tags step failed — continuing without it:', e && e.message || e);
+    console.log('Tag dictionary step failed — continuing without it:', e && e.message || e);
+  }
+
+  // Oracle Tags, part 2: MEMBERSHIPS — one paged search per app tag, from
+  // this one machine, weekly. The phones never interrogate again.
+  let tagCards = 0;
+  try{
+    const tmap = new Map();
+    for(const tag of APP_TAGS){
+      const oids = await tagMembers(tag);
+      oids.forEach(oid=>{
+        let g = tmap.get(oid);
+        if(!g){ g = new Set(); tmap.set(oid, g); }
+        g.add(tag);
+      });
+      console.log(`  otag:${tag} → ${oids.size} cards`);
+    }
+    if(tmap.size < 1000){
+      console.log(`Tag memberships came up thin (${tmap.size} cards) — refusing to publish.`);
+    }else{
+      const lines = (function*(){ for(const [oid, g] of tmap) yield JSON.stringify({ o: oid, g: Array.from(g) }) + '\n'; })();
+      await writeJsonlGz(`${OUT_DIR}/tags-slim.jsonl.gz`, lines);
+      tagCards = tmap.size;
+      console.log(`tags-slim.jsonl.gz: ${tagCards} tagged cards across ${APP_TAGS.size} tags`);
+    }
+  }catch(e){
+    console.log('Tag membership step failed — continuing without it:', e && e.message || e);
   }
 
   // Manifest — the app polls this tiny file to know when to refresh
@@ -278,7 +312,7 @@ async function main(){
     built: new Date().toISOString(),
     oracle:  { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at },
     rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at },
-    tags:    { cards: tagCards }
+    tags:    { cards: tagCards, index: tagIndexCount }
   };
   await writeFile(`${OUT_DIR}/bulk-meta.json`, JSON.stringify(meta, null, 2) + '\n');
   console.log('bulk-meta.json written. Done.');
@@ -286,5 +320,5 @@ async function main(){
 
 const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
 if(runDirectly && !process.env.BULK_NO_MAIN){
-  main().catch(e=>{ console.error(e); process.exit(1); });
-                    }
+  main().catch(e=>{ console.error(e); console.error(e && e.stack || ''); process.exit(1); });
+}
