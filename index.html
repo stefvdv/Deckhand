@@ -3527,13 +3527,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.300';
+const APP_VERSION = '2.51.301';
 const CHANGELOG_NOTES = {
   en: [
-    'Crash capture: any error the app hits \u2014 anywhere \u2014 now writes its real message and location into the diagnostics journal, so \ud83d\udccb Copy diagnostics carries the actual cause instead of a generic note. The Similar page\u2019s error note records what threw, and a card preview whose image fails to load closes itself instead of stranding you behind a dim broken icon.'
+    'Similar cards works again \u2014 the crash capture caught its own culprit on the first try: a diagnostics line added in the EDHREC update read a value one line before it existed, so every Similar run tripped over itself and showed the connection note. Order restored.'
   ],
   nl: [
-    'Crashregistratie: elke fout die de app raakt \u2014 waar dan ook \u2014 schrijft nu zijn echte melding en locatie in het diagnostiekjournaal, zodat \ud83d\udccb Kopieer diagnostiek de werkelijke oorzaak bevat in plaats van een algemene melding. De foutmelding van de Vergelijkbaar-pagina registreert wat er misging, en een kaartvoorvertoning waarvan de afbeelding niet laadt sluit zichzelf in plaats van je achter een gedimd kapot icoon te stranden.'
+    'Vergelijkbare kaarten werkt weer \u2014 de crashregistratie ving haar eigen boosdoener bij de eerste poging: een diagnostiekregel uit de EDHREC-update las een waarde \u00e9\u00e9n regel voordat die bestond, waardoor elke Vergelijkbaar-run over zichzelf struikelde en de verbindingsmelding toonde. Volgorde hersteld.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11484,11 +11484,11 @@ async function openSimilarCards(card, colorScope){
             });
           }catch(e){}
         }
+        const eMap = await _eMapP;              // declared BEFORE its first reader below
         sfJournal('similar: ' + card.name + ' · words[' + srcWords.size + '] pools:' + _poolCand
           + (isCmdrMode() ? (' corpus:' + (_corpusOk ? '+' + (cand.size - _poolCand) : 'ABSENT')) : ' corpus:admiral-off')
           + ' edh:' + eMap.size);
         const weights = await magicWordWeights();
-        const eMap = await _eMapP;
         cand.forEach(e=>{
           e.s = similarityScore(card, e.x, { srcWords, weights, srcTags: tags, eMap,
             tagHas: (cc, t)=>e.tags.has(t), fallbackPop: e.best });
