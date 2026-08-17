@@ -2904,6 +2904,25 @@ let _sfWorking = false, _sfGen = 0, _sfBeat = 0;
    Extras -> Copy diagnostics. When "nothing loads", this says why. */
 const _sfLog = [];
 function sfJournal(line){ try{ _sfLog.push(new Date().toISOString().slice(11, 19) + ' ' + line); if(_sfLog.length > 30) _sfLog.shift(); }catch(e){} }
+/* Crash capture: any uncaught error or rejected promise writes one line
+   into the journal (throttled), so Copy diagnostics always carries the
+   real exception — no more invisible failures. */
+let _crashNotes = 0;
+function _noteCrash(kind, msg, where){
+  if(_crashNotes >= 8) return;
+  _crashNotes++;
+  sfJournal(kind + ': ' + String(msg || 'unknown').slice(0, 140) + (where ? (' @' + where) : ''));
+}
+try{
+  window.addEventListener('error', (e)=>{
+    _noteCrash('JS ERROR', e && e.message, e && e.lineno ? ((e.filename || '').split('/').pop() + ':' + e.lineno) : '');
+  });
+  window.addEventListener('unhandledrejection', (e)=>{
+    const r = e && e.reason;
+    _noteCrash('UNHANDLED', (r && (r.message || r)) || 'rejection',
+      r && r.stack ? String(r.stack).split('\n')[1] : '');
+  });
+}catch(e){}
 window.addEventListener('error', (e)=>{
   sfJournal('JS-ERROR ' + (e.message || '') + ' @' + String(e.filename || '').split('/').pop() + ':' + (e.lineno || 0));
   try{ toast('⚠ ' + (e.message || 'Something broke')); }catch(_){}
@@ -3508,15 +3527,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.299';
+const APP_VERSION = '2.51.300';
 const CHANGELOG_NOTES = {
   en: [
-    'Similar cards and Budget Alternatives now lead with EDHREC itself: cards that appear on the source card\u2019s own EDHREC page (its synergy company) rank first, then the magic-word tiers, then EDHREC\u2019s on-page order, tags, colors, play data, and price. One week-cached fetch per card \u2014 offline or for brand-new cards the ranking simply stands as before.',
-    'A card sheet opened on top of another page (Similar, Recommendations\u2026) now covers the full height \u2014 the page beneath no longer peeks through at the foot where the nav bar would be.'
+    'Crash capture: any error the app hits \u2014 anywhere \u2014 now writes its real message and location into the diagnostics journal, so \ud83d\udccb Copy diagnostics carries the actual cause instead of a generic note. The Similar page\u2019s error note records what threw, and a card preview whose image fails to load closes itself instead of stranding you behind a dim broken icon.'
   ],
   nl: [
-    'Vergelijkbare kaarten en Budgetalternatieven laten nu EDHREC zelf voorop gaan: kaarten die op de eigen EDHREC-pagina van de bronkaart staan (haar synergiegezelschap) komen eerst, daarna de magic-woordniveaus, dan EDHREC\u2019s volgorde op die pagina, tags, kleuren, speeldata en prijs. \u00c9\u00e9n week-gecachete ophaalactie per kaart \u2014 offline of bij gloednieuwe kaarten blijft de rangschikking gewoon zoals hij was.',
-    'Een kaartvenster geopend b\u00f3venop een andere pagina (Vergelijkbaar, Aanbevelingen\u2026) bedekt nu de volledige hoogte \u2014 de pagina eronder gluurt niet meer door aan de voet waar de navigatiebalk zou zitten.'
+    'Crashregistratie: elke fout die de app raakt \u2014 waar dan ook \u2014 schrijft nu zijn echte melding en locatie in het diagnostiekjournaal, zodat \ud83d\udccb Kopieer diagnostiek de werkelijke oorzaak bevat in plaats van een algemene melding. De foutmelding van de Vergelijkbaar-pagina registreert wat er misging, en een kaartvoorvertoning waarvan de afbeelding niet laadt sluit zichzelf in plaats van je achter een gedimd kapot icoon te stranden.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11500,6 +11517,7 @@ async function openSimilarCards(card, colorScope){
     box.querySelectorAll('.sim-tile').forEach(btn=>btn.addEventListener('click', ()=>openCardInfo(ranked[+btn.dataset.i], { pool: ranked, poolIdx: +btn.dataset.i })));
     loadTilePrices(ranked);
   }catch(e){
+    _noteCrash('similar FAILED', e && (e.message || e), e && e.stack ? String(e.stack).split('\n')[1] : '');
     const box = document.getElementById('simBody');
     if(box) box.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`;
   }
@@ -15497,6 +15515,12 @@ function renderPreview(){
   if(!el){ el=document.createElement('div'); el.id='previewRoot'; document.body.appendChild(el); }
   el.innerHTML = `<div class="card-preview-backdrop" id="pbd"><img class="${state.preview.wb?'wb-card':''}" src="${state.preview.src}"></div>`;
   document.getElementById('pbd').addEventListener('click', closeTopOverlay);
+  // A dead image URL must not strand the person behind a dim scrim with a
+  // broken icon — note it and take the preview down.
+  el.querySelector('img').addEventListener('error', ()=>{
+    _noteCrash('preview img 404', state.preview && state.preview.src ? state.preview.src.split('/').slice(-3).join('/') : '');
+    try{ closeTopOverlay(); }catch(e){}
+  }, { once: true });
 }
 
 /* ========================= INIT ========================= */
