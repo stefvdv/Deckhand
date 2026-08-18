@@ -355,6 +355,9 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
    squats on top of the tag chips. */
 .tag-drop[hidden]{display:none;}
 .tag-drop-h{padding:7px 10px 3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-top:1px solid var(--pop-line);}
+/* On deckless card pages the picker is the app's one allowed drop-DOWN:
+   the editor sits under the buttons and the list opens below the input. */
+#ciTagBox .tag-drop{bottom:auto;top:calc(100% + 6px);}
 .tag-drop button{background:none;border:none;color:var(--ink-text);text-align:left;padding:8px 10px;font-size:13px;border-radius:6px;cursor:pointer;}
 .tag-drop button:active{background:var(--brass-glow);color:var(--brass);}
 .tag-suggest{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
@@ -3537,13 +3540,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.314';
+const APP_VERSION = '2.51.316';
 const CHANGELOG_NOTES = {
   en: [
-    'The tag catalog is rebuilt on ground truth: Scryfall\u2019s own tag dictionary supplied the real names for everything the pruning lost \u2014 the token family (repeatable-treasures, repeatable-creature-tokens\u2026), the counters world (counter-fuel\u2026), tutors by target, sixteen keyword granters (gives-flying\u2026), sacrifice kinship (mutual-sacrifice, opponent-sacrifices), landfall, magecraft, alternate-win-condition and more. 184 verified tags now feed the picker\u2019s shelves, the \u2699 recommendations, and Similar/Budget\u2019s ranking \u2014 memberships arrive with the next weekly harvest.'
+    'Combos arrive: deck Stats gains a Combos panel (2/3/4-card counts, tap to read each combo and its result, card names tappable), and Similar pages show a \u2694 button top-right when the card belongs to any known combos \u2014 both powered by Commander Spellbook via a fourth weekly file, and both wait politely until its first harvest lands.',
+    'Every card page shows the EDHREC community salt score (\U0001F9C2) next to its set line, read for free from the already-cached EDHREC page. Also fixed: the deckless tag picker now opens downward right under the buttons instead of leaping to the top, a second tap on the Search compass wipes the search clean, and the Advanced-filters arrow no longer blinks the page (it rebuilt the whole screen; now it toggles in place).'
   ],
   nl: [
-    'De tagcatalogus is herbouwd op de bron zelf: Scryfalls eigen tagwoordenboek leverde de echte namen voor alles wat de snoei verloor \u2014 de tokenfamilie (repeatable-treasures, repeatable-creature-tokens\u2026), de counterwereld (counter-fuel\u2026), tutors per doelwit, zestien keyword-verleners (gives-flying\u2026), offerverwantschap (mutual-sacrifice, opponent-sacrifices), landfall, magecraft, alternate-win-condition en meer. 184 geverifieerde tags voeden nu de schappen van de kiezer, de \u2699-aanbevelingen en de rangschikking van Vergelijkbaar/Budget \u2014 lidmaatschappen komen mee met de volgende weekoogst.'
+    'Combo\u2019s zijn er: deck-Stats krijgt een Combo\u2019s-paneel (aantallen 2/3/4-kaarts, tik om elke combo en zijn resultaat te lezen, kaartnamen aantikbaar), en Vergelijkbaar-pagina\u2019s tonen rechtsboven een \u2694-knop wanneer de kaart in bekende combo\u2019s zit \u2014 beide gevoed door Commander Spellbook via een vierde weekbestand, en beide wachten netjes tot de eerste oogst landt.',
+    'Elke kaartpagina toont de EDHREC-zoutscore (\U0001F9C2) naast de setregel, gratis gelezen uit de al gecachete EDHREC-pagina. Ook opgelost: de tagkiezer op losse kaartpagina\u2019s opent nu omlaag direct onder de knoppen in plaats van naar boven te springen, een tweede tik op het Zoeken-kompas veegt de zoekopdracht schoon, en het pijltje van Geavanceerde filters laat de pagina niet meer knipperen (het herbouwde het hele scherm; nu schakelt het ter plekke).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4039,6 +4044,10 @@ function switchPage(p, topnav){
   // goes straight home, never through whatever came before.
   if(topnav) state.navLadder = ['home'];
   state._focusSearchOnce = (p === 'search' && state.screen !== 'search');
+  // A second tap on the Search compass wipes the slate for a fresh hunt.
+  if(p === 'search' && state.screen === 'search' && topnav){
+    state.searchName = ''; state.searchRan = false; state.searchResults = [];
+  }
   if(p === 'spoilers') state.spoilerSetFilter = null;   // always land on the all-sets, newest-first feed
   // A deck pinned via "Search Cards" only lives for that one visit to the
   // Search page — any navigation elsewhere returns Search to popup mode.
@@ -8285,6 +8294,7 @@ function statsTabHtml(d){
       <div id="msDetail"></div>
     </div>`;
     })()}
+    <div class="panel-card" id="deckCombosPanel"><div class="panel-h">Combos</div><div id="deckCombosBody" class="hint" style="margin:0;">Scanning…</div></div>
     <div class="panel-card"><div class="panel-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;"><span>Most Expensive Cards</span><span id="deckTotalBadge" style="text-transform:none;color:var(--brass);font-weight:700;white-space:nowrap;"></span></div>
       <p class="hint" id="deckPriceNote" style="margin:4px 0 8px;">Cardmarket trend price, cheapest printing of each card.</p>
       <div class="action-row" style="margin:8px 0 4px;"><button class="ghost-btn" id="budgetBtn"><span class="ib">${ICONS.coins}</span>Budget alternatives</button></div><div id="topPriceBox"><div class="empty-note" style="padding:8px 0;">Pricing…</div></div></div>
@@ -8658,6 +8668,7 @@ function wireBuilderBody(d){
     wireDecklistInteractions(d);
   } else if(state.builderTab==='stats'){
     wireStatsTab(d);
+    wireDeckCombosPanel(d);
   } else if(state.builderTab==='primer'){
     const ta = document.getElementById('primerText');
     ta.addEventListener('input', ()=>{
@@ -8959,6 +8970,13 @@ function renderCardSheet(d, card, loc, idx){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
+  (function(){
+    const sp = el.querySelector('[data-salt]');
+    if(!sp) return;
+    edhrecSaltFor(card).then(v=>{
+      if(v != null && v > 0 && sp.isConnected) sp.textContent = ' · 🧂 ' + v.toFixed(2);
+    }).catch(()=>{});
+  })();
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
   const _reco = `<button class="ghost-btn" id="csReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>`;
@@ -8992,7 +9010,7 @@ function renderCardSheet(d, card, loc, idx){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a><span data-salt></span></div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
@@ -9726,7 +9744,7 @@ function searchPageHtml(){
       ? `<div class="pin-pill"><span class="pp-txt">Adding straight to <strong>${escapeHtml(pinned.name)}</strong></span><button id="unpinBtn" title="Stop adding to this deck">✕</button></div>`
       : ''}
     <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}" style="padding-right:36px;"><button class="in-chev" id="qChev" title="${trS('Advanced filters')}">${state.advOpen?'▴':'▾'}</button><button id="runSearchBtn">Search</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;">🔮</button></div>
-    ${state.advOpen ? advancedPanelHtml() : ''}
+    <div id="advSlot">${state.advOpen ? advancedPanelHtml() : ''}</div>
     <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
     <div class="cotd" id="cotdBox" ${state.searchRan?'style="display:none;"':''}></div>
   </main>`;
@@ -9835,7 +9853,17 @@ function wireSearchPage(){
     runAdvancedSearch();     // name bar and any set filters, same as Use filters
   });
   document.getElementById('spoilersBtn')?.addEventListener('click', ()=>switchPage('spoilers'));
-  document.getElementById('qChev')?.addEventListener('click', ()=>{ state.advOpen = !state.advOpen; render(); });
+  document.getElementById('qChev')?.addEventListener('click', ()=>{
+    // In-place toggle — the old full re-render rebuilt the whole page
+    // mid-tap, which was the shift-and-blink.
+    state.advOpen = !state.advOpen;
+    const chev = document.getElementById('qChev');
+    if(chev) chev.textContent = state.advOpen ? '▴' : '▾';
+    const slot = document.getElementById('advSlot');
+    if(!slot) return;
+    slot.innerHTML = state.advOpen ? advancedPanelHtml() : '';
+    if(state.advOpen) wireAdvancedPanel();
+  });
   if(state.advOpen) wireAdvancedPanel();
   if(state.searchRan) renderSearchResultsBox();
   loadCardOfTheDay();
@@ -10683,6 +10711,13 @@ function openCardInfo(card, opts){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
+  (function(){
+    const sp = el.querySelector('[data-salt]');
+    if(!sp) return;
+    edhrecSaltFor(card).then(v=>{
+      if(v != null && v > 0 && sp.isConnected) sp.textContent = ' · 🧂 ' + v.toFixed(2);
+    }).catch(()=>{});
+  })();
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
   // cards (basics etc.) stay on the Add side — only a removable main-deck
@@ -10693,7 +10728,7 @@ function openCardInfo(card, opts){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a><span data-salt></span></div>
         <div class="card-price" id="csPrice">Checking price…</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
@@ -10825,7 +10860,6 @@ function openCardInfo(card, opts){
     box.dataset.open='1';
     pushOverlay('tagBox', ()=>{ const b = document.getElementById('ciTagBox'); if(b){ b.dataset.open='0'; b.innerHTML=''; } });
     renderTagEditor(null, card, box);   // deckless: the global registry directly
-    box.scrollIntoView({ block: 'nearest' });
   });
   loadRulings(card);
   loadCardPrice(card);
@@ -11404,6 +11438,88 @@ async function edhrecCardThemes(card){
   }catch(e){ return []; }
 }
 /* One theme page's full card membership, week-cached like everything EDHREC. */
+/* EDHREC's community salt score (0–4), read from the same week-cached
+   card page the ranking already uses. Null when unknown — shown nowhere. */
+async function wireDeckCombosPanel(d){
+  const body = document.getElementById('deckCombosBody');
+  if(!body) return;
+  try{
+    const ix = await bulkIndexReady();
+    if(!ix || !ix.combos){ body.textContent = 'Combo data arrives with a coming weekly update.'; return; }
+    const names = new Set();
+    (d.cards || []).forEach(c=>names.add(String(c.name).toLowerCase()));
+    if(d.commander && d.commander.name) names.add(String(d.commander.name).toLowerCase());
+    const found = combosInNames(ix, names) || [];
+    if(!found.length){ body.textContent = 'No known combos in this deck.'; return; }
+    const by = {};
+    found.forEach(c=>{ const k = Math.min(4, c.nm.length); (by[k] = by[k] || []).push(c); });
+    body.innerHTML = [2, 3, 4].filter(k=>by[k]).map(k=>
+      `<button type="button" class="ghost-btn" data-cmbsize="${k}" style="width:100%;margin:3px 0;display:flex;justify-content:space-between;"><span>${k}-card combos</span><span style="color:var(--brass);font-weight:700;">${by[k].length}</span></button>`).join('');
+    body.querySelectorAll('[data-cmbsize]').forEach(b=>b.addEventListener('click', ()=>{
+      const k = +b.dataset.cmbsize;
+      openCombosOverlay(d.name + ' — ' + k + '-card combos', by[k]);
+    }));
+  }catch(e){ body.textContent = '—'; }
+}
+function combosWithCard(ix, name){
+  if(!ix || !ix.comboByName) return null;               // data not synced yet
+  const idxs = ix.comboByName.get(String(name).toLowerCase()) || [];
+  return idxs.map(i=>ix.combos[i]);
+}
+function combosInNames(ix, nameSet){
+  if(!ix || !ix.combos) return null;
+  return ix.combos.filter(c=>c.nm.every(n=>nameSet.has(String(n).toLowerCase())));
+}
+function openCombosOverlay(title, combos){
+  // The stacked-page dance, same as Similar: an earlier combos page steps
+  // aside intact instead of being hijacked mid-research.
+  {
+    const ex = document.getElementById('combosOverlay');
+    const topId = state.overlayStack.length ? state.overlayStack[state.overlayStack.length - 1].id : null;
+    if(ex && topId !== 'combos'){
+      window._cmbBgSeq = (window._cmbBgSeq || 0) + 1;
+      ex.id = 'combosOverlay_bg' + window._cmbBgSeq;
+      ex.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+      const bgEl = ex;
+      const oldEntry = state.overlayStack.slice().reverse().find(e=>e.id === 'combos');
+      if(oldEntry) oldEntry.closeFn = ()=>{ try{ bgEl.remove(); }catch(e){} };
+    }
+  }
+  pushOverlay('combos', ()=>{ document.getElementById('combosOverlay')?.remove(); });
+  let el = document.getElementById('combosOverlay');
+  if(!el){ el = document.createElement('div'); el.className = 'overlay'; el.id = 'combosOverlay'; }
+  document.body.appendChild(el);
+  el.innerHTML = `<div class="overlay-inner">
+    <div class="topbar"><button class="icon-btn" id="cmbClose">${ICONS.back}</button><div class="tb-titles"><div class="t1 name2">${escapeHtml(title)}</div></div></div>
+    <main>
+      <p class="hint" style="text-align:center;margin:0 0 8px;">${combos.length} · Commander Spellbook</p>
+      ${combos.slice(0, 80).map(c=>`<div class="panel-card" style="margin-bottom:10px;">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${c.nm.map(n=>`<button type="button" class="ghost-btn" data-cmbcard="${encodeURIComponent(n)}" style="width:auto;padding:6px 10px;font-size:12.5px;">${escapeHtml(n)}</button>`).join('')}</div>
+        <div class="hint" style="margin:0;">${escapeHtml(c.r || '')}</div>
+      </div>`).join('')}
+    </main>
+  </div>`;
+  el.querySelector('#cmbClose').addEventListener('click', closeTopOverlay);
+  el.querySelectorAll('[data-cmbcard]').forEach(b=>b.addEventListener('click', async ()=>{
+    try{
+      const r = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(decodeURIComponent(b.dataset.cmbcard)));
+      if(r.ok) openCardInfo(await r.json());
+    }catch(e){}
+  }));
+}
+async function edhrecSaltFor(card){
+  if(card._salt !== undefined) return card._salt;
+  try{
+    const data = await edhrecFetchJson('/pages/cards/' + edhrecSlug(card.name) + '.json');
+    const c2 = (((data||{}).container||{}).json_dict||{}).card || {};
+    let v = Number(c2.salt);
+    if(!isFinite(v)){
+      const m2 = /"salt":\s*([0-9.]+)/.exec(JSON.stringify(data) || '');
+      v = m2 ? Number(m2[1]) : NaN;
+    }
+    return (card._salt = isFinite(v) ? v : null);
+  }catch(e){ return (card._salt = null); }
+}
 async function edhrecThemeNames(slug){
   const data = await edhrecFetchJson('/pages/tags/' + slug + '.json');
   const names = new Set();
@@ -11428,6 +11544,11 @@ const SIM_POINTS = {
   wordRate: 2, wordCap: 20,
   tagRate: 3, tagCap: 15,
   colorSame: 2, colorOverlap: 1,
+  // Budget profile: EDHREC's card page lists cards CO-PLAYED in the same
+  // decks, not cards doing the same job — on a stand-in hunt that signal
+  // is halved-and-halved, and doing the same job in the same card TYPE
+  // earns a bonus (an instant's stand-in should be an instant).
+  budgetPageSynergy: 5, budgetPageOther: 2, budgetTypeBonus: 6,
 };
 function similarityScore(src, cand, opts){
   const o = opts || {};
@@ -11452,14 +11573,16 @@ function similarityScore(src, cand, opts){
   if(nm && o.eMap && o.eMap.size && o.eMap.has(nm)){
     const e = o.eMap.get(nm);
     eIdx = e.i;
-    pg = e.syn ? P.pageSynergy : P.pageOther;
+    pg = o.budget ? (e.syn ? P.budgetPageSynergy : P.budgetPageOther)
+                  : (e.syn ? P.pageSynergy : P.pageOther);
   }
+  const tp = (o.budget && primaryTypeOf(src) && primaryTypeOf(src) === primaryTypeOf(cand)) ? P.budgetTypeBonus : 0;
   const sci = colorIdOf(src), cci = colorIdOf(cand);
   const c = (sci === cci) ? P.colorSame
     : (cci === '' || sci === '' || [...cci].some(ch=>sci.includes(ch))) ? P.colorOverlap : 0;
   const pop = cand.edhrec_rank || cand.rk
     || (o.fallbackPop != null ? 1e6 + o.fallbackPop : 999999);
-  return { pts: th + pg + w + tg + c, th, pg, w, tg, c, shared, tShared, eIdx, pop };
+  return { pts: th + pg + w + tg + c + tp, th, pg, w, tg, c, tp, shared, tShared, eIdx, pop };
 }
 function cmpSimilarity(a, b){
   return (b.s.pts - a.s.pts) || (a.s.eIdx - b.s.eIdx) || (a.s.pop - b.s.pop)
@@ -11584,7 +11707,7 @@ async function openSimilarCards(card, colorScope){
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='similarOverlay'; }
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><button class="icon-btn" id="simClose">${ICONS.back}</button><div class="tb-titles"><div class="t1 name2">${escapeHtml(card.name)}</div></div></div>
+    <div class="topbar"><button class="icon-btn" id="simClose">${ICONS.back}</button><div class="tb-titles"><div class="t1 name2">${escapeHtml(card.name)}</div></div><button class="ghost-btn" id="simCombos" hidden style="width:auto;flex:0 0 auto;padding:7px 11px;">⚔</button></div>
     <main>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="simCardImg" alt="${escapeHtml(card.name)}">
@@ -11705,6 +11828,19 @@ async function openSimilarCards(card, colorScope){
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
       </div>`).join('')}</div>`;
     box.querySelectorAll('.sim-tile').forEach(btn=>btn.addEventListener('click', ()=>openCardInfo(ranked[+btn.dataset.i], { pool: ranked, poolIdx: +btn.dataset.i })));
+    (async ()=>{
+      try{
+        const ix = await bulkIndexReady();
+        const list = combosWithCard(ix, card.name);
+        const btn = document.getElementById('simCombos');
+        if(btn && list && list.length){
+          btn.hidden = false;
+          btn.textContent = '⚔ ' + list.length;
+          btn.title = 'Combos with ' + card.name;
+          btn.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
+        }
+      }catch(e){}
+    })();
     loadTilePrices(ranked);
   }catch(e){
     _noteCrash('similar FAILED', e && (e.message || e), e && e.stack ? String(e.stack).split('\n')[1] : '');
@@ -13778,6 +13914,7 @@ async function loadBudgetAlternatives(d){
   const otagByName = nonLandPriced.length ? await detectOtagsForCards(nonLandPriced.map(p=>p.c)) : {};
   // Pools are candidate SOURCES only now (scoring reads local tags), so
   // the fetch fan-out caps at each card's first four tags.
+  state._budgetLogOnce = true;
   const tagUnion = new Set(); Object.values(otagByName).forEach(a=>a.slice(0, 4).forEach(t=>tagUnion.add(t)));
   // Pools are identity-scoped, not deck-scoped — cache them for the session so
   // reopening this page (any deck in the same colours) skips the searches.
@@ -13894,7 +14031,7 @@ async function loadBudgetAlternatives(d){
         // Same point table; the theme signal stays neutral here — three
         // extra fetches per pricey card would drag the whole page.
         const sc = similarityScore(c, x, { srcWords: srcWordsB, weights: weightsB, eMap: eMapB,
-          srcTags: myTags,
+          srcTags: myTags, budget: true,
           tagHas: (cc, t)=>{ const l = localTagSetSync(cc); return (l ? l.has(t) : false) || tagsHave.has(t); },
           fallbackPop: e.best });
         sc.eur = pv;
@@ -13924,6 +14061,13 @@ async function loadBudgetAlternatives(d){
       if(a.s && b.s) return cmpSimilarity(a, b);
       return (b[0]||0) - (a[0]||0);
     });
+    if(state._budgetLogOnce && scored.length && scored[0].s){
+      state._budgetLogOnce = false;
+      const t = scored[0];
+      sfJournal('budget top: ' + (t.x.name || t.x.n) + ' pts:' + Math.round(t.s.pts)
+        + ' (pg:' + t.s.pg + ' w:' + Math.round(t.s.w) + ' tg:' + t.s.tg + ' c:' + t.s.c + ' tp:' + (t.s.tp || 0) + ')'
+        + ' for ' + c.name);
+    }
     const subs = scored.slice(0, 2).map(sx=>sx.x || sx[1]);
     const subsBox = trio.querySelector('.budget-subs');
     if(!subsBox || !subsBox.isConnected) return;
@@ -16221,11 +16365,21 @@ async function bulkSyncCheck(){
       tagCount = tagRecs.length;
     }catch(e){ ti = 0; tagCount = 0; }
     if(local){ for(let k = ti; k < (local.tagChunks || 0); k++) await bulkKvSet('tag:' + k, null); }
+    // ---- combos: optional fourth file (Commander Spellbook, trimmed by
+    // the weekly Action). A 404 today simply means "not yet". ----
+    let ki = 0, comboCount = 0;
+    try{
+      const rows = [];
+      await _bulkStreamJsonl('combos-slim.jsonl.gz', (r)=>rows.push(r));
+      for(let i = 0; i < rows.length; i += BULK_CHUNK){ await bulkKvSet('cmb:' + (ki++), rows.slice(i, i + BULK_CHUNK)); await _bulkYield(); }
+      comboCount = rows.length;
+    }catch(e){ ki = 0; comboCount = 0; }
+    if(local){ for(let k = ki; k < (local.comboChunks || 0); k++) await bulkKvSet('cmb:' + k, null); }
     await bulkKvSet('bannedCommander', { t: Date.parse(remote.built) || 0, names: bulkBannedNamesFrom(cards) });
-    await bulkKvSet('meta', { built: remote.built, cardChunks: ci, rulChunks: ri, tagChunks: ti, cards: cards.length, rulingCards: ruls.length, tagCards: tagCount, savedAt: Date.now() });
+    await bulkKvSet('meta', { built: remote.built, cardChunks: ci, rulChunks: ri, tagChunks: ti, comboChunks: ki, cards: cards.length, rulingCards: ruls.length, tagCards: tagCount, combos: comboCount, savedAt: Date.now() });
     _bulkIdx = null; _bulkLoadP = null;         // rebuilt lazily from the new data
     state._bulkMetaCache = null;                // Data Sources re-reads the new meta
-    sfJournal('bulkdb: synced ' + cards.length + ' cards, ' + ruls.length + ' ruling sets, ' + tagCount + ' tag sets');
+    sfJournal('bulkdb: synced ' + cards.length + ' cards, ' + ruls.length + ' ruling sets, ' + tagCount + ' tag sets, ' + comboCount + ' combos');
   }catch(e){
     console.warn('bulk sync failed', e);
     try{ sfJournal('bulkdb: sync FAILED ' + (e && e.message || e)); }catch(err){}
@@ -16273,7 +16427,20 @@ function bulkIndexReady(){
         await _bulkYield();
       }
     }
-    _bulkIdx = { built: meta.built, byName, rulByOid, cards: cardsArr, tagByOid };
+    let combos = null, comboByName = null;
+    if(meta.comboChunks > 0){
+      combos = []; comboByName = new Map();
+      for(let i = 0; i < meta.comboChunks; i++){
+        const arr = await bulkKvGet('cmb:' + i);
+        if(Array.isArray(arr)) arr.forEach(x=>{
+          if(!x || !Array.isArray(x.nm) || x.nm.length < 2) return;
+          const idx = combos.push(x) - 1;
+          x.nm.forEach(n=>{ const k = String(n).toLowerCase(); let lst = comboByName.get(k); if(!lst){ lst = []; comboByName.set(k, lst); } lst.push(idx); });
+        });
+        await _bulkYield();
+      }
+    }
+    _bulkIdx = { built: meta.built, byName, rulByOid, cards: cardsArr, tagByOid, combos, comboByName };
     return _bulkIdx;
   })();
   return _bulkLoadP;
