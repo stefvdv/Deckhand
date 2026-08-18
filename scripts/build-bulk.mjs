@@ -365,5 +365,74 @@ async function main(){
       tagCards = tmap.size;
       console.log(`tags-slim.jsonl.gz: ${tagCards} tagged cards across ${APP_TAGS.size} tags`);
     }
+}catch(e){
+    console.log('Tag membership step failed — continuing without it:', e && e.message || e);
+  }
+
+  // Commander Spellbook combos — optional artifact; problems here never
+  // sink the job. Source URLs are tried in order and self-document.
+  let comboCount = 0;
+  try{
+    // The bulk file is larger than Node's maximum string — STREAM it,
+    // one variant at a time, constant memory.
+    const CANDIDATE_URLS = [
+      'https://json.commanderspellbook.com/variants.json',
+      'https://spellbook-prod.s3.us-east-2.amazonaws.com/variants.json',
+    ];
+    let out = null, used = '', seen = 0; const samples = [];
+    for(const u of CANDIDATE_URLS){
+      try{
+        const r = await fetch(u, UA);
+        if(!r.ok || !r.body){ console.log('combos: ' + u + ' -> HTTP ' + r.status); continue; }
+        out = []; seen = 0; used = u;
+        for await (const v of jsonArrayItems(Readable.fromWeb(r.body))){
+          seen++;
+          if(samples.length < 2) samples.push(JSON.stringify(v).slice(0, 300));
+          const rec = comboRecordOf(v);
+          if(rec) out.push(rec);
+          if(seen % 50000 === 0) console.log(`  …${seen} variants read, ${out.length} kept`);
+        }
+        break;
+      }catch(e){ console.log('combos: ' + u + ' -> ' + (e && e.message || e)); out = null; }
+    }
+    if(!out){
+      console.log('Combos: no source answered — skipping this week.');
+    }else{
+      console.log('Combos source:', used, '(' + seen + ' variants streamed)');
+      if(out.length < 4000){
+        console.log(`Combos parsed thin (${out.length} of ${seen}) — refusing to publish. Sample variants:`);
+        samples.forEach(x=>console.log('  ', x));
+      }else{
+        let prev = 0;
+        try{ prev = gunzipSync(await readFile(`${OUT_DIR}/combos-slim.jsonl.gz`)).toString('utf-8').split('\n').filter(Boolean).length; }catch(e){}
+        if(out.length < prev * 0.8){
+          console.log(`Combos thinner than the previous run (${out.length} vs ${prev}) — keeping the previous file.`);
+          comboCount = prev;
+        }else{
+          await writeJsonlGz(`${OUT_DIR}/combos-slim.jsonl.gz`, (function*(){ for(const c of out) yield JSON.stringify(c) + '\n'; })());
+          comboCount = out.length;
+          console.log(`combos-slim.jsonl.gz: ${comboCount} combos (2–4 cards, commander-legal)`);
+        }
+      }
+    }
   }catch(e){
-    console.log('Tag members
+    console.log('Combos step failed — continuing without it:', e && e.message || e);
+  }
+
+  // Manifest — the app polls this tiny file to know when to refresh
+  const meta = {
+    format: 1,
+    built: new Date().toISOString(),
+    oracle:  { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at },
+    rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at },
+    tags:    { cards: tagCards, index: tagIndexCount },
+    combos:  { count: comboCount }
+  };
+  await writeFile(`${OUT_DIR}/bulk-meta.json`, JSON.stringify(meta, null, 2) + '\n');
+  console.log('bulk-meta.json written. Done.');
+}
+
+const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
+if(runDirectly && !process.env.BULK_NO_MAIN){
+  main().catch(e=>{ console.error(e); process.exit(1); });
+}
