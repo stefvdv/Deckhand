@@ -34,6 +34,7 @@ import { writeFile, readFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import readline from 'node:readline';
+import { StringDecoder } from 'node:string_decoder';
 
 const UA = { headers: { 'User-Agent': 'AdmiralsAndCommanders-bulk/1.0 (admirals-and-commanders.netlify.app)', 'Accept': '*/*' } };
 const OUT_DIR = process.env.OUT_DIR || '.';
@@ -220,6 +221,37 @@ export async function tagMembers(tag, fetchImpl, delayMs, budget){
   }
   return oids;
 }
+/* ---- stream a GIANT JSON array without ever holding it whole ----
+   Commander Spellbook's variants.json is bigger than Node's maximum
+   string (the 0x1ffffe8 crash) — so this walks the byte stream and
+   yields one top-level array element at a time: quote/escape-aware,
+   multibyte-safe, constant memory. */
+export async function* jsonArrayItems(stream){
+  const dec = new StringDecoder('utf8');
+  let buf = '', pos = 0, depth = 0, inStr = false, esc = false, objStart = -1;
+  for await (const chunk of stream){
+    buf += dec.write(chunk);
+    while(pos < buf.length){
+      const ch = buf[pos];
+      if(inStr){
+        if(esc) esc = false;
+        else if(ch === '\\') esc = true;
+        else if(ch === '"') inStr = false;
+      }else if(ch === '"'){ inStr = true; }
+      else if(ch === '{'){ if(depth === 0) objStart = pos; depth++; }
+      else if(ch === '}'){
+        depth--;
+        if(depth === 0 && objStart >= 0){
+          yield JSON.parse(buf.slice(objStart, pos + 1));
+          buf = buf.slice(pos + 1); pos = -1; objStart = -1;
+        }
+      }
+      pos++;
+    }
+    if(objStart < 0 && buf.length > 1024){ buf = ''; pos = 0; }   // between objects: drop separators
+    else if(objStart > 0){ buf = buf.slice(objStart); pos -= objStart; objStart = 0; }
+  }
+}
 /* One Commander Spellbook variant, trimmed — or null when unusable:
    template combos (arbitrary extra cards), wrong sizes, or non-commander. */
 export function comboRecordOf(v){
@@ -334,71 +366,4 @@ async function main(){
       console.log(`tags-slim.jsonl.gz: ${tagCards} tagged cards across ${APP_TAGS.size} tags`);
     }
   }catch(e){
-    console.log('Tag membership step failed — continuing without it:', e && e.message || e);
-  }
-
-  // Commander Spellbook combos — optional artifact; problems here never
-  // sink the job. Source URLs are tried in order and self-document.
-  let comboCount = 0;
-  try{
-    const CANDIDATE_URLS = [
-      'https://json.commanderspellbook.com/variants.json',
-      'https://spellbook-prod.s3.us-east-2.amazonaws.com/variants.json',
-      'https://backend.commanderspellbook.com/variants/?format=json&limit=10000',
-    ];
-    let data = null, used = '';
-    for(const u of CANDIDATE_URLS){
-      try{
-        const r = await fetch(u, UA);
-        if(!r.ok){ console.log('combos: ' + u + ' -> HTTP ' + r.status); continue; }
-        data = await r.json(); used = u; break;
-      }catch(e){ console.log('combos: ' + u + ' -> ' + (e && e.message || e)); }
-    }
-    if(!data){
-      console.log('Combos: no source answered — skipping this week.');
-    }else{
-      const arr = Array.isArray(data) ? data : (data.variants || data.results || []);
-      console.log('Combos source:', used, '(' + arr.length + ' variants)');
-      const out = []; const samples = [];
-      for(const v of arr){
-        if(samples.length < 2) samples.push(JSON.stringify(v).slice(0, 300));
-        const rec = comboRecordOf(v);
-        if(rec) out.push(rec);
-      }
-      if(out.length < 4000){
-        console.log(`Combos parsed thin (${out.length} of ${arr.length}) — refusing to publish. Sample variants:`);
-        samples.forEach(x=>console.log('  ', x));
-      }else{
-        let prev = 0;
-        try{ prev = gunzipSync(await readFile(`${OUT_DIR}/combos-slim.jsonl.gz`)).toString('utf-8').split('\n').filter(Boolean).length; }catch(e){}
-        if(out.length < prev * 0.8){
-          console.log(`Combos thinner than the previous run (${out.length} vs ${prev}) — keeping the previous file.`);
-          comboCount = prev;
-        }else{
-          await writeJsonlGz(`${OUT_DIR}/combos-slim.jsonl.gz`, (function*(){ for(const c of out) yield JSON.stringify(c) + '\n'; })());
-          comboCount = out.length;
-          console.log(`combos-slim.jsonl.gz: ${comboCount} combos (2–4 cards, commander-legal)`);
-        }
-      }
-    }
-  }catch(e){
-    console.log('Combos step failed — continuing without it:', e && e.message || e);
-  }
-
-  // Manifest — the app polls this tiny file to know when to refresh
-  const meta = {
-    format: 1,
-    built: new Date().toISOString(),
-    oracle:  { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at },
-    rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at },
-    tags:    { cards: tagCards, index: tagIndexCount },
-    combos:  { count: comboCount }
-  };
-  await writeFile(`${OUT_DIR}/bulk-meta.json`, JSON.stringify(meta, null, 2) + '\n');
-  console.log('bulk-meta.json written. Done.');
-}
-
-const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
-if(runDirectly && !process.env.BULK_NO_MAIN){
-  main().catch(e=>{ console.error(e); process.exit(1); });
-}
+    console.log('Tag members
