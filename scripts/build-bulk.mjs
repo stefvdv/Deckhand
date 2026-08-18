@@ -4,22 +4,15 @@
    ============================================================
    Runs on GitHub Actions (see .github/workflows/bulk-data.yml).
    Downloads the official Oracle Cards and Rulings bulk files,
-   keeps only the fields the app uses, and writes into the repo
-   root (deployed by Netlify next to index.html):
+   keeps only the fields the app uses, and writes three files
+   into the repo root (deployed by Netlify next to index.html):
 
      oracle-slim.jsonl.gz    one trimmed card per line
      rulings-slim.jsonl.gz   one {o, r:[{d,c}]} line per oracle_id
      bulk-meta.json          tiny manifest the app can poll cheaply
 
-   Plus two optional tag artifacts (problems here never sink the job):
-     tags-index.json         every oracle tag Scryfall knows, browsable
-     tags-slim.jsonl.gz      one {o, g:[tags]} line per tagged card,
-                             gathered by ONE paged search per app tag
-                             from this machine — phones never probe.
-
    The phone never touches the raw 148 MB — all trimming happens
-   on GitHub's machines, and Scryfall sees one bulk download plus
-   the weekly tag sweep, politely paced and throttle-patient.
+   on GitHub's machines, and Scryfall sees ONE download a week.
 
    Field legend for oracle-slim lines (absent = empty/false):
      n  name                id  scryfall id (drives image URLs)
@@ -97,7 +90,8 @@ export function requireDownloadUrl(item, label){
    Handles every shape Scryfall has served: a pretty-printed JSON
    array (one object per line with trailing commas), plain JSONL,
    raw bytes, Content-Encoding gzip (auto-undone by fetch), or a
-   .gz payload (detected by magic bytes and gunzipped here). */
+   .gz payload (detected by magic bytes and gunzipped here). A
+   compact single-line array is split on "},{" as a last resort. */
 export async function* bulkLines(url, fetchImpl){
   const f = fetchImpl || fetch;
   const r = await f(url, UA);
@@ -181,12 +175,13 @@ export function trimCard(c){
 }
 
 /* Only the tags the app actually consults — everything else is trimmed. */
-export const APP_TAGS = new Set(['removal','creature-removal','artifact-removal','enchantment-removal','planeswalker-removal','spot-removal','boardwipe','edict','bounce','tuck','bite','burn','counterspell','threaten','sacrifice-outlet','stifle','ramp','mana-rock','mana-dork','ritual','land-ramp','mana-doubler','mana-sink','untapper','lands-matter','cheat-into-play','draw','cantrip','card-advantage','wheel','impulse','rummage','tutor','peek','draw-engine','mill','self-mill','discard','reanimate','recursion','regrowth','graveyard-hate','token-doubler','anthem','overrun','counters-matter','counter-doubler','protection','fog','prevent-damage','lifegain','tax','hatebear','silence','rule-of-law','pillowfort','damage-doubler','extra-combat','extra-attack','evasion','unblockable','lure','attack-trigger','combat-trick','blink','flicker','clone','copy-spell','copy-permanent','copy-trigger','death-trigger','cast-trigger','group-hug','group-slug','voting','donate','extra-turn','chaos','removal-exile','removal-fight','removal-sacrifice','removal-toughness','removal-land','removal-permanent','mass-land-denial','mass-shrink','theft','theft-permanent','repeatable-token-generator','repeatable-creature-tokens','repeatable-artifact-tokens','repeatable-treasures','repeatable-clues','repeatable-food','repeatable-blood','repeatable-gold','affinity-for-tokens','creates-token-of-a-card','counter-fuel','counter-fuel-pt','counter-fuel-any','counter-fuel-energy','counter-fuel-loyalty','tutor-creature','tutor-artifact','tutor-land','tutor-enchantment','tutor-instant','tutor-sorcery','tutor-planeswalker','tutor-battle','tutor-legendary','tutor-color','gives-flying','gives-haste','gives-trample','gives-deathtouch','gives-lifelink','gives-menace','gives-hexproof','gives-indestructible','gives-first-strike','gives-double-strike','gives-vigilance','gives-flash','gives-evasion','gives-unblockable','gives-protection','gives-reach','repeatable-draw','repeatable-card-advantage','repeatable-impulse','repeatable-loot','repeatable-rummage','draw-matters','draw-to-seven','discard-outlet','discard-symmetrical','discard-matters','brainstorm','mana-fix','mana-filter','mana-increaser','mana-producer','mana-storage','utility-land','cost-reducer','cost-reducer-instant-sorcery','cost-reducer-creature','cost-reducer-artifact','free-cast-another','extra-land','extra-untap','extra-combat-phase','extra-draw-step','mana-value-matters','mass-reanimation','reanimate-creature','reanimate-from-any','leaving-graveyard-matters','castable-from-graveyard','sacrifice-matters','opponent-sacrifices','opponent-sacrifice-matters','mutual-sacrifice','free-sacrifice-outlet','repeatable-sacrifice-outlet','opponent-loses-life','life-loss-matters','lifegain-matters','opponent-lifegain','cards-in-exile-matter','castable-from-exile','storm-like','storm-count-matters','magecraft','landfall','land-count-matters','hand-size-matters','monarch-matters','sacrifice-outlet-creature','sacrifice-outlet-artifact','alternate-win-condition','lose-trigger','prevents-win-loss']);
+export const APP_TAGS = new Set(['removal','creature-removal','artifact-removal','enchantment-removal','planeswalker-removal','spot-removal','boardwipe','edict','bounce','tuck','bite','burn','counterspell','threaten','sacrifice-outlet','stifle','ramp','mana-rock','mana-dork','ritual','land-ramp','mana-doubler','mana-sink','untapper','lands-matter','cheat-into-play','draw','cantrip','card-advantage','wheel','impulse','rummage','tutor','peek','draw-engine','mill','self-mill','discard','reanimate','recursion','regrowth','graveyard-hate','token-doubler','anthem','overrun','counters-matter','counter-doubler','protection','fog','prevent-damage','lifegain','tax','hatebear','silence','rule-of-law','pillowfort','damage-doubler','extra-combat','extra-attack','evasion','unblockable','lure','attack-trigger','combat-trick','blink','flicker','clone','copy-spell','copy-permanent','copy-trigger','death-trigger','cast-trigger','group-hug','group-slug','voting','donate','extra-turn','removal-exile','removal-fight','removal-sacrifice','removal-toughness','removal-land','removal-permanent','mass-land-denial','mass-shrink','theft','theft-permanent','repeatable-token-generator','repeatable-creature-tokens','repeatable-artifact-tokens','repeatable-treasures','repeatable-clues','repeatable-food','repeatable-blood','repeatable-gold','affinity-for-tokens','creates-token-of-a-card','counter-fuel','counter-fuel-pt','counter-fuel-any','counter-fuel-energy','counter-fuel-loyalty','tutor-creature','tutor-artifact','tutor-land','tutor-enchantment','tutor-instant','tutor-sorcery','tutor-planeswalker','tutor-battle','tutor-legendary','tutor-color','gives-flying','gives-haste','gives-trample','gives-deathtouch','gives-lifelink','gives-menace','gives-hexproof','gives-indestructible','gives-first-strike','gives-double-strike','gives-vigilance','gives-flash','gives-evasion','gives-unblockable','gives-protection','gives-reach','repeatable-draw','repeatable-card-advantage','repeatable-impulse','repeatable-loot','repeatable-rummage','draw-matters','draw-to-seven','discard-outlet','discard-symmetrical','discard-matters','brainstorm','mana-fix','mana-filter','mana-increaser','mana-producer','mana-storage','utility-land','cost-reducer','cost-reducer-instant-sorcery','cost-reducer-creature','cost-reducer-artifact','free-cast-another','extra-land','extra-untap','extra-combat-phase','extra-draw-step','mana-value-matters','mass-reanimation','reanimate-creature','reanimate-from-any','leaving-graveyard-matters','castable-from-graveyard','sacrifice-matters','opponent-sacrifices','opponent-sacrifice-matters','mutual-sacrifice','free-sacrifice-outlet','repeatable-sacrifice-outlet','opponent-loses-life','life-loss-matters','lifegain-matters','opponent-lifegain','cards-in-exile-matter','castable-from-exile','storm-like','storm-count-matters','magecraft','landfall','land-count-matters','hand-size-matters','monarch-matters','sacrifice-outlet-creature','sacrifice-outlet-artifact','alternate-win-condition','lose-trigger','prevents-win-loss']);
 /* The Oracle Tags bulk file turned out to be a DICTIONARY — 4,500+ rows
    defining which tags exist (label, description, hierarchy), with no card
    memberships at all. So it feeds the browsable tags-index.json, while the
    memberships are gathered the other way round: one paged Scryfall search
-   per APP_TAG, run weekly from this machine. */
+   per APP_TAG, run weekly from this machine — ~150 polite requests total
+   instead of 17 per card per phone. */
 export function tagDictEntry(rec){
   if(!rec || typeof rec !== 'object') return null;
   if(rec.type && rec.type !== 'oracle') return null;   // art tags stay out
@@ -224,6 +219,19 @@ export async function tagMembers(tag, fetchImpl, delayMs, budget){
     if(url) await wait(delayMs == null ? 500 : delayMs);
   }
   return oids;
+}
+/* One Commander Spellbook variant, trimmed — or null when unusable:
+   template combos (arbitrary extra cards), wrong sizes, or non-commander. */
+export function comboRecordOf(v){
+  if(!v || typeof v !== 'object') return null;
+  if(Array.isArray(v.requires) && v.requires.length) return null;
+  if(v.status && String(v.status).toUpperCase() !== 'OK') return null;
+  const nm = (v.uses || []).map(u=>u && u.card && u.card.name).filter(Boolean);
+  if(nm.length < 2 || nm.length > 4) return null;
+  const leg = v.legalities || v.legal || null;
+  if(leg && leg.commander === false) return null;
+  const r = (v.produces || []).map(p=>(p && ((p.feature && p.feature.name) || p.name)) || '').filter(Boolean).join(' · ');
+  return { nm, r, i: v.identity || '' };
 }
 export function groupRuling(map, r){
   if(!r || !r.oracle_id || !r.comment) return;
@@ -329,19 +337,32 @@ async function main(){
     console.log('Tag membership step failed — continuing without it:', e && e.message || e);
   }
 
-  // Manifest — the app polls this tiny file to know when to refresh
-  const meta = {
-    format: 1,
-    built: new Date().toISOString(),
-    oracle:  { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at },
-    rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at },
-    tags:    { cards: tagCards, index: tagIndexCount }
-  };
-  await writeFile(`${OUT_DIR}/bulk-meta.json`, JSON.stringify(meta, null, 2) + '\n');
-  console.log('bulk-meta.json written. Done.');
-}
-
-const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
-if(runDirectly && !process.env.BULK_NO_MAIN){
-  main().catch(e=>{ console.error(e); console.error(e && e.stack || ''); process.exit(1); });
-                                 }
+  // Commander Spellbook combos — optional artifact; problems here never
+  // sink the job. Source URLs are tried in order and self-document.
+  let comboCount = 0;
+  try{
+    const CANDIDATE_URLS = [
+      'https://json.commanderspellbook.com/variants.json',
+      'https://spellbook-prod.s3.us-east-2.amazonaws.com/variants.json',
+      'https://backend.commanderspellbook.com/variants/?format=json&limit=10000',
+    ];
+    let data = null, used = '';
+    for(const u of CANDIDATE_URLS){
+      try{
+        const r = await fetch(u, UA);
+        if(!r.ok){ console.log('combos: ' + u + ' -> HTTP ' + r.status); continue; }
+        data = await r.json(); used = u; break;
+      }catch(e){ console.log('combos: ' + u + ' -> ' + (e && e.message || e)); }
+    }
+    if(!data){
+      console.log('Combos: no source answered — skipping this week.');
+    }else{
+      const arr = Array.isArray(data) ? data : (data.variants || data.results || []);
+      console.log('Combos source:', used, '(' + arr.length + ' variants)');
+      const out = []; const samples = [];
+      for(const v of arr){
+        if(samples.length < 2) samples.push(JSON.stringify(v).slice(0, 300));
+        const rec = comboRecordOf(v);
+        if(rec) out.push(rec);
+      }
+      if(out.length < 4000
