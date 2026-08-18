@@ -228,7 +228,9 @@ export async function tagMembers(tag, fetchImpl, delayMs, budget){
    multibyte-safe, constant memory. */
 export async function* jsonArrayItems(stream){
   const dec = new StringDecoder('utf8');
-  let buf = '', pos = 0, depth = 0, inStr = false, esc = false, objStart = -1;
+  let buf = '', pos = 0, inStr = false, esc = false;
+  let inArr = false, arrDepth = 0;     // the FIRST array is the one we want —
+  let objDepth = 0, objStart = -1;     // variants.json wraps it in an object
   for await (const chunk of stream){
     buf += dec.write(chunk);
     while(pos < buf.length){
@@ -238,17 +240,27 @@ export async function* jsonArrayItems(stream){
         else if(ch === '\\') esc = true;
         else if(ch === '"') inStr = false;
       }else if(ch === '"'){ inStr = true; }
-      else if(ch === '{'){ if(depth === 0) objStart = pos; depth++; }
-      else if(ch === '}'){
-        depth--;
-        if(depth === 0 && objStart >= 0){
-          yield JSON.parse(buf.slice(objStart, pos + 1));
-          buf = buf.slice(pos + 1); pos = -1; objStart = -1;
+      else if(!inArr){
+        if(ch === '[') inArr = true;               // found the array — everything before was wrapper
+      }else if(objStart < 0){
+        if(ch === '{'){ objStart = pos; objDepth = 1; }
+        else if(ch === '[') arrDepth++;
+        else if(ch === ']'){ if(arrDepth > 0) arrDepth--; else inArr = false; }
+      }else{
+        if(ch === '{') objDepth++;
+        else if(ch === '}'){
+          objDepth--;
+          if(objDepth === 0){
+            yield JSON.parse(buf.slice(objStart, pos + 1));
+            buf = buf.slice(pos + 1); pos = -1; objStart = -1;
+          }
         }
       }
       pos++;
     }
-    if(objStart < 0 && buf.length > 1024){ buf = ''; pos = 0; }   // between objects: drop separators
+    // Constant memory: the state machine survives buffer wipes, so anything
+    // between objects (wrapper keys, separators) can be dropped freely.
+    if(objStart < 0 && buf.length > 4096){ buf = ''; pos = 0; }
     else if(objStart > 0){ buf = buf.slice(objStart); pos -= objStart; objStart = 0; }
   }
 }
