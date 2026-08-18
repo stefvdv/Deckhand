@@ -33,7 +33,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Build the trimmed bulk files
         run: node scripts/build-bulk.mjs
@@ -45,6 +45,7 @@ jobs:
           git add oracle-slim.jsonl.gz rulings-slim.jsonl.gz bulk-meta.json
           git add tags-slim.jsonl.gz 2>/dev/null || echo "No tags file this week."
           git add tags-index.json 2>/dev/null || echo "No tag index this week."
+          git add combos-slim.jsonl.gz 2>/dev/null || echo "No combos file this week."
           if git diff --cached --quiet; then
             echo "No changes this week."
             exit 0
