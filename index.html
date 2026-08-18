@@ -354,6 +354,7 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
    display:none — without this guard the drop-up never actually hides and
    squats on top of the tag chips. */
 .tag-drop[hidden]{display:none;}
+.card-link{background:none;border:none;padding:0;margin:0;color:#7CB8DB;text-decoration:underline;text-underline-offset:2px;font:inherit;cursor:pointer;}
 .cs-combos-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 10px);right:12px;z-index:70;width:auto;padding:7px 11px;}
 .overlay[id^="cardSheetOverlay_bg"] .cs-combos-btn{display:none!important;}
 .tag-drop-h{padding:7px 10px 3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-top:1px solid var(--pop-line);}
@@ -2550,6 +2551,79 @@ function pipsHtml(colors, size){
 }
 function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function inlineMd(s){ return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>'); }
+/* Card names inside primer prose become tappable links — matched against
+   the local 33k-card index, longest name first, links styled blue. Single-
+   word names need 6+ letters so prose words like “opt” stay prose. */
+async function linkifyCardNames(box){
+  try{
+    if(!box) return;
+    const ix = await bulkIndexReady();
+    if(!ix || !ix.byName || !box.isConnected) return;
+    const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null);
+    const nodes = [];
+    while(walker.nextNode()){ const n = walker.currentNode; if(n.nodeValue && n.nodeValue.trim().length > 2) nodes.push(n); }
+    nodes.forEach(node=>{
+      const raw = node.nodeValue;
+      const toks = [];
+      const re = /[^\s]+/g; let m2;
+      while((m2 = re.exec(raw))) toks.push({ i: m2.index, e: m2.index + m2[0].length });
+      const hits = [];
+      let ti = 0;
+      while(ti < toks.length){
+        let matched = null;
+        for(let L = Math.min(5, toks.length - ti); L >= 1; L--){
+          let cand = raw.slice(toks[ti].i, toks[ti + L - 1].e);
+          cand = cand.replace(/^["'\u2018\u201c(\[]+/, '').replace(/["'\u2019\u201d)\],.:;!?]+$/, '');
+          const key = cand.toLowerCase().replace(/\u2019/g, "'");
+          if(key.length < (L === 1 ? 6 : 4)) continue;
+          const hit = ix.byName.get(key);
+          if(hit){
+            const start = raw.indexOf(cand, toks[ti].i);
+            if(start >= 0){ matched = { start, end: start + cand.length, name: hit.n || cand }; }
+            break;
+          }
+        }
+        if(matched){ hits.push(matched); while(ti < toks.length && toks[ti].i < matched.end) ti++; }
+        else ti++;
+      }
+      if(!hits.length) return;
+      const frag = document.createDocumentFragment();
+      let pos = 0;
+      hits.forEach(h=>{
+        if(h.start > pos) frag.appendChild(document.createTextNode(raw.slice(pos, h.start)));
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'card-link'; b.textContent = raw.slice(h.start, h.end);
+        b.dataset.cn = h.name;
+        frag.appendChild(b);
+        pos = h.end;
+      });
+      if(pos < raw.length) frag.appendChild(document.createTextNode(raw.slice(pos)));
+      node.parentNode.replaceChild(frag, node);
+    });
+    box.querySelectorAll('.card-link').forEach(b=>b.addEventListener('click', ()=>openCardPeek(b.dataset.cn)));
+  }catch(e){}
+}
+/* A featherweight card peek — just the image, ✕ or back to dismiss. */
+async function openCardPeek(name){
+  try{
+    const ix = await bulkIndexReady();
+    const entry = ix && ix.byName ? ix.byName.get(String(name).toLowerCase()) : null;
+    if(!entry) return;
+    const cardish = bulkToCardish(entry);
+    pushOverlay('cardPeek', ()=>{ document.getElementById('cardPeekOverlay')?.remove(); });
+    let el = document.getElementById('cardPeekOverlay');
+    if(!el){ el = document.createElement('div'); el.className = 'overlay'; el.id = 'cardPeekOverlay'; }
+    document.body.appendChild(el);
+    el.innerHTML = `<div class="overlay-inner" style="display:flex;flex-direction:column;">
+      <div class="topbar"><button class="icon-btn" id="peekClose">✕</button><div class="tb-titles"><div class="t1 name2">${escapeHtml(cardish.name || name)}</div></div></div>
+      <main style="display:flex;align-items:center;justify-content:center;padding:14px;">
+        <img class="${wbClass(cardish)}" src="${cardImageLarge(cardish)}" alt="${escapeHtml(name)}" style="max-width:min(92vw,420px);border-radius:16px;">
+      </main>
+    </div>`;
+    el.querySelector('#peekClose').addEventListener('click', closeTopOverlay);
+    el.addEventListener('click', (e)=>{ if(e.target === el || e.target.tagName === 'MAIN') closeTopOverlay(); });
+  }catch(e){}
+}
 function renderPrimerHtml(md){
   if(!md || !md.trim()) return '<p class="empty-note" style="padding:14px 0;">No primer written yet. Add strategy notes, key combos, or a mulligan guide for this deck.</p>';
   const lines = escapeHtml(md).split(/\r?\n/);
@@ -3542,15 +3616,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.318';
+const APP_VERSION = '2.51.321';
 const CHANGELOG_NOTES = {
   en: [
-    'Word rarity now counts quadratically in the similarity points \u2014 sharing a rare word like \u201ccopy\u201d is worth six or seven points while everyday words like \u201ctarget\u201d earn one, sharpening both Similar and Budget toward true function kinship.',
-    'Card pages: the \u201ccheapest printing \u00b7 Cardmarket trend\u201d note moved into a toast behind the price (tap the euro amount to see it) and the EDHREC salt score sits in its old seat. And when a card belongs to known 2\u20134-card combos, a \u2694 button with the count appears fixed top-right beside its name, opening the full combos page.'
+    'Combo pages sort by playability now: 2-card combos first, and within each size the most PLAYED combos lead \u2014 measured by the EDHREC play-rank of each combo\u2019s least-played piece, straight from the local database. Famous staple pairs top the list; jank built on obscurities sinks to the bottom.'
   ],
   nl: [
-    'Woordzeldzaamheid telt nu kwadratisch mee in de gelijkenispunten \u2014 een zeldzaam woord als \u201ccopy\u201d delen is zes of zeven punten waard terwijl alledaagse woorden als \u201ctarget\u201d er \u00e9\u00e9n opleveren, wat Vergelijkbaar \u00e9n Budget scherper op echte functieverwantschap richt.',
-    'Kaartpagina\u2019s: de notitie \u201cgoedkoopste versie \u00b7 Cardmarket-trend\u201d verhuisde naar een toast achter de prijs (tik op het eurobedrag) en de EDHREC-zoutscore zit op zijn oude plek. En wanneer een kaart in bekende 2\u20134-kaarts combo\u2019s zit, verschijnt rechtsboven naast de naam een \u2694-knop met het aantal, die de volledige combopagina opent.'
+    'Combopagina\u2019s sorteren nu op speelbaarheid: 2-kaarts combo\u2019s eerst, en binnen elke groep leiden de meest GESPEELDE combo\u2019s \u2014 gemeten aan de EDHREC-speelrang van het minst gespeelde onderdeel van elke combo, rechtstreeks uit de lokale database. Beroemde staple-paren bovenaan; jank op obscuriteiten zakt naar de bodem.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8298,7 +8370,7 @@ function statsTabHtml(d){
       <div id="msDetail"></div>
     </div>`;
     })()}
-    <div class="panel-card" id="deckCombosPanel"><div class="panel-h">Combos</div><div id="deckCombosBody" class="hint" style="margin:0;">Scanning…</div></div>
+    <div class="panel-card" id="deckCombosPanel"><div class="panel-h">Combos</div><div id="deckCombosBody" class="hint" style="margin:0;min-height:40px;display:flex;flex-direction:column;justify-content:center;">Scanning…</div></div>
     <div class="panel-card"><div class="panel-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;"><span>Most Expensive Cards</span><span id="deckTotalBadge" style="text-transform:none;color:var(--brass);font-weight:700;white-space:nowrap;"></span></div>
       <p class="hint" id="deckPriceNote" style="margin:4px 0 8px;">Cardmarket trend price, cheapest printing of each card.</p>
       <div class="action-row" style="margin:8px 0 4px;"><button class="ghost-btn" id="budgetBtn"><span class="ib">${ICONS.coins}</span>Budget alternatives</button></div><div id="topPriceBox"><div class="empty-note" style="padding:8px 0;">Pricing…</div></div></div>
@@ -8534,7 +8606,7 @@ function primerTabHtml(d){
     ${rows?`<div class="glog-list">${rows}</div>`:''}
   </div>
   <div class="panel-card"><div class="panel-h">Primer — strategy notes</div><textarea id="primerText" class="bulk-textarea" style="min-height:200px;">${escapeHtml(d.primer||'')}</textarea><p class="hint" style="margin-top:-4px;"># headers, **bold**, *italics*, - lists</p></div>
-    <div class="panel-card"><div class="panel-h">Preview</div><div class="rules-text">${renderPrimerHtml(d.primer)}</div></div>`;
+    <div class="panel-card"><div class="panel-h">Preview</div><div class="rules-text" id="primerPreview">${renderPrimerHtml(d.primer)}</div></div>`;
 }
 function openLogGameOverlay(d){
   document.getElementById('logGameOverlay')?.remove();
@@ -8674,10 +8746,15 @@ function wireBuilderBody(d){
     wireStatsTab(d);
     wireDeckCombosPanel(d);
   } else if(state.builderTab==='primer'){
+    linkifyCardNames(document.getElementById('primerPreview'));
     const ta = document.getElementById('primerText');
+    let _lkT = null;
     ta.addEventListener('input', ()=>{
       d.primer = ta.value; scheduleSave(d);
-      document.querySelector('#builderBody .panel-card:last-child .rules-text').innerHTML = renderPrimerHtml(d.primer);
+      const pv = document.querySelector('#builderBody .panel-card:last-child .rules-text');
+      pv.innerHTML = renderPrimerHtml(d.primer);
+      clearTimeout(_lkT);
+      _lkT = setTimeout(()=>linkifyCardNames(pv), 600);   // link after the typing pause
     });
     document.getElementById('logGameBtn')?.addEventListener('click', ()=>openLogGameOverlay(d));
     document.querySelectorAll('[data-dellog]').forEach(b=>b.addEventListener('click', ()=>{
@@ -11354,6 +11431,16 @@ const MAGIC_WORDS = (()=>{
   return out;
 })();
 const MW_KEYS = new Set(MAGIC_WORDS.map(w=>w.k));
+/* Multi-word MAGIC PHRASES — whole functional sentences that single words
+   can't capture. They ride the same corpus rarity weighting as words (the
+   frequency pass calls magicWordSet, so their counts fall out for free),
+   and with the quadratic curve a rare phrase like “choose new targets”
+   is worth the full seven points. One engine — Similar AND Budget. */
+const MAGIC_PHRASES = ['choose new targets', 'without paying its mana cost', "can't be countered",
+  'extra turn', 'extra combat phase', 'untap all', 'damage to each opponent', 'whenever you cast',
+  'first noncreature spell', 'from your graveyard', 'loses the game', 'wins the game',
+  "can't untap", "doesn't untap", 'skip your', 'each opponent sacrifices',
+  'return it to the battlefield', 'damage that would be dealt'];
 function magicWordSet(card){
   if(card._mws) return card._mws;
   const faces = (card.card_faces && card.card_faces.length) ? card.card_faces
@@ -11361,6 +11448,7 @@ function magicWordSet(card){
   const t = faces.map(fc=>(fc.oracle_text || fc.ot || '')).join(' ').toLowerCase().replace(/\u2019/g, "'");
   const out = new Set();
   for(const w of MAGIC_WORDS){ if(w.re.test(t)) out.add(w.k); }
+  for(const ph of MAGIC_PHRASES){ if(t.includes(ph)) out.add('p:' + ph); }
   (card.keywords || card.kw || []).forEach(k=>{
     const lk = String(k).toLowerCase();
     if(MW_KEYS.has(lk)) out.add(lk);
@@ -11493,7 +11581,33 @@ function combosInNames(ix, nameSet){
   if(!ix || !ix.combos) return null;
   return ix.combos.filter(c=>c.nm.every(n=>nameSet.has(String(n).toLowerCase())));
 }
+/* Combo ordering, Stef's spec: number of cards first (2-card combos are
+   the famous, playable ones), then EDHREC playability — a combo is as
+   playable as its LEAST-played piece, so the worst EDHREC rank among its
+   cards decides, straight from the local database. Spellbook popularity
+   (p, when the file someday carries it) and the alphabet break ties. */
+function comboPlayRank(c){
+  if(c._rk !== undefined) return c._rk;
+  const ix = _bulkIdx;
+  let worst = 0;
+  if(ix && ix.byName){
+    for(const n of c.nm){
+      const e = ix.byName.get(String(n).toLowerCase());
+      const rk = (e && e.rk) ? e.rk : 999999;   // unknown or unplayed sinks
+      if(rk > worst) worst = rk;
+    }
+  }else worst = 999999;
+  return (c._rk = worst);
+}
+function sortCombos(list){
+  return list.slice().sort((a, b)=>
+    (a.nm.length - b.nm.length)
+    || (comboPlayRank(a) - comboPlayRank(b))
+    || ((b.p || 0) - (a.p || 0))
+    || String(a.nm[0] || '').localeCompare(String(b.nm[0] || '')));
+}
 function openCombosOverlay(title, combos){
+  combos = sortCombos(combos);
   // The stacked-page dance, same as Similar: an earlier combos page steps
   // aside intact instead of being hijacked mid-research.
   {
