@@ -365,4 +365,40 @@ async function main(){
         const rec = comboRecordOf(v);
         if(rec) out.push(rec);
       }
-      if(out.length < 4000
+      if(out.length < 4000){
+        console.log(`Combos parsed thin (${out.length} of ${arr.length}) — refusing to publish. Sample variants:`);
+        samples.forEach(x=>console.log('  ', x));
+      }else{
+        let prev = 0;
+        try{ prev = gunzipSync(await readFile(`${OUT_DIR}/combos-slim.jsonl.gz`)).toString('utf-8').split('\n').filter(Boolean).length; }catch(e){}
+        if(out.length < prev * 0.8){
+          console.log(`Combos thinner than the previous run (${out.length} vs ${prev}) — keeping the previous file.`);
+          comboCount = prev;
+        }else{
+          await writeJsonlGz(`${OUT_DIR}/combos-slim.jsonl.gz`, (function*(){ for(const c of out) yield JSON.stringify(c) + '\n'; })());
+          comboCount = out.length;
+          console.log(`combos-slim.jsonl.gz: ${comboCount} combos (2–4 cards, commander-legal)`);
+        }
+      }
+    }
+  }catch(e){
+    console.log('Combos step failed — continuing without it:', e && e.message || e);
+  }
+
+  // Manifest — the app polls this tiny file to know when to refresh
+  const meta = {
+    format: 1,
+    built: new Date().toISOString(),
+    oracle:  { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at },
+    rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at },
+    tags:    { cards: tagCards, index: tagIndexCount },
+    combos:  { count: comboCount }
+  };
+  await writeFile(`${OUT_DIR}/bulk-meta.json`, JSON.stringify(meta, null, 2) + '\n');
+  console.log('bulk-meta.json written. Done.');
+}
+
+const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
+if(runDirectly && !process.env.BULK_NO_MAIN){
+  main().catch(e=>{ console.error(e); process.exit(1); });
+}
