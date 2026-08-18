@@ -354,6 +354,8 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
    display:none — without this guard the drop-up never actually hides and
    squats on top of the tag chips. */
 .tag-drop[hidden]{display:none;}
+.cs-combos-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 10px);right:12px;z-index:70;width:auto;padding:7px 11px;}
+.overlay[id^="cardSheetOverlay_bg"] .cs-combos-btn{display:none!important;}
 .tag-drop-h{padding:7px 10px 3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-top:1px solid var(--pop-line);}
 /* On deckless card pages the picker is the app's one allowed drop-DOWN:
    the editor sits under the buttons and the list opens below the input. */
@@ -3540,15 +3542,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.316';
+const APP_VERSION = '2.51.318';
 const CHANGELOG_NOTES = {
   en: [
-    'Combos arrive: deck Stats gains a Combos panel (2/3/4-card counts, tap to read each combo and its result, card names tappable), and Similar pages show a \u2694 button top-right when the card belongs to any known combos \u2014 both powered by Commander Spellbook via a fourth weekly file, and both wait politely until its first harvest lands.',
-    'Every card page shows the EDHREC community salt score (\U0001F9C2) next to its set line, read for free from the already-cached EDHREC page. Also fixed: the deckless tag picker now opens downward right under the buttons instead of leaping to the top, a second tap on the Search compass wipes the search clean, and the Advanced-filters arrow no longer blinks the page (it rebuilt the whole screen; now it toggles in place).'
+    'Word rarity now counts quadratically in the similarity points \u2014 sharing a rare word like \u201ccopy\u201d is worth six or seven points while everyday words like \u201ctarget\u201d earn one, sharpening both Similar and Budget toward true function kinship.',
+    'Card pages: the \u201ccheapest printing \u00b7 Cardmarket trend\u201d note moved into a toast behind the price (tap the euro amount to see it) and the EDHREC salt score sits in its old seat. And when a card belongs to known 2\u20134-card combos, a \u2694 button with the count appears fixed top-right beside its name, opening the full combos page.'
   ],
   nl: [
-    'Combo\u2019s zijn er: deck-Stats krijgt een Combo\u2019s-paneel (aantallen 2/3/4-kaarts, tik om elke combo en zijn resultaat te lezen, kaartnamen aantikbaar), en Vergelijkbaar-pagina\u2019s tonen rechtsboven een \u2694-knop wanneer de kaart in bekende combo\u2019s zit \u2014 beide gevoed door Commander Spellbook via een vierde weekbestand, en beide wachten netjes tot de eerste oogst landt.',
-    'Elke kaartpagina toont de EDHREC-zoutscore (\U0001F9C2) naast de setregel, gratis gelezen uit de al gecachete EDHREC-pagina. Ook opgelost: de tagkiezer op losse kaartpagina\u2019s opent nu omlaag direct onder de knoppen in plaats van naar boven te springen, een tweede tik op het Zoeken-kompas veegt de zoekopdracht schoon, en het pijltje van Geavanceerde filters laat de pagina niet meer knipperen (het herbouwde het hele scherm; nu schakelt het ter plekke).'
+    'Woordzeldzaamheid telt nu kwadratisch mee in de gelijkenispunten \u2014 een zeldzaam woord als \u201ccopy\u201d delen is zes of zeven punten waard terwijl alledaagse woorden als \u201ctarget\u201d er \u00e9\u00e9n opleveren, wat Vergelijkbaar \u00e9n Budget scherper op echte functieverwantschap richt.',
+    'Kaartpagina\u2019s: de notitie \u201cgoedkoopste versie \u00b7 Cardmarket-trend\u201d verhuisde naar een toast achter de prijs (tik op het eurobedrag) en de EDHREC-zoutscore zit op zijn oude plek. En wanneer een kaart in bekende 2\u20134-kaarts combo\u2019s zit, verschijnt rechtsboven naast de naam een \u2694-knop met het aantal, die de volledige combopagina opent.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4044,9 +4046,11 @@ function switchPage(p, topnav){
   // goes straight home, never through whatever came before.
   if(topnav) state.navLadder = ['home'];
   state._focusSearchOnce = (p === 'search' && state.screen !== 'search');
-  // A second tap on the Search compass wipes the slate for a fresh hunt.
+  // A second tap on the Search compass wipes the slate for a fresh hunt —
+  // name, results, AND every advanced filter (same routine as Reset filters).
   if(p === 'search' && state.screen === 'search' && topnav){
     state.searchName = ''; state.searchRan = false; state.searchResults = [];
+    resetSearchFilters();
   }
   if(p === 'spoilers') state.spoilerSetFilter = null;   // always land on the all-sets, newest-first feed
   // A deck pinned via "Search Cards" only lives for that one visit to the
@@ -8970,12 +8974,18 @@ function renderCardSheet(d, card, loc, idx){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
-  (function(){
-    const sp = el.querySelector('[data-salt]');
-    if(!sp) return;
-    edhrecSaltFor(card).then(v=>{
-      if(v != null && v > 0 && sp.isConnected) sp.textContent = ' · 🧂 ' + v.toFixed(2);
-    }).catch(()=>{});
+  (async ()=>{
+    const b = el.querySelector('[data-cmbbtn]');
+    if(!b) return;
+    try{
+      const ix = await bulkIndexReady();
+      const list = combosWithCard(ix, card.name);
+      if(list && list.length && b.isConnected){
+        b.hidden = false;
+        b.textContent = '⚔ ' + list.length;
+        b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
+      }
+    }catch(e){}
   })();
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
@@ -9010,8 +9020,8 @@ function renderCardSheet(d, card, loc, idx){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a><span data-salt></span></div>
-        <div class="card-price" id="csPrice">Checking price…</div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
+        <div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn hidden>⚔</button>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
@@ -9147,7 +9157,14 @@ async function loadCardPrice(card){
   if(!live) return;   // sheet closed while fetching
   live.innerHTML = (v===null)
     ? `<span class="cp-none">No Cardmarket price listed</span>`
-    : `<span class="cp-val">${fmtEur(v)}</span> <span class="cp-sub">cheapest printing · Cardmarket trend</span>`;
+    : `<span class="cp-val" data-priceinfo style="cursor:pointer;">${fmtEur(v)}</span> <span class="cp-sub" data-saltseat></span>`;
+  // The old subtitle lives on as a toast behind the price itself…
+  live.querySelector('[data-priceinfo]')?.addEventListener('click', ()=>toast('Cheapest printing · Cardmarket trend'));
+  // …and its seat belongs to the salt score now.
+  const seat = live.querySelector('[data-saltseat]');
+  if(seat) edhrecSaltFor(card).then(sv=>{
+    if(sv != null && sv > 0 && seat.isConnected) seat.textContent = '🧂 ' + sv.toFixed(2) + ' salt';
+  }).catch(()=>{});
 }
 const _rulingsCache = new Map();   // rulings_uri → rendered HTML, capped small
 function rulingsHtmlFrom(rulings){
@@ -10711,12 +10728,18 @@ function openCardInfo(card, opts){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
-  (function(){
-    const sp = el.querySelector('[data-salt]');
-    if(!sp) return;
-    edhrecSaltFor(card).then(v=>{
-      if(v != null && v > 0 && sp.isConnected) sp.textContent = ' · 🧂 ' + v.toFixed(2);
-    }).catch(()=>{});
+  (async ()=>{
+    const b = el.querySelector('[data-cmbbtn]');
+    if(!b) return;
+    try{
+      const ix = await bulkIndexReady();
+      const list = combosWithCard(ix, card.name);
+      if(list && list.length && b.isConnected){
+        b.hidden = false;
+        b.textContent = '⚔ ' + list.length;
+        b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
+      }
+    }catch(e){}
   })();
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
@@ -10728,8 +10751,8 @@ function openCardInfo(card, opts){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a><span data-salt></span></div>
-        <div class="card-price" id="csPrice">Checking price…</div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
+        <div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn hidden>⚔</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
@@ -11541,7 +11564,9 @@ async function edhrecThemeNames(slug){
 const SIM_POINTS = {
   themePage: 5, themeCap: 3,
   pageSynergy: 12, pageOther: 8,
-  wordRate: 2, wordCap: 20,
+  // Rarity is SQUARED now — Stef's call: sharing 'copy' should dwarf
+  // sharing 'target'. Common words ≈ 1 pt, mid ≈ 2.7, rare 6–7.
+  wordScale: 0.55, wordMin: 1, wordMax: 7, wordCap: 20,
   tagRate: 3, tagCap: 15,
   colorSame: 2, colorOverlap: 1,
   // Budget profile: EDHREC's card page lists cards CO-PLAYED in the same
@@ -11557,7 +11582,7 @@ function similarityScore(src, cand, opts){
   const sw = o.srcWords || magicWordSet(src);
   const cw = magicWordSet(cand);
   let w = 0, shared = 0;
-  sw.forEach(k=>{ if(cw.has(k)){ shared++; w += Math.min(5, Math.max(1, 1.25 * mwWeight(k, o.weights))); } });
+  sw.forEach(k=>{ if(cw.has(k)){ shared++; const mww = mwWeight(k, o.weights); w += Math.min(P.wordMax, Math.max(P.wordMin, P.wordScale * mww * mww)); } });
   w = Math.min(P.wordCap, w);
   const st = o.srcTags || [];
   let tShared = 0;
