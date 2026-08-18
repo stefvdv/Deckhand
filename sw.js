@@ -5,10 +5,7 @@
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v2.51.321';
-// Card images and fonts survive app updates: this cache is deliberately
-// NOT version-named, so activating a new version never wipes it.
-const ASSETS = 'admiral-assets-v1';
+const VERSION = 'admiral-v2.51.279';
 const SHELL = ['./', './index.html', './manifest.json', './format.txt', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -22,7 +19,7 @@ self.addEventListener('message', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== ASSETS).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -39,7 +36,7 @@ self.addEventListener('fetch', (e) => {
   const isCardImage = url.hostname === 'cards.scryfall.io' || url.hostname.endsWith('.scryfall.io');
   if (isFont || isCardImage) {
     e.respondWith(
-      caches.open(ASSETS).then(cache =>
+      caches.open(VERSION + '-assets').then(cache =>
         cache.match(e.request).then(hit => hit || fetch(e.request).then(res => {
           if (res.ok) cache.put(e.request, res.clone());
           return res;
