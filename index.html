@@ -640,7 +640,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-bridge{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;align-items:stretch;}
 .dl-bridge-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:stretch;}
 .dl-bridge{position:relative;}
-.dl-cover{position:absolute;inset:0;z-index:6;overflow:auto;background:rgba(22,7,10,.985);border:1px solid var(--pop-line);border-radius:14px;}
+.dl-cover{position:absolute;inset:0;z-index:6;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;}
 .dl-cover .panel-card{margin:0;min-height:100%;box-sizing:border-box;}
 .dl-panel-x{flex:none;margin-left:auto;}
 .dl-bridge-btns .ghost-btn{width:100%;padding:7px 2px;font-size:10.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;line-height:1.05;white-space:nowrap;}
@@ -3626,15 +3626,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.323';
+const APP_VERSION = '2.51.324';
 const CHANGELOG_NOTES = {
   en: [
-    'The deck toolbox is reorganized: Import and Export merged into one Import/Export panel, freeing a slot for the new Search deck button \u2014 a live advanced filter (name, oracle text, type, colors, mana value, tags) that narrows the decklist below as you type, all offline. Add Cards wears a big \uff0b now, and the little magnifier in the deck bar retired in favor of the new search.',
-    'Every deck tool panel (Import/Export, Bulk Edit, Search deck) now opens ON TOP of the commander-and-buttons block instead of pushing the page around, with a \u2715 to close \u2014 and the hardware back button closes them too, as always.'
+    'Deck tool panels now truly cover the commanders and buttons \u2014 fully opaque, \u2715 top-right, hardware back closes them.',
+    'Import/Export first asks which you want \u2014 Import or Export \u2014 then opens just that part.',
+    'Search deck wears the Collection Advanced-filter layout: labeled rows, real mana icons, \u2264/=/\u2265 dropdown.'
   ],
   nl: [
-    'De deck-gereedschapskist is gereorganiseerd: Import en Export samengevoegd tot \u00e9\u00e9n Import/Export-paneel, wat ruimte maakt voor de nieuwe Zoek-in-deck-knop \u2014 een live geavanceerd filter (naam, oracle-tekst, type, kleuren, mana value, tags) dat de decklijst eronder versmalt terwijl je typt, volledig offline. Kaarten toevoegen draagt nu een grote \uff0b, en het vergrootglaasje in de deckbalk is met pensioen ten gunste van het nieuwe zoeken.',
-    'Elk gereedschapspaneel (Import/Export, Bulk bewerken, Zoek in deck) opent nu BOVENOP het commander-en-knoppenblok in plaats van de pagina te verschuiven, met een \u2715 om te sluiten \u2014 en de hardware-terugknop sluit ze ook, zoals altijd.'
+    'Deck-toolpanelen bedekken nu echt de commanders en knoppen \u2014 volledig dekkend, \u2715 rechtsboven, hardware-terug sluit ze.',
+    'Import/Export vraagt eerst wat je wilt \u2014 Importeren of Exporteren \u2014 en opent dan alleen dat deel.',
+    'Zoek in deck heeft nu de Geavanceerd-filterindeling van de Collectie: rijen met labels, echte mana-iconen, \u2264/=/\u2265 keuzemenu.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8058,7 +8060,7 @@ function listTabHtml(d){
       <div class="dl-bridge-adm">${leaderZoneHtml(d)}</div>
       <div class="dl-bridge-btns">
         <button class="ghost-btn" id="inspireBtn"><span class="bi">${ICONS.spark}</span><span>Inspiration</span></button>
-        <button class="ghost-btn ${state.dlPanel==='impexp'?'active':''}" data-panel="impexp"><span class="bi">${ICONS.imp}</span><span>Import/Export</span></button>
+        <button class="ghost-btn ${(state.dlPanel==='impexp'||state.dlPanel==='import'||state.dlPanel==='export')?'active':''}" data-panel="impexp"><span class="bi">${ICONS.imp}</span><span>Import/Export</span></button>
         <button class="ghost-btn ${state.dlPanel==='dsearch'?'active':''}" data-panel="dsearch"><span class="bi">${ICONS.search}</span><span>${trS('Search deck')}</span></button>
         <button class="ghost-btn" id="budgetBtn2"><span class="bi">${ICONS.coins}</span><span>Budget</span></button>
         <button class="ghost-btn" id="deckSearchBtn"><span class="bi" style="font-size:22px;line-height:.9;">＋</span><span>Add Cards</span></button>
@@ -8128,44 +8130,37 @@ function dlPanelHtml(d){
   }
   if(state.dlPanel==='dsearch'){
     const f = state.dlFilter || (state.dlFilter = { ci: [] });
-    const ciBtn = (col, glyph)=>`<button type="button" class="ghost-btn ${f.ci && f.ci.includes(col)?'active':''}" data-dfci="${col}" style="width:auto;flex:1;padding:8px 0;">${glyph}</button>`;
+    // Row-for-row the Collection's Advanced filter: labels down the left,
+    // fields on the right, the hand-drawn mana icons as checkboxes, and the
+    // ≤/=/≥ choice as a page-style dropdown — one filter language app-wide.
+    const colorOrder = ['W','U','B','R','G','C'];
     return `<div class="panel-card">
       <div class="panel-h" style="display:flex;align-items:center;"><span>${trS('Search deck')}</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
-      <p class="hint" style="margin:0 0 8px;">${trS('The list below narrows live as you type.')}</p>
-      <input id="dfName" class="text-input" placeholder="${trS('Card Name')}…" value="${escapeHtml(f.name||'')}" autocomplete="off">
-      <input id="dfText" class="text-input" placeholder="${trS('Oracle Text')}…" value="${escapeHtml(f.text||'')}" autocomplete="off" style="margin-top:7px;">
-      <input id="dfType" class="text-input" placeholder="${trS('Card Type')}…" value="${escapeHtml(f.type||'')}" autocomplete="off" style="margin-top:7px;">
-      <div style="display:flex;gap:5px;margin-top:8px;">${ciBtn('W','☀')}${ciBtn('U','💧')}${ciBtn('B','💀')}${ciBtn('R','🔥')}${ciBtn('G','🌳')}${ciBtn('C','◇')}</div>
-      <div style="display:flex;gap:7px;margin-top:8px;align-items:center;">
-        <span class="hint" style="margin:0;">${trS('Mana Value')}</span>
-        <select id="dfMvOp" class="text-input" style="flex:0 0 72px;">${['<=','=','>='].map(o=>`<option ${f.mvOp===o?'selected':''}>${o}</option>`).join('')}</select>
-        <input id="dfMvVal" class="text-input" type="number" inputmode="numeric" style="flex:1;" value="${escapeHtml(f.mvVal||'')}">
-      </div>
-      <input id="dfTag" class="text-input" placeholder="Tag…" value="${escapeHtml(f.tag||'')}" autocomplete="off" style="margin-top:8px;">
+      <p class="hint" style="margin:0 0 10px;">${trS('The list below narrows live as you type.')}</p>
+      <div class="adv-row"><label>${trS('Name')}</label><input id="dfName" class="col-filter-input" placeholder="${trS('Card name…')}" value="${escapeHtml(f.name||'')}" autocomplete="off"></div>
+      <div class="adv-row"><label>${trS('Oracle text')}</label><input id="dfText" class="col-filter-input" placeholder="${trS('Any text, e.g. draw a card')}" value="${escapeHtml(f.text||'')}" autocomplete="off"></div>
+      <div class="adv-row"><label>Type</label><input id="dfType" class="col-filter-input" placeholder="${trS('e.g. Dragon, Equipment')}" value="${escapeHtml(f.type||'')}" autocomplete="off"></div>
+      <div class="adv-row"><label>${trS('Colors')}</label><div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" data-dfci="${c}" ${f.ci && f.ci.includes(c)?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div></div>
+      <div class="adv-row"><label>${trS('Mana Value')}</label><div style="display:flex;gap:8px;align-items:center;">
+        <div style="flex:0 0 92px;">${cselectHtml('dfMvOp', [{v:'<=',l:'≤'},{v:'=',l:'='},{v:'>=',l:'≥'}], f.mvOp||'<=', '≤')}</div>
+        <input id="dfMvVal" class="col-filter-input" type="number" inputmode="numeric" style="flex:1;" value="${escapeHtml(f.mvVal||'')}">
+      </div></div>
+      <div class="adv-row"><label>Tag</label><input id="dfTag" class="col-filter-input" placeholder="Tag…" value="${escapeHtml(f.tag||'')}" autocomplete="off"></div>
       <button class="ghost-btn" id="dfReset" style="width:100%;margin-top:10px;">${trS('Reset filters')}</button>
     </div>`;
   }
   if(state.dlPanel==='impexp'){
-    const fmt = state.exportFmt || 'admiral';
-    const text = buildExport(d, fmt);
+    // First question first: which way is the list traveling? The choice
+    // opens just that half — no more scrolling past export to reach import.
     return `<div class="panel-card">
       <div class="panel-h" style="display:flex;align-items:center;"><span>Import / Export</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
-      <div class="seg" style="margin-bottom:10px;">
-        ${EXPORT_FORMATS.map(fx=>`<button data-expfmt="${fx.key}" class="${fmt===fx.key?'active':''}">${fx.label}</button>`).join('')}
-      </div>
-      <textarea class="bulk-textarea" id="exportText" readonly>${escapeHtml(text)}</textarea>
-      <div class="action-row"><button class="ghost-btn" id="copyExport">Copy</button><button class="ghost-btn" id="downloadExport">Download .${exportExt(fmt)}</button></div>
-      <div class="panel-h" style="margin-top:14px;">Import Deck</div>
-      <textarea id="importText" class="bulk-textarea" placeholder="${leaderLineLabel(d)}: ${deckFormat(d)==='commander'?"Atraxa, Praetors' Voice":"Admiral Beckett Brass"}&#10;Sol Ring&#10;..."></textarea>
-      <input type="file" id="importFile" accept=".txt,.dec,text/plain" style="display:none;">
-      <button class="ghost-btn" id="importFileBtn" style="width:100%;margin:8px 0 2px;">📄 ${trS('Load a .txt file')}</button>
-      <button class="primary-btn danger-fill" id="applyImportBtn">Replace Deck</button>
-      <div id="importReport"></div>
+      <button class="ghost-btn" id="ieChooseExport" style="width:100%;padding:16px 10px;font-size:14px;">⬆ ${trS('Export')}</button>
+      <button class="ghost-btn" id="ieChooseImport" style="width:100%;margin-top:10px;padding:16px 10px;font-size:14px;">⬇ ${trS('Import')}</button>
     </div>`;
   }
   if(state.dlPanel==='import'){
     return `<div class="panel-card">
-      <div class="panel-h">Import Deck</div>
+      <div class="panel-h" style="display:flex;align-items:center;"><span>Import Deck</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
       <textarea id="importText" class="bulk-textarea" placeholder="${leaderLineLabel(d)}: ${deckFormat(d)==='commander'?"Atraxa, Praetors' Voice":"Admiral Beckett Brass"}&#10;Sol Ring&#10;..."></textarea>
       <input type="file" id="importFile" accept=".txt,.dec,text/plain" style="display:none;">
       <button class="ghost-btn" id="importFileBtn" style="width:100%;margin:8px 0 2px;">📄 ${trS('Load a .txt file')}</button>
@@ -8177,7 +8172,7 @@ function dlPanelHtml(d){
     const fmt = state.exportFmt || 'admiral';
     const text = buildExport(d, fmt);
     return `<div class="panel-card">
-      <div class="panel-h">Export Deck</div>
+      <div class="panel-h" style="display:flex;align-items:center;"><span>Export Deck</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
       <div class="seg" style="margin-bottom:10px;">
         ${EXPORT_FORMATS.map(f=>`<button data-expfmt="${f.key}" class="${fmt===f.key?'active':''}">${f.label}</button>`).join('')}
       </div>
@@ -8825,12 +8820,19 @@ function wireBuilderBody(d){
   if(state.builderTab==='list'){
     document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click', ()=>{
       const wasOpen = state.dlPanel;
-      state.dlPanel = state.dlPanel===b.dataset.panel ? null : b.dataset.panel;
+      const ieFam = p => p==='impexp' || p==='import' || p==='export';
+      const hit = b.dataset.panel==='impexp' ? ieFam(state.dlPanel) : state.dlPanel===b.dataset.panel;
+      state.dlPanel = hit ? null : b.dataset.panel;
       // Give the open panel its own history entry so the hardware back button
       // closes the panel rather than leaving the deck page.
       if(state.dlPanel && !wasOpen){ try{ history.pushState({dlPanel: state.dlPanel, screen: state.screen}, '', '#'+state.screen); }catch(e){} }
-      document.getElementById('dlPanelBox').innerHTML = dlPanelHtml(d);
-      document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active', x.dataset.panel===state.dlPanel));
+      const pBox = document.getElementById('dlPanelBox');
+      // The cover class is what floats the panel OVER the commander block and
+      // buttons — the initial page render sets it, and this click path must
+      // set it too, or the panel drops into the grid flow below the buttons.
+      pBox.className = state.dlPanel ? 'dl-cover' : '';
+      pBox.innerHTML = dlPanelHtml(d);
+      document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active', x.dataset.panel===state.dlPanel || (x.dataset.panel==='impexp' && ieFam(state.dlPanel))));
       wireDlPanel(d);
       scrollToPageFoot();
     }));
@@ -8881,26 +8883,47 @@ function wireDlPanel(d){
     const refresh = ()=>{ clearTimeout(_t); _t = setTimeout(()=>refreshDecklistBox(d), 130); };
     const bind = (id, key)=>document.getElementById(id)?.addEventListener('input', (e)=>{ f[key] = e.target.value; refresh(); });
     bind('dfName', 'name'); bind('dfText', 'text'); bind('dfType', 'type'); bind('dfTag', 'tag'); bind('dfMvVal', 'mvVal');
-    document.getElementById('dfMvOp')?.addEventListener('change', (e)=>{ f.mvOp = e.target.value; refresh(); });
-    document.querySelectorAll('[data-dfci]').forEach(b=>b.addEventListener('click', ()=>{
-      const col = b.dataset.dfci;
+    // Color identity rides the same checkbox-under-mana-icon control the
+    // Collection filter uses; checked state drives the live filter.
+    document.querySelectorAll('#dlPanelBox [data-dfci]').forEach(chk=>chk.addEventListener('change', ()=>{
+      const col = chk.dataset.dfci;
       f.ci = f.ci || [];
       const at = f.ci.indexOf(col);
-      if(at >= 0) f.ci.splice(at, 1); else f.ci.push(col);
-      b.classList.toggle('active', at < 0);
+      if(chk.checked){ if(at < 0) f.ci.push(col); }
+      else if(at >= 0) f.ci.splice(at, 1);
       refresh();
     }));
+    // The deck page never calls wireCSelects, so the panel wires its own
+    // ≤/=/≥ dropdown — the _csw flag keeps a re-render from ever stacking a
+    // second listener on the same element.
+    document.querySelectorAll('#dlPanelBox [data-cs]').forEach(b=>{ if(b._csw) return; b._csw = 1;
+      b.addEventListener('click', e=>{ e.stopPropagation(); state.openCSelect = state.openCSelect===b.dataset.cs ? null : b.dataset.cs; csRerender(); });
+    });
+    document.querySelectorAll('#dlPanelBox [data-csopt]').forEach(o=>{ if(o._csw) return; o._csw = 1;
+      o.addEventListener('click', e=>{ e.stopPropagation(); state.openCSelect = null; const h = _csHandlers[o.dataset.csopt]; if(h) h(o.dataset.val); else csRerender(); });
+    });
+    _csHandlers['dfMvOp'] = v=>{ if(state.dlFilter) state.dlFilter.mvOp = v; csRerender(); };
     document.getElementById('dfReset')?.addEventListener('click', ()=>{
       state.dlFilter = { ci: [] };
-      ['dfName','dfText','dfType','dfTag','dfMvVal'].forEach(id=>{ const el2 = document.getElementById(id); if(el2) el2.value = ''; });
-      document.querySelectorAll('[data-dfci]').forEach(b=>b.classList.remove('active'));
+      const box = document.getElementById('dlPanelBox');
+      if(box){ box.innerHTML = dlPanelHtml(d); wireDlPanel(d); }
       refreshDecklistBox(d);
     });
     return;
   }
+  if(state.dlPanel==='impexp'){
+    const go = (which)=>{
+      state.dlPanel = which;
+      const box = document.getElementById('dlPanelBox');
+      if(box){ box.innerHTML = dlPanelHtml(d); wireDlPanel(d); }
+    };
+    document.getElementById('ieChooseImport')?.addEventListener('click', ()=>go('import'));
+    document.getElementById('ieChooseExport')?.addEventListener('click', ()=>go('export'));
+    return;
+  }
   if(state.dlPanel==='bulk'){
     document.getElementById('applyBulkBtn').addEventListener('click', ()=>applyTextToDeck(d, document.getElementById('bulkText').value, 'bulkReport', false));
-  } else if(state.dlPanel==='import' || state.dlPanel==='impexp'){
+  } else if(state.dlPanel==='import'){
     // Load a downloaded deck list (.txt) straight into the paste box — the
     // person reviews it there and presses Replace Deck themselves; the red
     // button stays the one deliberate, destructive step.
@@ -8925,7 +8948,7 @@ function wireDlPanel(d){
       } else go();
     });
   }
-  if(state.dlPanel==='export' || state.dlPanel==='impexp'){
+  if(state.dlPanel==='export'){
     document.querySelectorAll('[data-expfmt]').forEach(b=>b.addEventListener('click', ()=>{
       state.exportFmt = b.dataset.expfmt;
       document.getElementById('dlPanelBox').innerHTML = dlPanelHtml(d);
@@ -16447,22 +16470,23 @@ function appBackStep(viaHistory){
     rearm({screen: state.screen}, '#'+state.screen);
     return true;
   }
-  // An open Import / Bulk-edit panel consumes the back press: close it and stay.
-  if(state.dlPanel){
-    state.dlPanel = null;
-    const box = document.getElementById('dlPanelBox');
-    if(box){
-      const d = getDeck(state.activeDeckId);
-      if(d){ box.innerHTML = dlPanelHtml(d); document.querySelectorAll('[data-panel]').forEach(x=>x.classList.remove('active')); }
-      rearm({screen: state.screen}, '#'+state.screen);
-      return true;
-    }
-  }
   // A page-level dropdown consumes the back press: close it and stay put.
   if(state.openCSelect){
     state.openCSelect = null; try{ csRerender(); }catch(err){}
     rearm({screen: state.screen, folder: state.folderNav||null}, '#'+state.screen);
     return true;
+  }
+  // An open Import / Bulk-edit panel consumes the back press: close it and stay.
+  if(state.dlPanel){
+    state.dlPanel = null;
+    const box = document.getElementById('dlPanelBox');
+    if(box){
+      box.className = '';
+      const d = getDeck(state.activeDeckId);
+      if(d){ box.innerHTML = dlPanelHtml(d); document.querySelectorAll('[data-panel]').forEach(x=>x.classList.remove('active')); }
+      rearm({screen: state.screen}, '#'+state.screen);
+      return true;
+    }
   }
   // Stats drill-downs (a tapped mana-value column, color symbol, or
   // production bar) consume the back press first: one press sweeps them
