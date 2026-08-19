@@ -642,6 +642,14 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-bridge{position:relative;}
 .dl-cover{position:absolute;inset:0;z-index:6;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;}
 .dl-cover .panel-card{margin:0;min-height:100%;box-sizing:border-box;}
+.df-compact{padding:10px 12px;}
+.df-compact .panel-h{margin:0 0 6px;}
+.df-compact .adv-row{grid-template-columns:72px minmax(0,1fr);gap:2px 8px;margin-bottom:4px;}
+.df-compact .adv-row label{font-size:11.5px;}
+.df-compact .col-filter-input{padding:5px 8px;font-size:12.5px;}
+.df-compact .cselect-btn{padding:5px 8px;font-size:12.5px;}
+.df-compact .mana-check svg{width:21px;height:21px;}
+.df-compact #dfReset{margin-top:6px;padding:6px 10px;font-size:12px;}
 .dl-panel-x{flex:none;margin-left:auto;}
 .dl-bridge-btns .ghost-btn{width:100%;padding:7px 2px;font-size:10.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;line-height:1.05;white-space:nowrap;}
 .dl-bridge-btns .bi svg{width:17px;height:17px;display:block;color:var(--sub-text);}
@@ -3626,17 +3634,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.324';
+const APP_VERSION = '2.51.325';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck tool panels now truly cover the commanders and buttons \u2014 fully opaque, \u2715 top-right, hardware back closes them.',
-    'Import/Export first asks which you want \u2014 Import or Export \u2014 then opens just that part.',
-    'Search deck wears the Collection Advanced-filter layout: labeled rows, real mana icons, \u2264/=/\u2265 dropdown.'
+    'Search deck is compacted \u2014 tighter rows, smaller fields, hint line gone \u2014 so the whole filter fits its cover without scrolling.'
   ],
   nl: [
-    'Deck-toolpanelen bedekken nu echt de commanders en knoppen \u2014 volledig dekkend, \u2715 rechtsboven, hardware-terug sluit ze.',
-    'Import/Export vraagt eerst wat je wilt \u2014 Importeren of Exporteren \u2014 en opent dan alleen dat deel.',
-    'Zoek in deck heeft nu de Geavanceerd-filterindeling van de Collectie: rijen met labels, echte mana-iconen, \u2264/=/\u2265 keuzemenu.'
+    'Zoek in deck is compacter \u2014 strakkere rijen, kleinere velden, hintregel weg \u2014 zodat het hele filter zonder scrollen in zijn paneel past.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8134,9 +8138,8 @@ function dlPanelHtml(d){
     // fields on the right, the hand-drawn mana icons as checkboxes, and the
     // ≤/=/≥ choice as a page-style dropdown — one filter language app-wide.
     const colorOrder = ['W','U','B','R','G','C'];
-    return `<div class="panel-card">
+    return `<div class="panel-card df-compact">
       <div class="panel-h" style="display:flex;align-items:center;"><span>${trS('Search deck')}</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
-      <p class="hint" style="margin:0 0 10px;">${trS('The list below narrows live as you type.')}</p>
       <div class="adv-row"><label>${trS('Name')}</label><input id="dfName" class="col-filter-input" placeholder="${trS('Card name…')}" value="${escapeHtml(f.name||'')}" autocomplete="off"></div>
       <div class="adv-row"><label>${trS('Oracle text')}</label><input id="dfText" class="col-filter-input" placeholder="${trS('Any text, e.g. draw a card')}" value="${escapeHtml(f.text||'')}" autocomplete="off"></div>
       <div class="adv-row"><label>Type</label><input id="dfType" class="col-filter-input" placeholder="${trS('e.g. Dragon, Equipment')}" value="${escapeHtml(f.type||'')}" autocomplete="off"></div>
@@ -8146,7 +8149,7 @@ function dlPanelHtml(d){
         <input id="dfMvVal" class="col-filter-input" type="number" inputmode="numeric" style="flex:1;" value="${escapeHtml(f.mvVal||'')}">
       </div></div>
       <div class="adv-row"><label>Tag</label><input id="dfTag" class="col-filter-input" placeholder="Tag…" value="${escapeHtml(f.tag||'')}" autocomplete="off"></div>
-      <button class="ghost-btn" id="dfReset" style="width:100%;margin-top:10px;">${trS('Reset filters')}</button>
+      <button class="ghost-btn" id="dfReset" style="width:100%;">${trS('Reset filters')}</button>
     </div>`;
   }
   if(state.dlPanel==='impexp'){
