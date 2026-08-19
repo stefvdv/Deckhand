@@ -355,6 +355,12 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
    squats on top of the tag chips. */
 .tag-drop[hidden]{display:none;}
 .card-link{background:none;border:none;padding:0;margin:0;color:#7CB8DB;text-decoration:underline;text-underline-offset:2px;font:inherit;cursor:pointer;}
+.cmb-head{display:block;width:100%;background:none;border:none;padding:0;margin:0;text-align:left;color:inherit;font:inherit;cursor:pointer;}
+.cmb-names{font-weight:700;line-height:1.35;}
+.cmb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px;}
+.cmb-card{padding:0;border:none;background:none;cursor:pointer;}
+.cmb-card img{width:100%;display:block;border-radius:7px;}
+.cmb-card-txt{border:1px solid var(--pop-line);border-radius:7px;min-height:56px;color:inherit;font-size:11.5px;padding:4px;}
 .cs-combos-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 10px);right:12px;z-index:70;width:auto;padding:7px 11px;}
 .overlay[id^="cardSheetOverlay_bg"] .cs-combos-btn{display:none!important;}
 .tag-drop-h{padding:7px 10px 3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-top:1px solid var(--pop-line);}
@@ -3616,13 +3622,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.321';
+const APP_VERSION = '2.51.322';
 const CHANGELOG_NOTES = {
   en: [
-    'Combo pages sort by playability now: 2-card combos first, and within each size the most PLAYED combos lead \u2014 measured by the EDHREC play-rank of each combo\u2019s least-played piece, straight from the local database. Famous staple pairs top the list; jank built on obscurities sinks to the bottom.'
+    'The combos page joins the ship\u2019s bottom-up charter: it opens at the foot with the best combo right there, reading upward \u2014 and rows fold now: closed, a combo is just its card names and what it produces; open it for the card images four across, each tappable straight into the normal card page.'
   ],
   nl: [
-    'Combopagina\u2019s sorteren nu op speelbaarheid: 2-kaarts combo\u2019s eerst, en binnen elke groep leiden de meest GESPEELDE combo\u2019s \u2014 gemeten aan de EDHREC-speelrang van het minst gespeelde onderdeel van elke combo, rechtstreeks uit de lokale database. Beroemde staple-paren bovenaan; jank op obscuriteiten zakt naar de bodem.'
+    'De combopagina voegt zich naar het onderop-charter van het schip: ze opent aan de voet met de beste combo meteen daar, lezend omhoog \u2014 en rijen vouwen nu: dicht is een combo alleen zijn kaartnamen en wat hij oplevert; open hem voor de kaartafbeeldingen vier naast elkaar, elk aantikbaar rechtstreeks naar de normale kaartpagina.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11626,22 +11632,51 @@ function openCombosOverlay(title, combos){
   let el = document.getElementById('combosOverlay');
   if(!el){ el = document.createElement('div'); el.className = 'overlay'; el.id = 'combosOverlay'; }
   document.body.appendChild(el);
+  const top = combos.slice(0, 80);
+  // Bottom-up, per the ship's charter: the main is column-reverse, so the
+  // BEST combo (first after sorting) sits at the foot where the eye starts,
+  // and reading proceeds upward. Rows fold: names + result as text; open a
+  // row for the card images, four across, each tappable to the card page.
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar"><button class="icon-btn" id="cmbClose">${ICONS.back}</button><div class="tb-titles"><div class="t1 name2">${escapeHtml(title)}</div></div></div>
-    <main>
-      <p class="hint" style="text-align:center;margin:0 0 8px;">${combos.length} · Commander Spellbook</p>
-      ${combos.slice(0, 80).map(c=>`<div class="panel-card" style="margin-bottom:10px;">
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${c.nm.map(n=>`<button type="button" class="ghost-btn" data-cmbcard="${encodeURIComponent(n)}" style="width:auto;padding:6px 10px;font-size:12.5px;">${escapeHtml(n)}</button>`).join('')}</div>
-        <div class="hint" style="margin:0;">${escapeHtml(c.r || '')}</div>
+    <main style="display:flex;flex-direction:column-reverse;justify-content:flex-start;">
+      ${top.map((c, i)=>`<div class="panel-card cmb-row" style="margin-bottom:10px;">
+        <button type="button" class="cmb-head" data-cmbrow="${i}">
+          <div class="cmb-names">${c.nm.map(escapeHtml).join(' ＋ ')}</div>
+          <div class="hint" style="margin:4px 0 0;">${escapeHtml(c.r || '')}</div>
+        </button>
+        <div class="cmb-grid" hidden></div>
       </div>`).join('')}
+      <p class="hint" style="text-align:center;margin:8px 0 0;">${combos.length} · Commander Spellbook</p>
     </main>
   </div>`;
   el.querySelector('#cmbClose').addEventListener('click', closeTopOverlay);
-  el.querySelectorAll('[data-cmbcard]').forEach(b=>b.addEventListener('click', async ()=>{
-    try{
-      const r = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(decodeURIComponent(b.dataset.cmbcard)));
-      if(r.ok) openCardInfo(await r.json());
-    }catch(e){}
+  el.querySelectorAll('[data-cmbrow]').forEach(head=>head.addEventListener('click', async ()=>{
+    const grid = head.parentElement.querySelector('.cmb-grid');
+    if(!grid) return;
+    if(!grid.hidden){ grid.hidden = true; return; }
+    grid.hidden = false;
+    if(!grid.dataset.filled){
+      grid.dataset.filled = '1';
+      const c = top[+head.dataset.cmbrow];
+      let ix = null;
+      try{ ix = await bulkIndexReady(); }catch(e){}
+      grid.innerHTML = c.nm.map((n, k)=>{
+        const entry = ix && ix.byName ? ix.byName.get(String(n).toLowerCase()) : null;
+        return entry
+          ? `<button type="button" class="cmb-card" data-cmbc="${k}"><img src="${cardImage(bulkToCardish(entry))}" alt="${escapeHtml(n)}" loading="lazy"></button>`
+          : `<button type="button" class="cmb-card cmb-card-txt" data-cmbc="${k}">${escapeHtml(n)}</button>`;
+      }).join('');
+      grid.querySelectorAll('[data-cmbc]').forEach(b=>b.addEventListener('click', async ()=>{
+        const name = c.nm[+b.dataset.cmbc];
+        const entry = ix && ix.byName ? ix.byName.get(String(name).toLowerCase()) : null;
+        if(entry){ openCardInfo(bulkToCardish(entry)); return; }
+        try{
+          const r = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(name));
+          if(r.ok) openCardInfo(await r.json());
+        }catch(e){}
+      }));
+    }
   }));
 }
 async function edhrecSaltFor(card){
