@@ -688,7 +688,9 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 /* Bottom dock: fixed status bar with cycling info sets */
 .deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--ink);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
 .dk-arr{background:none;border:1px solid var(--line);border-radius:8px;color:var(--sub-text);width:30px;height:34px;cursor:pointer;flex:none;font-size:13px;}
-.dk-mid{flex:1;display:flex;align-items:center;gap:8px;justify-content:center;font-size:12.5px;color:var(--sub-text);white-space:nowrap;overflow:hidden;min-width:0;}
+/* space-between spreads each set's items across the full bar width —
+   the left-clustered huddle with a dead gap before » was the complaint. */
+.dk-mid{flex:1;display:flex;align-items:center;gap:8px;justify-content:space-between;font-size:12.5px;color:var(--sub-text);white-space:nowrap;overflow:hidden;min-width:0;}
 .dk-count{background:none;border:none;color:var(--ink-text);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:12.5px;cursor:pointer;padding:0;}
 .dk-count.bad{color:var(--danger);}
 .dk-type{display:inline-flex;align-items:center;gap:3px;background:none;border:none;color:var(--ink-text);font-size:12px;font-family:'JetBrains Mono',monospace;padding:2px 2px;cursor:pointer;}
@@ -1222,10 +1224,10 @@ main.has-dock{padding-bottom:84px;}
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
 .overlay main .edh-sec > .section-label{top:auto;bottom:0;}
-#recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;}
+#recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;border-bottom:1px solid var(--line);}
 #recoOverlay main{padding-bottom:0;}
 #recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);margin:0;padding:8px 0;}
-#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(18px + var(--nav-h) + env(safe-area-inset-bottom));left:14px;right:auto;justify-content:flex-start;z-index:140;height:auto;}
+#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(84px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;}
 .edh-jump-row{top:70px;}
 .reco-fab{position:fixed;right:16px;bottom:calc(18px + var(--nav-h) + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--brass);color:#1a1204;font-size:26px;font-weight:800;border:none;z-index:140;box-shadow:0 6px 18px rgba(0,0,0,0.5);cursor:pointer;}
 .reco-fab .fab-n{position:absolute;top:-4px;right:-4px;background:var(--ink);color:var(--brass);border:1px solid var(--brass);border-radius:999px;font-size:11px;padding:1px 6px;font-weight:700;}
@@ -3673,17 +3675,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.332';
+const APP_VERSION = '2.51.334';
 const CHANGELOG_NOTES = {
   en: [
-    'Combos load on their own fast lane now \u2014 seconds, not the full database read \u2014 and combo pages fall back to text tiles rather than waiting on card images.',
-    'The Random Card steps aside while Advanced filters are open, so the menu sits at the page foot.',
-    'The official Mana-set color symbols \u2014 in their classic colors \u2014 now appear everywhere the app shows mana: filters, folders, binders, breakdowns, pickers.'
+    'The deck bars space their contents evenly, the \u2630 jump menu floats right, Recommendations run bottom-up (High Synergy at the foot) \u2014 and their section names carry the golden category stripe now, below the name like everywhere else.'
   ],
   nl: [
-    'Combo\u2019s laden nu via hun eigen snelle route \u2014 seconden, niet de volledige database \u2014 en combopagina\u2019s vallen terug op teksttegels in plaats van te wachten op kaartafbeeldingen.',
-    'De Willekeurige kaart stapt opzij zolang Geavanceerde filters open staan, zodat het menu onderaan de pagina zit.',
-    'De offici\u00eble Mana-set kleursymbolen \u2014 in hun klassieke kleuren \u2014 staan nu overal waar de app mana toont: filters, mappen, kleurverdelingen, kiezers.'
+    'De deckbalken verdelen hun inhoud gelijkmatig, het \u2630-springmenu zweeft rechts, Aanbevelingen lopen bottom-up (Hoge synergie onderaan) \u2014 en hun sectienamen dragen nu de gouden categoriestreep, onder de naam zoals overal.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6670,8 +6668,8 @@ function deckMeterHtml(d){
     const m = dockCachedSum(deckLeaders(d).concat(d.cards));
     const b = dockCachedSum(d.maybeboard);
     const fmt = (x)=>'€'+x.total.toFixed(2)+(x.missing?'+':'');
-    mid = `<span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(m)}</span><span>deck</span><span>·</span><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(b)}</span><span>maybe</span>
-      <button class="dk-tool" id="dockBudget" title="Budget" style="margin-left:auto;">${ICONS.coins}</button>`;
+    mid = `<span style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;"><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(m)}</span><span>deck</span><span>·</span><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(b)}</span><span>maybe</span></span>
+      <button class="dk-tool" id="dockBudget" title="Budget">${ICONS.coins}</button>`;
   } else {
     mid = dockTypeCounts(d) || '<span>Empty deck</span>';
   }
@@ -15197,6 +15195,10 @@ function renderRecoBody(){
     });
     const rest = R.pool.filter(c=>!used.has(c.name));
     if(rest.length) groups.push({ title: trS('Other'), cards: rest });
+    // Bottom-up, per the charter: EDHREC serves its best sections FIRST
+    // (New Cards, High Synergy …) — reversed, they land at the page FOOT
+    // where the eye starts, with Other and the type sections climbing away.
+    groups.reverse();
   }
   if(groups.length >= 2){
     const CAP = 12;
