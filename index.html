@@ -3678,13 +3678,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.337';
+const APP_VERSION = '2.51.338';
 const CHANGELOG_NOTES = {
   en: [
-    'Combo pages open with the 20 most playable combos (2-card famous ones first); a More combos button above them deals the next twenty on demand.'
+    'The combos button is back for everyone: the fast lane now probes the combo data directly when an older database lacks the chunk count, and falls through to the full index rather than concluding \u201cno combos\u201d.'
   ],
   nl: [
-    'Combopagina\u2019s openen met de 20 speelbaarste combo\u2019s (beroemde 2-kaarts eerst); een Meer combo\u2019s-knop erboven deelt op verzoek de volgende twintig.'
+    'De comboknop is terug voor iedereen: de snelle route peilt de combodata nu direct als een oudere database de chunktelling mist, en valt terug op de volledige index in plaats van \u201cgeen combo\u2019s\u201d te concluderen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9353,7 +9353,11 @@ function renderCardSheet(d, card, loc, idx){
     let _cmbDone = false;
     setTimeout(()=>{ if(!_cmbDone && b.isConnected) b.hidden = true; }, 15000);
     try{
-      const ix = await combosReady();
+      let ix = await combosReady();
+      // Fast lane empty? The full index is the proven path — slower, but
+      // never wrong; the 15s curtain covers the wait and the button steps
+      // back in when it resolves.
+      if(!ix || !(ix.combos && ix.combos.length)) ix = await bulkIndexReady();
       _cmbDone = true;
       const list = combosWithCard(ix, card.name);
       if(!b.isConnected) return;
@@ -11155,7 +11159,11 @@ function openCardInfo(card, opts){
     let _cmbDone = false;
     setTimeout(()=>{ if(!_cmbDone && b.isConnected) b.hidden = true; }, 15000);
     try{
-      const ix = await combosReady();
+      let ix = await combosReady();
+      // Fast lane empty? The full index is the proven path — slower, but
+      // never wrong; the 15s curtain covers the wait and the button steps
+      // back in when it resolves.
+      if(!ix || !(ix.combos && ix.combos.length)) ix = await bulkIndexReady();
       _cmbDone = true;
       const list = combosWithCard(ix, card.name);
       if(!b.isConnected) return;
@@ -17110,19 +17118,30 @@ function combosReady(){
   if(_cmbIdx) return Promise.resolve(_cmbIdx);
   if(_cmbLoadP) return _cmbLoadP;
   _cmbLoadP = (async ()=>{
+    // A meta written by an older ingest may not carry comboChunks at all —
+    // when the count is absent, probe cmb:0, cmb:1, … until a chunk is
+    // missing, exactly like the data was laid down.
     const meta = await bulkKvGet('meta');
-    if(!meta || !(meta.comboChunks > 0)){ _cmbLoadP = null; return null; }
+    const known = meta && meta.comboChunks > 0 ? meta.comboChunks : null;
     const combos = [], comboByName = new Map();
-    for(let i = 0; i < meta.comboChunks; i++){
-      const arr = await bulkKvGet('cmb:' + i);
-      if(Array.isArray(arr)) arr.forEach(x=>{
+    const eat = (arr)=>{
+      if(!Array.isArray(arr)) return false;
+      arr.forEach(x=>{
         if(!x || !Array.isArray(x.nm) || x.nm.length < 2) return;
         const idx = combos.push(x) - 1;
         x.nm.forEach(n=>{ const k = String(n).toLowerCase(); let lst = comboByName.get(k); if(!lst){ lst = []; comboByName.set(k, lst); } lst.push(idx); });
       });
-      await _bulkYield();
+      return true;
+    };
+    if(known){
+      for(let i = 0; i < known; i++){ eat(await bulkKvGet('cmb:' + i)); await _bulkYield(); }
+    } else {
+      for(let i = 0; i < 400; i++){ if(!eat(await bulkKvGet('cmb:' + i))) break; await _bulkYield(); }
     }
-    _cmbIdx = { combos, comboByName };
+    // An empty harvest is NOT cached: a later weekly ingest (or the full
+    // index) may still bring combos, and callers fall through to it.
+    _cmbIdx = combos.length ? { combos, comboByName } : null;
+    _cmbLoadP = null;
     return _cmbIdx;
   })();
   return _cmbLoadP;
