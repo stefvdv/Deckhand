@@ -686,11 +686,13 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .ib svg{width:16px;height:16px;color:currentColor;opacity:0.92;}
 .dl-adm-empty{aspect-ratio:63/88;border:2px dashed var(--line);border-radius:4.75% / 3.5%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--sub-text-2);font-size:12px;cursor:pointer;}
 /* Bottom dock: fixed status bar with cycling info sets */
-.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--ink);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
+.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;background:var(--ink);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
 .dk-arr{background:none;border:1px solid var(--line);border-radius:8px;color:var(--sub-text);width:30px;height:34px;cursor:pointer;flex:none;font-size:13px;}
-/* space-between spreads each set's items across the full bar width —
-   the left-clustered huddle with a dead gap before » was the complaint. */
-.dk-mid{flex:1;display:flex;align-items:center;gap:8px;justify-content:space-between;font-size:12.5px;color:var(--sub-text);white-space:nowrap;overflow:hidden;min-width:0;}
+/* display:contents lifts the set's items to be the dock's own flex
+   children, so the bar's space-between spreads EVERYTHING evenly —
+   including the » and ⋯ at the end, per Stef's spec. Font and color
+   still inherit through the contents wrapper. */
+.dk-mid{display:contents;font-size:12.5px;color:var(--sub-text);white-space:nowrap;}
 .dk-count{background:none;border:none;color:var(--ink-text);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:12.5px;cursor:pointer;padding:0;}
 .dk-count.bad{color:var(--danger);}
 .dk-type{display:inline-flex;align-items:center;gap:3px;background:none;border:none;color:var(--ink-text);font-size:12px;font-family:'JetBrains Mono',monospace;padding:2px 2px;cursor:pointer;}
@@ -3675,13 +3677,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.334';
+const APP_VERSION = '2.51.335';
 const CHANGELOG_NOTES = {
   en: [
-    'The deck bars space their contents evenly, the \u2630 jump menu floats right, Recommendations run bottom-up (High Synergy at the foot) \u2014 and their section names carry the golden category stripe now, below the name like everywhere else.'
+    'The deck bar spaces ALL its buttons evenly now \u2014 the \u00bb and \u22ef included, one rhythm across the whole row.'
   ],
   nl: [
-    'De deckbalken verdelen hun inhoud gelijkmatig, het \u2630-springmenu zweeft rechts, Aanbevelingen lopen bottom-up (Hoge synergie onderaan) \u2014 en hun sectienamen dragen nu de gouden categoriestreep, onder de naam zoals overal.'
+    'De deckbalk verdeelt AL zijn knoppen nu gelijkmatig \u2014 inclusief \u00bb en \u22ef, \u00e9\u00e9n ritme over de hele rij.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
