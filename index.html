@@ -663,6 +663,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-bridge-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:stretch;}
 .dl-bridge{position:relative;}
 .dl-cover{position:absolute;inset:0;z-index:6;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;}
+.dl-popup{position:fixed;left:12px;right:12px;top:50%;transform:translateY(-50%);z-index:120;max-height:82vh;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;box-shadow:0 12px 44px rgba(0,0,0,0.6);}
 .dl-cover .panel-card{margin:0;min-height:100%;box-sizing:border-box;}
 .df-compact{padding:10px 12px;}
 .df-compact .panel-h{margin:0 0 6px;}
@@ -694,6 +695,8 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-tool.active{color:var(--brass);border-color:var(--brass);background:var(--brass-glow);}
 .dk-mid:has(.dk-tool){gap:5px;}
 .dl-bridge-desc{display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;}
+.dl-bridge-desc .ghost-btn{flex:0 0 auto;height:auto;min-height:0;padding:9px 8px;margin-top:auto;font-size:12px;}
+.dl-desc-text{cursor:pointer;}
 .dl-desc-text{font-size:12.5px;line-height:1.45;color:var(--ink-text);overflow-wrap:anywhere;}
 .dk-type svg{width:14px;height:14px;opacity:0.8;flex:none;}
 .dk-mid:has(.dk-type){gap:4px;}
@@ -3665,21 +3668,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.329';
+const APP_VERSION = '2.51.330';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck remodel: the six bridge buttons moved into the deck bar as a compact tools row \u2014 count (tap flips main/maybe), Import/Export, Budget, Inspiration, Search deck, Bulk edit, Add cards \u2014 and the jump-to-category arrow retired.',
-    'Where the buttons stood, the deck now shows its DESCRIPTION (written on the Deck Log page) and a Log a game button.',
-    'The combos button aligns right, warms its database at app start, and bows out after 15s instead of spinning forever.',
-    'Empty deck-search results no longer lift the panel to the top, and the keyboard\u2019s search key now runs the search.',
-    'Similar & Budget: off-role Scryfall tags now cost a gentle penalty, like off-role words.'
+    'The tools bar breathes: Budget moved to the price bar (right side), and Import/Export lives in the \u22ef menu now \u2014 opening as a centered popup.',
+    'Log a game is a fixed narrow bar at the foot of the description \u2014 it no longer inflates with the text.',
+    'Tapping the deck description jumps to the Deck Log page with the description field focused and ready to type.'
   ],
   nl: [
-    'Deck-verbouwing: de zes brugknoppen verhuisden naar de deckbalk als compacte gereedschapsrij \u2014 telling (tik wisselt main/maybe), Import/Export, Budget, Inspiratie, Zoek in deck, Bulk bewerken, Kaarten toevoegen \u2014 en de spring-naar-categorie-pijl is met pensioen.',
-    'Waar de knoppen stonden toont het deck nu zijn BESCHRIJVING (te schrijven op de Decklog-pagina) en een Noteer een potje-knop.',
-    'De comboknop staat rechts uitgelijnd, warmt zijn database op bij de start en stopt na 15s in plaats van eeuwig te draaien.',
-    'Lege deckzoek-resultaten tillen het paneel niet meer naar boven, en de zoektoets van het toetsenbord start nu de zoekopdracht.',
-    'Vergelijkbaar & Budget: Scryfall-tags buiten de rol kosten nu een zachte straf, net als woorden buiten de rol.'
+    'De gereedschapsbalk ademt: Budget verhuisde naar de prijsbalk (rechts), en Import/Export zit nu in het \u22ef-menu \u2014 en opent als gecentreerde popup.',
+    'Noteer een potje is een vaste smalle balk onderaan de beschrijving \u2014 hij groeit niet meer mee met de tekst.',
+    'Tik op de deckbeschrijving en je springt naar de Decklog-pagina met het beschrijvingsveld gefocust en klaar om te typen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6654,8 +6653,6 @@ function deckMeterHtml(d){
     mid = state.dlSearchOpen
       ? `<input id="dockSearchInput" class="dock-search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off"><button class="dk-count" id="dockSearchClose" style="flex:none;">✕</button>`
       : `<button class="dk-count ${over||errors?'bad':''}" id="dockMainCount" title="Tap to flip main / maybeboard">${state.dockCount==='maybe' ? 'Maybe ' + d.maybeboard.length : `${total}/${deckTotal(d)}${issues.length?' ⚠':''}`}</button>
-        <button class="dk-tool ${(state.dlPanel==='impexp'||state.dlPanel==='import'||state.dlPanel==='export')?'active':''}" data-panel="impexp" title="Import/Export">${ICONS.imp}</button>
-        <button class="dk-tool" id="dockBudget" title="Budget">${ICONS.coins}</button>
         <button class="dk-tool" id="dockInspire" title="Inspiration">${ICONS.spark}</button>
         <button class="dk-tool ${state.dlPanel==='dsearch'?'active':''}" data-panel="dsearch" title="${trS('Search deck')}">${ICONS.search}</button>
         <button class="dk-tool ${state.dlPanel==='bulk'?'active':''}" data-panel="bulk" title="Bulk Edit">${ICONS.bulk}</button>
@@ -6664,7 +6661,8 @@ function deckMeterHtml(d){
     const m = dockCachedSum(deckLeaders(d).concat(d.cards));
     const b = dockCachedSum(d.maybeboard);
     const fmt = (x)=>'€'+x.total.toFixed(2)+(x.missing?'+':'');
-    mid = `<span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(m)}</span><span>deck</span><span>·</span><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(b)}</span><span>maybe</span>`;
+    mid = `<span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(m)}</span><span>deck</span><span>·</span><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(b)}</span><span>maybe</span>
+      <button class="dk-tool" id="dockBudget" title="Budget" style="margin-left:auto;">${ICONS.coins}</button>`;
   } else {
     mid = dockTypeCounts(d) || '<span>Empty deck</span>';
   }
@@ -6693,7 +6691,7 @@ function decklistPageHtml(){
   </main>`;
 }
 function menuPopHtml(){
-  return `<div class="menu-pop" id="menuPop"><button id="mSortBy">Sort by ⌄</button><button id="mAddFolder">Add to folder</button><button id="mDuplicate">Duplicate deck</button><button id="mShare">Share deck</button><hr><button id="mDelete" class="danger">Delete deck</button></div>`;
+  return `<div class="menu-pop" id="menuPop"><button id="mImpExp">Import / Export</button><button id="mSortBy">Sort by ⌄</button><button id="mAddFolder">Add to folder</button><button id="mDuplicate">Duplicate deck</button><button id="mShare">Share deck</button><hr><button id="mDelete" class="danger">Delete deck</button></div>`;
 }
 /* ---- legality ----------------------------------------------------------
    Re-derived from scratch on every deck change, so swapping your Admiral or
@@ -8115,6 +8113,7 @@ function wireDecklistPage(){
 }
 function syncTabsUI(){ document.querySelectorAll('.b-tab').forEach(b=>b.classList.toggle('active', b.dataset.btab===state.builderTab)); }
 function wireMenu(d){
+  document.getElementById('mImpExp')?.addEventListener('click', ()=>{ state.menuOpen=false; updateDeckMeter(d); toggleDlPanel(d, 'impexp'); });
   document.getElementById('mSortBy')?.addEventListener('click', ()=>{ state.menuOpen=false; updateDeckMeter(d); openModal('sort'); });
   document.getElementById('mAddFolder')?.addEventListener('click', ()=>{ state.menuOpen=false; render(); openFolderPicker(d); });
   document.getElementById('mDuplicate')?.addEventListener('click', ()=>{ state.menuOpen=false; duplicateDeck(d); });
@@ -8147,7 +8146,7 @@ function listTabHtml(d){
         <div class="dl-desc-text">${d.description ? escapeHtml(d.description).replace(/\n/g, '<br>') : `<span class="hint" style="margin:0;">${trS('No description yet — write one on the Deck Log page.')}</span>`}</div>
         <button class="ghost-btn" id="bridgeLogGame" style="width:100%;margin-top:8px;">⊕ ${trS('Log a game')}</button>
       </div>
-      <div id="dlPanelBox" class="${state.dlPanel?'dl-cover':''}">${dlPanelHtml(d)}</div>
+      <div id="dlPanelBox" class="${dlBoxClass()}">${dlPanelHtml(d)}</div>
     </div>
     <div id="decklistBox">${categorizedListHtml(d)}</div>`;
 }
@@ -8906,6 +8905,13 @@ function openLogGameOverlay(d){
   renderSheet();
 }
 
+/* Import/Export (and its Import / Export halves) floats as a centered
+   POPUP; the other tool panels keep their cover over the bridge. */
+function dlBoxClass(){
+  const p = state.dlPanel;
+  if(!p) return '';
+  return (p==='impexp' || p==='import' || p==='export') ? 'dl-popup' : 'dl-cover';
+}
 function toggleDlPanel(d, panelKey){
       const wasOpen = state.dlPanel;
       const ieFam = p => p==='impexp' || p==='import' || p==='export';
@@ -8918,7 +8924,7 @@ function toggleDlPanel(d, panelKey){
       // The cover class is what floats the panel OVER the commander block and
       // buttons — the initial page render sets it, and this click path must
       // set it too, or the panel drops into the grid flow below the buttons.
-      pBox.className = state.dlPanel ? 'dl-cover' : '';
+      pBox.className = dlBoxClass();
       if(state.dlPanel !== 'dsearch' && (state.dlFilterOn || (state.dlFilter && (state.dlFilter.ci||[]).length) || (state.dlFilter && (state.dlFilter.name || state.dlFilter.text || state.dlFilter.type || state.dlFilter.tag || state.dlFilter.mvVal)))){
         state.dlFilter = { ci: [] };
         const hadHits = state.dlFilterOn;
@@ -8933,6 +8939,13 @@ function toggleDlPanel(d, panelKey){
 function wireBuilderBody(d){
   if(state.builderTab==='list'){
     document.getElementById('bridgeLogGame')?.addEventListener('click', ()=>openLogGameOverlay(d));
+    document.querySelector('.dl-desc-text')?.addEventListener('click', ()=>{
+      // Straight to the pen: Deck Log tab, description field focused, cursor
+      // at the end — the tap IS the edit intent.
+      state.builderTab = 'primer';
+      state._focusDeckDesc = true;
+      render();
+    });
     ensureDeckPriced(d);
     wireDlPanel(d);
     wireDecklistInteractions(d);
@@ -8953,6 +8966,16 @@ function wireBuilderBody(d){
     document.getElementById('logGameBtn')?.addEventListener('click', ()=>openLogGameOverlay(d));
     const dta = document.getElementById('deckDescText');
     dta?.addEventListener('input', ()=>{ d.description = dta.value; scheduleSave(d); });
+    if(state._focusDeckDesc && dta){
+      state._focusDeckDesc = false;
+      requestAnimationFrame(()=>{
+        try{
+          dta.focus();
+          dta.setSelectionRange(dta.value.length, dta.value.length);
+          dta.scrollIntoView({ behavior:'smooth', block:'center' });
+        }catch(e){}
+      });
+    }
     document.querySelectorAll('[data-dellog]').forEach(b=>b.addEventListener('click', ()=>{
       const i = parseInt(b.dataset.dellog, 10);
       openInAppConfirm(trS('Delete this game from the log?'), (ok)=>{
