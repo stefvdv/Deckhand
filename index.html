@@ -210,7 +210,9 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main:has(> #colAdvBox) > .searchbar{order:0;padding-right:88px;}
 .app > main:has(> #colAdvBox) > div:has(> #colAdvToggle){order:0;}
 /* (6) Search page: explainer just above the random card, RANDOM below it. */
-.app > main > #searchResultsBox{order:95;}
+/* The results box hugs the search bar at the foot; the wrap-reverse grid
+   inside already reads bottom-up, so the best match sits nearest the bar. */
+.app > main > #searchResultsBox{order:95;margin-top:auto;}
 .app > main > .cotd{order:96;}
 .app > main:has(> #searchResultsBox){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));}
 #cotdBox{display:flex;flex-direction:column-reverse;align-items:center;gap:8px;}
@@ -3678,13 +3680,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.338';
+const APP_VERSION = '2.51.339';
 const CHANGELOG_NOTES = {
   en: [
-    'The combos button is back for everyone: the fast lane now probes the combo data directly when an older database lacks the chunk count, and falls through to the full index rather than concluding \u201cno combos\u201d.'
+    'THE combos mystery solved: Data Saver was silently blocking the weekly card-database download, so the local database never existed on this phone. It now downloads regardless \u2014 give the app one restart with internet, and combos, salt images, and every local lookup come alive.',
+    'Search results sit at the page foot now, best match nearest the search bar.'
   ],
   nl: [
-    'De comboknop is terug voor iedereen: de snelle route peilt de combodata nu direct als een oudere database de chunktelling mist, en valt terug op de volledige index in plaats van \u201cgeen combo\u2019s\u201d te concluderen.'
+    'H\u00c9T combomysterie opgelost: Databesparing blokkeerde stilletjes de wekelijkse database-download, dus de lokale database bestond simpelweg niet op deze telefoon. Hij downloadt nu hoe dan ook \u2014 herstart de app \u00e9\u00e9n keer met internet, en combo\u2019s, zoutafbeeldingen en elke lokale zoekactie komen tot leven.',
+    'Zoekresultaten staan nu onderaan de pagina, beste match het dichtst bij de zoekbalk.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -16984,10 +16988,13 @@ const BULK_CHUNK = 2000;
 async function bulkSyncCheck(){
   if(_bulkSyncing) return;
   try{
-    if(!('DecompressionStream' in window)) return;
+    if(!('DecompressionStream' in window)){ console.log('bulk: skipped — no DecompressionStream'); return; }
     if(navigator.onLine === false || document.hidden) return;
-    const conn = navigator.connection;
-    if(conn && conn.saveData) return;
+    // Data Saver used to veto the weekly file entirely — on a phone that
+    // always runs Data Saver (Stef's does) the database was simply NEVER
+    // ingested, which is why combos, salt images, and every other local
+    // lookup came up empty. The weekly file is the app's beating heart;
+    // it downloads regardless, once a week, compressed.
     let remote = null;
     try{
       const r = await fetch('bulk-meta.json', {cache:'no-store'});
