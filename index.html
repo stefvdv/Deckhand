@@ -270,7 +270,15 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 /* The back button wears the CROSS-fleet field colors — admiral blue while
    sailing Commander, commander red while sailing Admiral — so it reads as
    its own kind of button among the plain navigation tabs. */
-.brand-banner #capBack{background:var(--field);border-color:var(--field-line);}
+.brand-banner #capBack, .brand-banner .ov-back{background:var(--field);border-color:var(--field-line);}
+.overlay .ov-nav{position:static;flex:0 0 auto;z-index:20;}
+.overlay .ov-cap{justify-content:center;padding-left:54px;padding-right:54px;}
+.ov-cap .brand-txt{font-size:17px;flex:0 1 auto;max-width:100%;text-align:center;}
+.salt-row{display:flex;align-items:center;gap:10px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:8px;color:var(--ink-text);cursor:pointer;text-align:left;font:inherit;}
+.salt-row img{width:44px;border-radius:4px;flex:0 0 auto;}
+.salt-rank{font-family:'JetBrains Mono',monospace;color:var(--sub-text);flex:0 0 36px;font-size:12px;}
+.salt-name{flex:1;min-width:0;}
+.salt-val{color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:12.5px;white-space:nowrap;}
 .overlay .topbar{top:0;}
 
 /* ---------- deck selector (used on decklist/search/inspiration) ---------- */
@@ -561,7 +569,9 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 
 /* ---------- categorized decklist ---------- */
 .cat-group{margin-bottom:6px;display:flex;flex-direction:column-reverse;}
-.cat-group > .cat-head{border-bottom:none;border-top:1px solid var(--line);}
+/* Bottom-up charter: the category stripe sits BELOW the name, closing
+   off this category from the next one's cards beneath it. */
+.cat-group > .cat-head{border-top:none;}
 .cat-head{display:flex;align-items:center;gap:8px;padding:8px 2px;cursor:pointer;border-bottom:1px solid var(--line);}
 .cat-head .t{font-family:'Cinzel',serif;font-size:12.5px;color:var(--brass);text-transform:uppercase;letter-spacing:0.5px;flex:1;}
 .cat-head .n{font-size:11px;color:var(--sub-text);font-family:'JetBrains Mono',monospace;}
@@ -1186,12 +1196,12 @@ main.has-dock{padding-bottom:84px;}
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
 .overlay main .edh-sec > .section-label{top:auto;bottom:0;}
-#recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px calc(7px + env(safe-area-inset-bottom));}
+#recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;}
 #recoOverlay main{padding-bottom:0;}
-#recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);margin:0;padding:8px 0 calc(8px + env(safe-area-inset-bottom));}
-#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(18px + env(safe-area-inset-bottom));left:14px;right:auto;justify-content:flex-start;z-index:140;height:auto;}
+#recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);margin:0;padding:8px 0;}
+#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(18px + var(--nav-h) + env(safe-area-inset-bottom));left:14px;right:auto;justify-content:flex-start;z-index:140;height:auto;}
 .edh-jump-row{top:70px;}
-.reco-fab{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--brass);color:#1a1204;font-size:26px;font-weight:800;border:none;z-index:140;box-shadow:0 6px 18px rgba(0,0,0,0.5);cursor:pointer;}
+.reco-fab{position:fixed;right:16px;bottom:calc(18px + var(--nav-h) + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--brass);color:#1a1204;font-size:26px;font-weight:800;border:none;z-index:140;box-shadow:0 6px 18px rgba(0,0,0,0.5);cursor:pointer;}
 .reco-fab .fab-n{position:absolute;top:-4px;right:-4px;background:var(--ink);color:var(--brass);border:1px solid var(--brass);border-radius:999px;font-size:11px;padding:1px 6px;font-weight:700;}
 .reco-theme-banner{width:fit-content;margin:0 auto 8px;padding:6px 14px;border:1px solid var(--brass);border-radius:999px;color:var(--brass);font-size:13px;font-weight:600;text-align:center;}
 #tileMenuPop{max-height:70vh;overflow-y:auto;}
@@ -3634,13 +3644,23 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.325';
+const APP_VERSION = '2.51.326';
 const CHANGELOG_NOTES = {
   en: [
-    'Search deck is compacted \u2014 tighter rows, smaller fields, hint line gone \u2014 so the whole filter fits its cover without scrolling.'
+    'Search deck matches words like the Search page \u2014 "draw card" now finds "draw a card".',
+    'Similar cards rebalanced: shared rules-text and curated tags outweigh EDHREC co-play popularity, with a breadth bonus for sharing many words.',
+    'The salt score on a card page is tappable \u2014 it opens the community\u2019s 50 saltiest cards, saltiest at the foot.',
+    'Similar, Recommendations, Change printing, and Combo pages carry the real app navigation bar \u2014 back in its cross-fleet colors \u2014 and one uniform page-name style.',
+    'Combo pages open with every combo\u2019s card images already showing.',
+    'The combo glyph is \u221e now, and category stripes sit BELOW the category name, true to the bottom-up charter.'
   ],
   nl: [
-    'Zoek in deck is compacter \u2014 strakkere rijen, kleinere velden, hintregel weg \u2014 zodat het hele filter zonder scrollen in zijn paneel past.'
+    'Zoek in deck matcht op woorden zoals de Zoekpagina \u2014 "draw card" vindt nu "draw a card".',
+    'Vergelijkbare kaarten herijkt: gedeelde regeltekst en tags wegen zwaarder dan EDHREC-populariteit, met een bonus voor veel gedeelde woorden.',
+    'De salt-score op een kaartpagina is tikbaar \u2014 opent de 50 zoutste kaarten van de community, zoutste onderaan.',
+    'Vergelijkbaar, Aanbevelingen, Verander versie en Combo-pagina\u2019s dragen de echte navigatiebalk \u2014 terugknop in kruisvloot-kleuren \u2014 en \u00e9\u00e9n uniforme paginanaam-stijl.',
+    'Combo-pagina\u2019s openen met de kaartafbeeldingen van elke combo al in beeld.',
+    'Het combo-teken is nu \u221e, en categoriestrepen staan ONDER de categorienaam, trouw aan het bottom-up ontwerp.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4460,6 +4480,38 @@ function renderInner(){
   renderModal();
   renderPreview();
   renderLifeOverlay();
+}
+/* Sub-pages (Similar, Recommendations, Printings, Combos, Saltiest) carry
+   the REAL app navigation: same banner, back in its cross-fleet colors. The
+   banner rides as a flex child UNDER the scroller, so sticky bottoms pin
+   right above it and no padding arithmetic is needed. The top bar keeps
+   only the page name, styled like every main page word. */
+function overlayCapHtml(title, extra){
+  return `<div class="topbar ov-cap"><div class="brand-txt two-line ov-title">${escapeHtml(title)}</div>${extra || ''}</div>`;
+}
+function overlayNavHtml(){
+  const items = [
+    {k:'decks', l:'Decks', i:ICONS.decks},
+    {k:'collection', l:'Collection', i:ICONS.binder},
+    {k:'search', l:'Search', i:ICONS.search},
+    {k:'browse', l:'Inspiration', i:ICONS.inspire},
+    {k:'settings', l:'Extras', i:ICONS.settings}
+  ];
+  const activeKey = state.screen === 'decklist' ? 'decks' : (state.screen === 'trade') ? 'collection' : state.screen;
+  return `<div class="brand-banner ov-nav">
+    <div class="compass" data-ovnav="home" title="Home">${compassSvg()}</div>
+    <button class="banner-tab ov-back" data-ovnav="back" aria-label="Back" title="Back">${ICONS.back}</button>
+    <div class="spacer"></div>
+    <div class="banner-tabs">${items.map(it=>`<button class="banner-tab ${activeKey===it.k?'active':''}" data-ovnav="page:${it.k}" title="${it.l}" aria-label="${it.l}">${it.i}</button>`).join('')}</div>
+  </div>`;
+}
+function wireOverlayNav(el){
+  el.querySelectorAll('[data-ovnav]').forEach(b=>b.addEventListener('click', ()=>{
+    const v = b.dataset.ovnav;
+    if(v === 'back'){ closeTopOverlay(); return; }
+    dismissAllOverlays();
+    switchPage(v === 'home' ? 'home' : v.slice(5));
+  }));
 }
 function navHtml(){
   const items = [
@@ -8083,19 +8135,22 @@ function _deckFilterPredicate(d, f){
   if(!(has(f.name) || has(f.text) || has(f.type) || has(f.tag) || has(f.mvVal) || (f.ci && f.ci.length))) return null;
   const ix = _bulkIdx;
   const low = v=>String(v || '').toLowerCase();
-  const nameQ = low(f.name), textQ = low(f.text), typeQ = low(f.type), tagQ = low(f.tag);
+  // Word-based matching like the Search page: every word must appear, in any
+  // order with anything in between — "draw card" finds "draw a card".
+  const toks = v=>low(v).split(/\s+/).filter(Boolean);
+  const nameQ = toks(f.name), textQ = toks(f.text), typeQ = toks(f.type), tagQ = low(f.tag);
   return (c)=>{
     const e = (ix && ix.byName) ? ix.byName.get(low(c.name)) : null;
-    if(nameQ && !low(c.name).includes(nameQ)) return false;
-    if(typeQ){
+    if(nameQ.length && !nameQ.every(t=>low(c.name).includes(t))) return false;
+    if(typeQ.length){
       const tl = low(c.type_line || (e && e.tl));
-      if(!tl.includes(typeQ)) return false;
+      if(!typeQ.every(t=>tl.includes(t))) return false;
     }
-    if(textQ){
+    if(textQ.length){
       const ot = low(c.oracle_text
         || (c.card_faces && c.card_faces.map(x=>x.oracle_text || '').join(' '))
         || (e && e.ot) || (e && e.f && e.f.map(x=>x.ot || '').join(' ')));
-      if(!ot.includes(textQ)) return false;
+      if(!textQ.every(t=>ot.includes(t))) return false;
     }
     if(f.ci && f.ci.length){
       const raw = (c.color_identity && c.color_identity.join) ? c.color_identity.join('') : ((e && e.ci) || '');
@@ -8472,7 +8527,7 @@ function statsTabHtml(d){
       <div id="msDetail"></div>
     </div>`;
     })()}
-    <div class="panel-card" id="deckCombosPanel"><div class="panel-h">Combos</div><div id="deckCombosBody" class="hint" style="margin:0;min-height:40px;display:flex;flex-direction:column;justify-content:center;">Scanning…</div></div>
+    <div class="panel-card" id="deckCombosPanel"><div class="panel-h">∞ Combos</div><div id="deckCombosBody" class="hint" style="margin:0;min-height:40px;display:flex;flex-direction:column;justify-content:center;">Scanning…</div></div>
     <div class="panel-card"><div class="panel-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;"><span>Most Expensive Cards</span><span id="deckTotalBadge" style="text-transform:none;color:var(--brass);font-weight:700;white-space:nowrap;"></span></div>
       <p class="hint" id="deckPriceNote" style="margin:4px 0 8px;">Cardmarket trend price, cheapest printing of each card.</p>
       <div class="action-row" style="margin:8px 0 4px;"><button class="ghost-btn" id="budgetBtn"><span class="ib">${ICONS.coins}</span>Budget alternatives</button></div><div id="topPriceBox"><div class="empty-note" style="padding:8px 0;">Pricing…</div></div></div>
@@ -9210,7 +9265,7 @@ function renderCardSheet(d, card, loc, idx){
       const list = combosWithCard(ix, card.name);
       if(list && list.length && b.isConnected){
         b.hidden = false;
-        b.textContent = '⚔ ' + list.length;
+        b.textContent = '∞ ' + list.length;
         b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
       }
     }catch(e){}
@@ -9391,7 +9446,12 @@ async function loadCardPrice(card){
   // …and its seat belongs to the salt score now.
   const seat = live.querySelector('[data-saltseat]');
   if(seat) edhrecSaltFor(card).then(sv=>{
-    if(sv != null && sv > 0 && seat.isConnected) seat.textContent = '🧂 ' + sv.toFixed(2) + ' salt';
+    if(sv != null && sv > 0 && seat.isConnected){
+      seat.textContent = '🧂 ' + sv.toFixed(2) + ' salt';
+      seat.style.cursor = 'pointer';
+      seat.title = 'The 50 saltiest cards';
+      seat.addEventListener('click', openSaltiestOverlay);
+    }
   }).catch(()=>{});
 }
 const _rulingsCache = new Map();   // rulings_uri → rendered HTML, capped small
@@ -9617,15 +9677,16 @@ async function openPrintingGrid(card, onPick){
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   pushOverlay('printing', ()=>{ document.getElementById('printOverlay')?.remove(); });
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><button class="icon-btn" id="ppClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">Choose Printing</div></div>
+    ${overlayCapHtml(trS('Change printing'))}
     <main>
       <button class="ghost-btn" id="ppCustom" style="width:100%;margin:2px 0 4px;">📷 ${trS('Use your own image…')}</button>
       <p class="hint" style="margin:0 0 12px;text-align:center;">${infoBtnHtml(trS('Camera or any image file — it becomes this card\'s picture everywhere in the app. Picking a real printing below puts things back.'))}</p>
       <input type="file" id="ppCustomFile" accept="image/*" style="display:none;">
       <div id="ppList" class="status"><div class="spinner"></div>Loading printings…</div>
     </main>
+    ${overlayNavHtml()}
   </div>`;
-  document.getElementById('ppClose').addEventListener('click', closeTopOverlay);
+  wireOverlayNav(el);
   document.getElementById('ppCustom').addEventListener('click', ()=>{
     const inp = document.getElementById('ppCustomFile');
     if(inp) inp.click();   // Android's own sheet offers camera, gallery, and files
@@ -10964,7 +11025,7 @@ function openCardInfo(card, opts){
       const list = combosWithCard(ix, card.name);
       if(list && list.length && b.isConnected){
         b.hidden = false;
-        b.textContent = '⚔ ' + list.length;
+        b.textContent = '∞ ' + list.length;
         b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
       }
     }catch(e){}
@@ -11757,7 +11818,7 @@ function sortCombos(list){
     || ((b.p || 0) - (a.p || 0))
     || String(a.nm[0] || '').localeCompare(String(b.nm[0] || '')));
 }
-function openCombosOverlay(title, combos){
+async function openCombosOverlay(title, combos){
   combos = sortCombos(combos);
   // The stacked-page dance, same as Similar: an earlier combos page steps
   // aside intact instead of being hijacked mid-research.
@@ -11780,49 +11841,103 @@ function openCombosOverlay(title, combos){
   const top = combos.slice(0, 80);
   // Bottom-up, per the ship's charter: the main is column-reverse, so the
   // BEST combo (first after sorting) sits at the foot where the eye starts,
-  // and reading proceeds upward. Rows fold: names + result as text; open a
-  // row for the card images, four across, each tappable to the card page.
+  // and reading proceeds upward. Every section is BORN open now — names,
+  // result, and the card images four across, each tappable to its card page.
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><button class="icon-btn" id="cmbClose">${ICONS.back}</button><div class="tb-titles"><div class="t1 name2">${escapeHtml(title)}</div></div></div>
+    ${overlayCapHtml(title)}
     <main style="display:flex;flex-direction:column-reverse;justify-content:flex-start;">
-      ${top.map((c, i)=>`<div class="panel-card cmb-row" style="margin-bottom:10px;">
-        <button type="button" class="cmb-head" data-cmbrow="${i}">
-          <div class="cmb-names">${c.nm.map(escapeHtml).join(' ＋ ')}</div>
-          <div class="hint" style="margin:4px 0 0;">${escapeHtml(c.r || '')}</div>
-        </button>
-        <div class="cmb-grid" hidden></div>
-      </div>`).join('')}
-      <p class="hint" style="text-align:center;margin:8px 0 0;">${combos.length} · Commander Spellbook</p>
+      <div class="status"><div class="spinner"></div></div>
     </main>
+    ${overlayNavHtml()}
   </div>`;
-  el.querySelector('#cmbClose').addEventListener('click', closeTopOverlay);
-  el.querySelectorAll('[data-cmbrow]').forEach(head=>head.addEventListener('click', async ()=>{
-    const grid = head.parentElement.querySelector('.cmb-grid');
-    if(!grid) return;
-    if(!grid.hidden){ grid.hidden = true; return; }
-    grid.hidden = false;
-    if(!grid.dataset.filled){
-      grid.dataset.filled = '1';
-      const c = top[+head.dataset.cmbrow];
-      let ix = null;
-      try{ ix = await bulkIndexReady(); }catch(e){}
-      grid.innerHTML = c.nm.map((n, k)=>{
-        const entry = ix && ix.byName ? ix.byName.get(String(n).toLowerCase()) : null;
-        return entry
-          ? `<button type="button" class="cmb-card" data-cmbc="${k}"><img src="${cardImage(bulkToCardish(entry))}" alt="${escapeHtml(n)}" loading="lazy"></button>`
-          : `<button type="button" class="cmb-card cmb-card-txt" data-cmbc="${k}">${escapeHtml(n)}</button>`;
-      }).join('');
-      grid.querySelectorAll('[data-cmbc]').forEach(b=>b.addEventListener('click', async ()=>{
-        const name = c.nm[+b.dataset.cmbc];
-        const entry = ix && ix.byName ? ix.byName.get(String(name).toLowerCase()) : null;
-        if(entry){ openCardInfo(bulkToCardish(entry)); return; }
-        try{
-          const r = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(name));
-          if(r.ok) openCardInfo(await r.json());
-        }catch(e){}
-      }));
-    }
+  wireOverlayNav(el);
+  let ix = null;
+  try{ ix = await bulkIndexReady(); }catch(e){}
+  const main = el.querySelector('main');
+  if(!main || !document.getElementById('combosOverlay')) return;   // closed while the index loaded
+  const gridHtml = (c)=>c.nm.map(n=>{
+    const entry = ix && ix.byName ? ix.byName.get(String(n).toLowerCase()) : null;
+    return entry
+      ? `<button type="button" class="cmb-card" data-cmbn="${escapeHtml(n)}"><img src="${cardImage(bulkToCardish(entry))}" alt="${escapeHtml(n)}" loading="lazy"></button>`
+      : `<button type="button" class="cmb-card cmb-card-txt" data-cmbn="${escapeHtml(n)}">${escapeHtml(n)}</button>`;
+  }).join('');
+  main.innerHTML = `${top.map(c=>`<div class="panel-card cmb-row" style="margin-bottom:10px;">
+      <div class="cmb-head">
+        <div class="cmb-names">${c.nm.map(escapeHtml).join(' ＋ ')}</div>
+        <div class="hint" style="margin:4px 0 0;">${escapeHtml(c.r || '')}</div>
+      </div>
+      <div class="cmb-grid">${gridHtml(c)}</div>
+    </div>`).join('')}
+    <p class="hint" style="text-align:center;margin:8px 0 0;">${combos.length} · Commander Spellbook</p>`;
+  main.querySelectorAll('[data-cmbn]').forEach(b=>b.addEventListener('click', async ()=>{
+    const name = b.dataset.cmbn;
+    const entry = ix && ix.byName ? ix.byName.get(String(name).toLowerCase()) : null;
+    if(entry){ openCardInfo(bulkToCardish(entry)); return; }
+    try{
+      const r = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(name));
+      if(r.ok) openCardInfo(await r.json());
+    }catch(e){}
   }));
+}
+/* The community's 50 saltiest cards, from EDHREC's top-salt page (same
+   week cache as everything EDHREC). Bottom-up, per the charter: saltiest at
+   the FOOT where the eye starts, sweeter climbing upward — the page opens
+   scrolled to the bottom. Standard app navigation rides beneath. */
+async function openSaltiestOverlay(){
+  pushOverlay('saltiest', ()=>{ document.getElementById('saltOverlay')?.remove(); });
+  let el = document.getElementById('saltOverlay');
+  if(!el){ el = document.createElement('div'); el.className = 'overlay'; el.id = 'saltOverlay'; }
+  document.body.appendChild(el);
+  el.innerHTML = `<div class="overlay-inner">
+    ${overlayCapHtml('Saltiest Cards')}
+    <main><div class="status"><div class="spinner"></div></div></main>
+    ${overlayNavHtml()}
+  </div>`;
+  wireOverlayNav(el);
+  let ix = null;
+  try{ ix = await bulkIndexReady(); }catch(e){}
+  let rows = [];
+  try{
+    const data = await edhrecFetchJson('/pages/top/salt.json');
+    const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
+    let cvs = [];
+    lists.forEach(L=>{ if(cvs.length < 50) cvs = cvs.concat((L && L.cardviews) || []); });
+    rows = cvs.slice(0, 50).map((cv, i)=>{
+      let sv = Number(cv && cv.salt);
+      if(!isFinite(sv)){
+        const m = /([0-9]+(?:\.[0-9]+)?)/.exec(String((cv && (cv.label || cv.value)) || ''));
+        sv = m ? Number(m[1]) : NaN;
+      }
+      return { name: cv && cv.name, salt: isFinite(sv) ? sv : null, rank: i + 1 };
+    }).filter(r=>r.name);
+  }catch(e){}
+  const main = el.querySelector('main');
+  if(!main || !document.getElementById('saltOverlay')) return;   // closed while loading
+  if(!rows.length){
+    main.innerHTML = `<div class="error-note">Couldn't reach EDHREC's salt list. Check your connection and try again.</div>`;
+    return;
+  }
+  // Rank 1 (saltiest) renders LAST so it lands at the page foot.
+  const ordered = rows.slice().reverse();
+  main.innerHTML = ordered.map(r=>{
+    const entry = ix && ix.byName ? ix.byName.get(String(r.name).toLowerCase()) : null;
+    const img = entry ? `<img src="${cardImage(bulkToCardish(entry))}" alt="" loading="lazy">` : '';
+    return `<button type="button" class="salt-row" data-saltn="${escapeHtml(r.name)}">
+      <span class="salt-rank">#${r.rank}</span>${img}
+      <span class="salt-name">${escapeHtml(r.name)}</span>
+      <span class="salt-val">🧂 ${r.salt != null ? r.salt.toFixed(2) : '—'}</span>
+    </button>`;
+  }).join('');
+  main.querySelectorAll('[data-saltn]').forEach(b=>b.addEventListener('click', async ()=>{
+    const name = b.dataset.saltn;
+    const entry = ix && ix.byName ? ix.byName.get(String(name).toLowerCase()) : null;
+    if(entry){ openCardInfo(bulkToCardish(entry)); return; }
+    try{
+      const r = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(name));
+      if(r.ok) openCardInfo(await r.json());
+    }catch(e){}
+  }));
+  main.scrollTop = main.scrollHeight;   // the story starts at the salt mine's floor
 }
 async function edhrecSaltFor(card){
   if(card._salt !== undefined) return card._salt;
@@ -11857,11 +11972,17 @@ async function edhrecThemeNames(slug){
    ranking never stalls and never punishes offline. */
 const SIM_POINTS = {
   themePage: 5, themeCap: 3,
-  pageSynergy: 12, pageOther: 8,
+  // EDHREC page membership means CO-PLAYED, not same-job — that signal let
+  // generic tutor staples crowd out true cousins (the Land Tax case), so
+  // its points are cut hard and the text/tag signals carry the ranking.
+  pageSynergy: 6, pageOther: 3,
   // Rarity is SQUARED now — Stef's call: sharing 'copy' should dwarf
   // sharing 'target'. Common words ≈ 1 pt, mid ≈ 2.7, rare 6–7.
   wordScale: 0.55, wordMin: 1, wordMax: 7, wordCap: 20,
-  tagRate: 3, tagCap: 15,
+  // Breadth bonus: every shared PAIR of words counts (2→1, 3→3, 4→6,
+  // 5→10) — sharing MANY words says "same job" louder than any one word.
+  sharedPair: 1, sharedCap: 12,
+  tagRate: 4, tagCap: 18,
   colorSame: 2, colorOverlap: 1,
   // Budget profile: EDHREC's card page lists cards CO-PLAYED in the same
   // decks, not cards doing the same job — on a stand-in hunt that signal
@@ -11878,6 +11999,7 @@ function similarityScore(src, cand, opts){
   let w = 0, shared = 0;
   sw.forEach(k=>{ if(cw.has(k)){ shared++; const mww = mwWeight(k, o.weights); w += Math.min(P.wordMax, Math.max(P.wordMin, P.wordScale * mww * mww)); } });
   w = Math.min(P.wordCap, w);
+  const wb = Math.min(P.sharedCap, P.sharedPair * shared * (shared - 1) / 2);
   const st = o.srcTags || [];
   let tShared = 0;
   if(o.tagHas) st.forEach(t=>{ if(o.tagHas(cand, t)) tShared++; });
@@ -11901,7 +12023,7 @@ function similarityScore(src, cand, opts){
     : (cci === '' || sci === '' || [...cci].some(ch=>sci.includes(ch))) ? P.colorOverlap : 0;
   const pop = cand.edhrec_rank || cand.rk
     || (o.fallbackPop != null ? 1e6 + o.fallbackPop : 999999);
-  return { pts: th + pg + w + tg + c + tp, th, pg, w, tg, c, tp, shared, tShared, eIdx, pop };
+  return { pts: th + pg + w + wb + tg + c + tp, th, pg, w, wb, tg, c, tp, shared, tShared, eIdx, pop };
 }
 function cmpSimilarity(a, b){
   return (b.s.pts - a.s.pts) || (a.s.eIdx - b.s.eIdx) || (a.s.pop - b.s.pop)
@@ -12026,7 +12148,7 @@ async function openSimilarCards(card, colorScope){
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='similarOverlay'; }
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><button class="icon-btn" id="simClose">${ICONS.back}</button><div class="tb-titles"><div class="t1 name2">${escapeHtml(card.name)}</div></div><button class="ghost-btn" id="simCombos" hidden style="width:auto;flex:0 0 auto;padding:7px 11px;">⚔</button></div>
+    ${overlayCapHtml(card.name, `<button class="ghost-btn" id="simCombos" hidden style="width:auto;flex:0 0 auto;padding:7px 11px;">∞</button>`)}
     <main>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="simCardImg" alt="${escapeHtml(card.name)}">
@@ -12034,8 +12156,9 @@ async function openSimilarCards(card, colorScope){
       <p class="hint" style="text-align:center;margin:0 0 8px;">${trS('Similar cards')} — ${trS('cards that do the same job')}, ${trS('most played first.')}</p>
       <div id="simBody"><div class="status"><div class="spinner"></div></div></div>
     </main>
+    ${overlayNavHtml()}
   </div>`;
-  document.getElementById('simClose').addEventListener('click', closeTopOverlay);
+  wireOverlayNav(el);
   document.getElementById('simCardImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
   try{
     const f = frontFace(card);
@@ -12124,7 +12247,7 @@ async function openSimilarCards(card, colorScope){
         if(_all.length){
           const t = _all[0];
           sfJournal('top: ' + (t.x.name || t.x.n) + ' pts:' + Math.round(t.s.pts)
-            + ' (th:' + t.s.th + ' pg:' + t.s.pg + ' w:' + Math.round(t.s.w) + ' tg:' + t.s.tg + ' c:' + t.s.c + ')');
+            + ' (th:' + t.s.th + ' pg:' + t.s.pg + ' w:' + Math.round(t.s.w) + ' wb:' + Math.round(t.s.wb || 0) + ' tg:' + t.s.tg + ' c:' + t.s.c + ')');
         }
       }
       if(!ranked.length){
@@ -12154,7 +12277,7 @@ async function openSimilarCards(card, colorScope){
         const btn = document.getElementById('simCombos');
         if(btn && list && list.length){
           btn.hidden = false;
-          btn.textContent = '⚔ ' + list.length;
+          btn.textContent = '∞ ' + list.length;
           btn.title = 'Combos with ' + card.name;
           btn.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
         }
@@ -14488,10 +14611,7 @@ function renderRecoOverlay(){
   const n = R.selected.size;
   const theme = state.browseSel.theme ? BROWSE_THEMES.find(t=>t.key===state.browseSel.theme) : null;
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar" style="position:relative;">
-      <button class="icon-btn" id="recoBack">${ICONS.back}</button>
-      <div class="tb-titles"><div class="t1 name2">${escapeHtml(R.admiral.name)}${R.partner?` & ${escapeHtml(R.partner.name)}`:''}</div></div>
-    </div>
+    ${overlayCapHtml(R.admiral.name + (R.partner ? ' & ' + R.partner.name : ''))}
     <main>
       <div class="reco-admiral">
         ${R.partner ? `<div class="reco-pair-grid">
@@ -14502,8 +14622,9 @@ function renderRecoOverlay(){
       </div>
       <div id="recoBody">${R.loading ? `<div class="status"><div class="spinner"></div>${R._seedTheme ? trS('Charting themed recommendations…') : 'Charting recommendations…'}</div>` : ''}</div>
     </main>
+    ${overlayNavHtml()}
   </div>`;
-  document.getElementById('recoBack').addEventListener('click', closeTopOverlay);
+  wireOverlayNav(el);
   document.getElementById('recoAdmImg').addEventListener('click', ()=>showPreview(cardImageLarge(R.admiral), R.admiral.border_color==='white'));
   const p2 = document.getElementById('recoAdmImg2');
   if(p2) p2.addEventListener('click', ()=>showPreview(cardImageLarge(R.partner), R.partner.border_color==='white'));
