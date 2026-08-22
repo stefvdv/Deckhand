@@ -382,7 +382,7 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .cmb-card-txt{border:1px solid var(--pop-line);border-radius:7px;min-height:56px;color:inherit;font-size:11.5px;padding:4px;}
 .cs-price-row{position:relative;display:flex;align-items:center;justify-content:center;min-height:28px;margin:0 0 14px;}
 .cs-price-row .card-price{margin:0;}
-.cs-combos-btn{width:auto;padding:4px 10px;position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:12.5px;}
+.cs-combos-btn{width:auto;padding:4px 10px;position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:12.5px;}
 .cs-combos-btn[hidden]{display:none;}
 .cs-combos-btn:disabled{opacity:0.55;cursor:default;}
 .cs-combos-btn svg{width:12px;height:12px;vertical-align:-2px;}
@@ -3681,13 +3681,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.341';
+const APP_VERSION = '2.51.342';
 const CHANGELOG_NOTES = {
   en: [
-    'The Combos button is always on the card page now: a loading ring while the database answers, then \u221e Combos (tap for the 20 most playable, bottom-up) \u2014 or 0 Combos when there are none.'
+    'The eternal combos ring is slain: the boot-time full-database read was blocking the combo lane\u2019s own reads, and each chunk paused 180ms while you touched the screen. The boot now warms only the combo lane, the pause is 40ms, and \u221e Combos should appear within a few seconds. The button also nudged left to align with the grid.'
   ],
   nl: [
-    'De Combo-knop staat nu altijd op de kaartpagina: een laadring terwijl de database antwoordt, daarna \u221e Combo\u2019s (tik voor de 20 speelbaarste, bottom-up) \u2014 of 0 Combo\u2019s als er geen zijn.'
+    'De eeuwige comboring is verslagen: de volledige database-leesactie bij het opstarten blokkeerde de eigen leesacties van de comboroute, en elk blok pauzeerde 180ms zolang je het scherm aanraakte. De start warmt nu alleen de comboroute, de pauze is 40ms, en \u221e Combo\u2019s hoort binnen enkele seconden te verschijnen. De knop schoof ook iets naar links, uitgelijnd met het raster.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4439,10 +4439,12 @@ function pageBodyHtml(screen){
   if(screen==='trade') return tradePageHtml();
   return '';
 }
-// Prewarm the local card database soon after boot: the combos button (and
-// every other index reader) then answers in a breath instead of paying a
-// cold download-and-parse on first tap — the "stuck for a minute" report.
-setTimeout(()=>{ try{ bulkIndexReady().catch(()=>{}); }catch(e){} }, 2500);
+// Prewarm ONLY the combo lane at boot. The old full-index prewarm read all
+// 33k cards from IndexedDB right as the person started tapping around — and
+// the combos fast-lane reads queued BEHIND that convoy on the same store,
+// which is exactly the ring-spins-forever report. The full index still
+// builds itself on first genuine need (salt images, similar pools).
+setTimeout(()=>{ try{ combosReady().catch(()=>{}); }catch(e){} }, 2500);
 function render(){
   // The navigation ladder: every screen change made by the USER (not by a
   // back press) records its rung. Home resets the ladder; returning to a
@@ -16958,9 +16960,11 @@ function bulkLineFeed(onLine){
   };
 }
 function _bulkYield(){
-  // A long breath while the person is actively using the app.
+  // A short breath while the person is actively using the app. The old
+  // 180ms breath, times ~90 chunks, was most of a "stuck forever" ring —
+  // an actively-poked phone kept every yield in the busy window.
   const busy = (Date.now() - _warmLastInput) < 2500;
-  return new Promise(r=>setTimeout(r, busy ? 180 : 0));
+  return new Promise(r=>setTimeout(r, busy ? 40 : 0));
 }
 async function _bulkStreamJsonl(url, onLine){
   const res = await fetch(url);
