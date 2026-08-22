@@ -184,13 +184,15 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main:has(> #inspireResults) > .hint{order:98;}
 .app > main > .browse-hero{order:98;margin:10px 0 80px;}
 .app > main > #twResults{order:95;display:flex;flex-direction:column-reverse;gap:8px;padding-bottom:6px;}
-.app > main:has(> #twResults) > .hint, .app > main:has(> #twResults) > .panel-card{order:98;}
+
 /* Room beneath the last card so nothing hides behind the sticky wants bar. */
-/* The wants bar is pinned HARD above the nav — position:fixed like the
-   deck-dock, immune to every flow subtlety that kept floating it mid-air.
-   The main pads enough that the verdict scrolls clear above the bar. */
+/* The wants bar lives in a BODY-level portal: the page main carries a
+   transform (swipe machinery), which hijacks fixed-position coordinates for
+   anything inside it — that's why every in-main pin floated. Outside main,
+   fixed means fixed: glued to the nav, no gap. */
 .app > main:has(> #twResults){padding-bottom:calc(var(--nav-h) + 76px + env(safe-area-inset-bottom));}
-.app > main:has(> #twResults) > .searchbar{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h) + 6px + env(safe-area-inset-bottom));z-index:60;margin:0 !important;padding:0;border-top:none;background:transparent;}
+#tradeBarHost{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:90;background:var(--ink);border-top:1px solid var(--line);padding:8px 12px;}
+#tradeBarHost .searchbar{margin:0;display:flex;gap:8px;position:relative;}
 .tw-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
 .tw-row img{width:40px;border-radius:4px;display:block;}
 .tw-row .tw-nm{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -3716,13 +3718,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.363';
+const APP_VERSION = '2.51.364';
 const CHANGELOG_NOTES = {
   en: [
-    'The wants bar is hard-pinned directly above the navigation now (fixed, like the deck bar) \u2014 everything else scrolls into view above it.'
+    'The wants bar is glued to the navigation at last \u2014 it lives outside the page now (the page\u2019s swipe transform was hijacking every pin attempt), and the Even trade / balance section flows below ME again.'
   ],
   nl: [
-    'De gezocht-balk is nu hard vastgepind direct boven de navigatie (fixed, zoals de deckbalk) \u2014 al het andere scrolt erboven in beeld.'
+    'De gezocht-balk zit eindelijk vast aan de navigatie \u2014 hij leeft nu buiten de pagina (de swipe-transform van de pagina kaapte elke vastzetpoging), en het Gelijke ruil / balans-blok stroomt weer onder IK.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4486,6 +4488,7 @@ function pageBodyHtml(screen){
   return '';
 }
 function render(){
+  document.getElementById('tradeBarHost')?.remove();   // trade's portal bar, page-scoped
   // The navigation ladder: every screen change made by the USER (not by a
   // back press) records its rung. Home resets the ladder; returning to a
   // screen already on it trims back to that rung, so back always retraces
@@ -11681,7 +11684,14 @@ function wireTradePage(){
       requestAnimationFrame(()=>{ const q2 = document.getElementById('twQ'); if(q2){ q2.focus(); } });
     }));
   };
-  scrollToPageFoot();   // bottom-up: the verdict and the wants bar greet first
+  // Teleport the wants bar out of the transformed main into the portal.
+  { const sb = twQ ? twQ.closest('.searchbar') : null;
+    if(sb){
+      let host = document.getElementById('tradeBarHost');
+      if(!host){ host = document.createElement('div'); host.id = 'tradeBarHost'; document.body.appendChild(host); }
+      host.appendChild(sb);
+    } }
+  scrollToPageFoot();   // bottom-up: the verdict greets first, bar glued below
   if(twQ){
     twQ.addEventListener('input', renderWants);
     twQ.addEventListener('focus', renderWants);
