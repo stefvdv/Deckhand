@@ -293,10 +293,14 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
    bar + tabs stack. */
 .dl-jump{position:fixed !important;top:auto !important;right:14px;bottom:calc(150px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;justify-content:flex-end;z-index:45;height:auto;}
 .otag-wrap{position:relative;}
+.otag-pop[hidden]{display:none !important;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
-.tw-poprow{display:flex !important;align-items:center;gap:8px;text-align:left;}
+/* Inside .searchbar the generic button rule paints brass — override back
+   to the app's dark menu rows. */
+.searchbar .otag-pop button, .tw-poprow{display:flex !important;align-items:center;gap:8px;text-align:left;background:none !important;color:var(--ink-text) !important;font-weight:400;border:none;border-radius:7px;padding:7px 9px;}
+.searchbar .otag-pop button:hover{background:var(--brass-glow) !important;color:var(--brass) !important;}
 .tw-poprow img{width:30px;height:42px;object-fit:cover;border-radius:4px;flex:none;}
 .tw-poprow .tw-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tw-poprow .tw-eur{color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:11.5px;flex:none;}
@@ -3706,17 +3710,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.357';
+const APP_VERSION = '2.51.358';
 const CHANGELOG_NOTES = {
   en: [
-    'Selecting cards on Recommendations lifts the \u2630 burger above the + button; it settles back when the last selection drops.',
-    'Search-in-deck opens with the cursor in Name and the keyboard up, search key ready.',
-    'Add to trade is bottom-up now \u2014 navigation at the foot, search bar above it, results climbing \u2014 and the wants box became a drop-up of your whole wants list: tap a want and it lands on the ME side.'
+    'Trade repaired: the wants drop-up hides properly and wears the app\u2019s dark menu style, ME sits at the bottom (wants land right there), and the YOU side\u2019s Add card searches your OWN collection.'
   ],
   nl: [
-    'Kaarten selecteren op Aanbevelingen tilt de \u2630-burger boven de +-knop; hij zakt terug zodra de laatste selectie vervalt.',
-    'Zoeken-in-deck opent met de cursor in Naam en het toetsenbord omhoog, zoektoets paraat.',
-    'Toevoegen aan ruil is nu bottom-up \u2014 navigatie onderaan, zoekbalk erboven, resultaten klimmend \u2014 en het gezocht-veld werd een opklapmenu van je hele gezochtlijst: tik een kaart aan en hij landt aan de IK-kant.'
+    'Ruil hersteld: het gezocht-opklapmenu verbergt netjes en draagt de donkere menustijl van de app, IK staat onderaan (gezochte kaarten landen daar), en Kaart toevoegen aan de JIJ-kant zoekt door je EIGEN collectie.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11628,8 +11628,8 @@ function tradePageHtml(){
   return `<main>
     <div id="twResults"></div>
     <p class="hint">Cardmarket ${infoBtnHtml(trS('Cardmarket trend prices — pick the exact printing when adding a card.'))}</p>
-    ${sideCard('a', nl?'Ik':'Me', totA)}
     ${sideCard('b', nl?'Jij':'You', totB)}
+    ${sideCard('a', nl?'Ik':'Me', totA)}
     <div class="panel-card" style="text-align:center;">
       <div class="trade-verdict ${even?'even':''}">${verdict}</div>
       ${missing?`<p class="hint" style="margin:6px 0 0;">${trS('Some cards have no listed price and count as €0.00.')}</p>`:''}
@@ -12578,6 +12578,20 @@ function openTradeAdd(side){
     const box = document.getElementById('taResults');
     if(!q || !box) return;
     box.innerHTML = '<div class="status"><div class="spinner"></div></div>';
+    // The YOU side deals from MY OWN collection — what leaves my binders —
+    // so its search runs over the collection, not Scryfall.
+    if(side === 'b'){
+      const ql = q.toLowerCase();
+      const mine = (state.collection.items || []).filter(c=>c.name && c.name.toLowerCase().includes(ql)).slice(0, 30);
+      if(!mine.length){ box.innerHTML = `<p class="hint" style="text-align:center;">${trS('Nothing matches these filters.')}</p>`; return; }
+      box.innerHTML = `<div class="sr-grid">${mine.map((c,i)=>`<button class="sr-tile ta-tile" data-i="${i}">
+        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
+        <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
+      </button>`).join('')}</div>`;
+      box.querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, mine[+btn.dataset.i])));
+      loadTilePrices(mine);
+      return;
+    }
     try{
       const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent(q+' game:paper')}`);
       if(!r.ok){ box.innerHTML = '<p class="hint">No cards found.</p>'; return; }
