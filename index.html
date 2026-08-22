@@ -3675,13 +3675,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.347';
+const APP_VERSION = '2.51.348';
 const CHANGELOG_NOTES = {
   en: [
-    'The \u221e combos button now lives only on the card page (top right, with its count) \u2014 the Similar cards copy retired, the working mechanism untouched.'
+    'The card-page combos button gets its foundation back: the shared card index now warms up once per session (8s after start), the way the Similar page used to warm it invisibly \u2014 so \u221e appears on cards without the cold-build wait.'
   ],
   nl: [
-    'De \u221e-comboknop staat nu alleen op de kaartpagina (rechtsboven, met telling) \u2014 de kopie op Vergelijkbare kaarten is met pensioen, het werkende mechanisme onaangeroerd.'
+    'De comboknop op de kaartpagina krijgt zijn fundament terug: de gedeelde kaartindex warmt nu \u00e9\u00e9n keer per sessie op (8s na de start), zoals de Vergelijkbaar-pagina dat vroeger onzichtbaar deed \u2014 zodat \u221e op kaarten verschijnt zonder de koude-bouw-wachttijd.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4433,6 +4433,13 @@ function pageBodyHtml(screen){
   if(screen==='trade') return tradePageHtml();
   return '';
 }
+// The quiet foundation: when the combos button lived on the Similar page,
+// that page's own pipeline always built the shared index first — the button
+// merely read a warm answer. Moved to the card page, the button became the
+// FIRST caller and paid the cold build in full view. This warm-up restores
+// the old foundation on purpose: same shared promise the button awaits (so
+// nothing competes — unlike the .329 convoy), started once, off-peak.
+setTimeout(()=>{ try{ bulkIndexReady().catch(()=>{}); }catch(e){} }, 8000);
 function render(){
   // The navigation ladder: every screen change made by the USER (not by a
   // back press) records its rung. Home resets the ladder; returning to a
