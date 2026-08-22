@@ -384,6 +384,7 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .cs-price-row .card-price{margin:0;}
 .cs-combos-btn{width:auto;padding:4px 10px;position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:12.5px;}
 .cs-combos-btn[hidden]{display:none;}
+.cs-combos-btn:disabled{opacity:0.55;cursor:default;}
 .cs-combos-btn svg{width:12px;height:12px;vertical-align:-2px;}
 #deckCombosPanel .panel-h svg{width:12px;height:12px;vertical-align:-2px;margin-right:3px;}
 .mini-spin{display:inline-block;width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--brass);border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:-1px;}
@@ -3680,13 +3681,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.340';
+const APP_VERSION = '2.51.341';
 const CHANGELOG_NOTES = {
   en: [
-    'Extras \u2192 Data sources gained a \u2b07 Download card database now button \u2014 it speaks: every reason a download can\u2019t run (server, browser, already current) arrives as a toast instead of silence, and success reports its card and combo counts.'
+    'The Combos button is always on the card page now: a loading ring while the database answers, then \u221e Combos (tap for the 20 most playable, bottom-up) \u2014 or 0 Combos when there are none.'
   ],
   nl: [
-    'Extra\u2019s \u2192 Databronnen kreeg een \u2b07 Download kaartendatabase nu-knop \u2014 hij spreekt: elke reden waarom een download niet kan (server, browser, al actueel) komt als toast in plaats van stilte, en succes meldt zijn kaart- en combotellingen.'
+    'De Combo-knop staat nu altijd op de kaartpagina: een laadring terwijl de database antwoordt, daarna \u221e Combo\u2019s (tik voor de 20 speelbaarste, bottom-up) \u2014 of 0 Combo\u2019s als er geen zijn.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9349,27 +9350,23 @@ function renderCardSheet(d, card, loc, idx){
   (async ()=>{
     const b = el.querySelector('[data-cmbbtn]');
     if(!b) return;
-    // A cold local database can take a while to build; the ring must not
-    // spin forever. 15s and the button bows out — and steps back in with
-    // its count the moment the index lands, if the sheet is still open.
-    let _cmbDone = false;
-    setTimeout(()=>{ if(!_cmbDone && b.isConnected) b.hidden = true; }, 15000);
+    // The button is ALWAYS there: the ring spins until the database answers,
+    // then becomes ∞ Combos (tappable) or 0 Combos (honest and inert).
     try{
       let ix = await combosReady();
-      // Fast lane empty? The full index is the proven path — slower, but
-      // never wrong; the 15s curtain covers the wait and the button steps
-      // back in when it resolves.
       if(!ix || !(ix.combos && ix.combos.length)) ix = await bulkIndexReady();
-      _cmbDone = true;
       const list = combosWithCard(ix, card.name);
       if(!b.isConnected) return;
       if(list && list.length){
-        b.hidden = false;
-        // Total across every size — 2-, 3-, and 4-card combos alike.
-        b.innerHTML = MANA_INF + ' ' + escapeHtml(trS('Combos')) + ' · ' + list.length;
+        b.innerHTML = MANA_INF + ' ' + escapeHtml(trS('Combos'));
         b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
-      } else b.hidden = true;
-    }catch(e){ _cmbDone = true; if(b.isConnected) b.hidden = true; }
+      } else {
+        b.innerHTML = '0 ' + escapeHtml(trS('Combos'));
+        b.disabled = true;
+      }
+    }catch(e){
+      if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; }
+    }
   })();
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
@@ -9405,7 +9402,7 @@ function renderCardSheet(d, card, loc, idx){
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div class="cs-price-row"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn hidden><span class="mini-spin"></span> ${trS('Combos')}</button></div>
+        <div class="cs-price-row"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn><span class="mini-spin"></span> ${trS('Combos')}</button></div>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
@@ -11155,27 +11152,23 @@ function openCardInfo(card, opts){
   (async ()=>{
     const b = el.querySelector('[data-cmbbtn]');
     if(!b) return;
-    // A cold local database can take a while to build; the ring must not
-    // spin forever. 15s and the button bows out — and steps back in with
-    // its count the moment the index lands, if the sheet is still open.
-    let _cmbDone = false;
-    setTimeout(()=>{ if(!_cmbDone && b.isConnected) b.hidden = true; }, 15000);
+    // The button is ALWAYS there: the ring spins until the database answers,
+    // then becomes ∞ Combos (tappable) or 0 Combos (honest and inert).
     try{
       let ix = await combosReady();
-      // Fast lane empty? The full index is the proven path — slower, but
-      // never wrong; the 15s curtain covers the wait and the button steps
-      // back in when it resolves.
       if(!ix || !(ix.combos && ix.combos.length)) ix = await bulkIndexReady();
-      _cmbDone = true;
       const list = combosWithCard(ix, card.name);
       if(!b.isConnected) return;
       if(list && list.length){
-        b.hidden = false;
-        // Total across every size — 2-, 3-, and 4-card combos alike.
-        b.innerHTML = MANA_INF + ' ' + escapeHtml(trS('Combos')) + ' · ' + list.length;
+        b.innerHTML = MANA_INF + ' ' + escapeHtml(trS('Combos'));
         b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
-      } else b.hidden = true;
-    }catch(e){ _cmbDone = true; if(b.isConnected) b.hidden = true; }
+      } else {
+        b.innerHTML = '0 ' + escapeHtml(trS('Combos'));
+        b.disabled = true;
+      }
+    }catch(e){
+      if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; }
+    }
   })();
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
@@ -11188,7 +11181,7 @@ function openCardInfo(card, opts){
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div class="cs-price-row"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn hidden><span class="mini-spin"></span> ${trS('Combos')}</button></div>
+        <div class="cs-price-row"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn><span class="mini-spin"></span> ${trS('Combos')}</button></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
