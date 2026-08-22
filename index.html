@@ -671,7 +671,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .cs-actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .cs-actions-grid .ghost-btn{width:100%;font-size:12px;padding:10px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cs-actions-grid > .ghost-btn:last-child:nth-child(odd){grid-column:1 / -1;}
-.dl-bridge{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;align-items:stretch;}
+.dl-bridge{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;align-items:stretch;}
 .dl-bridge-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:stretch;}
 .dl-bridge{position:relative;}
 .dl-cover{position:absolute;inset:0;z-index:6;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;}
@@ -712,7 +712,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-mid:has(.dk-tool){gap:5px;}
 .dl-bridge-desc{display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;}
 .dl-mini-add{width:30px;height:30px;border-radius:9px;flex:none;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:6px;}
-.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;border-top:1px solid var(--line);margin-top:auto;padding-top:8px;font-size:12.5px;color:var(--ink-text);}
+.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding-right:46px;border-top:1px solid var(--line);margin-top:auto;padding-top:8px;font-size:12.5px;color:var(--ink-text);}
 .dl-winrate b{color:var(--brass);}
 .dl-bridge-adm{display:flex;flex-direction:column;}
 .dl-leader-cat{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.6px;padding:6px 2px 2px;margin-top:auto;}
@@ -1175,10 +1175,14 @@ main.has-dock{padding-bottom:84px;}
 .cr-toc{display:flex;flex-direction:column;}
 .cr-toc-row{display:flex;gap:10px;align-items:baseline;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:11px 10px;color:var(--ink-text);font-size:13.5px;cursor:pointer;}
 #logGameOverlay{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.55);display:flex;align-items:flex-end;justify-content:center;}
-/* Pickers in the log form are DROP-UPs, options running bottom-up: the
-   search field sits nearest the trigger and the list climbs away. (Card
-   grids keep display:grid — flex-direction is inert there, by design.) */
-#logGameOverlay .cselect-panel{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;justify-content:flex-start;}
+/* Pickers in the log form are DROP-UPs, options bottom-up. Plain lists
+   reverse via flex; the CARD pickers stay a two-column grid of full images
+   (the id-scoped flex was flattening them into strips) — their bottom-up
+   comes from the options array itself arriving Z→A, so A lands at the
+   grid's foot. The filter field sinks to the panel foot in both. */
+#logGameOverlay .cselect-panel{top:auto;bottom:calc(100% + 4px);}
+#logGameOverlay .cselect:not(.cs-cardgrid) .cselect-panel{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
+#logGameOverlay .cs-cardgrid .cselect-panel .cselect-search{order:999;grid-column:1 / -1;}
 .cselect-panel.inline{position:static;max-height:44vh;overflow-y:auto;margin-top:6px;box-shadow:none;}
 .glog-csbox{flex:1;min-width:0;}
 .glog-csbox .cselect{width:100%;}
@@ -3695,17 +3699,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.355';
+const APP_VERSION = '2.51.356';
 const CHANGELOG_NOTES = {
   en: [
-    'The COMMANDER label sits stripeless at the cell\u2019s foot, right above the toolbar, and the log-a-game \uff0b moved left, clear of the floating burger.',
-    'On commander Recommendations the Theme and Kindred menus live at the page foot now, below the commander card.',
-    'Every category\u2019s More button says just \u201cMore\u201d, and burger jumps land at a section\u2019s START \u2014 its bottom, where reading begins.'
+    'The MVP/Weakest pickers are a two-column grid of full card images again \u2014 alphabetical with A at the bottom, filter at the foot.',
+    'On Recommendations the tap-cards hint sits just above the commander, with Kindred and Theme directly below the card (Theme at the very foot).',
+    'The decklist bridge lost its empty tail, and the winrate line keeps clear of the floating burger.'
   ],
   nl: [
-    'Het COMMANDER-label staat streeploos onderaan zijn cel, vlak boven de werkbalk, en de potje-noteren-\uff0b schoof naar links, vrij van de zwevende burger.',
-    'Op commander-Aanbevelingen staan de Thema- en Kindred-menu\u2019s nu onderaan de pagina, onder de commanderkaart.',
-    'Elke Meer-knop zegt gewoon \u201cMeer\u201d, en burgersprongen landen bij het BEGIN van een sectie \u2014 de onderkant, waar het lezen begint.'
+    'De MVP/Zwakste-kiezers zijn weer een tweekoloms raster met volledige kaartafbeeldingen \u2014 alfabetisch met A onderaan, filter aan de voet.',
+    'Op Aanbevelingen staat de tik-kaarten-hint vlak boven de commander, met Kindred en Thema direct onder de kaart (Thema helemaal onderaan).',
+    'De decklijst-brug verloor zijn lege staart, en de winrate-regel blijft vrij van de zwevende burger.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8872,6 +8876,8 @@ function openLogGameOverlay(d){
   el.id = 'logGameOverlay';
   document.body.appendChild(el);
   pushOverlay('gamelog', ()=>{ document.getElementById('logGameOverlay')?.remove(); });
+  // Bottom-up grid: Z→A in DOM puts A on the bottom row, nearest the eye.
+  const cardOptsUp = cardOpts.slice(1).reverse().concat([cardOpts[0]]);
   const csLocal = (id, options, value, ph, cls)=>{
     const keep = state.openCSelect;
     state.openCSelect = local.open;
@@ -8894,8 +8900,8 @@ function openLogGameOverlay(d){
         <div class="glog-frow"><span class="glog-lbl">Mulligans</span>${segHtml('mull','mull',[['0','0'],['1','1'],['2','2'],['3','3+']])}</div>
         <div class="glog-frow"><span class="glog-lbl">Mana</span>${segHtml('mana','mana',[['ok','Smooth'],['screw','Screwed'],['flood','Flooded']])}</div>
         <div class="glog-frow"><span class="glog-lbl">Dead turns</span><input id="lgDead" type="number" min="0" max="99" inputmode="numeric" class="glog-num" placeholder="0" value="${escapeHtml(local.dead)}"></div>
-        <div class="glog-frow"><span class="glog-lbl">MVP card</span><div class="glog-csbox">${csLocal('lgMvp', cardOpts, local.mvp, '—', 'cs-cardgrid')}</div></div>
-        <div class="glog-frow"><span class="glog-lbl">Weakest card</span><div class="glog-csbox">${csLocal('lgWeak', cardOpts, local.weak, '—', 'cs-cardgrid')}</div></div>
+        <div class="glog-frow"><span class="glog-lbl">MVP card</span><div class="glog-csbox">${csLocal('lgMvp', cardOptsUp, local.mvp, '—', 'cs-cardgrid')}</div></div>
+        <div class="glog-frow"><span class="glog-lbl">Weakest card</span><div class="glog-csbox">${csLocal('lgWeak', cardOptsUp, local.weak, '—', 'cs-cardgrid')}</div></div>
         <textarea id="lgNote" class="bulk-textarea" style="min-height:64px;" placeholder="Notes — what decided this game?">${escapeHtml(local.note)}</textarea>
         <button class="primary-btn" id="lgSave">Save game</button>
       </div>
@@ -14930,11 +14936,12 @@ function renderRecoOverlay(){
     ${overlayCapHtml(R.admiral.name + (R.partner ? ' & ' + R.partner.name : ''))}
     <main>
       <div class="reco-admiral">
+        <div class="ra-hint" style="position:static;border-top:none;margin:0 0 6px;padding:0;">tap cards to select</div>
         ${R.partner ? `<div class="reco-pair-grid">
           <img class="${wbClass(R.admiral)}" src="${cardImageLarge(R.admiral)}" id="recoAdmImg" alt="${escapeHtml(R.admiral.name)}">
           <img class="${wbClass(R.partner)}" src="${cardImageLarge(R.partner)}" id="recoAdmImg2" alt="${escapeHtml(R.partner.name)}">
         </div>` : `<img class="${wbClass(R.admiral)}" src="${cardImageLarge(R.admiral)}" id="recoAdmImg" alt="${escapeHtml(R.admiral.name)}">`}
-        <div class="ra-hint">tap cards to select</div>
+        <div id="recoChipsSlot"></div>
       </div>
       <div id="recoBody">${R.loading ? `<div class="status"><div class="spinner"></div>${R._seedTheme ? trS('Charting themed recommendations…') : 'Charting recommendations…'}</div>` : ''}</div>
     </main>
@@ -15330,10 +15337,11 @@ function renderRecoBody(){
   const kinList = chipList.filter(isKin);
   const thList  = chipList.filter(t=>!isKin(t));
   const activeIsKin = activeTheme ? isKin(activeTheme) : false;
+  // Below the hero: Kindred first (upper), Theme beneath it at the foot.
   const chips = chipList.length
-    ? `<div class="reco-themes" style="flex-direction:column;align-items:stretch;gap:8px;">
-        ${thList.length ? cselectHtml('recoTheme', [{v:'',l:trS('Theme — none')}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label)}))), activeIsKin ? '' : (R.activeThemeSlug||''), trS('Theme — none'), {search:true}) : ''}
+    ? `<div class="reco-themes" style="flex-direction:column;align-items:stretch;gap:8px;margin-top:8px;">
         ${kinList.length ? cselectHtml('recoKindred', [{v:'',l:trS('Kindred — none')}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label)}))), activeIsKin ? (R.activeThemeSlug||'') : '', trS('Kindred — none'), {search:true}) : ''}
+        ${thList.length ? cselectHtml('recoTheme', [{v:'',l:trS('Theme — none')}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label)}))), activeIsKin ? '' : (R.activeThemeSlug||''), trS('Theme — none'), {search:true}) : ''}
       </div>`
     : '';
   box.innerHTML = themeBanner + hint + fallbackNote;
@@ -15415,15 +15423,17 @@ function renderRecoBody(){
     if(!v){ loadRecoTheme(cur); return; }             // "none" — same slug toggles back to the main list
     loadRecoTheme(v);                                  // switching loads the new theme directly
   };
-  // The Theme / Kindred menus live at the page FOOT, below the commander
-  // hero — appended last so they render bottommost, wired right after.
-  box.insertAdjacentHTML('beforeend', chips);
-  box.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', e=>{
+  // The Theme / Kindred menus live in the hero's slot, directly below the
+  // commander card — wired from the overlay root since they sit outside box.
+  const chipSlot = document.getElementById('recoChipsSlot');
+  if(chipSlot) chipSlot.innerHTML = chips; else box.insertAdjacentHTML('beforeend', chips);
+  const ovRoot = document.getElementById('recoOverlay') || box;
+  ovRoot.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', e=>{
     e.stopPropagation();
     state.openCSelect = state.openCSelect === b.dataset.cs ? null : b.dataset.cs;
     renderRecoBody();
   }));
-  box.querySelectorAll('[data-csopt]').forEach(opt=>opt.addEventListener('click', e=>{
+  ovRoot.querySelectorAll('[data-csopt]').forEach(opt=>opt.addEventListener('click', e=>{
     e.stopPropagation();
     const id = opt.dataset.csopt, val = opt.dataset.val;
     state.openCSelect = null;
