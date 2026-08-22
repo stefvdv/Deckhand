@@ -3675,13 +3675,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.346';
+const APP_VERSION = '2.51.347';
 const CHANGELOG_NOTES = {
   en: [
-    'Full revert of the combos-button saga: the \u221e button lives on the Similar cards page again (with its count), the card page\u2019s button is back in its original top-right form, and loading is the original single shared-index call. Everything else from those releases stays.'
+    'The \u221e combos button now lives only on the card page (top right, with its count) \u2014 the Similar cards copy retired, the working mechanism untouched.'
   ],
   nl: [
-    'Volledige terugdraai van de comboknop-saga: de \u221e-knop staat weer op de Vergelijkbare kaarten-pagina (met telling), de knop op de kaartpagina is terug in zijn oorspronkelijke vorm rechtsboven, en het laden is weer de oorspronkelijke enkele aanroep op de gedeelde index. Al het andere uit die releases blijft.'
+    'De \u221e-comboknop staat nu alleen op de kaartpagina (rechtsboven, met telling) \u2014 de kopie op Vergelijkbare kaarten is met pensioen, het werkende mechanisme onaangeroerd.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12300,7 +12300,7 @@ async function openSimilarCards(card, colorScope){
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='similarOverlay'; }
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner">
-    ${overlayCapHtml(card.name, `<button class="ghost-btn" id="simCombos" hidden style="width:auto;flex:0 0 auto;padding:7px 11px;">∞</button>`)}
+    ${overlayCapHtml(card.name)}
     <main>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="simCardImg" alt="${escapeHtml(card.name)}">
@@ -12422,19 +12422,6 @@ async function openSimilarCards(card, colorScope){
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
       </div>`).join('')}</div>`;
     box.querySelectorAll('.sim-tile').forEach(btn=>btn.addEventListener('click', ()=>openCardInfo(ranked[+btn.dataset.i], { pool: ranked, poolIdx: +btn.dataset.i })));
-    (async ()=>{
-      try{
-        const ix = await bulkIndexReady();
-        const list = combosWithCard(ix, card.name);
-        const btn = document.getElementById('simCombos');
-        if(btn && list && list.length){
-          btn.hidden = false;
-          btn.textContent = '∞ ' + list.length;
-          btn.title = 'Combos with ' + card.name;
-          btn.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
-        }
-      }catch(e){}
-    })();
     loadTilePrices(ranked);
   }catch(e){
     _noteCrash('similar FAILED', e && (e.message || e), e && e.stack ? String(e.stack).split('\n')[1] : '');
