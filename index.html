@@ -722,12 +722,12 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-mid:has(.dk-tool){gap:5px;}
 .dl-bridge-desc{display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;}
 .dl-mini-add{width:30px;height:30px;border-radius:9px;flex:none;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:6px;}
-.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding-right:46px;border-top:1px solid var(--line);margin-top:auto;padding-top:8px;font-size:12.5px;color:var(--ink-text);}
+.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:12px 46px 6px 0;border-top:1px solid var(--line);margin-top:auto;font-size:13px;color:var(--ink-text);}
 .dl-winrate b{color:var(--brass);}
 .dl-bridge-adm{display:flex;flex-direction:column;}
 .dl-leader-cat{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.6px;padding:6px 2px 2px;margin-top:auto;}
 .dl-desc-text{cursor:pointer;}
-.dl-desc-text{font-size:12.5px;line-height:1.45;color:var(--ink-text);overflow-wrap:anywhere;}
+.dl-desc-text{font-size:12px;line-height:1.4;color:var(--ink-text);overflow-wrap:anywhere;}
 .dk-type svg{width:14px;height:14px;opacity:0.8;flex:none;}
 .dk-mid:has(.dk-type){gap:4px;}
 .deck-dock .menu-pop{position:absolute;bottom:56px;right:8px;top:auto;}
@@ -3712,13 +3712,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.361';
+const APP_VERSION = '2.51.362';
 const CHANGELOG_NOTES = {
   en: [
-    'The wants bar truly sits flush above the navigation now \u2014 the phantom block beneath it was leftover clearance padding, removed.'
+    'Trade opens at the page foot \u2014 verdict and wants bar in view, panels climbing above.',
+    'Shared decks carry their description and winrate now (the primer already travelled).',
+    'All cards and Wants have the big \uff0b too, the add sheet reads \u201cAdd to \u2026\u201d, the winrate row breathes wider, and logging a game updates the winrate on the spot.'
   ],
   nl: [
-    'De gezocht-balk zit nu \u00e9cht strak boven de navigatie \u2014 het spookblok eronder was overgebleven opvulling, verwijderd.'
+    'Ruil opent onderaan de pagina \u2014 oordeel en gezocht-balk in beeld, panelen klimmen erboven.',
+    'Gedeelde decks dragen nu hun beschrijving en winrate mee (de primer reisde al mee).',
+    'Alle kaarten en Gezocht hebben ook de grote \uff0b, het toevoegblad zegt \u201cToevoegen aan \u2026\u201d, de winrate-rij ademt breder, en een potje noteren ververst de winrate direct.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5702,7 +5706,7 @@ function collectionPageHtml(){
       </div>`;
     })()}</div>
     ${f.binder ? '' : collectionBindersGridHtml()}
-    ${(f.binder && f.binder!=='__all__' && f.binder!=='__wants__') ? `<button class="deck-fab" id="binderFab" title="${trS('Add cards to collection…')}">＋</button>` : ''}
+    ${f.binder ? `<button class="deck-fab" id="binderFab" title="${trS('Add cards to collection…')}">＋</button>` : ''}
     ${items.length ? `<div class="col-grid">${items.map((it)=> wantsMode ? `
       <div class="sr-tile col-tile want-tile" data-wn="${escapeHtml(it.name)}">
         <img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}">
@@ -6038,7 +6042,7 @@ function wireCollectionPage(){
     const bl = binderName(bid) || 'binder';
     const el = document.createElement('div');
     el.className = 'deckpick-scrim'; el.id = 'deckPickScrim';
-    el.innerHTML = `<div class="deckpick"><h3 class="dp-title">${trS('Add')} — ${escapeHtml(bl)}</h3>
+    el.innerHTML = `<div class="deckpick"><h3 class="dp-title">${trS('Add to')} ${escapeHtml(bl)}</h3>
       <button class="dp-row" id="bfAddCard"><div class="dp-txt">${trS('Add card')}<div class="dp-meta">${trS('Search Scryfall and file it into a binder')}</div></div></button>
       <button class="dp-row" id="bfImport"><div class="dp-txt">⬆ ${trS('Import')}<div class="dp-meta">${trS('A collection or binder from Moxfield / Archidekt')}</div></div></button>
       <button class="dp-row" id="bfPaste"><div class="dp-txt">📋 ${trS('Paste a list')}<div class="dp-meta">${trS('One card per line, e.g. 1 Sol Ring')}</div></div></button>
@@ -7432,6 +7436,8 @@ async function buildShareUrl(d){
     c: d.cards.map(c=>c.name),
     m: (d.maybeboard||[]).map(c=>c.name),
     p: d.primer || '',
+    ds: d.description || '',
+    wr: (()=>{ const st = logStatsFor(d); return st ? { w: st.wins, l: st.losses } : null; })(),
     by: d.author || ''
   };
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
@@ -8007,7 +8013,7 @@ async function openShowcase(payload, opts){
       admiral: (res && res.admiral) || null,
       partner: partnerCard || null,
       cards: (res && res.main) || [], maybeboard: (res && res.maybe) || [],
-      tags: {}, primer: payload.p || '', author: payload.by || '',
+      tags: {}, primer: payload.p || '', description: payload.ds || '', playLog: (payload.wr ? Array.from({length: payload.wr.w}, ()=>({res:'W'})).concat(Array.from({length: payload.wr.l}, ()=>({res:'L'}))) : []), author: payload.by || '',
       collected: true, folderId: null,
       createdAt: Date.now(), updatedAt: Date.now()
     };
@@ -8135,7 +8141,7 @@ async function importSharedDeck(payload, opts){
   }
   const d = {
     id: uid(), name: payload.n || 'Shared Fleet', admiral: null, cards: [], maybeboard: [], format: appMode(),
-    tags: {}, primer: payload.p || '', author: payload.by || '',
+    tags: {}, primer: payload.p || '', description: payload.ds || '', playLog: (payload.wr ? Array.from({length: payload.wr.w}, ()=>({res:'W'})).concat(Array.from({length: payload.wr.l}, ()=>({res:'L'}))) : []), author: payload.by || '',
     collected: !!opts.collected,
     createdAt: Date.now(), updatedAt: Date.now()
   };
@@ -8972,7 +8978,14 @@ function openLogGameOverlay(d){
       d.playLog.push(entry);
       scheduleSave(d);
       history.back();
-      setTimeout(()=>{ const box = document.getElementById('builderBody'); if(box && state.builderTab==='primer'){ box.innerHTML = primerTabHtml(d); wireBuilderBody(d); } }, 60);
+      // The page behind must show the fresh winrate IMMEDIATELY — the
+      // bridge row on the list tab and the log itself on the primer tab.
+      setTimeout(()=>{
+        const box = document.getElementById('builderBody');
+        if(!box) return;
+        if(state.builderTab==='primer'){ box.innerHTML = primerTabHtml(d); wireBuilderBody(d); }
+        else if(state.builderTab==='list') renderBuilderBody(d);
+      }, 60);
       toast(entry.res==='W' ? 'Victory logged. ⚔' : 'Logged — every loss is data.');
     });
   }
@@ -11668,6 +11681,7 @@ function wireTradePage(){
       requestAnimationFrame(()=>{ const q2 = document.getElementById('twQ'); if(q2){ q2.focus(); } });
     }));
   };
+  scrollToPageFoot();   // bottom-up: the verdict and the wants bar greet first
   if(twQ){
     twQ.addEventListener('input', renderWants);
     twQ.addEventListener('focus', renderWants);
