@@ -3681,13 +3681,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.342';
+const APP_VERSION = '2.51.344';
 const CHANGELOG_NOTES = {
   en: [
-    'The eternal combos ring is slain: the boot-time full-database read was blocking the combo lane\u2019s own reads, and each chunk paused 180ms while you touched the screen. The boot now warms only the combo lane, the pause is 40ms, and \u221e Combos should appear within a few seconds. The button also nudged left to align with the grid.'
+    'Combos loading reverted to the original, proven mechanism \u2014 the one shared index every feature uses, no boot prewarm, no fast lanes, no fallback chains. Only what was actually asked for remains: the button by the price, the loading ring, \u221e or 0.'
   ],
   nl: [
-    'De eeuwige comboring is verslagen: de volledige database-leesactie bij het opstarten blokkeerde de eigen leesacties van de comboroute, en elk blok pauzeerde 180ms zolang je het scherm aanraakte. De start warmt nu alleen de comboroute, de pauze is 40ms, en \u221e Combo\u2019s hoort binnen enkele seconden te verschijnen. De knop schoof ook iets naar links, uitgelijnd met het raster.'
+    'Combo-laden teruggedraaid naar het oorspronkelijke, bewezen mechanisme \u2014 de ene gedeelde index die elke functie gebruikt, geen opstart-voorverwarming, geen snelle routes, geen terugvalketens. Alleen wat echt gevraagd was blijft: de knop naast de prijs, de laadring, \u221e of 0.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4439,12 +4439,6 @@ function pageBodyHtml(screen){
   if(screen==='trade') return tradePageHtml();
   return '';
 }
-// Prewarm ONLY the combo lane at boot. The old full-index prewarm read all
-// 33k cards from IndexedDB right as the person started tapping around — and
-// the combos fast-lane reads queued BEHIND that convoy on the same store,
-// which is exactly the ring-spins-forever report. The full index still
-// builds itself on first genuine need (salt images, similar pools).
-setTimeout(()=>{ try{ combosReady().catch(()=>{}); }catch(e){} }, 2500);
 function render(){
   // The navigation ladder: every screen change made by the USER (not by a
   // back press) records its rung. Home resets the ladder; returning to a
@@ -9354,10 +9348,19 @@ function renderCardSheet(d, card, loc, idx){
     if(!b) return;
     // The button is ALWAYS there: the ring spins until the database answers,
     // then becomes ∞ Combos (tappable) or 0 Combos (honest and inert).
+    // Every stage leaves a journal crumb; a 30s watchdog names the stall.
+    let _stage = 'lane';
+    setTimeout(()=>{ if(_stage !== 'done'){ try{ sfJournal('combos: WATCHDOG — stalled at stage “' + _stage + '”'); }catch(e){} if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; } } }, 30000);
     try{
-      let ix = await combosReady();
-      if(!ix || !(ix.combos && ix.combos.length)) ix = await bulkIndexReady();
+      // Back to the original mechanism: ONE call to the same index every
+      // other feature shares — the way the button worked when it was fast.
+      _stage = 'index';
+      const ix = await bulkIndexReady();
+      try{ sfJournal('combos: index ' + (ix ? 'ok' : 'null')); }catch(e){}
+      _stage = 'lookup';
       const list = combosWithCard(ix, card.name);
+      try{ sfJournal('combos: ' + card.name + ' → ' + (list ? list.length : 0)); }catch(e){}
+      _stage = 'done';
       if(!b.isConnected) return;
       if(list && list.length){
         b.innerHTML = MANA_INF + ' ' + escapeHtml(trS('Combos'));
@@ -9367,6 +9370,8 @@ function renderCardSheet(d, card, loc, idx){
         b.disabled = true;
       }
     }catch(e){
+      _stage = 'done';
+      try{ sfJournal('combos: FAILED ' + ((e && e.message) || e)); }catch(err){}
       if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; }
     }
   })();
@@ -11156,10 +11161,19 @@ function openCardInfo(card, opts){
     if(!b) return;
     // The button is ALWAYS there: the ring spins until the database answers,
     // then becomes ∞ Combos (tappable) or 0 Combos (honest and inert).
+    // Every stage leaves a journal crumb; a 30s watchdog names the stall.
+    let _stage = 'lane';
+    setTimeout(()=>{ if(_stage !== 'done'){ try{ sfJournal('combos: WATCHDOG — stalled at stage “' + _stage + '”'); }catch(e){} if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; } } }, 30000);
     try{
-      let ix = await combosReady();
-      if(!ix || !(ix.combos && ix.combos.length)) ix = await bulkIndexReady();
+      // Back to the original mechanism: ONE call to the same index every
+      // other feature shares — the way the button worked when it was fast.
+      _stage = 'index';
+      const ix = await bulkIndexReady();
+      try{ sfJournal('combos: index ' + (ix ? 'ok' : 'null')); }catch(e){}
+      _stage = 'lookup';
       const list = combosWithCard(ix, card.name);
+      try{ sfJournal('combos: ' + card.name + ' → ' + (list ? list.length : 0)); }catch(e){}
+      _stage = 'done';
       if(!b.isConnected) return;
       if(list && list.length){
         b.innerHTML = MANA_INF + ' ' + escapeHtml(trS('Combos'));
@@ -11169,6 +11183,8 @@ function openCardInfo(card, opts){
         b.disabled = true;
       }
     }catch(e){
+      _stage = 'done';
+      try{ sfJournal('combos: FAILED ' + ((e && e.message) || e)); }catch(err){}
       if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; }
     }
   })();
@@ -16919,6 +16935,8 @@ function bulkDbOpen(){
       req.onupgradeneeded = ()=>{ try{ req.result.createObjectStore('kv'); }catch(e){} };
       req.onsuccess = ()=>res(req.result);
       req.onerror = ()=>res(null);
+      req.onblocked = ()=>{ try{ sfJournal('bulkdb: open BLOCKED'); }catch(e){} res(null); };
+      setTimeout(()=>{ try{ sfJournal('bulkdb: open watchdog fired'); }catch(e){} res(null); }, 8000);
     }catch(e){ res(null); }
   });
   return _bulkDbP;
@@ -17133,8 +17151,10 @@ function combosReady(){
     // A meta written by an older ingest may not carry comboChunks at all —
     // when the count is absent, probe cmb:0, cmb:1, … until a chunk is
     // missing, exactly like the data was laid down.
+    try{ sfJournal('combos: lane start'); }catch(e){}
     const meta = await bulkKvGet('meta');
     const known = meta && meta.comboChunks > 0 ? meta.comboChunks : null;
+    try{ sfJournal('combos: meta ' + (meta ? 'ok, chunks=' + (known || '?') : 'MISSING')); }catch(e){}
     const combos = [], comboByName = new Map();
     const eat = (arr)=>{
       if(!Array.isArray(arr)) return false;
@@ -17146,10 +17166,11 @@ function combosReady(){
       return true;
     };
     if(known){
-      for(let i = 0; i < known; i++){ eat(await bulkKvGet('cmb:' + i)); await _bulkYield(); }
+      for(let i = 0; i < known; i++){ eat(await bulkKvGet('cmb:' + i)); if(i % 15 === 0){ try{ sfJournal('combos: chunk ' + i + '/' + known); }catch(e){} } await _bulkYield(); }
     } else {
-      for(let i = 0; i < 400; i++){ if(!eat(await bulkKvGet('cmb:' + i))) break; await _bulkYield(); }
+      for(let i = 0; i < 400; i++){ if(!eat(await bulkKvGet('cmb:' + i))) break; if(i % 15 === 0){ try{ sfJournal('combos: probe ' + i); }catch(e){} } await _bulkYield(); }
     }
+    try{ sfJournal('combos: lane done, ' + combos.length + ' combos'); }catch(e){}
     // An empty harvest is NOT cached: a later weekly ingest (or the full
     // index) may still bring combos, and callers fall through to it.
     _cmbIdx = combos.length ? { combos, comboByName } : null;
