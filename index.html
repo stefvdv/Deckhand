@@ -186,7 +186,11 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > #twResults{order:95;display:flex;flex-direction:column-reverse;gap:8px;padding-bottom:6px;}
 .app > main:has(> #twResults) > .hint, .app > main:has(> #twResults) > .panel-card{order:98;}
 /* Room beneath the last card so nothing hides behind the sticky wants bar. */
-.app > main:has(> #twResults){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));min-height:calc(100vh - 56px - env(safe-area-inset-top));}
+/* The wants bar is pinned HARD above the nav — position:fixed like the
+   deck-dock, immune to every flow subtlety that kept floating it mid-air.
+   The main pads enough that the verdict scrolls clear above the bar. */
+.app > main:has(> #twResults){padding-bottom:calc(var(--nav-h) + 76px + env(safe-area-inset-bottom));}
+.app > main:has(> #twResults) > .searchbar{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h) + 6px + env(safe-area-inset-bottom));z-index:60;margin:0 !important;padding:0;border-top:none;background:transparent;}
 .tw-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
 .tw-row img{width:40px;border-radius:4px;display:block;}
 .tw-row .tw-nm{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -3712,17 +3716,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.362';
+const APP_VERSION = '2.51.363';
 const CHANGELOG_NOTES = {
   en: [
-    'Trade opens at the page foot \u2014 verdict and wants bar in view, panels climbing above.',
-    'Shared decks carry their description and winrate now (the primer already travelled).',
-    'All cards and Wants have the big \uff0b too, the add sheet reads \u201cAdd to \u2026\u201d, the winrate row breathes wider, and logging a game updates the winrate on the spot.'
+    'The wants bar is hard-pinned directly above the navigation now (fixed, like the deck bar) \u2014 everything else scrolls into view above it.'
   ],
   nl: [
-    'Ruil opent onderaan de pagina \u2014 oordeel en gezocht-balk in beeld, panelen klimmen erboven.',
-    'Gedeelde decks dragen nu hun beschrijving en winrate mee (de primer reisde al mee).',
-    'Alle kaarten en Gezocht hebben ook de grote \uff0b, het toevoegblad zegt \u201cToevoegen aan \u2026\u201d, de winrate-rij ademt breder, en een potje noteren ververst de winrate direct.'
+    'De gezocht-balk is nu hard vastgepind direct boven de navigatie (fixed, zoals de deckbalk) \u2014 al het andere scrolt erboven in beeld.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
