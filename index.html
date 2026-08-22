@@ -380,14 +380,8 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .cmb-card{padding:0;border:none;background:none;cursor:pointer;}
 .cmb-card img{width:100%;display:block;border-radius:7px;}
 .cmb-card-txt{border:1px solid var(--pop-line);border-radius:7px;min-height:56px;color:inherit;font-size:11.5px;padding:4px;}
-.cs-price-row{position:relative;display:flex;align-items:center;justify-content:center;min-height:28px;margin:0 0 14px;}
-.cs-price-row .card-price{margin:0;}
-.cs-combos-btn{width:auto;padding:4px 10px;position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:12.5px;}
-.cs-combos-btn[hidden]{display:none;}
-.cs-combos-btn:disabled{opacity:0.55;cursor:default;}
-.cs-combos-btn svg{width:12px;height:12px;vertical-align:-2px;}
+.cs-combos-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 10px);right:12px;z-index:70;width:auto;padding:7px 11px;}
 #deckCombosPanel .panel-h svg{width:12px;height:12px;vertical-align:-2px;margin-right:3px;}
-.mini-spin{display:inline-block;width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--brass);border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:-1px;}
 .overlay[id^="cardSheetOverlay_bg"] .cs-combos-btn{display:none!important;}
 .tag-drop-h{padding:7px 10px 3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-top:1px solid var(--pop-line);}
 /* On deckless card pages the picker is the app's one allowed drop-DOWN:
@@ -3681,13 +3675,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.345';
+const APP_VERSION = '2.51.346';
 const CHANGELOG_NOTES = {
   en: [
-    'Combos run on Stef\u2019s architecture now: one call reads only the combo text from the local database (seconds), and card images resolve by name straight from Scryfall \u2014 the 33k-card index is out of the combos path entirely.'
+    'Full revert of the combos-button saga: the \u221e button lives on the Similar cards page again (with its count), the card page\u2019s button is back in its original top-right form, and loading is the original single shared-index call. Everything else from those releases stays.'
   ],
   nl: [
-    'Combo\u2019s draaien nu op Stefs architectuur: \u00e9\u00e9n aanroep leest alleen de combotekst uit de lokale database (seconden), en kaartafbeeldingen komen op naam rechtstreeks van Scryfall \u2014 de 33k-kaartenindex zit helemaal niet meer in het combopad.'
+    'Volledige terugdraai van de comboknop-saga: de \u221e-knop staat weer op de Vergelijkbare kaarten-pagina (met telling), de knop op de kaartpagina is terug in zijn oorspronkelijke vorm rechtsboven, en het laden is weer de oorspronkelijke enkele aanroep op de gedeelde index. Al het andere uit die releases blijft.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9346,34 +9340,15 @@ function renderCardSheet(d, card, loc, idx){
   (async ()=>{
     const b = el.querySelector('[data-cmbbtn]');
     if(!b) return;
-    // The button is ALWAYS there: the ring spins until the database answers,
-    // then becomes ∞ Combos (tappable) or 0 Combos (honest and inert).
-    // Every stage leaves a journal crumb; a 30s watchdog names the stall.
-    let _stage = 'lane';
-    setTimeout(()=>{ if(_stage !== 'done'){ try{ sfJournal('combos: WATCHDOG — stalled at stage “' + _stage + '”'); }catch(e){} if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; } } }, 30000);
     try{
-      // Stef's architecture: ONE call that reads ONLY the combo chunks
-      // (~46 small reads) — the 33k-card index is not involved at all.
-      _stage = 'combodata';
-      const ix = await combosReady();
-      try{ sfJournal('combos: data ' + (ix && ix.combos ? ix.combos.length : 'null')); }catch(e){}
-      _stage = 'lookup';
+      const ix = await bulkIndexReady();
       const list = combosWithCard(ix, card.name);
-      try{ sfJournal('combos: ' + card.name + ' → ' + (list ? list.length : 0)); }catch(e){}
-      _stage = 'done';
-      if(!b.isConnected) return;
-      if(list && list.length){
-        b.innerHTML = MANA_INF + ' ' + escapeHtml(trS('Combos'));
+      if(list && list.length && b.isConnected){
+        b.hidden = false;
+        b.textContent = '∞ ' + list.length;
         b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
-      } else {
-        b.innerHTML = '0 ' + escapeHtml(trS('Combos'));
-        b.disabled = true;
       }
-    }catch(e){
-      _stage = 'done';
-      try{ sfJournal('combos: FAILED ' + ((e && e.message) || e)); }catch(err){}
-      if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; }
-    }
+    }catch(e){}
   })();
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
@@ -9409,7 +9384,7 @@ function renderCardSheet(d, card, loc, idx){
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div class="cs-price-row"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn><span class="mini-spin"></span> ${trS('Combos')}</button></div>
+        <div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn hidden>∞</button>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
@@ -11159,34 +11134,15 @@ function openCardInfo(card, opts){
   (async ()=>{
     const b = el.querySelector('[data-cmbbtn]');
     if(!b) return;
-    // The button is ALWAYS there: the ring spins until the database answers,
-    // then becomes ∞ Combos (tappable) or 0 Combos (honest and inert).
-    // Every stage leaves a journal crumb; a 30s watchdog names the stall.
-    let _stage = 'lane';
-    setTimeout(()=>{ if(_stage !== 'done'){ try{ sfJournal('combos: WATCHDOG — stalled at stage “' + _stage + '”'); }catch(e){} if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; } } }, 30000);
     try{
-      // Stef's architecture: ONE call that reads ONLY the combo chunks
-      // (~46 small reads) — the 33k-card index is not involved at all.
-      _stage = 'combodata';
-      const ix = await combosReady();
-      try{ sfJournal('combos: data ' + (ix && ix.combos ? ix.combos.length : 'null')); }catch(e){}
-      _stage = 'lookup';
+      const ix = await bulkIndexReady();
       const list = combosWithCard(ix, card.name);
-      try{ sfJournal('combos: ' + card.name + ' → ' + (list ? list.length : 0)); }catch(e){}
-      _stage = 'done';
-      if(!b.isConnected) return;
-      if(list && list.length){
-        b.innerHTML = MANA_INF + ' ' + escapeHtml(trS('Combos'));
+      if(list && list.length && b.isConnected){
+        b.hidden = false;
+        b.textContent = '∞ ' + list.length;
         b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
-      } else {
-        b.innerHTML = '0 ' + escapeHtml(trS('Combos'));
-        b.disabled = true;
       }
-    }catch(e){
-      _stage = 'done';
-      try{ sfJournal('combos: FAILED ' + ((e && e.message) || e)); }catch(err){}
-      if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; }
-    }
+    }catch(e){}
   })();
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
@@ -11199,7 +11155,7 @@ function openCardInfo(card, opts){
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div class="cs-price-row"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn><span class="mini-spin"></span> ${trS('Combos')}</button></div>
+        <div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn cs-combos-btn" data-cmbbtn hidden>∞</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
@@ -12009,10 +11965,8 @@ async function openCombosOverlay(title, combos){
     ${overlayNavHtml()}
   </div>`;
   wireOverlayNav(el);
-  // Combo data only; card images resolve by NAME straight from Scryfall's
-  // image endpoint — no local index involved, pictures stream in lazily.
   let ix = null;
-  try{ ix = await combosReady(); }catch(e){}
+  try{ ix = await bulkIndexReady(); }catch(e){}
   const main = el.querySelector('main');
   if(!main || !document.getElementById('combosOverlay')) return;   // closed while the index loaded
   const gridHtml = (c)=>c.nm.map(n=>{
@@ -12346,7 +12300,7 @@ async function openSimilarCards(card, colorScope){
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='similarOverlay'; }
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner">
-    ${overlayCapHtml(card.name)}
+    ${overlayCapHtml(card.name, `<button class="ghost-btn" id="simCombos" hidden style="width:auto;flex:0 0 auto;padding:7px 11px;">∞</button>`)}
     <main>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="simCardImg" alt="${escapeHtml(card.name)}">
@@ -12468,6 +12422,19 @@ async function openSimilarCards(card, colorScope){
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
       </div>`).join('')}</div>`;
     box.querySelectorAll('.sim-tile').forEach(btn=>btn.addEventListener('click', ()=>openCardInfo(ranked[+btn.dataset.i], { pool: ranked, poolIdx: +btn.dataset.i })));
+    (async ()=>{
+      try{
+        const ix = await bulkIndexReady();
+        const list = combosWithCard(ix, card.name);
+        const btn = document.getElementById('simCombos');
+        if(btn && list && list.length){
+          btn.hidden = false;
+          btn.textContent = '∞ ' + list.length;
+          btn.title = 'Combos with ' + card.name;
+          btn.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
+        }
+      }catch(e){}
+    })();
     loadTilePrices(ranked);
   }catch(e){
     _noteCrash('similar FAILED', e && (e.message || e), e && e.stack ? String(e.stack).split('\n')[1] : '');
