@@ -185,6 +185,8 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > .browse-hero{order:98;margin:10px 0 80px;}
 .app > main > #twResults{order:95;display:flex;flex-direction:column-reverse;gap:8px;padding-bottom:6px;}
 .app > main:has(> #twResults) > .hint, .app > main:has(> #twResults) > .panel-card{order:98;}
+/* Room beneath the last card so nothing hides behind the sticky wants bar. */
+.app > main:has(> #twResults){padding-bottom:calc(var(--nav-h) + 78px + env(safe-area-inset-bottom));min-height:calc(100vh - 56px - env(safe-area-inset-top));}
 .tw-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
 .tw-row img{width:40px;border-radius:4px;display:block;}
 .tw-row .tw-nm{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -3710,13 +3712,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.358';
+const APP_VERSION = '2.51.360';
 const CHANGELOG_NOTES = {
   en: [
-    'Trade repaired: the wants drop-up hides properly and wears the app\u2019s dark menu style, ME sits at the bottom (wants land right there), and the YOU side\u2019s Add card searches your OWN collection.'
+    'The wants bar sits flush at the page foot now, trade full or empty \u2014 the idle mid-air gap is gone.'
   ],
   nl: [
-    'Ruil hersteld: het gezocht-opklapmenu verbergt netjes en draagt de donkere menustijl van de app, IK staat onderaan (gezochte kaarten landen daar), en Kaart toevoegen aan de JIJ-kant zoekt door je EIGEN collectie.'
+    'De gezocht-balk zit nu strak onderaan de pagina, ruil vol of leeg \u2014 het zwevende gat is weg.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12585,7 +12587,7 @@ function openTradeAdd(side){
       const mine = (state.collection.items || []).filter(c=>c.name && c.name.toLowerCase().includes(ql)).slice(0, 30);
       if(!mine.length){ box.innerHTML = `<p class="hint" style="text-align:center;">${trS('Nothing matches these filters.')}</p>`; return; }
       box.innerHTML = `<div class="sr-grid">${mine.map((c,i)=>`<button class="sr-tile ta-tile" data-i="${i}">
-        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
+        <img class="${wbClass(c)}" src="${c.img || cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
       </button>`).join('')}</div>`;
       box.querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, mine[+btn.dataset.i])));
