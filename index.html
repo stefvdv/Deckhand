@@ -3681,13 +3681,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.344';
+const APP_VERSION = '2.51.345';
 const CHANGELOG_NOTES = {
   en: [
-    'Combos loading reverted to the original, proven mechanism \u2014 the one shared index every feature uses, no boot prewarm, no fast lanes, no fallback chains. Only what was actually asked for remains: the button by the price, the loading ring, \u221e or 0.'
+    'Combos run on Stef\u2019s architecture now: one call reads only the combo text from the local database (seconds), and card images resolve by name straight from Scryfall \u2014 the 33k-card index is out of the combos path entirely.'
   ],
   nl: [
-    'Combo-laden teruggedraaid naar het oorspronkelijke, bewezen mechanisme \u2014 de ene gedeelde index die elke functie gebruikt, geen opstart-voorverwarming, geen snelle routes, geen terugvalketens. Alleen wat echt gevraagd was blijft: de knop naast de prijs, de laadring, \u221e of 0.'
+    'Combo\u2019s draaien nu op Stefs architectuur: \u00e9\u00e9n aanroep leest alleen de combotekst uit de lokale database (seconden), en kaartafbeeldingen komen op naam rechtstreeks van Scryfall \u2014 de 33k-kaartenindex zit helemaal niet meer in het combopad.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9352,11 +9352,11 @@ function renderCardSheet(d, card, loc, idx){
     let _stage = 'lane';
     setTimeout(()=>{ if(_stage !== 'done'){ try{ sfJournal('combos: WATCHDOG — stalled at stage “' + _stage + '”'); }catch(e){} if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; } } }, 30000);
     try{
-      // Back to the original mechanism: ONE call to the same index every
-      // other feature shares — the way the button worked when it was fast.
-      _stage = 'index';
-      const ix = await bulkIndexReady();
-      try{ sfJournal('combos: index ' + (ix ? 'ok' : 'null')); }catch(e){}
+      // Stef's architecture: ONE call that reads ONLY the combo chunks
+      // (~46 small reads) — the 33k-card index is not involved at all.
+      _stage = 'combodata';
+      const ix = await combosReady();
+      try{ sfJournal('combos: data ' + (ix && ix.combos ? ix.combos.length : 'null')); }catch(e){}
       _stage = 'lookup';
       const list = combosWithCard(ix, card.name);
       try{ sfJournal('combos: ' + card.name + ' → ' + (list ? list.length : 0)); }catch(e){}
@@ -11165,11 +11165,11 @@ function openCardInfo(card, opts){
     let _stage = 'lane';
     setTimeout(()=>{ if(_stage !== 'done'){ try{ sfJournal('combos: WATCHDOG — stalled at stage “' + _stage + '”'); }catch(e){} if(b.isConnected){ b.innerHTML = '0 ' + escapeHtml(trS('Combos')); b.disabled = true; } } }, 30000);
     try{
-      // Back to the original mechanism: ONE call to the same index every
-      // other feature shares — the way the button worked when it was fast.
-      _stage = 'index';
-      const ix = await bulkIndexReady();
-      try{ sfJournal('combos: index ' + (ix ? 'ok' : 'null')); }catch(e){}
+      // Stef's architecture: ONE call that reads ONLY the combo chunks
+      // (~46 small reads) — the 33k-card index is not involved at all.
+      _stage = 'combodata';
+      const ix = await combosReady();
+      try{ sfJournal('combos: data ' + (ix && ix.combos ? ix.combos.length : 'null')); }catch(e){}
       _stage = 'lookup';
       const list = combosWithCard(ix, card.name);
       try{ sfJournal('combos: ' + card.name + ' → ' + (list ? list.length : 0)); }catch(e){}
@@ -12009,17 +12009,18 @@ async function openCombosOverlay(title, combos){
     ${overlayNavHtml()}
   </div>`;
   wireOverlayNav(el);
-  // Full index gives the card IMAGES — wait a few seconds at most; past
-  // that, render with text tiles (still tappable via live Scryfall).
+  // Combo data only; card images resolve by NAME straight from Scryfall's
+  // image endpoint — no local index involved, pictures stream in lazily.
   let ix = null;
-  try{ ix = await Promise.race([bulkIndexReady(), new Promise(r=>setTimeout(()=>r(null), 4000))]); }catch(e){}
+  try{ ix = await combosReady(); }catch(e){}
   const main = el.querySelector('main');
   if(!main || !document.getElementById('combosOverlay')) return;   // closed while the index loaded
   const gridHtml = (c)=>c.nm.map(n=>{
     const entry = ix && ix.byName ? ix.byName.get(String(n).toLowerCase()) : null;
-    return entry
-      ? `<button type="button" class="cmb-card" data-cmbn="${escapeHtml(n)}"><img src="${cardImage(bulkToCardish(entry))}" alt="${escapeHtml(n)}" loading="lazy"></button>`
-      : `<button type="button" class="cmb-card cmb-card-txt" data-cmbn="${escapeHtml(n)}">${escapeHtml(n)}</button>`;
+    const src = entry
+      ? cardImage(bulkToCardish(entry))
+      : SF_BASE + '/cards/named?format=image&version=normal&exact=' + encodeURIComponent(n);
+    return `<button type="button" class="cmb-card" data-cmbn="${escapeHtml(n)}"><img src="${src}" alt="${escapeHtml(n)}" loading="lazy"></button>`;
   }).join('');
   // Twenty at a time, best (sortCombos' playability order) first at the
   // FOOT; the More button sits just above the topmost visible combo and
