@@ -296,6 +296,10 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
+.tw-poprow{display:flex !important;align-items:center;gap:8px;text-align:left;}
+.tw-poprow img{width:30px;height:42px;object-fit:cover;border-radius:4px;flex:none;}
+.tw-poprow .tw-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tw-poprow .tw-eur{color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:11.5px;flex:none;}
 .overlay .topbar{top:0;}
 
 /* ---------- deck selector (used on decklist/search/inspiration) ---------- */
@@ -1251,7 +1255,10 @@ main.has-dock{padding-bottom:84px;}
 #recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;border-bottom:1px solid var(--line);}
 #recoOverlay main{padding-bottom:0;}
 #recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);margin:0;padding:8px 0;}
-#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;}
+#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;transition:bottom 0.2s;}
+/* While the selection + fab is visible, the burger steps up to make room —
+   and steps back down the moment the last selection is dropped. */
+#recoOverlay:has(.reco-fab:not([hidden])) .edh-jump-row{bottom:calc(96px + var(--nav-h) + env(safe-area-inset-bottom));}
 .edh-jump-row{top:70px;}
 .reco-fab{position:fixed;right:16px;bottom:calc(18px + var(--nav-h) + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--brass);color:#1a1204;font-size:26px;font-weight:800;border:none;z-index:140;box-shadow:0 6px 18px rgba(0,0,0,0.5);cursor:pointer;}
 .reco-fab .fab-n{position:absolute;top:-4px;right:-4px;background:var(--ink);color:var(--brass);border:1px solid var(--brass);border-radius:999px;font-size:11px;padding:1px 6px;font-weight:700;}
@@ -3699,17 +3706,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.356';
+const APP_VERSION = '2.51.357';
 const CHANGELOG_NOTES = {
   en: [
-    'The MVP/Weakest pickers are a two-column grid of full card images again \u2014 alphabetical with A at the bottom, filter at the foot.',
-    'On Recommendations the tap-cards hint sits just above the commander, with Kindred and Theme directly below the card (Theme at the very foot).',
-    'The decklist bridge lost its empty tail, and the winrate line keeps clear of the floating burger.'
+    'Selecting cards on Recommendations lifts the \u2630 burger above the + button; it settles back when the last selection drops.',
+    'Search-in-deck opens with the cursor in Name and the keyboard up, search key ready.',
+    'Add to trade is bottom-up now \u2014 navigation at the foot, search bar above it, results climbing \u2014 and the wants box became a drop-up of your whole wants list: tap a want and it lands on the ME side.'
   ],
   nl: [
-    'De MVP/Zwakste-kiezers zijn weer een tweekoloms raster met volledige kaartafbeeldingen \u2014 alfabetisch met A onderaan, filter aan de voet.',
-    'Op Aanbevelingen staat de tik-kaarten-hint vlak boven de commander, met Kindred en Thema direct onder de kaart (Thema helemaal onderaan).',
-    'De decklijst-brug verloor zijn lege staart, en de winrate-regel blijft vrij van de zwevende burger.'
+    'Kaarten selecteren op Aanbevelingen tilt de \u2630-burger boven de +-knop; hij zakt terug zodra de laatste selectie vervalt.',
+    'Zoeken-in-deck opent met de cursor in Naam en het toetsenbord omhoog, zoektoets paraat.',
+    'Toevoegen aan ruil is nu bottom-up \u2014 navigatie onderaan, zoekbalk erboven, resultaten klimmend \u2014 en het gezocht-veld werd een opklapmenu van je hele gezochtlijst: tik een kaart aan en hij landt aan de IK-kant.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9084,6 +9091,9 @@ function wireDlPanel(d){
       el2.setAttribute('enterkeyhint', 'search');
     };
     bind('dfName', 'name'); bind('dfText', 'text'); bind('dfType', 'type'); bind('dfTag', 'tag'); bind('dfMvVal', 'mvVal');
+    // The panel opens ready to type: cursor in Name, keyboard up (the tap
+    // that opened the panel is the gesture the keyboard needs).
+    setTimeout(()=>{ try{ document.getElementById('dfName')?.focus(); }catch(e){} }, 60);
     // Color identity rides the same checkbox-under-mana-icon control the
     // Collection filter uses.
     document.querySelectorAll('#dlPanelBox [data-dfci]').forEach(chk=>chk.addEventListener('change', ()=>{
@@ -11625,7 +11635,7 @@ function tradePageHtml(){
       ${missing?`<p class="hint" style="margin:6px 0 0;">${trS('Some cards have no listed price and count as €0.00.')}</p>`:''}
       ${(state.trade.a.length||state.trade.b.length)?`<button class="primary-btn" id="tradeConfirm" style="width:100%;margin-top:10px;">✓ ${trS('Confirm trade')}</button><button class="ghost-btn" id="tradeClear" style="width:100%;margin-top:8px;color:var(--danger);border-color:var(--danger);">${trS('Clear trade')}</button>`:''}
     </div>
-    <div class="searchbar"><input id="twQ" enterkeyhint="search" placeholder="${trS('Search your wants…')}" value="${escapeHtml(state._twQ||'')}" autocomplete="off"><button id="twGo">${trS('Search')}</button><button id="twClear" title="✕">✕</button></div>
+    <div class="searchbar" style="position:relative;"><div id="twPop" class="otag-pop" hidden style="max-height:260px;"></div><input id="twQ" enterkeyhint="search" placeholder="${trS('Search your wants…')}" value="${escapeHtml(state._twQ||'')}" autocomplete="off"><button id="twClear" title="✕">✕</button></div>
   </main>`;
 }
 function wireTradePage(){
@@ -11633,34 +11643,40 @@ function wireTradePage(){
   const nlW = appLang()==='nl';
   const twQ = document.getElementById('twQ');
   const twBox = document.getElementById('twResults');
+  // The wants box is a DROP-UP: focus it and your whole wants list appears
+  // above the bar (bottom-up, nearest match by the input), narrowing as you
+  // type. Tapping a want puts it on the ME side and reopens for the next.
+  const twPop = document.getElementById('twPop');
   const renderWants = ()=>{
-    if(!twQ || !twBox) return;
+    if(!twQ || !twPop) return;
     const raw = twQ.value.trim();
     state._twQ = raw;
     const q = raw.toLowerCase();
-    if(q.length < 2){ twBox.innerHTML = ''; return; }
-    const hits = computeWants().filter(w=>w.name.toLowerCase().includes(q)).slice(0, 40);
-    twBox.innerHTML = hits.length
-      ? hits.map((w,i)=>`<div class="tw-row"><img loading="lazy" src="${w.img}" alt=""><div class="tw-nm">${escapeHtml(w.name)}</div><span class="tw-eur">${w.eur!=null?('€'+Number(w.eur).toFixed(2)):'—'}</span><button class="ghost-btn" data-twadd="${i}">＋ ${nlW?'Jij':'You'}</button></div>`).join('')
-      : `<div class="empty-note">${trS('No wants match that name.')}</div>`;
-    twBox.querySelectorAll('[data-twadd]').forEach(b=>b.addEventListener('click', ()=>{
+    const hits = computeWants().filter(w=>!q || w.name.toLowerCase().includes(q)).slice(0, 40);
+    twPop.innerHTML = hits.length
+      ? hits.map((w,i)=>`<button type="button" class="tw-poprow" data-twadd="${i}"><img loading="lazy" src="${w.img}" alt=""><span class="tw-nm">${escapeHtml(w.name)}</span><span class="tw-eur">${w.eur!=null?('€'+Number(w.eur).toFixed(2)):'—'}</span></button>`).join('')
+      : `<div class="empty-note" style="margin:8px;">${trS('No wants match that name.')}</div>`;
+    twPop.hidden = false;
+    twPop.querySelectorAll('[data-twadd]').forEach(b=>b.addEventListener('click', ()=>{
       const w = hits[+b.dataset.twadd]; if(!w) return;
-      state.trade.b.push({ name:w.name, set:w.set||'', set_name:w.set_name||'', cn:'', img:w.img, wb:w.border_color==='white'?1:0, eur:(w.eur!=null?w.eur:null), qty:1, type_line:w.type_line||'', colors:w.colors||[], rarity:w.rarity||'' });
+      state.trade.a.push({ name:w.name, set:w.set||'', set_name:w.set_name||'', cn:'', img:w.img, wb:w.border_color==='white'?1:0, eur:(w.eur!=null?w.eur:null), qty:1, type_line:w.type_line||'', colors:w.colors||[], rarity:w.rarity||'' });
       saveTrade();
-      toast(`${w.name} → ${nlW?'Jij':'You'}`);
+      toast(`${w.name} → ${nlW?'Ik':'Me'}`);
       render();
+      requestAnimationFrame(()=>{ const q2 = document.getElementById('twQ'); if(q2){ q2.focus(); } });
     }));
   };
   if(twQ){
     twQ.addEventListener('input', renderWants);
-    twQ.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); twQ.blur(); renderWants(); } });
-    document.getElementById('twGo')?.addEventListener('click', renderWants);
+    twQ.addEventListener('focus', renderWants);
+    twQ.addEventListener('blur', ()=>setTimeout(()=>{ if(twPop) twPop.hidden = true; }, 250));
+    twQ.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); renderWants(); } });
     document.getElementById('twClear')?.addEventListener('click', ()=>{
       twQ.value = ''; state._twQ = '';
-      if(twBox) twBox.innerHTML = '';
+      if(twPop) twPop.hidden = true;
       twQ.blur();
     });
-    if((state._twQ||'').length >= 2) renderWants();
+    if(state._twQ) renderWants();
   }
   document.querySelectorAll('[data-tradeadd]').forEach(b=>b.addEventListener('click', ()=>openTradeAdd(b.dataset.tradeadd)));
   document.querySelectorAll('[data-tq]').forEach(b=>b.addEventListener('click', ()=>{
@@ -12548,13 +12564,15 @@ function openTradeAdd(side){
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='tradeAddOverlay'; }
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar"><button class="icon-btn" id="taClose">${ICONS.back}</button><div class="brand-txt" style="font-size:15px;">${trS('Add to trade')}</div></div>
-    <main>
-      <div class="searchbar" style="margin-bottom:8px;"><input id="taName" enterkeyhint="search" placeholder="${escapeHtml(trS('Card name…'))}"><button id="taGo">${trS('Search')}</button></div>
-      <div id="taResults"><p class="hint">${trS('Search any card — every printing of it can join the trade.')}</p></div>
+    ${overlayCapHtml(trS('Add to trade'))}
+    <main style="display:flex;flex-direction:column-reverse;">
+      <div class="searchbar" style="margin:8px 0 0;"><input id="taName" enterkeyhint="search" placeholder="${escapeHtml(trS('Card name…'))}"><button id="taGo">${trS('Search')}</button></div>
+      <div id="taResults"><p class="hint" style="text-align:center;">${trS('Search any card — every printing of it can join the trade.')}</p></div>
     </main>
+    ${overlayNavHtml()}
   </div>`;
-  document.getElementById('taClose').addEventListener('click', closeTopOverlay);
+  wireOverlayNav(el);
+  setTimeout(()=>{ try{ document.getElementById('taName')?.focus(); }catch(e){} }, 60);
   const go = async ()=>{
     const q = (document.getElementById('taName')?.value||'').trim();
     const box = document.getElementById('taResults');
