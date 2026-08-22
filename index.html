@@ -212,7 +212,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 /* (6) Search page: explainer just above the random card, RANDOM below it. */
 /* The results box hugs the search bar at the foot; the wrap-reverse grid
    inside already reads bottom-up, so the best match sits nearest the bar. */
-.app > main > #searchResultsBox{order:95;margin-top:auto;}
+.app > main > #searchResultsBox{order:95;margin-top:auto;display:flex;flex-direction:column;justify-content:flex-end;min-height:0;}
 .app > main > .cotd{order:96;}
 .app > main:has(> #searchResultsBox){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));}
 #cotdBox{display:flex;flex-direction:column-reverse;align-items:center;gap:8px;}
@@ -284,7 +284,8 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .salt-tile img{width:100%;display:block;border-radius:10px;}
 .salt-noimg{border:1px solid var(--pop-line);border-radius:10px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;font-size:12.5px;color:var(--ink-text);}
 .salt-meta{text-align:center;color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:12.5px;margin-top:4px;}
-.insp-jump{position:fixed;right:14px;bottom:calc(84px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
+.insp-jump{position:fixed;right:14px;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
+.dl-jump{position:fixed;right:14px;bottom:calc(108px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:45;height:auto;}
 .otag-wrap{position:relative;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
@@ -1232,7 +1233,7 @@ main.has-dock{padding-bottom:84px;}
 #recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;border-bottom:1px solid var(--line);}
 #recoOverlay main{padding-bottom:0;}
 #recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);margin:0;padding:8px 0;}
-#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(84px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;}
+#recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;}
 .edh-jump-row{top:70px;}
 .reco-fab{position:fixed;right:16px;bottom:calc(18px + var(--nav-h) + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--brass);color:#1a1204;font-size:26px;font-weight:800;border:none;z-index:140;box-shadow:0 6px 18px rgba(0,0,0,0.5);cursor:pointer;}
 .reco-fab .fab-n{position:absolute;top:-4px;right:-4px;background:var(--ink);color:var(--brass);border:1px solid var(--brass);border-radius:999px;font-size:11px;padding:1px 6px;font-weight:700;}
@@ -3680,15 +3681,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.350';
+const APP_VERSION = '2.51.351';
 const CHANGELOG_NOTES = {
   en: [
-    'Combo pages gained a filter box at the page foot \u2014 type a card name and the combos narrow live, with the tally showing matches out of the total.',
-    'Card pages read bottom-up like everything else now: each section\u2019s name and golden stripe sit BELOW its content.'
+    'Decklists gained the hovering \u2630 jump menu (above the deck bar) for leaping straight to a category; the Recommendations burger sits a touch lower.',
+    'Deck Inspiration: a kindred now means the tribe AND its support cards \u2014 all categories return \u2014 and the deck\u2019s dominant THEME is auto-detected alongside the kindred.',
+    'Search results anchor to the page foot properly, and page titles refit once the real font loads instead of staying whisper-small.'
   ],
   nl: [
-    'Combopagina\u2019s kregen een filterveld onderaan de pagina \u2014 typ een kaartnaam en de combo\u2019s versmallen live, met de telling als treffers van het totaal.',
-    'Kaartpagina\u2019s lezen nu bottom-up zoals al het andere: de naam en gouden streep van elke sectie staan ONDER de inhoud.'
+    'Decklijsten kregen het zwevende \u2630-springmenu (boven de deckbalk) om direct naar een categorie te springen; de Aanbevelingen-burger staat iets lager.',
+    'Deck-inspiratie: een kindred betekent nu de stam \u00c9N zijn ondersteuning \u2014 alle categorie\u00ebn keren terug \u2014 en het dominante THEMA van het deck wordt naast de kindred automatisch herkend.',
+    'Zoekresultaten hechten nu echt aan de paginavoet, en paginatitels passen zich opnieuw aan zodra het echte lettertype laadt in plaats van fluisterklein te blijven.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4594,6 +4597,11 @@ function fitBrandTitle(){
   // against that shrinks titles like INSPIRATION to a whisper, and the size
   // sticks. Wait a frame and measure the finished layout instead.
   if(avail < 80){ requestAnimationFrame(fitBrandTitle); return; }
+  // Measuring against the fallback serif (wider than Cinzel) also shrinks
+  // titles — refit once the real face arrives.
+  if(document.fonts && document.fonts.status !== 'loaded'){
+    document.fonts.ready.then(()=>requestAnimationFrame(fitBrandTitle));
+  }
   const text = (inner.textContent || '').trim();
   if(!text){ state._brandSize = '18px'; return; }
   const maxLines = box.classList.contains('two-line') ? 2 : 1;
@@ -8161,6 +8169,7 @@ function listTabHtml(d){
         <button class="ghost-btn" id="bridgeLogGame" style="width:100%;margin-top:8px;">⊕ ${trS('Log a game')}</button>
       </div>
       <div id="dlPanelBox" class="${dlBoxClass()}">${dlPanelHtml(d)}</div>
+      <div class="edh-jump-row dl-jump"><button class="icon-btn edh-jump" id="dlCatJump" title="${trS('Jump to section')}">☰</button></div>
     </div>
     <div id="decklistBox">${categorizedListHtml(d)}</div>`;
 }
@@ -8953,6 +8962,15 @@ function toggleDlPanel(d, panelKey){
 function wireBuilderBody(d){
   if(state.builderTab==='list'){
     document.getElementById('bridgeLogGame')?.addEventListener('click', ()=>openLogGameOverlay(d));
+    document.getElementById('dlCatJump')?.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const heads = Array.from(document.querySelectorAll('.cat-group > .cat-head'));
+      const items = heads.map(h=>{
+        const t = h.querySelector('.t');
+        return { label: t ? t.textContent.trim() : '—', fn: ()=>h.scrollIntoView({ behavior:'smooth', block:'center' }) };
+      }).filter(x=>x.label && x.label !== '—');
+      if(items.length) openTileMenu(e.currentTarget, items);
+    });
     document.querySelector('.dl-desc-text')?.addEventListener('click', ()=>{
       // Straight to the pen: Deck Log tab, description field focused, cursor
       // at the end — the tap IS the edit intent.
@@ -12526,8 +12544,8 @@ function inspirationPageHtml(){
   // Each deck's recommendations start clean: type and theme selections never
   // carry over from the previous deck's session.
   if(d && state._inspireSelFor !== d.id){
-    // Deck-aware start: the deck's own dominant kindred pre-fills the menu.
-    state.inspireSel = { kindred: deckDominantKindred(d), theme:'' };
+    // Deck-aware start: the deck's own dominant kindred AND theme pre-fill.
+    state.inspireSel = { kindred: deckDominantKindred(d), theme: deckDominantTheme(d) };
     state._inspireSelFor = d.id;
   }
   if(d && d.admiral){
@@ -12572,6 +12590,27 @@ function deckDominantKindred(d){
   const top = deckKindredOptions(d)[0];
   return (top && top.n >= 5) ? top.v : '';   // a real kindred core, not two stray Wizards
 }
+/* The deck's dominant THEME: walk the commander's ranked theme list and
+   take the first non-kindred theme (with a real Scryfall clause) whose key
+   word shows up in at least 8 of the deck's own rules texts — an Energy
+   deck says "energy" everywhere, and that's the tell. */
+function deckDominantTheme(d){
+  let opts = [];
+  try{ opts = rankedBrowseThemeOptions(deckComboKey(d), d) || []; }catch(e){}
+  let kin = null;
+  try{ kin = kindredNameSet(); }catch(e){}
+  const blob = deckLeaders(d).concat(d.cards).map(c=>String(c.oracle_text || '').toLowerCase()).join('\n');
+  for(const o of opts){
+    if(!BROWSE_THEMES.some(t=>t.key === o.v)) continue;   // needs a real clause
+    const label = String(o.l || '').replace(/\s*\(\d+\)\s*$/, '');
+    if(kin && kin.has(label)) continue;
+    const w = label.toLowerCase().split(/[\s/-]+/)[0].replace(/s$/, '');
+    if(w.length < 4) continue;
+    const hits = (blob.match(new RegExp('\\b' + w, 'g')) || []).length;
+    if(hits >= 8) return o.v;
+  }
+  return '';
+}
 function wireInspirationPage(){
   const d = getDeck(state.inspireDeckId);
   if(!d){ wireNeedDeck(); return; }
@@ -12586,7 +12625,10 @@ function wireInspirationPage(){
 function inspireClause(d){
   const sel = state.inspireSel;
   const parts = [];
-  if(sel.kindred) parts.push(`t:"${sel.kindred}"`);
+  // A kindred is a THEME, not a type filter: the tribe itself OR any card
+  // that names the tribe (lords, payoffs, tribal lands) — so the page keeps
+  // all its categories instead of collapsing into one creature list.
+  if(sel.kindred) parts.push(`(t:"${sel.kindred}" or o:"${sel.kindred}")`);
   const th = BROWSE_THEMES.find(c=>c.key===sel.theme);
   if(th) parts.push(th.clause);
   parts.push(idClauseForDeck(d));
