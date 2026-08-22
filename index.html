@@ -712,9 +712,10 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-mid:has(.dk-tool){gap:5px;}
 .dl-bridge-desc{display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;}
 .dl-mini-add{width:30px;height:30px;border-radius:9px;flex:none;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:6px;}
-.dl-winrate{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--line);margin-top:auto;padding-top:8px;font-size:12.5px;color:var(--ink-text);}
+.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;border-top:1px solid var(--line);margin-top:auto;padding-top:8px;font-size:12.5px;color:var(--ink-text);}
 .dl-winrate b{color:var(--brass);}
-.dl-leader-cat{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.6px;padding:6px 2px 5px;border-bottom:1px solid var(--line);margin-top:4px;}
+.dl-bridge-adm{display:flex;flex-direction:column;}
+.dl-leader-cat{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.6px;padding:6px 2px 2px;margin-top:auto;}
 .dl-desc-text{cursor:pointer;}
 .dl-desc-text{font-size:12.5px;line-height:1.45;color:var(--ink-text);overflow-wrap:anywhere;}
 .dk-type svg{width:14px;height:14px;opacity:0.8;flex:none;}
@@ -3694,17 +3695,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.354';
+const APP_VERSION = '2.51.355';
 const CHANGELOG_NOTES = {
   en: [
-    'The game-log\u2019s MVP/Weakest pickers open UPWARD now, options bottom-up with the filter nearest your thumb \u2014 and a hardware back press or a tap outside closes just the picker.',
-    'The commanders wear their own category label \u2014 COMMANDER, with the golden stripe below \u2014 just like Creatures.',
-    'The description corner grew up: a \uff0b appears when there\u2019s no description yet, and a Winrate row (wins\u2013losses from your logged games) sits below it with its own \uff0b to log a game \u2014 the big button retired.'
+    'The COMMANDER label sits stripeless at the cell\u2019s foot, right above the toolbar, and the log-a-game \uff0b moved left, clear of the floating burger.',
+    'On commander Recommendations the Theme and Kindred menus live at the page foot now, below the commander card.',
+    'Every category\u2019s More button says just \u201cMore\u201d, and burger jumps land at a section\u2019s START \u2014 its bottom, where reading begins.'
   ],
   nl: [
-    'De MVP/Zwakste-kiezers van het potjeslog openen nu OMHOOG, opties bottom-up met het filter het dichtst bij je duim \u2014 en een hardware-terugdruk of tik ernaast sluit alleen de kiezer.',
-    'De commanders dragen hun eigen categorielabel \u2014 COMMANDER, met de gouden streep eronder \u2014 net als Wezens.',
-    'De beschrijvingshoek is volwassen: een \uff0b verschijnt als er nog geen beschrijving is, en een Winrate-rij (winst\u2013verlies uit je genoteerde potjes) staat eronder met een eigen \uff0b om een potje te noteren \u2014 de grote knop is met pensioen.'
+    'Het COMMANDER-label staat streeploos onderaan zijn cel, vlak boven de werkbalk, en de potje-noteren-\uff0b schoof naar links, vrij van de zwevende burger.',
+    'Op commander-Aanbevelingen staan de Thema- en Kindred-menu\u2019s nu onderaan de pagina, onder de commanderkaart.',
+    'Elke Meer-knop zegt gewoon \u201cMeer\u201d, en burgersprongen landen bij het BEGIN van een sectie \u2014 de onderkant, waar het lezen begint.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8197,7 +8198,7 @@ function listTabHtml(d){
           ? escapeHtml(d.description).replace(/\n/g, '<br>')
           : `<span class="hint" style="margin:0;">${trS('No description yet — write one on the Deck Log page.')}</span><button class="icon-btn dl-mini-add" id="descAddBtn" title="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">＋</button>`}</div>
         ${(()=>{ const st = logStatsFor(d);
-          return `<div class="dl-winrate"><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}">＋</button></div>`; })()}
+          return `<div class="dl-winrate"><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}" style="margin-left:0;">＋</button><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span></div>`; })()}
       </div>
       <div id="dlPanelBox" class="${dlBoxClass()}">${dlPanelHtml(d)}</div>
       <div class="edh-jump-row dl-jump"><button class="icon-btn edh-jump" id="dlCatJump" title="${trS('Jump to section')}">☰</button></div>
@@ -9008,7 +9009,7 @@ function wireBuilderBody(d){
       const heads = Array.from(document.querySelectorAll('.cat-group > .cat-head'));
       const items = heads.map(h=>{
         const t = h.querySelector('.t');
-        return { label: t ? t.textContent.trim() : '—', fn: ()=>h.scrollIntoView({ behavior:'smooth', block:'center' }) };
+        return { label: t ? t.textContent.trim() : '—', fn: ()=>h.scrollIntoView({ behavior:'smooth', block:'end' }) };
       }).filter(x=>x.label && x.label !== '—');
       if(items.length) openTileMenu(e.currentTarget, items);
     });
@@ -12734,7 +12735,7 @@ function renderInspireFromCache(cacheKey, d, keepScroll){
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="inspJump" title="${trS('Jump to section')}">☰</button></div>`;
   document.getElementById('inspJump')?.addEventListener('click', (e)=>{
     e.stopPropagation();
-    openTileMenu(e.currentTarget, groups.map((g, i)=>({ label: g.title, fn: ()=>{ document.querySelector(`.edh-sec[data-isec="${i}"]`)?.scrollIntoView({ behavior:'smooth', block:'start' }); } })));
+    openTileMenu(e.currentTarget, groups.map((g, i)=>({ label: g.title, fn: ()=>{ document.querySelector(`.edh-sec[data-isec="${i}"]`)?.scrollIntoView({ behavior:'smooth', block:'end' }); } })));
   });
   wireResultButtons(display, d, ()=>renderInspireFromCache(cacheKey, d, true));
   loadTilePrices(display.slice(0, 36));
@@ -13579,7 +13580,7 @@ function renderEdhrecSections(box, key, S, keepScroll){
     if(!cards || !cards.length) return '';
     const idx = pools.length;
     pools.push({ title, cards, opts, subOf, wire });
-    return `<div class="edh-sec" data-si="${idx}">${lbl(title)}${cards.length > CAP ? `<button class="ghost-btn edh-more" data-si="${idx}" style="width:100%;margin:0 0 6px;">${trS('More')} (${cards.length - CAP})</button>` : ''}${grid(cards.slice(0, CAP), opts, subOf)}</div>`;
+    return `<div class="edh-sec" data-si="${idx}">${lbl(title)}${cards.length > CAP ? `<button class="ghost-btn edh-more" data-si="${idx}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}${grid(cards.slice(0, CAP), opts, subOf)}</div>`;
   };
   // Colour strip: how many decks play this theme per colour combination —
   // tap to jump to that combination.
@@ -13635,7 +13636,6 @@ function renderEdhrecSections(box, key, S, keepScroll){
     const g = wrap.querySelector('.sr-grid');
     if(g) g.outerHTML = grid(p.cards.slice(0, next), p.opts, p.subOf);
     if(next >= p.cards.length) btn.remove();
-    else btn.textContent = trS('More') + ' (' + (p.cards.length - next) + ')';
     wireResultButtons(p.cards.slice(0, next), pinned, ()=>renderEdhrecSections(box, key, S, true), p.wire || {});
     loadTilePrices(p.cards.slice(already, next));
   }));
@@ -15336,7 +15336,7 @@ function renderRecoBody(){
         ${kinList.length ? cselectHtml('recoKindred', [{v:'',l:trS('Kindred — none')}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label)}))), activeIsKin ? (R.activeThemeSlug||'') : '', trS('Kindred — none'), {search:true}) : ''}
       </div>`
     : '';
-  box.innerHTML = themeBanner + hint + fallbackNote + chips;
+  box.innerHTML = themeBanner + hint + fallbackNote;
   const recoTile = (c)=>{
     const sel = R.selected.has(c.name);
     return `<div class="sr-tile selectable ${sel?'selected':''}" data-name="${encodeURIComponent(c.name)}">
@@ -15382,7 +15382,7 @@ function renderRecoBody(){
         const n = shownOf(g);
         // Ten most-played first; the More button rides at the section's TOP
         // (just under the previous stripe, bottom-up) and deals ten more.
-        return `<div class="edh-sec" data-si="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > n ? `<button class="ghost-btn edh-more" data-si="${i}" style="width:100%;margin:0 0 6px;">${trS('More')} (${g.cards.length - n})</button>` : ''}<div class="sr-grid" data-sg="${i}">${g.cards.slice(0, n).map(recoTile).join('')}</div></div>`;
+        return `<div class="edh-sec" data-si="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > n ? `<button class="ghost-btn edh-more" data-si="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid" data-sg="${i}">${g.cards.slice(0, n).map(recoTile).join('')}</div></div>`;
       }).join(''));
     wireRecoChunk();
     loadTilePrices(groups.flatMap(g=>g.cards.slice(0, CAP)).slice(0, 36));
@@ -15391,7 +15391,8 @@ function renderRecoBody(){
       e.stopPropagation();
       openTileMenu(jb, groups.map((g,i)=>({ label: g.title, fn: ()=>{
         const s = box.querySelector(`.edh-sec[data-si="${i}"]`);
-        if(s) s.scrollIntoView({ behavior:'smooth', block:'start' });
+        // Bottom-up: a section STARTS at its foot (the label) — land there.
+        if(s) s.scrollIntoView({ behavior:'smooth', block:'end' });
       }})));
     });
     box.querySelectorAll('.edh-more').forEach(btn=>btn.addEventListener('click', ()=>{
@@ -15402,7 +15403,6 @@ function renderRecoBody(){
       const gr = box.querySelector(`.sr-grid[data-sg="${btn.dataset.si}"]`);
       if(gr){ gr.innerHTML = g.cards.slice(0, next).map(recoTile).join(''); wireRecoChunk(); loadTilePrices(g.cards.slice(already, next)); }
       if(next >= g.cards.length) btn.remove();
-      else btn.textContent = trS('More') + ' (' + (g.cards.length - next) + ')';
     }));
   } else {
     pagedGrid(box, R.pool, recoTile, (chunk)=>{ wireRecoChunk(); loadTilePrices(chunk); });
@@ -15415,6 +15415,9 @@ function renderRecoBody(){
     if(!v){ loadRecoTheme(cur); return; }             // "none" — same slug toggles back to the main list
     loadRecoTheme(v);                                  // switching loads the new theme directly
   };
+  // The Theme / Kindred menus live at the page FOOT, below the commander
+  // hero — appended last so they render bottommost, wired right after.
+  box.insertAdjacentHTML('beforeend', chips);
   box.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', e=>{
     e.stopPropagation();
     state.openCSelect = state.openCSelect === b.dataset.cs ? null : b.dataset.cs;
