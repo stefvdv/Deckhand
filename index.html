@@ -285,7 +285,10 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .salt-noimg{border:1px solid var(--pop-line);border-radius:10px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;font-size:12.5px;color:var(--ink-text);}
 .salt-meta{text-align:center;color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:12.5px;margin-top:4px;}
 .insp-jump{position:fixed;right:14px;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
-.dl-jump{position:fixed;right:14px;bottom:calc(108px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:45;height:auto;}
+/* The base .edh-jump-row is sticky — without !important the burger rode
+   the content and scrolled away. Fixed for real, and lifted above the deck
+   bar + tabs stack. */
+.dl-jump{position:fixed !important;top:auto !important;right:14px;bottom:calc(150px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;justify-content:flex-end;z-index:45;height:auto;}
 .otag-wrap{position:relative;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
@@ -3681,17 +3684,19 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.351';
+const APP_VERSION = '2.51.352';
 const CHANGELOG_NOTES = {
   en: [
-    'Decklists gained the hovering \u2630 jump menu (above the deck bar) for leaping straight to a category; the Recommendations burger sits a touch lower.',
-    'Deck Inspiration: a kindred now means the tribe AND its support cards \u2014 all categories return \u2014 and the deck\u2019s dominant THEME is auto-detected alongside the kindred.',
-    'Search results anchor to the page foot properly, and page titles refit once the real font loads instead of staying whisper-small.'
+    'The decklist \u2630 truly hovers now (its base style was sticky and rode the scroll away) and sits higher, above the extra bars.',
+    'Search results stay anchored at the foot even with many hits \u2014 the page re-anchors as images and prices settle.',
+    'Deck Inspiration: the detected THEME carries the pre-fill (all card types survive); the detected kindred waits in its menu instead of collapsing the page into one creature list.',
+    'Short page titles can no longer render whisper-small \u2014 a hard floor guards them while the auto-fit does its work.'
   ],
   nl: [
-    'Decklijsten kregen het zwevende \u2630-springmenu (boven de deckbalk) om direct naar een categorie te springen; de Aanbevelingen-burger staat iets lager.',
-    'Deck-inspiratie: een kindred betekent nu de stam \u00c9N zijn ondersteuning \u2014 alle categorie\u00ebn keren terug \u2014 en het dominante THEMA van het deck wordt naast de kindred automatisch herkend.',
-    'Zoekresultaten hechten nu echt aan de paginavoet, en paginatitels passen zich opnieuw aan zodra het echte lettertype laadt in plaats van fluisterklein te blijven.'
+    'De decklijst-\u2630 zweeft nu echt (zijn basisstijl was sticky en scrolde mee weg) en staat hoger, boven de extra balken.',
+    'Zoekresultaten blijven onderaan verankerd, ook met veel treffers \u2014 de pagina herankert terwijl afbeeldingen en prijzen laden.',
+    'Deck-inspiratie: het herkende THEMA vult vooraf in (alle kaarttypen blijven); de herkende kindred wacht in zijn menu in plaats van de pagina tot \u00e9\u00e9n wezenlijst te laten krimpen.',
+    'Korte paginatitels kunnen niet meer fluisterklein renderen \u2014 een harde ondergrens bewaakt ze terwijl de auto-fit zijn werk doet.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4629,6 +4634,10 @@ function fitBrandTitle(){
     }
     if(lines <= maxLines) break;
   }
+  // A one- or two-word title on a phone can never truly need single digits
+  // — if the measurer says so, it was measuring the wrong font or a
+  // half-laid-out box. Floor it.
+  if(words.length <= 2 && text.length <= 16) size = Math.max(size, 15);
   box.style.fontSize = size + 'px';
   state._brandSize = size + 'px';
 }
@@ -10565,7 +10574,14 @@ function renderSearchResultsBox(){
     (chunk, shown)=>{ wireResultButtons(srPool, d, searchGridRefresh); loadTilePrices(chunk); },
     { initial: prevShown });
   if(prevShown) window.scrollTo(0, y);
-  else scrollToPageFoot();   // a fresh result set lands at the foot — best matches by the thumb
+  else {
+    // A fresh result set lands at the foot — but images and prices inflate
+    // the page AFTER the first paint, dragging the foot away from under the
+    // first anchor. Re-anchor as the layout settles.
+    scrollToPageFoot();
+    setTimeout(scrollToPageFoot, 250);
+    setTimeout(scrollToPageFoot, 800);
+  }
 }
 /* Sort for recommendation lists: color first (WUBRG, then multicolor, then
    colorless), mana value second, name third. */
@@ -12544,8 +12560,11 @@ function inspirationPageHtml(){
   // Each deck's recommendations start clean: type and theme selections never
   // carry over from the previous deck's session.
   if(d && state._inspireSelFor !== d.id){
-    // Deck-aware start: the deck's own dominant kindred AND theme pre-fill.
-    state.inspireSel = { kindred: deckDominantKindred(d), theme: deckDominantTheme(d) };
+    // Deck-aware start: the dominant THEME pre-fills (broad clause, all
+    // card types survive). The kindred is detected too but stays a MENU
+    // default rather than an active filter — auto-applying it collapsed
+    // the whole page into one creature list.
+    state.inspireSel = { kindred: '', theme: deckDominantTheme(d) };
     state._inspireSelFor = d.id;
   }
   if(d && d.admiral){
