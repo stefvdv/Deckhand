@@ -3722,13 +3722,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.373';
+const APP_VERSION = '2.51.375';
 const CHANGELOG_NOTES = {
   en: [
-    'The green \u2713 in the printing chooser now sits on the card image itself \u2014 bottom-left, just like the collection marks in your decklist \u2014 instead of drifting down onto the set text.'
+    'Prices are live now: the card sheet prices the exact printing it shows and tiles use today\u2019s Scryfall value instead of yesterday\u2019s cache \u2014 the cache only steps in offline. Picking a printing therefore visibly changes the price too, which the frozen cached number used to hide.'
   ],
   nl: [
-    'De groene \u2713 in de versiekiezer staat nu op de kaartafbeelding zelf \u2014 linksonder, net als de collectiemarkers in je decklijst \u2014 in plaats van af te zakken naar de settekst.'
+    'Prijzen zijn nu live: het kaartvel prijst exact de getoonde versie en tegels gebruiken de Scryfall-waarde van vandaag in plaats van de cache van gisteren \u2014 de cache springt alleen offline bij. Een versie kiezen verandert dus ook zichtbaar de prijs, wat het bevroren cachegetal verborg.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -7290,15 +7290,16 @@ function fmtEur(v){
   if(v===null || v===undefined || isNaN(v)) return '—';
   return '€' + Number(v).toFixed(2);
 }
-async function cheapestEur(card, front){
+async function cheapestEur(card, front, fresh){
   if(!card || !card.name) return null;
   const hit = state.priceCache[card.name];
-  if(hit && Date.now()-hit.t < PRICE_TTL) return hit.v;
-  if(!card.prints_search_uri) return null;
+  const cached = (hit && Date.now()-hit.t < PRICE_TTL) ? hit.v : undefined;
+  if(!fresh && cached !== undefined) return cached;
+  if(!card.prints_search_uri) return cached !== undefined ? cached : null;
   let min = null;
   try{
     const res = await sfFetch(card.prints_search_uri, 0, true, false, front);
-    if(!res.ok) return null;
+    if(!res.ok) return cached !== undefined ? cached : null;
     const data = await res.json();
     (data.data||[]).forEach(p=>{
       if(p.digital) return;                 // MTGO/Arena printings aren't purchasable in paper
@@ -7307,7 +7308,7 @@ async function cheapestEur(card, front){
       const e = parseFloat(raw);
       if(!isNaN(e) && (min===null || e < min)) min = e;
     });
-  }catch(e){ console.error('price lookup failed for', card.name, e); return null; }
+  }catch(e){ console.error('price lookup failed for', card.name, e); return cached !== undefined ? cached : null; }
   state.priceCache[card.name] = { v: min, t: Date.now() };
   savePriceCache();
   return min;
@@ -9620,7 +9621,15 @@ async function loadCardPrice(card){
   const gen = _cardSheetGen;
   const el = document.getElementById('csPrice');
   if(!el) return;
-  const v = await cheapestEur(card, true);
+  // The sheet shows ONE printing, so it prices THAT printing — the value
+  // that travelled with the card object, fresh from Scryfall's daily
+  // Cardmarket sync. The cheapest-printing lookup is only the fallback for
+  // cards that arrived without price data — and then it fetches LIVE, its
+  // 24h cache demoted to an offline safety net. (The cached cheapest used
+  // to overrule everything: pick the €60 printing, sheet insists €56.88.)
+  const own = printEur(card);
+  const specific = (own != null && !isNaN(own));
+  const v = specific ? own : await cheapestEur(card, true, true);
   if(gen !== _cardSheetGen) return;   // a different card owns the sheet now
   const live = document.getElementById('csPrice');
   if(!live) return;   // sheet closed while fetching
@@ -9628,7 +9637,7 @@ async function loadCardPrice(card){
     ? `<span class="cp-none">No Cardmarket price listed</span>`
     : `<span class="cp-val" data-priceinfo style="cursor:pointer;">${fmtEur(v)}</span> <span class="cp-sub" data-saltseat></span>`;
   // The old subtitle lives on as a toast behind the price itself…
-  live.querySelector('[data-priceinfo]')?.addEventListener('click', ()=>toast('Cheapest printing · Cardmarket trend'));
+  live.querySelector('[data-priceinfo]')?.addEventListener('click', ()=>toast(specific ? 'This printing · Cardmarket trend' : 'Cheapest printing · Cardmarket trend'));
   // …and its seat belongs to the salt score now.
   const seat = live.querySelector('[data-saltseat]');
   if(seat) edhrecSaltFor(card).then(sv=>{
@@ -10709,8 +10718,12 @@ function loadTilePrices(cards){
   for(const c of cards){
     const els = document.querySelectorAll(`.st-price[data-pricecard="${encodeURIComponent(c.name)}"]`);
     if(!els.length) continue;
+    // The card object's own price is TODAY's Scryfall value — it outranks
+    // yesterday's cached cheapest. The cache answers only for objects that
+    // carry no prices of their own (collection items between syncs).
+    const own = printEur(c);
     const hit = state.priceCache[c.name];
-    const v = (hit && Date.now()-hit.t < PRICE_TTL) ? hit.v : printEur(c);
+    const v = (own != null && !isNaN(own)) ? own : ((hit && Date.now()-hit.t < PRICE_TTL) ? hit.v : null);
     els.forEach(el=>{ el.textContent = (v===null || v===undefined) ? 'no price listed' : fmtEur(v); });
   }
 }
@@ -12641,50 +12654,12 @@ function openTradeAdd(side){
     const box = document.getElementById('taResults');
     if(!q || !box) return;
     box.innerHTML = '<div class="status"><div class="spinner"></div></div>';
-    // The YOU side deals from MY OWN collection — what leaves my binders —
-    // so its search runs over the collection, not Scryfall.
-    if(side === 'b'){
-      const ql = q.toLowerCase();
-      // One tile per card NAME — which exact copy leaves the binder is the
-      // printing chooser's decision, so duplicate copies collapse here.
-      const seen = new Set();
-      const mine = (state.collection.items || []).filter(c=>{
-        if(!c.name || !c.name.toLowerCase().includes(ql)) return false;
-        const k = c.name.toLowerCase();
-        if(seen.has(k)) return false;
-        seen.add(k); return true;
-      }).slice(0, 30);
-      if(!mine.length){ box.innerHTML = `<p class="hint" style="text-align:center;">${trS('Nothing matches these filters.')}</p>`; return; }
-      // Both search pages wear the SAME face per card, from the FIRST paint:
-      // Scryfall's default (most recognizable) printing — the one its Oracle
-      // bulk ships, and the one the Me-side Scryfall search already returns.
-      // So the canonical faces are fetched BEFORE the grid renders — the
-      // spinner above covers the wait, tiles appear once, and no art ever
-      // shifts underneath you. Only if Scryfall can't be reached does a tile
-      // fall back to your own copy's picture — better than a blank card.
-      let byName = {};
-      try{
-        const r = await postWithTimeout(`${SF_BASE}/cards/collection`, { identifiers: mine.map(c=>({ name: c.name })) }, 6000);
-        if(r.ok){
-          const d = await r.json();
-          (d.data||[]).forEach(c=>{
-            byName[c.name.toLowerCase()] = c;
-            const cut = c.name.indexOf(' // ');
-            if(cut > 0) byName[c.name.slice(0, cut).toLowerCase()] = c;   // DFCs stored by front-face name still match
-          });
-        }
-      }catch(e){}
-      box.innerHTML = `<div class="sr-grid">${mine.map((c,i)=>{
-        const canon = byName[c.name.toLowerCase()];
-        return `<button class="sr-tile ta-tile" data-i="${i}">
-        <img class="${wbClass(canon || c)}" src="${canon ? cardImageMed(canon) : (c.img || cardImageMed(c))}" alt="${escapeHtml(c.name)}" loading="lazy">
-        <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
-      </button>`;
-      }).join('')}</div>`;
-      box.querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, mine[+btn.dataset.i])));
-      loadTilePrices(mine);
-      return;
-    }
+    // BOTH sides search all of Scryfall — a trader without a collection in
+    // the app can still line up any card. Scryfall's search returns its
+    // default (most recognizable) printing per name, so the two pages wear
+    // identical faces for identical cards. The sides differ only in the
+    // printing chooser: the YOU side keeps the In-your-collection shelf so
+    // your own copies are one tap away; the ME side hides it (noOwned).
     try{
       const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent(q+' game:paper')}`);
       if(!r.ok){ box.innerHTML = '<p class="hint">No cards found.</p>'; return; }
