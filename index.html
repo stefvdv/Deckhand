@@ -191,6 +191,8 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    anything inside it — that's why every in-main pin floated. Outside main,
    fixed means fixed: glued to the nav, no gap. */
 .app > main:has(> #twResults){padding-bottom:calc(var(--nav-h) + 76px + env(safe-area-inset-bottom));}
+/* Bottom-up: the whole trade stack rides the foot cluster, hugging the bar. */
+.app > main:has(> #twResults) > .hint, .app > main:has(> #twResults) > .panel-card{order:98;}
 #tradeBarHost{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:90;background:var(--ink);border-top:1px solid var(--line);padding:8px 12px;}
 #tradeBarHost .searchbar{margin:0;display:flex;gap:8px;position:relative;}
 .tw-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
@@ -1294,7 +1296,7 @@ main.has-dock{padding-bottom:84px;}
 .tp-set{font-size:11.5px;font-weight:600;line-height:1.25;}
 .tp-sub{font-size:10.5px;color:var(--sub-text);margin:1px 0 2px;}
 .glog-cname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.glog-sheet{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:var(--ink);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:10px 12px 16px;-webkit-overflow-scrolling:touch;}
+.glog-sheet{width:100%;max-width:560px;min-height:min(94vh, 940px);max-height:94vh;overflow-y:auto;display:flex;flex-direction:column;justify-content:flex-end;background:var(--ink);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:10px 12px 16px;-webkit-overflow-scrolling:touch;}
 .glog-form{display:flex;flex-direction:column;gap:7px;margin-top:6px;}
 .glog-frow{display:flex;align-items:center;gap:8px;}
 .glog-lbl{flex:0 0 84px;font-size:12px;color:var(--sub-text);text-transform:uppercase;letter-spacing:.03em;}
@@ -3718,13 +3720,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.364';
+const APP_VERSION = '2.51.366';
 const CHANGELOG_NOTES = {
   en: [
-    'The wants bar is glued to the navigation at last \u2014 it lives outside the page now (the page\u2019s swipe transform was hijacking every pin attempt), and the Even trade / balance section flows below ME again.'
+    'Trade, rounded out: the wants pop closes after a pick, on back, and on outside taps; the panels ride the page foot; Confirm and Clear sit side by side; confirming moves YOU-cards out of your collection and lands the ME-cards unfiled on the collection page (and off the wants).',
+    'Printing choosers run newest-to-oldest top-down, with the printings you actually own on their own shelf at the foot.'
   ],
   nl: [
-    'De gezocht-balk zit eindelijk vast aan de navigatie \u2014 hij leeft nu buiten de pagina (de swipe-transform van de pagina kaapte elke vastzetpoging), en het Gelijke ruil / balans-blok stroomt weer onder IK.'
+    'Ruil, afgerond: de gezocht-pop sluit na een keuze, bij terug en bij tikken ernaast; de panelen rijden op de paginavoet; Bevestigen en Wissen staan naast elkaar; bevestigen haalt JIJ-kaarten uit je collectie en zet de IK-kaarten ongesorteerd op de collectiepagina (en van de gezochtlijst af).',
+    'Versiekiezers lopen nieuwste-naar-oudste van boven naar beneden, met de versies die je echt bezit op hun eigen plank onderaan.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9928,6 +9932,16 @@ async function openPrintingGrid(card, onPick){
       return;
     }
     box.className='';
+    // Chronological, bottom-up: newest printings read first at the top,
+    // the oldest sits at the page foot. Printings YOU OWN sink below them
+    // all into their own shelf — nearest the thumb.
+    prints.sort((a,b)=>String(b.released_at||'').localeCompare(String(a.released_at||'')));
+    const ownKey = new Set((state.collection.items||[]).map(x=>x.name+'|'+(x.set||'')+'|'+(x.cn||'')));
+    const owned = prints.filter(p=>ownKey.has(p.name+'|'+(p.set||'')+'|'+(p.collector_number||'')));
+    if(owned.length && owned.length < prints.length){
+      prints = prints.filter(p=>!owned.includes(p)).concat(owned);
+    }
+    const ownStart = prints.length - (owned.length < prints.length ? owned.length : 0);
     // Foil handling: a printing that exists in foil offers it as its own
     // pick with Cardmarket's FOIL trend price; a foil-ONLY printing simply
     // IS the foil. Choosing foil overrides the card's price fields so every
@@ -9939,6 +9953,8 @@ async function openPrintingGrid(card, onPick){
     // is exactly how the first attempt's foil control escaped its tile and
     // hijacked a whole grid cell. The tile itself stays untouched.
     box.innerHTML = `<div class="sr-grid">${prints.map((p,i)=>{
+      const shelf = (owned.length && i === ownStart && ownStart > 0) ? `<div class="section-label" style="grid-column:1/-1;border-bottom:1px solid var(--line);">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>` : '';
+      return shelf + (()=>{
       const fins = p.finishes || [];
       const foilOnly = fins.includes('foil') && !fins.includes('nonfoil');
       const foilEur = p.prices && parseFloat(p.prices.eur_foil);
@@ -9954,6 +9970,7 @@ async function openPrintingGrid(card, onPick){
         </button>
         ${!foilOnly && fins.includes('foil') ? `<button class="pp-foil" data-fi="${i}" title="Choose the foil printing">✨${foilEur?` €${foilEur.toFixed(2)}`:''}</button>` : ''}
       </div>`;
+      })();
     }).join('')}</div>`;
     box.querySelectorAll('.pp-foil').forEach(fb=>{
       fb.addEventListener('click', (e)=>{
@@ -11651,7 +11668,7 @@ function tradePageHtml(){
     <div class="panel-card" style="text-align:center;">
       <div class="trade-verdict ${even?'even':''}">${verdict}</div>
       ${missing?`<p class="hint" style="margin:6px 0 0;">${trS('Some cards have no listed price and count as €0.00.')}</p>`:''}
-      ${(state.trade.a.length||state.trade.b.length)?`<button class="primary-btn" id="tradeConfirm" style="width:100%;margin-top:10px;">✓ ${trS('Confirm trade')}</button><button class="ghost-btn" id="tradeClear" style="width:100%;margin-top:8px;color:var(--danger);border-color:var(--danger);">${trS('Clear trade')}</button>`:''}
+      ${(state.trade.a.length||state.trade.b.length)?`<div style="display:flex;gap:8px;margin-top:10px;"><button class="primary-btn" id="tradeConfirm" style="flex:1;">✓ ${trS('Confirm trade')}</button><button class="ghost-btn" id="tradeClear" style="flex:1;color:var(--danger);border-color:var(--danger);">${trS('Clear trade')}</button></div>`:''}
     </div>
     <div class="searchbar" style="position:relative;"><div id="twPop" class="otag-pop" hidden style="max-height:260px;"></div><input id="twQ" enterkeyhint="search" placeholder="${trS('Search your wants…')}" value="${escapeHtml(state._twQ||'')}" autocomplete="off"><button id="twClear" title="✕">✕</button></div>
   </main>`;
@@ -11680,9 +11697,11 @@ function wireTradePage(){
       state.trade.a.push({ name:w.name, set:w.set||'', set_name:w.set_name||'', cn:'', img:w.img, wb:w.border_color==='white'?1:0, eur:(w.eur!=null?w.eur:null), qty:1, type_line:w.type_line||'', colors:w.colors||[], rarity:w.rarity||'' });
       saveTrade();
       toast(`${w.name} → ${nlW?'Ik':'Me'}`);
-      render();
-      requestAnimationFrame(()=>{ const q2 = document.getElementById('twQ'); if(q2){ q2.focus(); } });
+      state._localCsClose = null;
+      render();   // rebuild closes the pop — one pick, one landing
     }));
+    // Hardware back closes just the pop (the gatekeeper's first rung).
+    state._localCsClose = ()=>{ if(twPop) twPop.hidden = true; state._localCsClose = null; try{ twQ.blur(); }catch(e){} };
   };
   // Teleport the wants bar out of the transformed main into the portal.
   { const sb = twQ ? twQ.closest('.searchbar') : null;
@@ -11695,7 +11714,7 @@ function wireTradePage(){
   if(twQ){
     twQ.addEventListener('input', renderWants);
     twQ.addEventListener('focus', renderWants);
-    twQ.addEventListener('blur', ()=>setTimeout(()=>{ if(twPop) twPop.hidden = true; }, 250));
+    twQ.addEventListener('blur', ()=>setTimeout(()=>{ if(twPop) twPop.hidden = true; if(state._localCsClose) state._localCsClose = null; }, 250));
     twQ.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); renderWants(); } });
     document.getElementById('twClear')?.addEventListener('click', ()=>{
       twQ.value = ''; state._twQ = '';
@@ -11738,11 +11757,13 @@ function wireTradePage(){
    binder and condition until the traded quantity is covered. */
 function confirmTrade(){
   loadTrade();
-  const gives = state.trade.a, gets = state.trade.b;
+  // Panels swapped in .358: ME (a) = what I RECEIVE, YOU (b) = what leaves
+  // my binders. Joining and leaving follow suit.
+  const gives = state.trade.b, gets = state.trade.a;
   if(!gives.length && !gets.length) return;
   const q = appLang()==='nl'
-    ? 'Deze ruil bevestigen? Kaarten onder Jij komen in je collectie; kaarten onder Ik gaan eruit.'
-    : 'Confirm this trade? Cards under You join your collection; cards under Me leave it.';
+    ? 'Deze ruil bevestigen? Kaarten onder Ik komen in je collectie; kaarten onder Jij gaan eruit.'
+    : 'Confirm this trade? Cards under Me join your collection; cards under You leave it.';
   openInAppConfirm(q, (okd)=>{
     if(!okd) return;
     gets.forEach(it=>{
@@ -11766,6 +11787,9 @@ function confirmTrade(){
     state.trade = { a:[], b:[] };
     saveTrade();
     tradeFireworks();
+    // The new cards wait unfiled on the collection page — land there so
+    // filing them into a binder is the natural next tap.
+    setTimeout(()=>switchPage('collection'), 900);
     toast(trS('Trade confirmed. Enjoy the new cards.')+' 🎆');
     render();
   }, { ok: trS('Confirm trade') });
