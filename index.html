@@ -302,6 +302,7 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
    the content and scrolled away. Fixed for real, and lifted above the deck
    bar + tabs stack. */
 .dl-jump{position:fixed !important;top:auto !important;right:14px;bottom:calc(150px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;justify-content:flex-end;z-index:45;height:auto;}
+.pp-own{position:absolute;left:10px;bottom:12px;width:26px;height:26px;border-radius:50%;background:#1e8a4c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;}
 .otag-wrap{position:relative;}
 .otag-pop[hidden]{display:none !important;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
@@ -3720,13 +3721,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.368';
+const APP_VERSION = '2.51.369';
 const CHANGELOG_NOTES = {
   en: [
-    'Printing choosers: the In-your-collection label sits BELOW its cards with the stripe under the word, owned printings show \u00d7N copies, and the custom-image button stays out of trade pickers.'
+    'Printing choosers show TWO shelves now \u2014 In your collection at the foot, All printings above it \u2014 with a green \u2713 on the copies you own; the leftover \u24d8 hint stays out of trade pickers; and the collection search box empties itself when you navigate away.'
   ],
   nl: [
-    'Versiekiezers: het In-je-collectie-label staat ONDER zijn kaarten met de streep onder het woord, eigen versies tonen \u00d7N exemplaren, en de eigen-afbeelding-knop blijft uit ruilkiezers.'
+    'Versiekiezers tonen nu TWEE planken \u2014 In je collectie onderaan, Alle versies erboven \u2014 met een groene \u2713 op de exemplaren die je bezit; de overgebleven \u24d8-hint blijft uit ruilkiezers; en het collectie-zoekveld leegt zichzelf als je wegnavigeert.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4257,6 +4258,7 @@ function switchPage(p, topnav){
   }
   if(p === 'decks'){ state.folderNav = null; state.deckFilter = ''; }
   if(p === 'collection'){ state.colFilter.binder = null; state.colFilter.q = ''; }
+  else if(state.screen === 'collection'){ state.colFilter.q = ''; }   // leaving clears the search box too
   state.screen = p; state.menuOpen = false; state.openCSelect = null; state.colSel = null;
   pushHistory(p);
   render();
@@ -9863,7 +9865,7 @@ async function openPrintingGrid(card, onPick, gOpts){
     ${overlayCapHtml(trS('Change printing'))}
     <main>
       ${gOpts && gOpts.noCustom ? '' : `<button class="ghost-btn" id="ppCustom" style="width:100%;margin:2px 0 4px;">📷 ${trS('Use your own image…')}</button>`}
-      <p class="hint" style="margin:0 0 12px;text-align:center;">${infoBtnHtml(trS('Camera or any image file — it becomes this card\'s picture everywhere in the app. Picking a real printing below puts things back.'))}</p>
+      ${gOpts && gOpts.noCustom ? '' : `<p class="hint" style="margin:0 0 12px;text-align:center;">${infoBtnHtml(trS('Camera or any image file — it becomes this card\'s picture everywhere in the app. Picking a real printing below puts things back.'))}</p>`}
       <input type="file" id="ppCustomFile" accept="image/*" style="display:none;">
       <div id="ppList" class="status"><div class="spinner"></div>Loading printings…</div>
     </main>
@@ -9953,9 +9955,15 @@ async function openPrintingGrid(card, onPick, gOpts){
     // is exactly how the first attempt's foil control escaped its tile and
     // hijacked a whole grid cell. The tile itself stays untouched.
     box.innerHTML = `<div class="sr-grid">${prints.map((p,i)=>{
-      // Array start renders at the FOOT: the label emitted before tile 0
-      // lands at the very bottom, stripe under the word, owned cards above.
-      const shelf = (i === 0 && owned.length) ? `<div class="section-label" style="width:100%;flex:1 1 100%;border-bottom:1px solid var(--line);">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>` : '';
+      // Array start renders at the FOOT. Two shelves split the grid rows:
+      // 'In your collection' at the very bottom captioning the owned block
+      // above it, then 'All printings' captioning everything else — each
+      // label with its stripe below the word, decklist style.
+      const lblCss = 'width:100%;flex:1 1 100%;border-bottom:1px solid var(--line);';
+      let shelf = '';
+      if(owned.length && i === 0) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>`;
+      else if(owned.length && i === owned.length) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'Alle versies' : 'All printings'}</div>`;
+      const ownMark = (owned.length && i < owned.length) ? '<span class="pp-own" title="In your collection">✓</span>' : '';
       return shelf + (()=>{
       const fins = p.finishes || [];
       const foilOnly = fins.includes('foil') && !fins.includes('nonfoil');
@@ -9971,6 +9979,7 @@ async function openPrintingGrid(card, onPick, gOpts){
           </div>
         </button>
         ${!foilOnly && fins.includes('foil') ? `<button class="pp-foil" data-fi="${i}" title="Choose the foil printing">✨${foilEur?` €${foilEur.toFixed(2)}`:''}</button>` : ''}
+        ${ownMark}
       </div>`;
       })();
     }).join('')}</div>`;
