@@ -3721,13 +3721,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.370';
+const APP_VERSION = '2.51.371';
 const CHANGELOG_NOTES = {
   en: [
-    'The trade\u2019s two search pages now say whose cards they gather \u2014 Mine to receive and Yours to receive \u2014 and the Mine-side printing chooser no longer shows the In-your-collection shelf, \u2713 marks, or \u00d7counts: those cards come from the other trader, not your binders.'
+    'Both trade searches now show the same face for a card: Scryfall\u2019s most recognizable printing \u2014 the Yours-to-receive page swaps your own copy\u2019s art for the canonical one the moment it loads, and duplicate copies collapse into a single tile (the exact copy is still picked in the printing chooser).'
   ],
   nl: [
-    'De twee zoekpagina\u2019s van de ruil zeggen nu wiens kaarten ze verzamelen \u2014 Ik ontvang en Jij ontvangt \u2014 en de versiekiezer aan de Ik-kant toont niet langer de In-je-collectie-plank, \u2713-markers of \u00d7aantallen: die kaarten komen van de andere ruiler, niet uit jouw mappen.'
+    'Beide ruil-zoekpagina\u2019s tonen nu hetzelfde gezicht voor een kaart: Scryfalls meest herkenbare versie \u2014 de Jij-ontvangt-pagina wisselt de art van je eigen exemplaar om voor de canonieke zodra die laadt, en dubbele exemplaren vouwen samen tot \u00e9\u00e9n tegel (het exacte exemplaar kies je nog steeds in de versiekiezer).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12645,14 +12645,47 @@ function openTradeAdd(side){
     // so its search runs over the collection, not Scryfall.
     if(side === 'b'){
       const ql = q.toLowerCase();
-      const mine = (state.collection.items || []).filter(c=>c.name && c.name.toLowerCase().includes(ql)).slice(0, 30);
+      // One tile per card NAME — which exact copy leaves the binder is the
+      // printing chooser's decision, so duplicate copies collapse here.
+      const seen = new Set();
+      const mine = (state.collection.items || []).filter(c=>{
+        if(!c.name || !c.name.toLowerCase().includes(ql)) return false;
+        const k = c.name.toLowerCase();
+        if(seen.has(k)) return false;
+        seen.add(k); return true;
+      }).slice(0, 30);
       if(!mine.length){ box.innerHTML = `<p class="hint" style="text-align:center;">${trS('Nothing matches these filters.')}</p>`; return; }
       box.innerHTML = `<div class="sr-grid">${mine.map((c,i)=>`<button class="sr-tile ta-tile" data-i="${i}">
-        <img class="${wbClass(c)}" src="${c.img || cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
+        <img class="${wbClass(c)}" src="${c.img || cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy" data-canon="${encodeURIComponent(c.name)}">
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
       </button>`).join('')}</div>`;
       box.querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, mine[+btn.dataset.i])));
       loadTilePrices(mine);
+      // Both search pages wear the SAME face per card: Scryfall's default
+      // (most recognizable) printing — the one its Oracle bulk ships, and the
+      // one the Me-side Scryfall search already returns. Your own copy shows
+      // instantly as a stand-in; one batch POST then swaps every tile to the
+      // canonical art the moment it lands. If the POST fails, the stand-ins
+      // simply stay — nothing breaks offline.
+      (async ()=>{
+        try{
+          const r = await postWithTimeout(`${SF_BASE}/cards/collection`, { identifiers: mine.map(c=>({ name: c.name })) }, 6000);
+          if(!r.ok) return;
+          const d = await r.json();
+          const byName = {};
+          (d.data||[]).forEach(c=>{
+            byName[c.name.toLowerCase()] = c;
+            const cut = c.name.indexOf(' // ');
+            if(cut > 0) byName[c.name.slice(0, cut).toLowerCase()] = c;   // DFCs stored by front-face name still match
+          });
+          box.querySelectorAll('img[data-canon]').forEach(img=>{
+            const canon = byName[decodeURIComponent(img.dataset.canon).toLowerCase()];
+            if(!canon) return;
+            img.className = wbClass(canon);
+            img.src = cardImageMed(canon);
+          });
+        }catch(e){}
+      })();
       return;
     }
     try{
