@@ -3720,13 +3720,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.367';
+const APP_VERSION = '2.51.368';
 const CHANGELOG_NOTES = {
   en: [
-    'Printing choosers read truly bottom-up now: your own printings at the very foot, the oldest printing just above the shelf, the newest at the top \u2014 and the trade search bar answers taps again (the pop\u2019s back-press guard was arming too early and eating them).'
+    'Printing choosers: the In-your-collection label sits BELOW its cards with the stripe under the word, owned printings show \u00d7N copies, and the custom-image button stays out of trade pickers.'
   ],
   nl: [
-    'Versiekiezers lezen nu echt bottom-up: je eigen versies helemaal onderaan, de oudste versie net boven de plank, de nieuwste bovenaan \u2014 en de ruil-zoekbalk reageert weer op tikken (de terugdruk-bewaker van de pop stond te vroeg op scherp en at ze op).'
+    'Versiekiezers: het In-je-collectie-label staat ONDER zijn kaarten met de streep onder het woord, eigen versies tonen \u00d7N exemplaren, en de eigen-afbeelding-knop blijft uit ruilkiezers.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9854,7 +9854,7 @@ async function processCustomCardImage(file){
   try{ if(bmp.close) bmp.close(); }catch(e){}
   return cv.toDataURL('image/jpeg', 0.62);
 }
-async function openPrintingGrid(card, onPick){
+async function openPrintingGrid(card, onPick, gOpts){
   let el = document.getElementById('printOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='printOverlay'; }
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
@@ -9862,7 +9862,7 @@ async function openPrintingGrid(card, onPick){
   el.innerHTML = `<div class="overlay-inner">
     ${overlayCapHtml(trS('Change printing'))}
     <main>
-      <button class="ghost-btn" id="ppCustom" style="width:100%;margin:2px 0 4px;">📷 ${trS('Use your own image…')}</button>
+      ${gOpts && gOpts.noCustom ? '' : `<button class="ghost-btn" id="ppCustom" style="width:100%;margin:2px 0 4px;">📷 ${trS('Use your own image…')}</button>`}
       <p class="hint" style="margin:0 0 12px;text-align:center;">${infoBtnHtml(trS('Camera or any image file — it becomes this card\'s picture everywhere in the app. Picking a real printing below puts things back.'))}</p>
       <input type="file" id="ppCustomFile" accept="image/*" style="display:none;">
       <div id="ppList" class="status"><div class="spinner"></div>Loading printings…</div>
@@ -9870,7 +9870,7 @@ async function openPrintingGrid(card, onPick){
     ${overlayNavHtml()}
   </div>`;
   wireOverlayNav(el);
-  document.getElementById('ppCustom').addEventListener('click', ()=>{
+  document.getElementById('ppCustom')?.addEventListener('click', ()=>{
     const inp = document.getElementById('ppCustomFile');
     if(inp) inp.click();   // Android's own sheet offers camera, gallery, and files
   });
@@ -9934,7 +9934,9 @@ async function openPrintingGrid(card, onPick){
     // So: owned printings first (they land at the very bottom), then the
     // rest ascending by date — oldest just above the shelf, newest on top.
     prints.sort((a,b)=>String(a.released_at||'').localeCompare(String(b.released_at||'')));
-    const ownKey = new Set((state.collection.items||[]).map(x=>x.name+'|'+(x.set||'')+'|'+(x.cn||'')));
+    const ownQty = {};
+    (state.collection.items||[]).forEach(x=>{ const k = x.name+'|'+(x.set||'')+'|'+(x.cn||''); ownQty[k] = (ownQty[k]||0) + (x.qty||1); });
+    const ownKey = new Set(Object.keys(ownQty));
     const owned = prints.filter(p=>ownKey.has(p.name+'|'+(p.set||'')+'|'+(p.collector_number||'')));
     if(owned.length && owned.length < prints.length){
       prints = owned.concat(prints.filter(p=>!owned.includes(p)));
@@ -9951,7 +9953,9 @@ async function openPrintingGrid(card, onPick){
     // is exactly how the first attempt's foil control escaped its tile and
     // hijacked a whole grid cell. The tile itself stays untouched.
     box.innerHTML = `<div class="sr-grid">${prints.map((p,i)=>{
-      const shelf = (i === shelfAt) ? `<div class="section-label" style="width:100%;flex:1 1 100%;border-bottom:1px solid var(--line);">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>` : '';
+      // Array start renders at the FOOT: the label emitted before tile 0
+      // lands at the very bottom, stripe under the word, owned cards above.
+      const shelf = (i === 0 && owned.length) ? `<div class="section-label" style="width:100%;flex:1 1 100%;border-bottom:1px solid var(--line);">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>` : '';
       return shelf + (()=>{
       const fins = p.finishes || [];
       const foilOnly = fins.includes('foil') && !fins.includes('nonfoil');
@@ -9962,7 +9966,7 @@ async function openPrintingGrid(card, onPick){
           <img class="${wbClass(p)}" src="${cardImageMedRaw(p)}" alt="${escapeHtml(p.name)}" loading="lazy">
           <div class="st-body">
             <div class="tp-set">${setIcoHtml(p.set, p.rarity)} ${escapeHtml(p.set_name||p.set)}</div>
-            <div class="tp-sub">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}${foilOnly?' · ✨ foil only':''}</div>
+            <div class="tp-sub">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}${foilOnly?' · ✨ foil only':''}${(()=>{ const q = ownQty[p.name+'|'+(p.set||'')+'|'+(p.collector_number||'')]; return q ? ` · ×${q}` : ''; })()}</div>
             <div class="st-price st-price-lg">${eur!=null && !isNaN(eur)?`${foilOnly?'✨ ':''}€${eur.toFixed(2)}`:'no price listed'}</div>
           </div>
         </button>
@@ -12667,7 +12671,7 @@ function openTradePrints(side, card){
     // as well lands back on the trade overview, freshly rendered with the
     // new card on the table.
     closeTopOverlay();
-  });
+  }, { noCustom: true });   // custom images have no business in a trade
 }
 
 /* ---------------- INSPIRATION PAGE ---------------- */
