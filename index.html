@@ -2526,7 +2526,7 @@ function setPrintPref(chosen){
   const iu = chosen.image_uris || (chosen.card_faces && chosen.card_faces[0] && chosen.card_faces[0].image_uris) || null;
   if(!iu) return;
   const prefs = _printPrefs();
-  const rec = { id: chosen.id, f: !!chosen._foilPick, i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
+  const rec = { id: chosen.id, f: !!chosen._foilPick, p: printEur(chosen), i: { s: iu.small || iu.normal || '', n: iu.normal || iu.large || iu.small || '' } };
   prefs[chosen.name] = rec;
   try{ localStorage.setItem(LS_PREFIX+'printPrefs', JSON.stringify(prefs)); }catch(e){}
   // Already-rendered tiles keep their old art until something repaints them —
@@ -2545,6 +2545,11 @@ function setPrintPref(chosen){
         if(rec.f && !star){ const i = document.createElement('i'); i.className = 'foil-star'; i.title = 'Foil printing'; i.textContent = '✨'; tile.appendChild(i); }
         else if(!rec.f && star){ star.remove(); }
       }
+      // The tile's PRICE follows the pick too — art swapping while the old
+      // number stayed put was the loudest “nothing changed” signal around.
+      const pt = img.closest('.sr-tile');
+      const pe = pt && pt.querySelector('.st-price[data-pricecard]');
+      if(pe && rec.p != null && !isNaN(rec.p)) pe.textContent = fmtEur(rec.p);
     });
   }catch(e){}
 }
@@ -3722,13 +3727,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.375';
+const APP_VERSION = '2.51.376';
 const CHANGELOG_NOTES = {
   en: [
-    'Prices are live now: the card sheet prices the exact printing it shows and tiles use today\u2019s Scryfall value instead of yesterday\u2019s cache \u2014 the cache only steps in offline. Picking a printing therefore visibly changes the price too, which the frozen cached number used to hide.'
+    'Search tiles now follow a printing pick completely \u2014 price included, live as it happens \u2014 and the Yours-to-receive trade search sorts into two shelves: your own cards at the foot under In your collection, everything else above under All results, each reading A\u2192Z upward.'
   ],
   nl: [
-    'Prijzen zijn nu live: het kaartvel prijst exact de getoonde versie en tegels gebruiken de Scryfall-waarde van vandaag in plaats van de cache van gisteren \u2014 de cache springt alleen offline bij. Een versie kiezen verandert dus ook zichtbaar de prijs, wat het bevroren cachegetal verborg.'
+    'Zoektegels volgen een versiekeuze nu volledig \u2014 prijs incluis, live op het moment zelf \u2014 en de Jij-ontvangt-ruilzoeker sorteert in twee planken: je eigen kaarten onderaan onder In je collectie, de rest erboven onder Alle resultaten, elk A\u2192Z omhoog lezend.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10720,8 +10725,11 @@ function loadTilePrices(cards){
     if(!els.length) continue;
     // The card object's own price is TODAY's Scryfall value — it outranks
     // yesterday's cached cheapest. The cache answers only for objects that
-    // carry no prices of their own (collection items between syncs).
-    const own = printEur(c);
+    // carry no prices of their own (collection items between syncs). And a
+    // remembered printing outranks everything: the tile WEARS that printing,
+    // so it must charge that printing's price.
+    const ppr = printPrefFor(c);
+    const own = (ppr && typeof ppr.p === 'number' && !isNaN(ppr.p)) ? ppr.p : printEur(c);
     const hit = state.priceCache[c.name];
     const v = (own != null && !isNaN(own)) ? own : ((hit && Date.now()-hit.t < PRICE_TTL) ? hit.v : null);
     els.forEach(el=>{ el.textContent = (v===null || v===undefined) ? 'no price listed' : fmtEur(v); });
@@ -12665,12 +12673,31 @@ function openTradeAdd(side){
       if(!r.ok){ box.innerHTML = '<p class="hint">No cards found.</p>'; return; }
       const d = await r.json();
       const cards = (d.data||[]).slice(0,30);
-      box.innerHTML = `<div class="sr-grid">${cards.map((c,i)=>`<button class="sr-tile ta-tile" data-i="${i}">
+      // YOU side: results split into the printing chooser's two shelves —
+      // your own cards at the very foot under an 'In your collection' stripe,
+      // everything else above under 'All results' — each block A→Z reading
+      // UPWARD (the grid is wrap-reverse: array start renders at the foot).
+      let list = cards, shelfAt = -1;
+      if(side === 'b'){
+        const ownSet = ownedNames();
+        const az = (a,b)=>String(a.name).localeCompare(String(b.name));
+        const owned = cards.filter(c=>ownSet.has(c.name)).sort(az);
+        const rest = cards.filter(c=>!ownSet.has(c.name)).sort(az);
+        if(owned.length && rest.length){ list = owned.concat(rest); shelfAt = owned.length; }
+        else list = (owned.length ? owned : rest);   // one group: plain grid, still A→Z
+      }
+      const lblCss = 'width:100%;flex:1 1 100%;border-bottom:1px solid var(--line);';
+      box.innerHTML = `<div class="sr-grid">${list.map((c,i)=>{
+        let shelf = '';
+        if(shelfAt > 0 && i === 0) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>`;
+        else if(shelfAt > 0 && i === shelfAt) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'Alle resultaten' : 'All results'}</div>`;
+        return shelf + `<button class="sr-tile ta-tile" data-i="${i}">
         <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
-      </button>`).join('')}</div>`;
-      box.querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, cards[+btn.dataset.i])));
-      loadTilePrices(cards);
+      </button>`;
+      }).join('')}</div>`;
+      box.querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, list[+btn.dataset.i])));
+      loadTilePrices(list);
     }catch(e){ box.innerHTML = '<p class="hint">Couldn\'t reach Scryfall.</p>'; }
   };
   document.getElementById('taGo').addEventListener('click', go);
