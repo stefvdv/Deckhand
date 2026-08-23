@@ -302,7 +302,8 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
    the content and scrolled away. Fixed for real, and lifted above the deck
    bar + tabs stack. */
 .dl-jump{position:fixed !important;top:auto !important;right:14px;bottom:calc(150px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;justify-content:flex-end;z-index:45;height:auto;}
-.pp-own{position:absolute;left:10px;bottom:12px;width:26px;height:26px;border-radius:50%;background:#1e8a4c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;}
+.pp-imghold{position:relative;display:block;}
+.pp-own{position:absolute;left:10px;bottom:10px;width:26px;height:26px;border-radius:50%;background:#1e8a4c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;}
 .otag-wrap{position:relative;}
 .otag-pop[hidden]{display:none !important;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
@@ -3721,13 +3722,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.372';
+const APP_VERSION = '2.51.373';
 const CHANGELOG_NOTES = {
   en: [
-    'The Yours-to-receive trade search now shows Scryfall\u2019s most recognizable printing from the very first paint \u2014 the canonical face is fetched before the tiles render, so the art never shifts underneath you anymore.'
+    'The green \u2713 in the printing chooser now sits on the card image itself \u2014 bottom-left, just like the collection marks in your decklist \u2014 instead of drifting down onto the set text.'
   ],
   nl: [
-    'De Jij-ontvangt-ruilzoeker toont nu vanaf de allereerste tekening Scryfalls meest herkenbare versie \u2014 het canonieke gezicht wordt opgehaald voordat de tegels renderen, dus de art verschuift nooit meer onder je handen.'
+    'De groene \u2713 in de versiekiezer staat nu op de kaartafbeelding zelf \u2014 linksonder, net als de collectiemarkers in je decklijst \u2014 in plaats van af te zakken naar de settekst.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9973,7 +9974,7 @@ async function openPrintingGrid(card, onPick, gOpts){
       const eur = foilOnly ? (foilEur || printEur(p)) : printEur(p);
       return `<div class="pp-wrap">
         <button class="sr-tile ta-tile" data-i="${i}" data-foilonly="${foilOnly?1:''}">
-          <img class="${wbClass(p)}" src="${cardImageMedRaw(p)}" alt="${escapeHtml(p.name)}" loading="lazy">
+          <span class="pp-imghold"><img class="${wbClass(p)}" src="${cardImageMedRaw(p)}" alt="${escapeHtml(p.name)}" loading="lazy">${ownMark}</span>
           <div class="st-body">
             <div class="tp-set">${setIcoHtml(p.set, p.rarity)} ${escapeHtml(p.set_name||p.set)}</div>
             <div class="tp-sub">#${p.collector_number||''}${p.rarity?' · '+p.rarity:''}${foilOnly?' · ✨ foil only':''}${(()=>{ const q = ownQty[p.name+'|'+(p.set||'')+'|'+(p.collector_number||'')]; return q ? ` · ×${q}` : ''; })()}</div>
@@ -9981,7 +9982,6 @@ async function openPrintingGrid(card, onPick, gOpts){
           </div>
         </button>
         ${!foilOnly && fins.includes('foil') ? `<button class="pp-foil" data-fi="${i}" title="Choose the foil printing">✨${foilEur?` €${foilEur.toFixed(2)}`:''}</button>` : ''}
-        ${ownMark}
       </div>`;
       })();
     }).join('')}</div>`;
