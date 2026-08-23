@@ -1314,6 +1314,9 @@ main.has-dock{padding-bottom:84px;}
 .glog-tag{background:rgba(217,164,65,0.12);border:1px solid rgba(217,164,65,0.4);color:var(--brass);border-radius:8px;padding:3px 8px;font-size:12px;}
 .glog-tag.weak{background:rgba(200,90,90,0.10);border-color:rgba(200,90,90,0.45);color:#d98c8c;}
 .glog-list{margin-top:8px;display:flex;flex-direction:column-reverse;}
+.glog-row{cursor:pointer;}
+.glog-detail{display:none;margin-top:6px;font-size:12.5px;color:var(--sub-text);line-height:1.6;}
+.glog-row.open .glog-detail{display:block;}
 .glog-row{display:flex;gap:10px;align-items:flex-start;padding:7px 2px;border-top:1px solid var(--line);}
 .glog-res{flex:none;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
 .glog-res.w{background:rgba(120,190,120,0.15);color:#8fd08f;border:1px solid rgba(120,190,120,0.4);}
@@ -1878,7 +1881,26 @@ document.addEventListener('click', (e)=>{
   btn.dataset.showing = toBack ? 'back' : 'front';
   btn.classList.toggle('flipped', toBack);
 }, true);
+/* Quoted-name links in the deck's description & primer: tap opens the card's
+   normal detail sheet — fetched fuzzily so small typos still land. */
+document.addEventListener('click', async (e)=>{
+  const a = e.target.closest && e.target.closest('.card-ql');
+  if(!a) return;
+  e.preventDefault(); e.stopPropagation();
+  const nm = (a.textContent || '').trim();
+  if(!nm) return;
+  try{
+    const r = await sfFetch(`${SF_BASE}/cards/named?fuzzy=${encodeURIComponent(nm)}`);
+    if(r.ok) openCardInfo(await r.json());
+    else toast(`No card found for “${nm}”.`);
+  }catch(err){ toast('Couldn\u2019t reach Scryfall.'); }
+}, true);
 document.addEventListener('click', (e)=>{
+  // A tap anywhere outside the deck's ⋯ menu folds it away.
+  if(state.menuOpen && !(e.target.closest && (e.target.closest('#menuPop') || e.target.closest('#menuBtn')))){
+    popDeckMenu();
+    try{ const dd = getDeck(state.activeDeckId); if(dd) updateDeckMeter(dd); }catch(err){}
+  }
   if(state.colAdvOpen && state.screen==='collection' &&
      !(e.target.closest && (e.target.closest('#colAdvPanel') || e.target.closest('#colAdvToggle') || e.target.closest('#colChev')))){
     state.colAdvOpen = false;
@@ -2661,7 +2683,12 @@ function pipsHtml(colors, size){
   return colors.map(c=>manaIconSvg(c, px)).join('');
 }
 function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function inlineMd(s){ return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>'); }
+function inlineMd(s){
+  // No automatic card-name recognition — the WRITER decides what links: a
+  // card name between "quotes" becomes a tappable link to its card sheet.
+  return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/&quot;([^&<>]{2,80}?)&quot;/g,'<a class="card-ql" href="javascript:void 0">$1</a>');
+}
 /* Card names inside primer prose become tappable links — matched against
    the local 33k-card index, longest name first, links styled blue. Single-
    word names need 6+ letters so prose words like “opt” stay prose. */
@@ -3727,13 +3754,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.377';
+const APP_VERSION = '2.51.379';
 const CHANGELOG_NOTES = {
   en: [
-    'Trade searches now match the card\u2019s REAL name only \u2014 no more Secret-Lair flavor-name stowaways like the \u2018Summoner\u2019s Rift\u2019 Command Tower answering to \u2018rift\u2019 \u2014 and the Yours-to-receive shelves show their stripe even for a single card.'
+    'Six deck-page refinements: the jump menu now mirrors the bottom-up deck order; Inspiration starts with empty theme and kindred; Budget sits on the main toolbar beside Inspiration while the card count moved to the top bar; the \u22ef menu closes on hardware back and outside taps; and Description & primer merged into one Save/Edit panel where a card name between quotes becomes a tappable link \u2014 automatic linking is gone.'
   ],
   nl: [
-    'Ruilzoekers matchen nu alleen de ECHTE kaartnaam \u2014 geen Secret-Lair-verstekelingen op flavor-naam meer, zoals de \u2018Summoner\u2019s Rift\u2019 Command Tower die op \u2018rift\u2019 reageerde \u2014 en de Jij-ontvangt-planken tonen hun streep ook bij \u00e9\u00e9n enkele kaart.'
+    'Zes verfijningen op de deckpagina: het springmenu volgt nu de bottom-up deckvolgorde; Inspiratie start met leeg thema en kindred; Budget staat op de hoofdbalk naast Inspiratie en de kaartenteller verhuisde naar de bovenbalk; het \u22ef-menu sluit met de terugknop en tikken buiten het menu; en Beschrijving & primer zijn \u00e9\u00e9n Opslaan/Bewerken-paneel geworden waarin een kaartnaam tussen aanhalingstekens een tikbare link wordt \u2014 automatisch linken is weg.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4626,6 +4653,11 @@ function navHtml(){
   }
   const activeKey = state.screen === 'decklist' ? 'decks' : (state.screen === 'trade') ? 'collection' : state.screen;
   return `<div class="page-cap">
+    ${(()=>{ if(state.screen!=='decklist') return ''; const dd = getDeck(state.activeDeckId); if(!dd) return '';
+      const tot = dd.cards.length + deckLeaders(dd).length;
+      const issues = checkDeckLegality(dd);
+      const bad = issues.some(i=>i.level==='error') || dd.cards.length > deckTotal(dd) - 1;
+      return `<span id="capDeckCount" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-family:'JetBrains Mono',monospace;color:${bad?'var(--danger)':'var(--brass)'};white-space:nowrap;">${tot}/${deckTotal(dd)}${issues.length?' ⚠':''}</span>`; })()}
     <div class="brand-txt ${editable?'editable':''} two-line" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner">${escapeHtml(title)}</span></div>
     ${state._capNote ? `<span class="cap-note">${state._capNote}</span>` : ''}
   </div><div class="brand-banner">
@@ -6733,7 +6765,7 @@ function deckMeterHtml(d){
   if(set === 0){
     mid = state.dlSearchOpen
       ? `<input id="dockSearchInput" class="dock-search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off"><button class="dk-count" id="dockSearchClose" style="flex:none;">✕</button>`
-      : `<button class="dk-count ${over||errors?'bad':''}" id="dockMainCount" title="Tap to flip main / maybeboard">${state.dockCount==='maybe' ? 'Maybe ' + d.maybeboard.length : `${total}/${deckTotal(d)}${issues.length?' ⚠':''}`}</button>
+      : `<button class="dk-tool" id="dockBudget" title="Budget">${ICONS.coins}</button>
         <button class="dk-tool" id="dockInspire" title="Inspiration">${ICONS.spark}</button>
         <button class="dk-tool ${state.dlPanel==='dsearch'?'active':''}" data-panel="dsearch" title="${trS('Search deck')}">${ICONS.search}</button>
         <button class="dk-tool ${state.dlPanel==='bulk'?'active':''}" data-panel="bulk" title="Bulk Edit">${ICONS.bulk}</button>
@@ -6742,8 +6774,7 @@ function deckMeterHtml(d){
     const m = dockCachedSum(deckLeaders(d).concat(d.cards));
     const b = dockCachedSum(d.maybeboard);
     const fmt = (x)=>'€'+x.total.toFixed(2)+(x.missing?'+':'');
-    mid = `<span style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;"><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(m)}</span><span>deck</span><span>·</span><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(b)}</span><span>maybe</span></span>
-      <button class="dk-tool" id="dockBudget" title="Budget">${ICONS.coins}</button>`;
+    mid = `<span style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;"><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(m)}</span><span>deck</span><span>·</span><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(b)}</span><span>maybe</span></span>`;
   } else {
     mid = dockTypeCounts(d) || '<span>Empty deck</span>';
   }
@@ -8197,15 +8228,24 @@ function wireDecklistPage(){
 }
 function syncTabsUI(){ document.querySelectorAll('.b-tab').forEach(b=>b.classList.toggle('active', b.dataset.btab===state.builderTab)); }
 function wireMenu(d){
-  document.getElementById('mImpExp')?.addEventListener('click', ()=>{ state.menuOpen=false; updateDeckMeter(d); toggleDlPanel(d, 'impexp'); });
-  document.getElementById('mSortBy')?.addEventListener('click', ()=>{ state.menuOpen=false; updateDeckMeter(d); openModal('sort'); });
-  document.getElementById('mAddFolder')?.addEventListener('click', ()=>{ state.menuOpen=false; render(); openFolderPicker(d); });
-  document.getElementById('mDuplicate')?.addEventListener('click', ()=>{ state.menuOpen=false; duplicateDeck(d); });
-  document.getElementById('mShare')?.addEventListener('click', ()=>{ state.menuOpen=false; updateDeckMeter(d); shareDeck(d); });
-  document.getElementById('mDelete')?.addEventListener('click', ()=>{ state.menuOpen=false; openModal('delete'); });
+  document.getElementById('mImpExp')?.addEventListener('click', ()=>{ popDeckMenu(); updateDeckMeter(d); toggleDlPanel(d, 'impexp'); });
+  document.getElementById('mSortBy')?.addEventListener('click', ()=>{ popDeckMenu(); updateDeckMeter(d); openModal('sort'); });
+  document.getElementById('mAddFolder')?.addEventListener('click', ()=>{ popDeckMenu(); render(); openFolderPicker(d); });
+  document.getElementById('mDuplicate')?.addEventListener('click', ()=>{ popDeckMenu(); duplicateDeck(d); });
+  document.getElementById('mShare')?.addEventListener('click', ()=>{ popDeckMenu(); updateDeckMeter(d); shareDeck(d); });
+  document.getElementById('mDelete')?.addEventListener('click', ()=>{ popDeckMenu(); openModal('delete'); });
   document.addEventListener('click', closeMenuOnce, {once:true});
 }
-function closeMenuOnce(){ if(state.menuOpen){ state.menuOpen=false; render(); } }
+function popDeckMenu(){
+  // The open menu rides the overlay stack so the hardware back button can
+  // close it; every OTHER closing route must retire that entry the
+  // dismissAll way — popped directly, its history entry left inert (the
+  // state-driven ladder re-arms on every press).
+  const st = state.overlayStack;
+  if(st.length && st[st.length-1].id === 'deckMenu') st.pop();
+  state.menuOpen = false;
+}
+function closeMenuOnce(){ if(state.menuOpen){ popDeckMenu(); render(); } }
 async function duplicateDeck(d){
   const copy = JSON.parse(JSON.stringify(d));
   copy.id = uid(); copy.name = d.name + ' (copy)'; copy.createdAt = Date.now(); copy.updatedAt = Date.now();
@@ -8863,26 +8903,49 @@ function primerTabHtml(d){
     if(typeof g.turns==='number') bits.push('T'+g.turns);
     if(g.mana==='screw') bits.push('screw'); else if(g.mana==='flood') bits.push('flood');
     if(typeof g.dead==='number' && g.dead>0) bits.push(g.dead+' dead');
+    // Collapsed: one summary line. Tapping the row unfolds EVERY field the
+    // log dialog offers — result, ending, pod, turns, mulligans, mana, dead
+    // turns, MVP, weakest, notes — right here in place.
+    const manaTxt = g.mana==='screw' ? trS('Screwed') : g.mana==='flood' ? trS('Flooded') : trS('Smooth');
+    const det = [
+      [trS('Result'), g.res==='W' ? trS('Won') : trS('Lost')],
+      [trS('Ended by'), g.by || '—'],
+      [trS('Pod size'), g.pod ? g.pod+'p' : '—'],
+      [trS('Turns'), (typeof g.turns==='number') ? g.turns : '—'],
+      [trS('Mulligans'), (typeof g.mull==='number') ? g.mull : '—'],
+      [trS('Mana'), manaTxt],
+      [trS('Dead turns'), (typeof g.dead==='number') ? g.dead : '—'],
+      [trS('MVP card'), g.mvp || '—'],
+      [trS('Weakest card'), g.weak || '—']
+    ].map(([k,v])=>`<div><b>${escapeHtml(String(k))}:</b> ${escapeHtml(String(v))}</div>`).join('')
+      + (g.note?`<div><b>${appLang()==='nl'?'Notities':'Notes'}:</b> ${escapeHtml(g.note)}</div>`:'');
     return `<div class="glog-row">
       <span class="glog-res ${g.res==='W'?'w':'l'}">${g.res}</span>
       <div class="glog-mid">
         <div class="glog-line1">${dt.getDate()}/${dt.getMonth()+1} · ${bits.map(escapeHtml).join(' · ')||'—'}</div>
-        ${g.mvp?`<div class="glog-line2">★ ${escapeHtml(g.mvp)}${g.weak?` · ▽ ${escapeHtml(g.weak)}`:''}</div>`:(g.weak?`<div class="glog-line2">▽ ${escapeHtml(g.weak)}</div>`:'')}
-        ${g.note?`<div class="glog-note">${escapeHtml(g.note)}</div>`:''}
+        <div class="glog-detail">${det}</div>
       </div>
       <button class="icon-btn glog-del" data-dellog="${idx}" title="Delete">✕</button>
     </div>`;
   }).join('');
-  return `<div class="panel-card"><div class="panel-h">Description</div>
-    <textarea id="deckDescText" class="bulk-textarea" style="min-height:70px;" placeholder="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">${escapeHtml(d.description||'')}</textarea>
-  </div>
-  <div class="panel-card"><div class="panel-h">Play Log</div>
+  // Bottom-up: the container is column-reverse, so Play Log FIRST in the
+  // DOM lands at the page FOOT — met first — with the combined
+  // Description & primer panel directly above it. The old Preview panel is
+  // retired: the SAVED state IS the rendered view.
+  const dpEditing = state._dpEdit != null ? !!state._dpEdit : !String((d.description||'') + (d.primer||'')).trim();
+  return `<div class="panel-card"><div class="panel-h">Play Log</div>
     ${statHtml}
     <button class="primary-btn" id="logGameBtn" style="margin-top:6px;">⊕ Log a game</button>
-    ${rows?`<div class="glog-list">${rows}</div>`:''}
+    ${rows?`<button class="ghost-btn" id="glogToggle" data-lbl="${appLang()==='nl'?'Potjes':'Games'} (${log.length})" style="width:100%;margin-top:8px;">${state._glogOpen?'▾':'▸'} ${appLang()==='nl'?'Potjes':'Games'} (${log.length})</button><div class="glog-list" id="glogList"${state._glogOpen?'':' style="display:none;"'}>${rows}</div>`:''}
   </div>
-  <div class="panel-card"><div class="panel-h">Primer — strategy notes</div><textarea id="primerText" class="bulk-textarea" style="min-height:200px;">${escapeHtml(d.primer||'')}</textarea><p class="hint" style="margin-top:-4px;"># headers, **bold**, *italics*, - lists</p></div>
-    <div class="panel-card"><div class="panel-h">Preview</div><div class="rules-text" id="primerPreview">${renderPrimerHtml(d.primer)}</div></div>`;
+  <div class="panel-card"><div class="panel-h">${appLang()==='nl'?'Beschrijving & primer':'Description & primer'}</div>
+    ${dpEditing ? `
+      <textarea id="deckDescText" class="bulk-textarea" style="min-height:70px;" placeholder="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">${escapeHtml(d.description||'')}</textarea>
+      <textarea id="primerText" class="bulk-textarea" style="min-height:200px;margin-top:8px;" placeholder="${escapeHtml(trS('Primer — strategy notes'))}">${escapeHtml(d.primer||'')}</textarea>
+      <p class="hint" style="margin:4px 0 2px;"># headers, **bold**, *italics*, - lists · ${appLang()==='nl'?'een kaartnaam tussen &quot;aanhalingstekens&quot; wordt een link':'a card name between &quot;quotes&quot; becomes a link'}</p>
+    ` : `<div class="rules-text" id="dpView">${renderPrimerHtml([String(d.description||'').trim(), String(d.primer||'').trim()].filter(Boolean).join('\n\n'))}</div>`}
+    <button class="primary-btn" id="dpSaveEdit" style="margin-top:8px;">${dpEditing ? trS('Save') : '✎ ' + trS('Edit')}</button>
+  </div>`;
 }
 function openLogGameOverlay(d){
   document.getElementById('logGameOverlay')?.remove();
@@ -9043,6 +9106,7 @@ function wireBuilderBody(d){
     document.getElementById('descAddBtn')?.addEventListener('click', (e)=>{
       e.stopPropagation();
       state.builderTab = 'primer';
+      state._dpEdit = true;   // the combined panel must open on its text boxes
       state._focusDeckDesc = true;
       render();
     });
@@ -9053,12 +9117,16 @@ function wireBuilderBody(d){
         const t = h.querySelector('.t');
         return { label: t ? t.textContent.trim() : '—', fn: ()=>h.scrollIntoView({ behavior:'smooth', block:'end' }) };
       }).filter(x=>x.label && x.label !== '—');
+      // The menu mirrors the page: the deck reads bottom-up, so the list
+      // flips — Creatures at the menu's foot, Maybeboard at its head.
+      items.reverse();
       if(items.length) openTileMenu(e.currentTarget, items);
     });
     document.querySelector('.dl-desc-text')?.addEventListener('click', ()=>{
       // Straight to the pen: Deck Log tab, description field focused, cursor
       // at the end — the tap IS the edit intent.
       state.builderTab = 'primer';
+      state._dpEdit = true;   // the combined panel must open on its text boxes
       state._focusDeckDesc = true;
       render();
     });
@@ -9069,15 +9137,20 @@ function wireBuilderBody(d){
     wireStatsTab(d);
     wireDeckCombosPanel(d);
   } else if(state.builderTab==='primer'){
-    linkifyCardNames(document.getElementById('primerPreview'));
     const ta = document.getElementById('primerText');
-    let _lkT = null;
-    ta.addEventListener('input', ()=>{
-      d.primer = ta.value; scheduleSave(d);
-      const pv = document.querySelector('#builderBody .panel-card:last-child .rules-text');
-      pv.innerHTML = renderPrimerHtml(d.primer);
-      clearTimeout(_lkT);
-      _lkT = setTimeout(()=>linkifyCardNames(pv), 600);   // link after the typing pause
+    ta?.addEventListener('input', ()=>{ d.primer = ta.value; scheduleSave(d); });
+    document.getElementById('dpSaveEdit')?.addEventListener('click', ()=>{
+      if(document.getElementById('primerText')){   // Save: commit both boxes, show the rendered view
+        const t1 = document.getElementById('deckDescText'), t2 = document.getElementById('primerText');
+        if(t1) d.description = t1.value;
+        if(t2) d.primer = t2.value;
+        scheduleSave(d);
+        state._dpEdit = false;
+      } else {                                     // Edit: back to the two boxes
+        state._dpEdit = true;
+      }
+      const box = document.getElementById('builderBody');
+      box.innerHTML = primerTabHtml(d); wireBuilderBody(d);
     });
     document.getElementById('logGameBtn')?.addEventListener('click', ()=>openLogGameOverlay(d));
     const dta = document.getElementById('deckDescText');
@@ -9092,6 +9165,17 @@ function wireBuilderBody(d){
         }catch(e){}
       });
     }
+    document.getElementById('glogToggle')?.addEventListener('click', ()=>{
+      state._glogOpen = !state._glogOpen;
+      const l = document.getElementById('glogList');
+      if(l) l.style.display = state._glogOpen ? '' : 'none';
+      const t = document.getElementById('glogToggle');
+      if(t) t.textContent = (state._glogOpen ? '▾ ' : '▸ ') + (t.dataset.lbl || '');
+    });
+    document.querySelectorAll('.glog-row').forEach(r=>r.addEventListener('click', (e)=>{
+      if(e.target.closest('.glog-del')) return;   // deleting is not expanding
+      r.classList.toggle('open');
+    }));
     document.querySelectorAll('[data-dellog]').forEach(b=>b.addEventListener('click', ()=>{
       const i = parseInt(b.dataset.dellog, 10);
       openInAppConfirm(trS('Delete this game from the log?'), (ok)=>{
@@ -9364,7 +9448,10 @@ function refreshLegality(d){
   if(wrap) wrap.innerHTML = legalityHtml(d);
 }
 function wireMeterRow(d){
-  document.getElementById('menuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); state.menuOpen=!state.menuOpen; updateDeckMeter(d); });
+  document.getElementById('menuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation();
+    if(state.menuOpen){ popDeckMenu(); }
+    else { state.menuOpen = true; pushOverlay('deckMenu', ()=>{ state.menuOpen = false; try{ const dd = getDeck(state.activeDeckId); if(dd) updateDeckMeter(dd); }catch(err){} }); }
+    updateDeckMeter(d); });
   // The tools bar: every button opens what its bridge ancestor used to.
   document.querySelectorAll('#deckMeterRow [data-panel]').forEach(b=>b.addEventListener('click', ()=>toggleDlPanel(d, b.dataset.panel)));
   document.getElementById('dockBudget')?.addEventListener('click', ()=>openBudgetOverlay(d));
@@ -12706,10 +12793,10 @@ function openTradeAdd(side){
         let shelf = '';
         if(ownedLen >= 0 && ownedLen > 0 && i === 0) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>`;
         else if(ownedLen >= 0 && i === ownedLen && i < list.length) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'Alle resultaten' : 'All results'}</div>`;
-        return shelf + `<button class="sr-tile ta-tile" data-i="${i}">
-        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
+        return shelf + `<div class="sr-tile ta-tile" data-i="${i}" role="button">
+        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${dfcFlipHtml(c)}
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
-      </button>`;
+      </div>`;
       }).join('')}</div>`;
       box.querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>openTradePrints(side, list[+btn.dataset.i])));
       loadTilePrices(list);
@@ -12741,11 +12828,9 @@ function inspirationPageHtml(){
   // Each deck's recommendations start clean: type and theme selections never
   // carry over from the previous deck's session.
   if(d && state._inspireSelFor !== d.id){
-    // Deck-aware start: the dominant THEME pre-fills (broad clause, all
-    // card types survive). The kindred is detected too but stays a MENU
-    // default rather than an active filter — auto-applying it collapsed
-    // the whole page into one creature list.
-    state.inspireSel = { kindred: '', theme: deckDominantTheme(d) };
+    // Both menus start EMPTY — an auto-detected theme was too often wrong
+    // and quietly skewed the whole page. The person picks; the app follows.
+    state.inspireSel = { kindred: '', theme: '' };
     state._inspireSelFor = d.id;
   }
   if(d && d.admiral){
@@ -13922,10 +14007,10 @@ function wireBrowsePage(){
     results = results.filter(c => isNonlandFront(c) && !isBanned(c) && (isCmdrMode() ? true : (isLegendary(c) && hasPowerToughness(c))));
     if(!box()) return;
     if(!results.length){ box().innerHTML = `<div class="empty-note" style="margin:8px 0;">No eligible ${isCmdrMode()?'Commander':'Admiral'} matches “${escapeHtml(q)}”.</div>`; return; }
-    box().innerHTML = `<div class="sr-grid">${results.slice(0,30).map((c,i)=>`<button class="sr-tile ta-tile" data-i="${i}">
-        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
+    box().innerHTML = `<div class="sr-grid">${results.slice(0,30).map((c,i)=>`<div class="sr-tile ta-tile" data-i="${i}" role="button">
+        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${dfcFlipHtml(c)}
         <div class="st-body"><div class="tp-set">${escapeHtml(c.name)}</div><div class="tp-sub">${escapeHtml(frontFace(c).type_line||'')}</div></div>
-      </button>`).join('')}</div>`;
+      </div>`).join('')}</div>`;
     box().querySelectorAll('.ta-tile').forEach(btn=>btn.addEventListener('click', ()=>maybePairThenReco(results[+btn.dataset.i])));
     scrollToPageFoot();
   };
