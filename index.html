@@ -3720,15 +3720,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.366';
+const APP_VERSION = '2.51.367';
 const CHANGELOG_NOTES = {
   en: [
-    'Trade, rounded out: the wants pop closes after a pick, on back, and on outside taps; the panels ride the page foot; Confirm and Clear sit side by side; confirming moves YOU-cards out of your collection and lands the ME-cards unfiled on the collection page (and off the wants).',
-    'Printing choosers run newest-to-oldest top-down, with the printings you actually own on their own shelf at the foot.'
+    'Printing choosers read truly bottom-up now: your own printings at the very foot, the oldest printing just above the shelf, the newest at the top \u2014 and the trade search bar answers taps again (the pop\u2019s back-press guard was arming too early and eating them).'
   ],
   nl: [
-    'Ruil, afgerond: de gezocht-pop sluit na een keuze, bij terug en bij tikken ernaast; de panelen rijden op de paginavoet; Bevestigen en Wissen staan naast elkaar; bevestigen haalt JIJ-kaarten uit je collectie en zet de IK-kaarten ongesorteerd op de collectiepagina (en van de gezochtlijst af).',
-    'Versiekiezers lopen nieuwste-naar-oudste van boven naar beneden, met de versies die je echt bezit op hun eigen plank onderaan.'
+    'Versiekiezers lezen nu echt bottom-up: je eigen versies helemaal onderaan, de oudste versie net boven de plank, de nieuwste bovenaan \u2014 en de ruil-zoekbalk reageert weer op tikken (de terugdruk-bewaker van de pop stond te vroeg op scherp en at ze op).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4413,7 +4411,7 @@ const stripScreen = (s)=> s === 'trade' ? 'collection' : s;
    finger is not activated. (Capture phase, so it runs before any handler.) */
 document.addEventListener('click', (e)=>{
   if(state._localCsClose){
-    const inside = e.target.closest && e.target.closest('.cselect');
+    const inside = e.target.closest && (e.target.closest('.cselect') || e.target.closest('#tradeBarHost'));
     if(!inside){
       e.preventDefault();
       e.stopPropagation();
@@ -9932,16 +9930,16 @@ async function openPrintingGrid(card, onPick){
       return;
     }
     box.className='';
-    // Chronological, bottom-up: newest printings read first at the top,
-    // the oldest sits at the page foot. Printings YOU OWN sink below them
-    // all into their own shelf — nearest the thumb.
-    prints.sort((a,b)=>String(b.released_at||'').localeCompare(String(a.released_at||'')));
+    // The tile grid is wrap-REVERSE: array start renders at the page FOOT.
+    // So: owned printings first (they land at the very bottom), then the
+    // rest ascending by date — oldest just above the shelf, newest on top.
+    prints.sort((a,b)=>String(a.released_at||'').localeCompare(String(b.released_at||'')));
     const ownKey = new Set((state.collection.items||[]).map(x=>x.name+'|'+(x.set||'')+'|'+(x.cn||'')));
     const owned = prints.filter(p=>ownKey.has(p.name+'|'+(p.set||'')+'|'+(p.collector_number||'')));
     if(owned.length && owned.length < prints.length){
-      prints = prints.filter(p=>!owned.includes(p)).concat(owned);
+      prints = owned.concat(prints.filter(p=>!owned.includes(p)));
     }
-    const ownStart = prints.length - (owned.length < prints.length ? owned.length : 0);
+    const shelfAt = (owned.length && owned.length < prints.length) ? owned.length : -1;
     // Foil handling: a printing that exists in foil offers it as its own
     // pick with Cardmarket's FOIL trend price; a foil-ONLY printing simply
     // IS the foil. Choosing foil overrides the card's price fields so every
@@ -9953,7 +9951,7 @@ async function openPrintingGrid(card, onPick){
     // is exactly how the first attempt's foil control escaped its tile and
     // hijacked a whole grid cell. The tile itself stays untouched.
     box.innerHTML = `<div class="sr-grid">${prints.map((p,i)=>{
-      const shelf = (owned.length && i === ownStart && ownStart > 0) ? `<div class="section-label" style="grid-column:1/-1;border-bottom:1px solid var(--line);">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>` : '';
+      const shelf = (i === shelfAt) ? `<div class="section-label" style="width:100%;flex:1 1 100%;border-bottom:1px solid var(--line);">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>` : '';
       return shelf + (()=>{
       const fins = p.finishes || [];
       const foilOnly = fins.includes('foil') && !fins.includes('nonfoil');
@@ -11692,6 +11690,8 @@ function wireTradePage(){
       ? hits.map((w,i)=>`<button type="button" class="tw-poprow" data-twadd="${i}"><img loading="lazy" src="${w.img}" alt=""><span class="tw-nm">${escapeHtml(w.name)}</span><span class="tw-eur">${w.eur!=null?('€'+Number(w.eur).toFixed(2)):'—'}</span></button>`).join('')
       : `<div class="empty-note" style="margin:8px;">${trS('No wants match that name.')}</div>`;
     twPop.hidden = false;
+    // Back press closes just the pop — armed only while it's open.
+    state._localCsClose = ()=>{ if(twPop) twPop.hidden = true; state._localCsClose = null; try{ twQ.blur(); }catch(e){} };
     twPop.querySelectorAll('[data-twadd]').forEach(b=>b.addEventListener('click', ()=>{
       const w = hits[+b.dataset.twadd]; if(!w) return;
       state.trade.a.push({ name:w.name, set:w.set||'', set_name:w.set_name||'', cn:'', img:w.img, wb:w.border_color==='white'?1:0, eur:(w.eur!=null?w.eur:null), qty:1, type_line:w.type_line||'', colors:w.colors||[], rarity:w.rarity||'' });
@@ -11700,8 +11700,6 @@ function wireTradePage(){
       state._localCsClose = null;
       render();   // rebuild closes the pop — one pick, one landing
     }));
-    // Hardware back closes just the pop (the gatekeeper's first rung).
-    state._localCsClose = ()=>{ if(twPop) twPop.hidden = true; state._localCsClose = null; try{ twQ.blur(); }catch(e){} };
   };
   // Teleport the wants bar out of the transformed main into the portal.
   { const sb = twQ ? twQ.closest('.searchbar') : null;
