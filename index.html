@@ -732,7 +732,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-mid:has(.dk-tool){gap:5px;}
 .dl-bridge-desc{display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;}
 .dl-mini-add{width:30px;height:30px;border-radius:9px;flex:none;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:6px;}
-.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:12px 46px 6px 0;border-top:1px solid var(--line);margin-top:auto;font-size:13px;color:var(--ink-text);}
+.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:12px 46px 0 0;border-top:1px solid var(--line);margin-top:auto;font-size:13px;color:var(--ink-text);}
 .dl-winrate b{color:var(--brass);}
 .dl-bridge-adm{display:flex;flex-direction:column;}
 .dl-leader-cat{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.6px;padding:6px 2px 2px;margin-top:auto;}
@@ -3754,13 +3754,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.379';
+const APP_VERSION = '2.51.380';
 const CHANGELOG_NOTES = {
   en: [
-    'Six deck-page refinements: the jump menu now mirrors the bottom-up deck order; Inspiration starts with empty theme and kindred; Budget sits on the main toolbar beside Inspiration while the card count moved to the top bar; the \u22ef menu closes on hardware back and outside taps; and Description & primer merged into one Save/Edit panel where a card name between quotes becomes a tappable link \u2014 automatic linking is gone.'
+    'Deck Log reads Play Log above Description & primer now, and on the Decklist page the winrate line sits snug against the commander cards\u2019 bottom edge \u2014 the empty gap beneath it is gone.'
   ],
   nl: [
-    'Zes verfijningen op de deckpagina: het springmenu volgt nu de bottom-up deckvolgorde; Inspiratie start met leeg thema en kindred; Budget staat op de hoofdbalk naast Inspiratie en de kaartenteller verhuisde naar de bovenbalk; het \u22ef-menu sluit met de terugknop en tikken buiten het menu; en Beschrijving & primer zijn \u00e9\u00e9n Opslaan/Bewerken-paneel geworden waarin een kaartnaam tussen aanhalingstekens een tikbare link wordt \u2014 automatisch linken is weg.'
+    'Decklog toont Speellog nu boven Beschrijving & primer, en op de Decklijst-pagina zit de winrate-regel strak tegen de onderrand van de commander-kaarten \u2014 de lege ruimte eronder is weg.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8271,7 +8271,7 @@ function listTabHtml(d){
           ? escapeHtml(d.description).replace(/\n/g, '<br>')
           : `<span class="hint" style="margin:0;">${trS('No description yet — write one on the Deck Log page.')}</span><button class="icon-btn dl-mini-add" id="descAddBtn" title="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">＋</button>`}</div>
         ${(()=>{ const st = logStatsFor(d);
-          return `<div class="dl-winrate"><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}" style="margin-left:0;">＋</button><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span></div>`; })()}
+          return `<div class="dl-winrate"><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}" style="margin-left:0;">＋</button><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span></div><div class="dl-leader-cat" style="visibility:hidden;" aria-hidden="true">&nbsp;</div>`; })()}
       </div>
       <div id="dlPanelBox" class="${dlBoxClass()}">${dlPanelHtml(d)}</div>
       <div class="edh-jump-row dl-jump"><button class="icon-btn edh-jump" id="dlCatJump" title="${trS('Jump to section')}">☰</button></div>
@@ -8928,24 +8928,24 @@ function primerTabHtml(d){
       <button class="icon-btn glog-del" data-dellog="${idx}" title="Delete">✕</button>
     </div>`;
   }).join('');
-  // Bottom-up: the container is column-reverse, so Play Log FIRST in the
-  // DOM lands at the page FOOT — met first — with the combined
-  // Description & primer panel directly above it. The old Preview panel is
+  // Bottom-up: the container is column-reverse, so the combined
+  // Description & primer panel FIRST in the DOM lands at the page FOOT,
+  // with Play Log rendering ABOVE it. The old Preview panel stays
   // retired: the SAVED state IS the rendered view.
   const dpEditing = state._dpEdit != null ? !!state._dpEdit : !String((d.description||'') + (d.primer||'')).trim();
-  return `<div class="panel-card"><div class="panel-h">Play Log</div>
+  const playLogPanel = `<div class="panel-card"><div class="panel-h">Play Log</div>
     ${statHtml}
     <button class="primary-btn" id="logGameBtn" style="margin-top:6px;">⊕ Log a game</button>
     ${rows?`<button class="ghost-btn" id="glogToggle" data-lbl="${appLang()==='nl'?'Potjes':'Games'} (${log.length})" style="width:100%;margin-top:8px;">${state._glogOpen?'▾':'▸'} ${appLang()==='nl'?'Potjes':'Games'} (${log.length})</button><div class="glog-list" id="glogList"${state._glogOpen?'':' style="display:none;"'}>${rows}</div>`:''}
-  </div>
-  <div class="panel-card"><div class="panel-h">${appLang()==='nl'?'Beschrijving & primer':'Description & primer'}</div>
+  </div>`;
+  return `<div class="panel-card"><div class="panel-h">${appLang()==='nl'?'Beschrijving & primer':'Description & primer'}</div>
     ${dpEditing ? `
       <textarea id="deckDescText" class="bulk-textarea" style="min-height:70px;" placeholder="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">${escapeHtml(d.description||'')}</textarea>
       <textarea id="primerText" class="bulk-textarea" style="min-height:200px;margin-top:8px;" placeholder="${escapeHtml(trS('Primer — strategy notes'))}">${escapeHtml(d.primer||'')}</textarea>
       <p class="hint" style="margin:4px 0 2px;"># headers, **bold**, *italics*, - lists · ${appLang()==='nl'?'een kaartnaam tussen &quot;aanhalingstekens&quot; wordt een link':'a card name between &quot;quotes&quot; becomes a link'}</p>
     ` : `<div class="rules-text" id="dpView">${renderPrimerHtml([String(d.description||'').trim(), String(d.primer||'').trim()].filter(Boolean).join('\n\n'))}</div>`}
     <button class="primary-btn" id="dpSaveEdit" style="margin-top:8px;">${dpEditing ? trS('Save') : '✎ ' + trS('Edit')}</button>
-  </div>`;
+  </div>${playLogPanel}`;
 }
 function openLogGameOverlay(d){
   document.getElementById('logGameOverlay')?.remove();
