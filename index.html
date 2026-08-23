@@ -3727,13 +3727,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.376';
+const APP_VERSION = '2.51.377';
 const CHANGELOG_NOTES = {
   en: [
-    'Search tiles now follow a printing pick completely \u2014 price included, live as it happens \u2014 and the Yours-to-receive trade search sorts into two shelves: your own cards at the foot under In your collection, everything else above under All results, each reading A\u2192Z upward.'
+    'Trade searches now match the card\u2019s REAL name only \u2014 no more Secret-Lair flavor-name stowaways like the \u2018Summoner\u2019s Rift\u2019 Command Tower answering to \u2018rift\u2019 \u2014 and the Yours-to-receive shelves show their stripe even for a single card.'
   ],
   nl: [
-    'Zoektegels volgen een versiekeuze nu volledig \u2014 prijs incluis, live op het moment zelf \u2014 en de Jij-ontvangt-ruilzoeker sorteert in twee planken: je eigen kaarten onderaan onder In je collectie, de rest erboven onder Alle resultaten, elk A\u2192Z omhoog lezend.'
+    'Ruilzoekers matchen nu alleen de ECHTE kaartnaam \u2014 geen Secret-Lair-verstekelingen op flavor-naam meer, zoals de \u2018Summoner\u2019s Rift\u2019 Command Tower die op \u2018rift\u2019 reageerde \u2014 en de Jij-ontvangt-planken tonen hun streep ook bij \u00e9\u00e9n enkele kaart.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11248,8 +11248,13 @@ function openCardInfo(card, opts){
       // resolve must not flash the old card back onto the sheet.
       const myGen = _cardSheetGen;
       sfFetch(SF_BASE + '/cards/' + pp.id).then(r=> r.ok ? r.json() : null).then(full=>{
-        if(full && full.name === card.name && _cardSheetGen === myGen && document.getElementById('cardSheetOverlay'))
+        if(full && full.name === card.name && _cardSheetGen === myGen && document.getElementById('cardSheetOverlay')){
+          // Pref records from before prices rode along lack .p — tiles then
+          // wore this printing's art with the canonical printing's price.
+          // The full card is in hand right here: refresh the record once.
+          if(pp.p == null && !pp.f) setPrintPref(full);
           openCardInfo(full, Object.assign({}, opts, { _replace: true }));
+        }
       }).catch(()=>{});
     }
   }
@@ -12673,24 +12678,34 @@ function openTradeAdd(side){
       if(!r.ok){ box.innerHTML = '<p class="hint">No cards found.</p>'; return; }
       const d = await r.json();
       const cards = (d.data||[]).slice(0,30);
+      // Scryfall's bare-word search also matches FLAVOR names — 'rift'
+      // returns the League-of-Legends 'Summoner's Rift' Command Tower. A
+      // trade search must return the card someone actually typed, so every
+      // query word has to appear in the card's REAL name. (If that filter
+      // would empty the list — someone searched BY a flavor name — the
+      // Scryfall hits stand, since then they're exactly what was wanted.)
+      const toks = q.toLowerCase().split(/\s+/).filter(Boolean);
+      const named = cards.filter(c=>{ const n = String(c.name).toLowerCase(); return toks.every(t=>n.includes(t)); });
+      const pool = named.length ? named : cards;
       // YOU side: results split into the printing chooser's two shelves —
       // your own cards at the very foot under an 'In your collection' stripe,
       // everything else above under 'All results' — each block A→Z reading
       // UPWARD (the grid is wrap-reverse: array start renders at the foot).
-      let list = cards, shelfAt = -1;
+      // A group's stripe shows whenever the group has cards — even just one.
+      let list = pool, ownedLen = -1;
       if(side === 'b'){
         const ownSet = ownedNames();
         const az = (a,b)=>String(a.name).localeCompare(String(b.name));
-        const owned = cards.filter(c=>ownSet.has(c.name)).sort(az);
-        const rest = cards.filter(c=>!ownSet.has(c.name)).sort(az);
-        if(owned.length && rest.length){ list = owned.concat(rest); shelfAt = owned.length; }
-        else list = (owned.length ? owned : rest);   // one group: plain grid, still A→Z
+        const owned = pool.filter(c=>ownSet.has(c.name)).sort(az);
+        const rest = pool.filter(c=>!ownSet.has(c.name)).sort(az);
+        list = owned.concat(rest);
+        ownedLen = owned.length;
       }
       const lblCss = 'width:100%;flex:1 1 100%;border-bottom:1px solid var(--line);';
       box.innerHTML = `<div class="sr-grid">${list.map((c,i)=>{
         let shelf = '';
-        if(shelfAt > 0 && i === 0) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>`;
-        else if(shelfAt > 0 && i === shelfAt) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'Alle resultaten' : 'All results'}</div>`;
+        if(ownedLen >= 0 && ownedLen > 0 && i === 0) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'In je collectie' : 'In your collection'}</div>`;
+        else if(ownedLen >= 0 && i === ownedLen && i < list.length) shelf = `<div class="section-label" style="${lblCss}">${appLang()==='nl' ? 'Alle resultaten' : 'All results'}</div>`;
         return shelf + `<button class="sr-tile ta-tile" data-i="${i}">
         <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
