@@ -3754,13 +3754,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.390';
+const APP_VERSION = '2.51.391';
 const CHANGELOG_NOTES = {
   en: [
-    'The \u221e combos button moved down to the card\u2019s price line, flush with the right edge of the buttons beneath it \u2014 out of the name bar, into the card\u2019s own flow.'
+    'The \u221e combos button now sits truly flush with the right edge of the buttons beneath it \u2014 the price row adopted the button grid\u2019s exact centered width, so the edges align on every screen size.'
   ],
   nl: [
-    'De \u221e-comboknop verhuisde omlaag naar de prijsregel van de kaart, gelijk met de rechterrand van de knoppen eronder \u2014 uit de naambalk, de eigen stroom van de kaart in.'
+    'De \u221e-comboknop staat nu \u00e9cht gelijk met de rechterrand van de knoppen eronder \u2014 de prijsregel nam de exacte gecentreerde breedte van het knoppenraster over, dus de randen sporen op elk schermformaat.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9569,7 +9569,7 @@ function renderCardSheet(d, card, loc, idx){
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div style="position:relative;"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
+        <div style="position:relative;max-width:330px;margin:0 auto;"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
@@ -11380,7 +11380,7 @@ function openCardInfo(card, opts){
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div style="position:relative;"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
+        <div style="position:relative;max-width:330px;margin:0 auto;"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
