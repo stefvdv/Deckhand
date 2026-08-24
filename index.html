@@ -3754,13 +3754,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.392';
+const APP_VERSION = '2.51.393';
 const CHANGELOG_NOTES = {
   en: [
-    'The \u221e combos button now measures the action buttons\u2019 real rendered right edge and pins itself to it \u2014 flush by measurement rather than by stylesheet promise, on every device.'
+    'Both search panels read bottom-up now \u2014 Card Name at the foot, Sort Direction on top \u2014 and the deck search filters LIVE as you type (its Search and Reset buttons retired); the Budget page grew a slider (\u20ac0.10\u2013\u20ac10) that sets which cards count as pricey; the dock\u2019s price row is gone since the deck price lives in the top bar; and the commander block tightened \u2014 the empty band under the label vanished and the winrate sits at the true foot, giving the description more room.'
   ],
   nl: [
-    'De \u221e-comboknop meet nu de \u00e9cht gerenderde rechterrand van de actieknoppen en pint zichzelf daaraan vast \u2014 gelijk door meting in plaats van door stylesheet-belofte, op elk toestel.'
+    'Beide zoekpanelen lezen nu bottom-up \u2014 Kaartnaam onderaan, Sorteerrichting bovenaan \u2014 en het deck-zoeken filtert LIVE terwijl je typt (de Zoek- en Reset-knoppen zijn weg); de Budgetpagina kreeg een schuif (\u20ac0,10\u2013\u20ac10) die bepaalt welke kaarten als prijzig tellen; de prijsregel van de dock is weg omdat de deckprijs in de bovenbalk staat; en het commanderblok is strakker \u2014 de lege strook onder het label verdween en de winrate staat op de echte voet, met meer ruimte voor de beschrijving.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -6769,11 +6769,6 @@ function deckMeterHtml(d){
         <button class="dk-tool ${state.dlPanel==='dsearch'?'active':''}" data-panel="dsearch" title="${trS('Search deck')}">${ICONS.search}</button>
         <button class="dk-tool ${state.dlPanel==='bulk'?'active':''}" data-panel="bulk" title="Bulk Edit">${ICONS.bulk}</button>
         <button class="dk-tool" id="dockAddCards" title="Add Cards" style="font-size:19px;line-height:1;">＋</button>`;
-  } else if(set === 1){
-    const m = dockCachedSum(deckLeaders(d).concat(d.cards));
-    const b = dockCachedSum(d.maybeboard);
-    const fmt = (x)=>'€'+x.total.toFixed(2)+(x.missing?'+':'');
-    mid = `<span style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;"><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(m)}</span><span>deck</span><span>·</span><span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">${fmt(b)}</span><span>maybe</span></span>`;
   } else {
     mid = dockTypeCounts(d) || '<span>Empty deck</span>';
   }
@@ -8270,7 +8265,7 @@ function listTabHtml(d){
           ? escapeHtml(d.description).replace(/\n/g, '<br>')
           : `<span class="hint" style="margin:0;">${trS('No description yet — write one on the Deck Log page.')}</span><button class="icon-btn dl-mini-add" id="descAddBtn" title="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">＋</button>`}</div>
         ${(()=>{ const st = logStatsFor(d);
-          return `<div class="dl-winrate"><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}" style="margin-left:0;">＋</button><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span></div><div class="dl-leader-cat" style="visibility:hidden;" aria-hidden="true">&nbsp;</div>`; })()}
+          return `<div class="dl-winrate"><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}" style="margin-left:0;">＋</button><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span></div>`; })()}
       </div>
       <div id="dlPanelBox" class="${dlBoxClass()}">${dlPanelHtml(d)}</div>
       <div class="edh-jump-row dl-jump"><button class="icon-btn edh-jump" id="dlCatJump" title="${trS('Jump to section')}">☰</button></div>
@@ -8348,8 +8343,7 @@ function dlPanelHtml(d){
     // fields on the right, the hand-drawn mana icons as checkboxes, and the
     // ≤/=/≥ choice as a page-style dropdown — one filter language app-wide.
     const colorOrder = ['W','U','B','R','G','C'];
-    return `<div class="panel-card df-compact">
-      <div class="panel-h" style="display:flex;align-items:center;"><span>${trS('Search deck')}</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
+    return `<div class="panel-card df-compact" style="display:flex;flex-direction:column-reverse;">
       <div class="adv-row"><label>${trS('Name')}</label><input id="dfName" class="col-filter-input" placeholder="${trS('Card name…')}" value="${escapeHtml(f.name||'')}" autocomplete="off"></div>
       <div class="adv-row"><label>${trS('Oracle text')}</label><input id="dfText" class="col-filter-input" placeholder="${trS('Any text, e.g. draw a card')}" value="${escapeHtml(f.text||'')}" autocomplete="off"></div>
       <div class="adv-row"><label>Type</label><input id="dfType" class="col-filter-input" placeholder="${trS('e.g. Dragon, Equipment')}" value="${escapeHtml(f.type||'')}" autocomplete="off"></div>
@@ -8359,7 +8353,7 @@ function dlPanelHtml(d){
         <input id="dfMvVal" class="col-filter-input" type="number" inputmode="numeric" style="flex:1;" value="${escapeHtml(f.mvVal||'')}">
       </div></div>
       <div class="adv-row"><label>Tag</label><input id="dfTag" class="col-filter-input" placeholder="Tag…" value="${escapeHtml(f.tag||'')}" autocomplete="off"></div>
-      <div class="df-btn-row"><button class="primary-btn" id="dfGo">🔍 ${trS('Search')}</button><button class="ghost-btn" id="dfReset">${trS('Reset filters')}</button></div>
+      <div class="panel-h" style="display:flex;align-items:center;"><span>${trS('Search deck')}</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
     </div>`;
   }
   if(state.dlPanel==='impexp'){
@@ -9196,10 +9190,15 @@ function wireDlPanel(d){
     const bind = (id, key)=>{
       const el2 = document.getElementById(id);
       if(!el2) return;
-      el2.addEventListener('input', (e)=>{ f[key] = e.target.value; });
-      // The keyboard's own search/enter key runs the search, like any
-      // search bar in the app.
-      el2.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); document.getElementById('dfGo')?.click(); } });
+      // LIVE filtering: the buttons are gone — the list narrows as you type,
+      // debounced a breath so mid-word keystrokes don't thrash the render.
+      el2.addEventListener('input', (e)=>{
+        f[key] = e.target.value;
+        state.dlFilterOn = true;
+        clearTimeout(state._dfT);
+        state._dfT = setTimeout(()=>refreshDecklistBox(d), 220);
+      });
+      el2.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); el2.blur(); } });
       el2.setAttribute('enterkeyhint', 'search');
     };
     bind('dfName', 'name'); bind('dfText', 'text'); bind('dfType', 'type'); bind('dfTag', 'tag'); bind('dfMvVal', 'mvVal');
@@ -9214,12 +9213,9 @@ function wireDlPanel(d){
       const at = f.ci.indexOf(col);
       if(chk.checked){ if(at < 0) f.ci.push(col); }
       else if(at >= 0) f.ci.splice(at, 1);
-    }));
-    document.getElementById('dfGo')?.addEventListener('click', ()=>{
       state.dlFilterOn = true;
       refreshDecklistBox(d);
-      scrollToPageFoot();   // the rebuilt list must not fling the page to the top
-    });
+    }));
     // The deck page never calls wireCSelects, so the panel wires its own
     // ≤/=/≥ dropdown — the _csw flag keeps a re-render from ever stacking a
     // second listener on the same element.
@@ -9229,15 +9225,7 @@ function wireDlPanel(d){
     document.querySelectorAll('#dlPanelBox [data-csopt]').forEach(o=>{ if(o._csw) return; o._csw = 1;
       o.addEventListener('click', e=>{ e.stopPropagation(); state.openCSelect = null; const h = _csHandlers[o.dataset.csopt]; if(h) h(o.dataset.val); else csRerender(); });
     });
-    _csHandlers['dfMvOp'] = v=>{ if(state.dlFilter) state.dlFilter.mvOp = v; csRerender(); };   // redraw only — filtering waits for Search
-    document.getElementById('dfReset')?.addEventListener('click', ()=>{
-      state.dlFilter = { ci: [] };
-      state.dlFilterOn = false;
-      const box = document.getElementById('dlPanelBox');
-      if(box){ box.innerHTML = dlPanelHtml(d); wireDlPanel(d); }
-      refreshDecklistBox(d);
-      scrollToPageFoot();
-    });
+    _csHandlers['dfMvOp'] = v=>{ if(state.dlFilter) state.dlFilter.mvOp = v; state.dlFilterOn = true; csRerender(); };   // redraw only — filtering waits for Search
     return;
   }
   if(state.dlPanel==='impexp'){
@@ -9493,7 +9481,7 @@ function wireMeterRow(d){
       }
     }
   }
-  document.getElementById('dockNext')?.addEventListener('click', ()=>{ state.dockSet = ((state.dockSet||0) + 1) % 3; updateDeckMeter(d); });
+  document.getElementById('dockNext')?.addEventListener('click', ()=>{ state.dockSet = ((state.dockSet||0) + 1) % 2; updateDeckMeter(d); });
   document.getElementById('dockMainCount')?.addEventListener('click', ()=>{
     state.dockCount = state.dockCount === 'maybe' ? 'main' : 'maybe';
     updateDeckMeter(d);
@@ -10376,7 +10364,7 @@ function advancedPanelHtml(){
     sets.sort((a,b)=>a[1].localeCompare(b[1]));
   }catch(e){}
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
-  return `<div class="adv-panel">
+  return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;">
     ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<div class="toggle-row" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Include off-color cards')}</div><div style="color:var(--sub-text);font-size:10.5px;margin-top:2px;">${trS('Off — only cards legal in this deck. On — every format-legal card, off-color included.')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
     <div class="adv-row"><label>Card Name</label><input id="advName" type="text" placeholder="Any words in the name" value="${escapeHtml(s.searchName)}"></div>
     <div class="adv-row"><label>Set / Expansion</label>
@@ -14838,15 +14826,36 @@ async function loadBudgetAlternatives(d){
   // starved every other page of Scryfall access while it ran.
   await priceDeck(d);
   // Every card at €5 or more, however many that is
-  const BUDGET_FLOOR = 5;
+  const BUDGET_FLOOR = (()=>{ const v = parseFloat(localStorage.getItem(LS_PREFIX+'budgetFloor')); return (v >= 0.1 && v <= 10) ? v : 5; })();
   const priced = all
     .map(c=>({ c, v: (state.priceCache[c.name] && typeof state.priceCache[c.name].v==='number') ? state.priceCache[c.name].v : 0 }))
     .filter(x=>x.v >= BUDGET_FLOOR)
     .sort((a,b)=>b.v-a.v);
   const box = document.getElementById('bgBody');
   if(!box) return;
-  if(!priced.length){ box.innerHTML = `<div class="empty-note">No cards at €5 or more in this deck — ${isCmdrMode()?'it\'s already built thrifty.':'this crew is already sailing cheap.'}</div>`; return; }
-  box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €5+ ${infoBtnHtml('Every card at €5 or more gets two thriftier stand-ins for the same job. Tap + to swap one in.')}</p>`;
+  // The budget line, adjustable: sticky at the page's foot, live label while
+  // dragging, rebuild on release (prices are cached — the redo is instant).
+  (()=>{
+    const mainEl = box.closest('main') || box.parentElement;
+    let row = document.getElementById('bgFloorRow');
+    if(!row){
+      row = document.createElement('div');
+      row.id = 'bgFloorRow';
+      row.style.cssText = 'position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px 12px;display:flex;align-items:center;gap:10px;';
+      mainEl.appendChild(row);
+    }
+    row.innerHTML = `<span style="font-size:12.5px;color:var(--sub-text);white-space:nowrap;">${appLang()==='nl'?'Budgetgrens':'Budget line'}</span>
+      <input type="range" id="bgFloor" min="0.1" max="10" step="0.1" value="${BUDGET_FLOOR}" style="flex:1;">
+      <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);min-width:56px;text-align:right;" id="bgFloorVal">€${BUDGET_FLOOR.toFixed(2)}</span>`;
+    const sl = row.querySelector('#bgFloor');
+    sl.addEventListener('input', ()=>{ const v = document.getElementById('bgFloorVal'); if(v) v.textContent = '€' + parseFloat(sl.value).toFixed(2); });
+    sl.addEventListener('change', ()=>{
+      try{ localStorage.setItem(LS_PREFIX+'budgetFloor', sl.value); }catch(e){}
+      openBudgetOverlay(d);
+    });
+  })();
+  if(!priced.length){ box.innerHTML = `<div class="empty-note">No cards at €${BUDGET_FLOOR} or more in this deck — ${isCmdrMode()?'it\'s already built thrifty.':'this crew is already sailing cheap.'}</div>`; return; }
+  box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €${BUDGET_FLOOR}+ ${infoBtnHtml('Every card at €5 or more gets two thriftier stand-ins for the same job. Tap + to swap one in.')}</p>`;
   // Build ONE shared candidate pool up front — EDHREC's dedicated budget page
   // for this commander (real play data) plus the most-played cheap cards in
   // identity, fetched in parallel — then match every pricey card against it
