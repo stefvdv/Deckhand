@@ -3754,13 +3754,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.391';
+const APP_VERSION = '2.51.392';
 const CHANGELOG_NOTES = {
   en: [
-    'The \u221e combos button now sits truly flush with the right edge of the buttons beneath it \u2014 the price row adopted the button grid\u2019s exact centered width, so the edges align on every screen size.'
+    'The \u221e combos button now measures the action buttons\u2019 real rendered right edge and pins itself to it \u2014 flush by measurement rather than by stylesheet promise, on every device.'
   ],
   nl: [
-    'De \u221e-comboknop staat nu \u00e9cht gelijk met de rechterrand van de knoppen eronder \u2014 de prijsregel nam de exacte gecentreerde breedte van het knoppenraster over, dus de randen sporen op elk schermformaat.'
+    'De \u221e-comboknop meet nu de \u00e9cht gerenderde rechterrand van de actieknoppen en pint zichzelf daaraan vast \u2014 gelijk door meting in plaats van door stylesheet-belofte, op elk toestel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12142,6 +12142,21 @@ function wireCombosButton(el, card){
       list = list.filter(c=>c.nm.length >= 2 && c.nm.length <= 4);
       if(!b.isConnected) return;
       b.textContent = '∞ ' + list.length;
+      // Flush-right with the ACTION BUTTONS as actually rendered — measured,
+      // not assumed: CSS boxes promised alignment twice and missed twice
+      // (the buttons render narrower than their 330px cap on some devices).
+      // The second action button = the right column; its real right edge is
+      // the line to sit on, whatever the stylesheet resolves to.
+      requestAnimationFrame(()=>{
+        try{
+          if(!b.isConnected || !b.offsetParent) return;
+          const btns = el.querySelectorAll('main .ghost-btn:not([data-cmbbtn]), main .primary-btn');
+          const ref = btns[1] || btns[0];
+          if(!ref) return;
+          const d1 = b.offsetParent.getBoundingClientRect().right - ref.getBoundingClientRect().right;
+          if(isFinite(d1) && d1 > 0 && d1 < 80) b.style.right = Math.round(d1) + 'px';
+        }catch(err){}
+      });
       b.onclick = list.length
         ? ()=>openCombosOverlay(card.name + ' — combos', list)
         : ()=>toast(trS('No 2, 3 or 4 card combos for this card.'));
