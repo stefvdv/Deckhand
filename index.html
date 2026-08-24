@@ -404,15 +404,6 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
    squats on top of the tag chips. */
 .tag-drop[hidden]{display:none;}
 .card-link{background:none;border:none;padding:0;margin:0;color:#7CB8DB;text-decoration:underline;text-underline-offset:2px;font:inherit;cursor:pointer;}
-.cmb-head{display:block;width:100%;background:none;border:none;padding:0;margin:0;text-align:left;color:inherit;font:inherit;cursor:pointer;}
-.cmb-names{font-weight:700;line-height:1.35;}
-.cmb-res-btn{display:block;width:100%;background:none;border:none;color:var(--brass);font-size:12px;padding:7px 0 0;cursor:pointer;text-align:center;font-family:inherit;}
-.cmb-search-row{padding:8px 0 2px;}
-.cmb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px;}
-.cmb-card{padding:0;border:none;background:none;cursor:pointer;}
-.cmb-card img{width:100%;display:block;border-radius:7px;}
-.cmb-card-txt{border:1px solid var(--pop-line);border-radius:7px;min-height:56px;color:inherit;font-size:11.5px;padding:4px;}
-#deckCombosPanel .panel-h svg{width:12px;height:12px;vertical-align:-2px;margin-right:3px;}
 .tag-drop-h{padding:7px 10px 3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-top:1px solid var(--pop-line);}
 /* On deckless card pages the picker is the app's one allowed drop-DOWN:
    the editor sits under the buttons and the list opens below the input. */
@@ -3752,13 +3743,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.386';
+const APP_VERSION = '2.51.387';
 const CHANGELOG_NOTES = {
   en: [
-    'The \u221e combos button truly lives on the card detail page now \u2014 inside its name bar, top right, with the combo count \u2014 and the Similar cards page gave up the separate \u221e button it had been carrying all along, which was the one appearing there.'
+    'The combos feature \u2014 button, deck panel, combo pages, and its share of the weekly data \u2014 has been removed completely for a clean rebuild from scratch; leftover combo data on the device is cleaned up automatically.'
   ],
   nl: [
-    'De \u221e-comboknop woont nu \u00e9cht op de kaartdetailpagina \u2014 in de naambalk rechtsboven, met het comboaantal \u2014 en de Vergelijkbare-kaarten-pagina leverde de aparte \u221e-knop in die zij al die tijd zelf droeg: d\u00edat was de knop die daar verscheen.'
+    'De combofunctie \u2014 knop, deckpaneel, combopagina\u2019s en haar deel van de wekelijkse data \u2014 is volledig verwijderd voor een schone herbouw vanaf nul; achtergebleven combodata op het toestel wordt automatisch opgeruimd.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4592,7 +4583,7 @@ function renderInner(){
   renderPreview();
   renderLifeOverlay();
 }
-/* Sub-pages (Similar, Recommendations, Printings, Combos, Saltiest) carry
+/* Sub-pages (Similar, Recommendations, Printings, Saltiest) carry
    the REAL app navigation: same banner, back in its cross-fleet colors. The
    banner rides as a flex child UNDER the scroller, so sticky bottoms pin
    right above it and no padding arithmetic is needed. The top bar keeps
@@ -6744,7 +6735,6 @@ const DOCK_TYPE_ICONS = {
   Battle: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1 14 3v4.4c0 3.7-2.4 6.3-6 7.6-3.6-1.3-6-3.9-6-7.6V3z"/></svg>',
   Land: '<svg viewBox="0 0 32 32"><path fill="currentColor" d="M10.756 3.523l0.002-0.001c0.825-0.316 1.306 0.346 1.5 0.658 1.075 1.515 1.514 3.352 2.294 5.017 1.055 2.212 2.206 4.463 4.041 6.138 0.241 0.259 0.719 0.494 0.928 0.249 0.768-0.9 1.389-1.911 1.948-2.952 0.361-0.718 1.161-1.177 1.962-1.151 0.634-0.018 1.206 0.389 1.559 0.891 0.809 1.231 1.198 2.665 1.739 4.022 0.666 1.43 1.391 2.874 2.519 4.003 0.669 0.624 1.395 1.184 2.020 1.855 0.343 0.304 0.536 0.728 0.686 1.151l0.015 0.043c0.149 1.177-0.513 1.735-0.892 2.004-0.739 0.589-1.621 0.96-2.509 1.258-2.994 1.063-6.163 1.622-9.327 1.758-5.152 0.221-7.177 0.004-7.702-0.086-1.923-0.172-3.833-0.493-5.711-0.942-1.543-0.425-3.119-0.855-4.494-1.702-0.536-0.319-1.558-0.709-1.275-2.319l0.016-0.021c0.289-1.060 1.099-1.865 1.837-2.644 0.545-0.742 1.307-1.284 1.852-2.025 1.294-1.664 2.244-3.568 2.989-5.531 0.682-1.721 1.081-3.538 1.687-5.286 0.303-1.127 0.753-2.212 1.298-3.243 0.243-0.455 0.579-0.862 1.018-1.141z"></path></svg>'
 };
-const MANA_INF = '<svg viewBox="0 0 32 32"><path fill="currentColor" d="M21.482 12.75q-0.761 0.488-1.779 1.296t-2.17 1.916q2.14 2.16 3.939 3.222t3.199 1.061q0.967 0 1.79-0.348t1.43-0.958 0.957-1.409 0.35-1.7-0.35-1.644-0.967-1.277-1.461-0.836-1.851-0.301q-1.481 0-3.086 0.977zM7.514 20.246q1.481 0 3.261-1.024t3.775-3.090q-2.037-2.179-3.888-3.269t-3.456-1.090q-0.967 0-1.78 0.329t-1.399 0.892-0.915 1.315-0.329 1.597q0 0.902 0.36 1.691t0.998 1.381 1.502 0.93 1.872 0.338zM7.144 9.425q4.361 0 8.969 4.884 1.358-1.315 2.633-2.311t2.242-1.522q0.988-0.526 2.037-0.789t2.078-0.263q1.481 0 2.746 0.488t2.191 1.353 1.44 2.076 0.514 2.639q0 1.447-0.566 2.658t-1.574 2.085-2.397 1.362-3.014 0.488q-1.913 0-4.053-1.174t-4.505-3.522q-2.304 2.348-4.526 3.522t-4.402 1.174q-1.461 0-2.726-0.507t-2.212-1.381-1.481-2.067-0.535-2.583q0-1.409 0.555-2.621t1.522-2.095 2.273-1.39 2.787-0.507z"></path></svg>';
 function dockTypeCounts(d){
   const kinds = ['Creature','Instant','Sorcery','Artifact','Enchantment','Planeswalker','Battle','Land'];
   const all = deckLeaders(d).concat(d.cards);
@@ -8681,7 +8671,6 @@ function statsTabHtml(d){
       <div id="msDetail"></div>
     </div>`;
     })()}
-    <div class="panel-card" id="deckCombosPanel"><div class="panel-h">${MANA_INF} Combos</div><div id="deckCombosBody" class="hint" style="margin:0;min-height:40px;display:flex;flex-direction:column;justify-content:center;">Scanning…</div></div>
     <div class="panel-card"><div class="panel-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;"><span>Most Expensive Cards</span><span id="deckTotalBadge" style="text-transform:none;color:var(--brass);font-weight:700;white-space:nowrap;"></span></div>
       <p class="hint" id="deckPriceNote" style="margin:4px 0 8px;">Cardmarket trend price, cheapest printing of each card.</p>
       <div class="action-row" style="margin:8px 0 4px;"><button class="ghost-btn" id="budgetBtn"><span class="ib">${ICONS.coins}</span>Budget alternatives</button></div><div id="topPriceBox"><div class="empty-note" style="padding:8px 0;">Pricing…</div></div></div>
@@ -9133,7 +9122,6 @@ function wireBuilderBody(d){
     wireDecklistInteractions(d);
   } else if(state.builderTab==='stats'){
     wireStatsTab(d);
-    wireDeckCombosPanel(d);
   } else if(state.builderTab==='primer'){
     const ta = document.getElementById('primerText');
     ta?.addEventListener('input', ()=>{ d.primer = ta.value; scheduleSave(d); });
@@ -9534,7 +9522,6 @@ function renderCardSheet(d, card, loc, idx){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
-  wireCombosButton(el, card);
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
   const _reco = `<button class="ghost-btn" id="csReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>`;
@@ -9564,7 +9551,7 @@ function renderCardSheet(d, card, loc, idx){
   }
 
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><button type="button" class="ghost-btn" data-cmbbtn hidden style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
+    <div class="topbar"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
@@ -11368,14 +11355,13 @@ function openCardInfo(card, opts){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
-  wireCombosButton(el, card);
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
   // cards (basics etc.) stay on the Add side — only a removable main-deck
   // copy flips the button to Remove.
   const pinnedHasCard = ()=> !!(pinned && pinned.cards.some(x=>x.name===card.name) && !allowsDuplicates(card));
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><button type="button" class="ghost-btn" data-cmbbtn hidden style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
+    <div class="topbar"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
@@ -12123,179 +12109,6 @@ async function edhrecCardThemes(card){
 /* One theme page's full card membership, week-cached like everything EDHREC. */
 /* EDHREC's community salt score (0–4), read from the same week-cached
    card page the ranking already uses. Null when unknown — shown nowhere. */
-async function wireDeckCombosPanel(d){
-  const body = document.getElementById('deckCombosBody');
-  if(!body) return;
-  try{
-    const ix = await bulkIndexReady();
-    if(!ix || !ix.combos){ body.textContent = 'Combo data arrives with a coming weekly update.'; return; }
-    const names = new Set();
-    (d.cards || []).forEach(c=>names.add(String(c.name).toLowerCase()));
-    if(d.commander && d.commander.name) names.add(String(d.commander.name).toLowerCase());
-    const found = combosInNames(ix, names) || [];
-    if(!found.length){ body.textContent = 'No known combos in this deck.'; return; }
-    const by = {};
-    found.forEach(c=>{ const k = Math.min(4, c.nm.length); (by[k] = by[k] || []).push(c); });
-    body.innerHTML = [2, 3, 4].filter(k=>by[k]).map(k=>
-      `<button type="button" class="ghost-btn" data-cmbsize="${k}" style="width:100%;margin:3px 0;display:flex;justify-content:space-between;"><span>${k}-card combos</span><span style="color:var(--brass);font-weight:700;">${by[k].length}</span></button>`).join('');
-    body.querySelectorAll('[data-cmbsize]').forEach(b=>b.addEventListener('click', ()=>{
-      const k = +b.dataset.cmbsize;
-      openCombosOverlay(d.name + ' — ' + k + '-card combos', by[k]);
-    }));
-  }catch(e){ body.textContent = '—'; }
-}
-/* ── The ∞ combos button, complete lifecycle ─────────────────────────
-   BORN [hidden] in both card-sheet templates' name bars.
-   It sits IN the sheet's own name bar (top right), an in-flow part of its
-   overlay — so any page opened on top (opaque, fixed, appended later)
-   covers it naturally, and a sheet re-render replaces and re-wires it.
-   SHOWN only once the local database confirms combos: count in the label,
-   tap opens the sorted combo page. DFC names fall back to the front face.
-   Failures land in the console tagged with the card's name. */
-function wireCombosButton(el, card){
-  (async ()=>{
-    const b = el.querySelector('[data-cmbbtn]');
-    if(!b) return;
-    try{
-      const ix = await bulkIndexReady();
-      let list = combosWithCard(ix, card.name) || [];
-      if(!list.length && String(card.name).includes(' // '))
-        list = combosWithCard(ix, String(card.name).split(' // ')[0]) || [];
-      if(!list.length || !b.isConnected) return;
-      b.hidden = false;
-      b.textContent = '∞ ' + list.length;
-      b.onclick = ()=>openCombosOverlay(card.name + ' — combos', list);
-    }catch(e){ console.error('combos button for', card.name, e); }
-  })();
-}
-function combosWithCard(ix, name){
-  if(!ix || !ix.comboByName) return null;               // data not synced yet
-  const idxs = ix.comboByName.get(String(name).toLowerCase()) || [];
-  return idxs.map(i=>ix.combos[i]);
-}
-function combosInNames(ix, nameSet){
-  if(!ix || !ix.combos) return null;
-  return ix.combos.filter(c=>c.nm.every(n=>nameSet.has(String(n).toLowerCase())));
-}
-/* Combo ordering, Stef's spec: number of cards first (2-card combos are
-   the famous, playable ones), then EDHREC playability — a combo is as
-   playable as its LEAST-played piece, so the worst EDHREC rank among its
-   cards decides, straight from the local database. Spellbook popularity
-   (p, when the file someday carries it) and the alphabet break ties. */
-function comboPlayRank(c){
-  if(c._rk !== undefined) return c._rk;
-  const ix = _bulkIdx;
-  let worst = 0;
-  if(ix && ix.byName){
-    for(const n of c.nm){
-      const e = ix.byName.get(String(n).toLowerCase());
-      const rk = (e && e.rk) ? e.rk : 999999;   // unknown or unplayed sinks
-      if(rk > worst) worst = rk;
-    }
-  }else worst = 999999;
-  return (c._rk = worst);
-}
-function sortCombos(list){
-  return list.slice().sort((a, b)=>
-    (a.nm.length - b.nm.length)
-    || (comboPlayRank(a) - comboPlayRank(b))
-    || ((b.p || 0) - (a.p || 0))
-    || String(a.nm[0] || '').localeCompare(String(b.nm[0] || '')));
-}
-async function openCombosOverlay(title, combos){
-  combos = sortCombos(combos);
-  // The stacked-page dance, same as Similar: an earlier combos page steps
-  // aside intact instead of being hijacked mid-research.
-  {
-    const ex = document.getElementById('combosOverlay');
-    const topId = state.overlayStack.length ? state.overlayStack[state.overlayStack.length - 1].id : null;
-    if(ex && topId !== 'combos'){
-      window._cmbBgSeq = (window._cmbBgSeq || 0) + 1;
-      ex.id = 'combosOverlay_bg' + window._cmbBgSeq;
-      ex.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
-      const bgEl = ex;
-      const oldEntry = state.overlayStack.slice().reverse().find(e=>e.id === 'combos');
-      if(oldEntry) oldEntry.closeFn = ()=>{ try{ bgEl.remove(); }catch(e){} };
-    }
-  }
-  pushOverlay('combos', ()=>{ document.getElementById('combosOverlay')?.remove(); });
-  let el = document.getElementById('combosOverlay');
-  if(!el){ el = document.createElement('div'); el.className = 'overlay'; el.id = 'combosOverlay'; }
-  document.body.appendChild(el);
-  const top = combos.slice(0, 80);
-  // Bottom-up, per the ship's charter: the main is column-reverse, so the
-  // BEST combo (first after sorting) sits at the foot where the eye starts,
-  // and reading proceeds upward. Every section is BORN open now — names,
-  // result, and the card images four across, each tappable to its card page.
-  el.innerHTML = `<div class="overlay-inner">
-    ${overlayCapHtml(title)}
-    <main style="display:flex;flex-direction:column-reverse;justify-content:flex-start;">
-      <div class="status"><div class="spinner"></div></div>
-    </main>
-    ${overlayNavHtml()}
-  </div>`;
-  wireOverlayNav(el);
-  let ix = null;
-  try{ ix = await bulkIndexReady(); }catch(e){}
-  const main = el.querySelector('main');
-  if(!main || !document.getElementById('combosOverlay')) return;   // closed while the index loaded
-  const gridHtml = (c)=>c.nm.map(n=>{
-    const entry = ix && ix.byName ? ix.byName.get(String(n).toLowerCase()) : null;
-    const src = entry
-      ? cardImage(bulkToCardish(entry))
-      : SF_BASE + '/cards/named?format=image&version=normal&exact=' + encodeURIComponent(n);
-    return `<button type="button" class="cmb-card" data-cmbn="${escapeHtml(n)}"><img src="${src}" alt="${escapeHtml(n)}" loading="lazy"></button>`;
-  }).join('');
-  // Twenty at a time, best (sortCombos' playability order) first at the
-  // FOOT; the More button sits just above the topmost visible combo and
-  // deals the next twenty — images and wiring only for what's shown.
-  // The filter box lives at the page FOOT (first child of the reversed
-  // column) and stays mounted while only the rows re-render — so the
-  // keyboard never loses its grip mid-word.
-  let shown = 20, q = '';
-  main.innerHTML = `<div class="cmb-search-row"><input id="cmbFilter" class="col-filter-input" placeholder="${trS('Filter combos by card…')}" enterkeyhint="search" autocomplete="off"></div><div id="cmbRows" style="display:contents"></div>`;
-  const rowsBox = main.querySelector('#cmbRows');
-  const pool = ()=>{
-    if(!q) return top;
-    const toks = q.toLowerCase().split(/\s+/).filter(Boolean);
-    return top.filter(c=>toks.every(t=>c.nm.some(n=>String(n).toLowerCase().includes(t))));
-  };
-  const renderRows = ()=>{
-    const keep = main.scrollTop;
-    const P = pool();
-    const vis = P.slice(0, shown);
-    rowsBox.innerHTML = `${vis.map((c, i)=>`<div class="panel-card cmb-row" style="margin-bottom:10px;">
-        <div class="cmb-grid" style="margin-top:0;">${gridHtml(c)}</div>
-        <button type="button" class="cmb-res-btn" data-cmbres="${i}">${trS('Tap to see what this combo does')}</button>
-        <div class="cmb-res hint" hidden style="margin:6px 0 0;">${escapeHtml(c.r || '')}</div>
-      </div>`).join('')}
-      ${!P.length ? `<p class="hint" style="text-align:center;margin:10px 0;">${trS('No combos match that name.')}</p>` : ''}
-      ${shown < P.length ? `<button class="ghost-btn" id="cmbMore" style="width:100%;margin:4px 0 10px;">${trS('More combos')} (${P.length - shown})</button>` : ''}
-      <p class="hint" style="text-align:center;margin:8px 0 0;">${q ? P.length + ' / ' + combos.length : combos.length} · Commander Spellbook</p>`;
-    rowsBox.querySelectorAll('[data-cmbres]').forEach(b=>b.addEventListener('click', ()=>{
-      const res = b.parentElement.querySelector('.cmb-res');
-      if(res) res.hidden = !res.hidden;
-    }));
-    rowsBox.querySelectorAll('[data-cmbn]').forEach(b=>b.addEventListener('click', async ()=>{
-      const name = b.dataset.cmbn;
-      const entry = ix && ix.byName ? ix.byName.get(String(name).toLowerCase()) : null;
-      if(entry){ openCardInfo(bulkToCardish(entry)); return; }
-      try{
-        const r = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(name));
-        if(r.ok) openCardInfo(await r.json());
-      }catch(e){}
-    }));
-    rowsBox.querySelector('#cmbMore')?.addEventListener('click', ()=>{ shown += 20; renderRows(); });
-    main.scrollTop = keep;   // column-reverse: restoring keeps the eye where it was
-  };
-  renderRows();
-  const fi = main.querySelector('#cmbFilter');
-  let _ft = null;
-  fi?.addEventListener('input', ()=>{
-    clearTimeout(_ft);
-    _ft = setTimeout(()=>{ q = fi.value.trim(); shown = 20; renderRows(); main.scrollTop = 0; }, 140);
-  });
-}
 /* The community's 100 saltiest cards, from EDHREC's top-salt page (same
    week cache as everything EDHREC). Bottom-up, per the charter: saltiest at
    the FOOT where the eye starts, sweeter climbing upward — the page opens
@@ -17390,22 +17203,15 @@ async function bulkSyncCheck(force){
       tagCount = tagRecs.length;
     }catch(e){ ti = 0; tagCount = 0; }
     if(local){ for(let k = ti; k < (local.tagChunks || 0); k++) await bulkKvSet('tag:' + k, null); }
-    // ---- combos: optional fourth file (Commander Spellbook, trimmed by
-    // the weekly Action). A 404 today simply means "not yet". ----
-    let ki = 0, comboCount = 0;
-    try{
-      const rows = [];
-      await _bulkStreamJsonl('combos-slim.jsonl.gz', (r)=>rows.push(r));
-      for(let i = 0; i < rows.length; i += BULK_CHUNK){ await bulkKvSet('cmb:' + (ki++), rows.slice(i, i + BULK_CHUNK)); await _bulkYield(); }
-      comboCount = rows.length;
-    }catch(e){ ki = 0; comboCount = 0; }
-    if(local){ for(let k = ki; k < (local.comboChunks || 0); k++) await bulkKvSet('cmb:' + k, null); }
+    // Combos feature removed for a clean rebuild — the weekly file is not
+    // ingested; chunks from earlier versions are purged once here.
+    if(local){ for(let k = 0; k < (local.comboChunks || 0); k++) await bulkKvSet('cmb:' + k, null); }
     await bulkKvSet('bannedCommander', { t: Date.parse(remote.built) || 0, names: bulkBannedNamesFrom(cards) });
-    await bulkKvSet('meta', { built: remote.built, cardChunks: ci, rulChunks: ri, tagChunks: ti, comboChunks: ki, cards: cards.length, rulingCards: ruls.length, tagCards: tagCount, combos: comboCount, savedAt: Date.now() });
+    await bulkKvSet('meta', { built: remote.built, cardChunks: ci, rulChunks: ri, tagChunks: ti, cards: cards.length, rulingCards: ruls.length, tagCards: tagCount, savedAt: Date.now() });
     _bulkIdx = null; _bulkLoadP = null;         // rebuilt lazily from the new data
     state._bulkMetaCache = null;                // Data Sources re-reads the new meta
-    sfJournal('bulkdb: synced ' + cards.length + ' cards, ' + ruls.length + ' ruling sets, ' + tagCount + ' tag sets, ' + comboCount + ' combos');
-    if(force) toast(trS('Database ready') + ': ' + cards.length + ' cards, ' + comboCount + ' combos.');
+    sfJournal('bulkdb: synced ' + cards.length + ' cards, ' + ruls.length + ' ruling sets, ' + tagCount + ' tag sets');
+    if(force) toast(trS('Database ready') + ': ' + cards.length + ' cards.');
     setTimeout(()=>{ try{ bulkIndexReady().catch(()=>{}); }catch(e){} }, 500);   // warm the fresh data
   }catch(e){
     console.warn('bulk sync failed', e);
@@ -17455,64 +17261,10 @@ function bulkIndexReady(){
         await _bulkYield();
       }
     }
-    let combos = null, comboByName = null;
-    if(meta.comboChunks > 0){
-      combos = []; comboByName = new Map();
-      for(let i = 0; i < meta.comboChunks; i++){
-        const arr = await bulkKvGet('cmb:' + i);
-        if(Array.isArray(arr)) arr.forEach(x=>{
-          if(!x || !Array.isArray(x.nm) || x.nm.length < 2) return;
-          const idx = combos.push(x) - 1;
-          x.nm.forEach(n=>{ const k = String(n).toLowerCase(); let lst = comboByName.get(k); if(!lst){ lst = []; comboByName.set(k, lst); } lst.push(idx); });
-        });
-        await _bulkYield();
-      }
-    }
-    _bulkIdx = { built: meta.built, byName, rulByOid, cards: cardsArr, tagByOid, combos, comboByName };
+    _bulkIdx = { built: meta.built, byName, rulByOid, cards: cardsArr, tagByOid };
     return _bulkIdx;
   })();
   return _bulkLoadP;
-}
-/* Combos-only fast lane: the full index reads EVERY card chunk before it
-   touches combos — tens of seconds on a phone — while the combo chunks
-   alone are a blink. The card-sheet button rides this lane; the full index,
-   once built by the boot prewarm, is preferred for free. */
-let _cmbIdx = null, _cmbLoadP = null;
-function combosReady(){
-  if(_bulkIdx && _bulkIdx.comboByName) return Promise.resolve(_bulkIdx);
-  if(_cmbIdx) return Promise.resolve(_cmbIdx);
-  if(_cmbLoadP) return _cmbLoadP;
-  _cmbLoadP = (async ()=>{
-    // A meta written by an older ingest may not carry comboChunks at all —
-    // when the count is absent, probe cmb:0, cmb:1, … until a chunk is
-    // missing, exactly like the data was laid down.
-    try{ sfJournal('combos: lane start'); }catch(e){}
-    const meta = await bulkKvGet('meta');
-    const known = meta && meta.comboChunks > 0 ? meta.comboChunks : null;
-    try{ sfJournal('combos: meta ' + (meta ? 'ok, chunks=' + (known || '?') : 'MISSING')); }catch(e){}
-    const combos = [], comboByName = new Map();
-    const eat = (arr)=>{
-      if(!Array.isArray(arr)) return false;
-      arr.forEach(x=>{
-        if(!x || !Array.isArray(x.nm) || x.nm.length < 2) return;
-        const idx = combos.push(x) - 1;
-        x.nm.forEach(n=>{ const k = String(n).toLowerCase(); let lst = comboByName.get(k); if(!lst){ lst = []; comboByName.set(k, lst); } lst.push(idx); });
-      });
-      return true;
-    };
-    if(known){
-      for(let i = 0; i < known; i++){ eat(await bulkKvGet('cmb:' + i)); if(i % 15 === 0){ try{ sfJournal('combos: chunk ' + i + '/' + known); }catch(e){} } await _bulkYield(); }
-    } else {
-      for(let i = 0; i < 400; i++){ if(!eat(await bulkKvGet('cmb:' + i))) break; if(i % 15 === 0){ try{ sfJournal('combos: probe ' + i); }catch(e){} } await _bulkYield(); }
-    }
-    try{ sfJournal('combos: lane done, ' + combos.length + ' combos'); }catch(e){}
-    // An empty harvest is NOT cached: a later weekly ingest (or the full
-    // index) may still bring combos, and callers fall through to it.
-    _cmbIdx = combos.length ? { combos, comboByName } : null;
-    _cmbLoadP = null;
-    return _cmbIdx;
-  })();
-  return _cmbLoadP;
 }
 async function bulkCardByName(name){
   const ix = await bulkIndexReady();
