@@ -412,10 +412,8 @@ main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bot
 .cmb-card{padding:0;border:none;background:none;cursor:pointer;}
 .cmb-card img{width:100%;display:block;border-radius:7px;}
 .cmb-card-txt{border:1px solid var(--pop-line);border-radius:7px;min-height:56px;color:inherit;font-size:11.5px;padding:4px;}
-.cs-combos-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 8px);right:12px;z-index:70;width:auto;padding:7px 11px;}
+.cs-combos-btn{position:absolute;top:calc(env(safe-area-inset-top, 0px) + 8px);right:12px;z-index:80;width:auto;padding:7px 11px;}
 .cs-combos-btn[hidden]{display:none!important;}
-.overlay[id^="cardSheetOverlay_bg"] .cs-combos-btn{display:none!important;}
-.overlay:has(~ .overlay) .cs-combos-btn{display:none!important;}
 #deckCombosPanel .panel-h svg{width:12px;height:12px;vertical-align:-2px;margin-right:3px;}
 .tag-drop-h{padding:7px 10px 3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-top:1px solid var(--pop-line);}
 /* On deckless card pages the picker is the app's one allowed drop-DOWN:
@@ -3756,13 +3754,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.384';
+const APP_VERSION = '2.51.385';
 const CHANGELOG_NOTES = {
   en: [
-    'The \u221e combos button sits in the card view\u2019s top name bar on the right, shows only when the card truly has combos, and taps through to them again \u2014 a styling rule had been forcing it visible before its wiring was ready.'
+    'The \u221e combos button was rebuilt to belong to the card detail page itself \u2014 pinned to that page\u2019s own top-right name-bar corner, shown only when the local database confirms combos, covered naturally by any page opened on top. The old screen-corner styling that could hide it everywhere is gone.'
   ],
   nl: [
-    'De \u221e-comboknop staat rechts in de naambalk van het kaartvenster, verschijnt alleen als de kaart \u00e9cht combo\u2019s heeft, en tikt weer door \u2014 een stijlregel dwong hem zichtbaar voordat zijn bedrading klaar was.'
+    'De \u221e-comboknop is herbouwd als onderdeel van de kaartdetailpagina zelf \u2014 vastgepind rechtsboven in de naambalk van di\u00e9 pagina, alleen zichtbaar als de lokale database combo\u2019s bevestigt, en vanzelf bedekt door elke pagina die erboven opent. De oude schermhoek-styling die hem overal kon verbergen is weg.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9538,19 +9536,7 @@ function renderCardSheet(d, card, loc, idx){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
-  (async ()=>{
-    const b = el.querySelector('[data-cmbbtn]');
-    if(!b) return;
-    try{
-      const ix = await bulkIndexReady();
-      const list = combosWithCard(ix, card.name);
-      if(list && list.length && b.isConnected){
-        b.hidden = false;
-        b.textContent = '∞ ' + list.length;
-        b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
-      }
-    }catch(e){}
-  })();
+  wireCombosButton(el, card);
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
   const _reco = `<button class="ghost-btn" id="csReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>`;
@@ -11384,19 +11370,7 @@ function openCardInfo(card, opts){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
-  (async ()=>{
-    const b = el.querySelector('[data-cmbbtn]');
-    if(!b) return;
-    try{
-      const ix = await bulkIndexReady();
-      const list = combosWithCard(ix, card.name);
-      if(list && list.length && b.isConnected){
-        b.hidden = false;
-        b.textContent = '∞ ' + list.length;
-        b.addEventListener('click', ()=>openCombosOverlay(card.name + ' — combos', list));
-      }
-    }catch(e){}
-  })();
+  wireCombosButton(el, card);
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
   // cards (basics etc.) stay on the Add side — only a removable main-deck
@@ -12171,6 +12145,34 @@ async function wireDeckCombosPanel(d){
       openCombosOverlay(d.name + ' — ' + k + '-card combos', by[k]);
     }));
   }catch(e){ body.textContent = '—'; }
+}
+/* ── The ∞ combos button, complete lifecycle ─────────────────────────
+   BORN [hidden] in both card-sheet templates, next to the price line.
+   RE-HOMED here to a DIRECT CHILD of its overlay, so position:absolute
+   pins it to that overlay's own top-right corner — the card's name bar.
+   It paints inside its overlay's stacking context, so any page opened on
+   top (opaque, fixed, appended later) covers it naturally: no global hide
+   rules, no viewport-fixed bleed. A sheet re-render wipes el's children
+   — moved button included — and wires a fresh one, so nothing leaks.
+   SHOWN only once the local database confirms combos: count in the label,
+   tap opens the sorted combo page. DFC names fall back to the front face.
+   Failures land in the console tagged with the card's name. */
+function wireCombosButton(el, card){
+  (async ()=>{
+    const b = el.querySelector('[data-cmbbtn]');
+    if(!b) return;
+    try{
+      const ix = await bulkIndexReady();
+      let list = combosWithCard(ix, card.name) || [];
+      if(!list.length && String(card.name).includes(' // '))
+        list = combosWithCard(ix, String(card.name).split(' // ')[0]) || [];
+      if(!list.length || !b.isConnected) return;
+      el.appendChild(b);   // direct overlay child → pinned to ITS corner
+      b.hidden = false;
+      b.textContent = '∞ ' + list.length;
+      b.onclick = ()=>openCombosOverlay(card.name + ' — combos', list);
+    }catch(e){ console.error('combos button for', card.name, e); }
+  })();
 }
 function combosWithCard(ix, name){
   if(!ix || !ix.comboByName) return null;               // data not synced yet
