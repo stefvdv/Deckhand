@@ -3754,13 +3754,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.389';
+const APP_VERSION = '2.51.390';
 const CHANGELOG_NOTES = {
   en: [
-    'The database download recognizes when this week\u2019s data on the device is missing its combos \u2014 left behind by the version that removed them \u2014 and re-syncs once to fetch them, instead of insisting everything is already current.'
+    'The \u221e combos button moved down to the card\u2019s price line, flush with the right edge of the buttons beneath it \u2014 out of the name bar, into the card\u2019s own flow.'
   ],
   nl: [
-    'De databasedownload herkent nu wanneer de data van deze week op het toestel zijn combo\u2019s mist \u2014 achtergelaten door de versie die ze verwijderde \u2014 en synchroniseert \u00e9\u00e9nmalig opnieuw om ze op te halen, in plaats van vol te houden dat alles al actueel is.'
+    'De \u221e-comboknop verhuisde omlaag naar de prijsregel van de kaart, gelijk met de rechterrand van de knoppen eronder \u2014 uit de naambalk, de eigen stroom van de kaart in.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9564,12 +9564,12 @@ function renderCardSheet(d, card, loc, idx){
   }
 
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
+    <div class="topbar"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div class="card-price" id="csPrice">Checking price…</div>
+        <div style="position:relative;"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
@@ -11375,12 +11375,12 @@ function openCardInfo(card, opts){
   // copy flips the button to Remove.
   const pinnedHasCard = ()=> !!(pinned && pinned.cards.some(x=>x.name===card.name) && !allowsDuplicates(card));
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
+    <div class="topbar"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div class="card-price" id="csPrice">Checking price…</div>
+        <div style="position:relative;"><div class="card-price" id="csPrice">Checking price…</div><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
