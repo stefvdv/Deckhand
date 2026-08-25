@@ -659,6 +659,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 #bindersPop > button:last-child{border-bottom:none;}
 .binder-glyphs{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-right:3px;}
 .binder-glyphs svg{width:14px;height:14px;}
+.vg-card.dl-msel{outline:2px solid var(--brass);outline-offset:-2px;border-radius:10px;}
 .binder-glyph-row{display:flex;justify-content:center;align-items:center;gap:3px;min-height:15px;margin:-9px 0 2px;flex-wrap:wrap;}
 .binder-glyphs .mana-ic{width:14px;height:14px;}
 .rar-dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,0.45);}
@@ -3763,13 +3764,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.407';
+const APP_VERSION = '2.51.409';
 const CHANGELOG_NOTES = {
   en: [
-    'Two new tools: ⛰ Suggest lands on Bulk edit (Commander decks) proposes the most-played lands for the deck\u2019s identity \u2014 best picks by the confirm bar, basics auto-split by the deck\u2019s mana pips, one Add does the rest \u2014 and the Export sheet grew a \ud83d\udda8 Proxies button that prints nine true-size cards per A4 page.'
+    'Bulk edit and Search deck open with their FEET in view again \u2014 the Name box\u2019s keyboard focus had been dragging the page off the foot \u2014 and the multi-select actions now take over the deck toolbar itself instead of floating above it.'
   ],
   nl: [
-    'Twee nieuwe gereedschappen: ⛰ Stel landen voor op Bulkbewerken (Commander-decks) stelt de meest gespeelde landen voor de identiteit van het deck voor \u2014 beste keuzes bij de bevestigingsbalk, basics automatisch verdeeld naar de manapips van het deck, \u00e9\u00e9n Toevoegen doet de rest \u2014 en het Exportvenster kreeg een \ud83d\udda8 Proxies-knop die negen kaarten op ware grootte per A4 afdrukt.'
+    'Bulkbewerken en Zoek-in-deck openen weer met hun VOET in beeld \u2014 de toetsenbordfocus van het Naamvak trok de pagina van de voet af \u2014 en de multiselectie-acties nemen nu de deckwerkbalk zelf over in plaats van erboven te zweven.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4552,6 +4553,7 @@ function render(){
   // screen already on it trims back to that rung, so back always retraces
   // the way you actually came down.
   if(state.screen !== 'decklist' && (state.dlSearchOpen || state.dlSearchQ)){
+    state._dlSel = null;   // any multi-select ends with the page
     state.dlSearchOpen = false; state.dlSearchQ = '';   // the find bar lives on the decklist only
   }
   if(!state._ladderBack){
@@ -6844,7 +6846,12 @@ function deckMeterHtml(d){
   const set = state.dockSet || 0;
   let mid = '';
   if(set === 0){
-    mid = state.dlSearchOpen
+    if(state._dlSel && state._dlSel.size){
+      mid = `<span style="flex:1;font-size:13px;">${state._dlSel.size} selected</span>
+        <button class="dk-tool" id="dlSelMaybe" title="To maybeboard">?</button>
+        <button class="dk-tool" id="dlSelDel" title="Delete" style="color:var(--danger);">🗑</button>
+        <button class="dk-tool" id="dlSelX" title="Cancel">✕</button>`;
+    } else     mid = state.dlSearchOpen
       ? `<input id="dockSearchInput" class="dock-search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off"><button class="dk-count" id="dockSearchClose" style="flex:none;">✕</button>`
       : `<button class="dk-tool" id="dockBudget" title="Budget">${ICONS.coins}</button>
         <button class="dk-tool" id="dockInspire" title="Inspiration">${ICONS.spark}</button>
@@ -9176,6 +9183,7 @@ function toggleDlPanel(d, panelKey){
       document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active', x.dataset.panel===state.dlPanel || (x.dataset.panel==='impexp' && ieFam(state.dlPanel))));
       wireDlPanel(d);
       scrollToPageFoot();
+      setTimeout(scrollToPageFoot, 90);   // re-assert after focus/layout
 }
 function wireBuilderBody(d){
   if(state.builderTab==='list'){
@@ -9311,7 +9319,7 @@ function wireDlPanel(d){
     bind('dfName', 'name'); bind('dfText', 'text'); bind('dfType', 'type'); bind('dfTag', 'tag'); bind('dfMvVal', 'mvVal');
     // The panel opens ready to type: cursor in Name, keyboard up (the tap
     // that opened the panel is the gesture the keyboard needs).
-    setTimeout(()=>{ try{ document.getElementById('dfName')?.focus(); }catch(e){} }, 60);
+    setTimeout(()=>{ try{ document.getElementById('dfName')?.focus({ preventScroll: true }); }catch(e){} }, 60);
     // Color identity rides the same checkbox-under-mana-icon control the
     // Collection filter uses.
     document.querySelectorAll('#dlPanelBox [data-dfci]').forEach(chk=>chk.addEventListener('change', ()=>{
@@ -9522,15 +9530,54 @@ function wireDecklistInteractions(d){
       refreshDecklistBox(d);
     });
   });
+  // LONG-PRESS a card = start multi-select; short taps then toggle more.
+  // Main-deck and maybeboard cards select; leaders stay out of it.
   document.querySelectorAll('.vg-card img').forEach(img=>{
+    const parent = img.closest('[data-idx]');
+    if(!parent) return;
+    const idx = +parent.dataset.idx;
+    const loc = parent.dataset.loc;
+    const key = loc + ':' + idx;
+    let lpT = null, lpFired = false;
+    const selectable = (loc === 'main' || loc === 'maybe');
+    if(selectable){
+      const arm = ()=>{ lpFired = false; clearTimeout(lpT); lpT = setTimeout(()=>{ lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} dlSelToggle(d, key, parent); }, 480); };
+      const disarm = ()=>clearTimeout(lpT);
+      parent.addEventListener('pointerdown', arm);
+      ['pointerup','pointercancel','pointerleave'].forEach(ev=>parent.addEventListener(ev, disarm));
+      parent.addEventListener('contextmenu', e=>e.preventDefault());
+    }
     img.addEventListener('click', ()=>{
-      const parent = img.closest('[data-idx]');
-      const idx = +parent.dataset.idx;
-      const loc = parent.dataset.loc;
+      if(lpFired){ lpFired = false; return; }
+      if(state._dlSel){
+        if(selectable) dlSelToggle(d, key, parent);
+        return;
+      }
       const card = loc==='admiral' ? d.admiral : (loc==='partner' ? d.partner : (loc==='maybe' ? d.maybeboard[idx] : d.cards[idx]));
       openCardActionSheet(d, card, loc, idx);
     });
+    if(state._dlSel && state._dlSel.has(key)) parent.classList.add('dl-msel');
   });
+}
+function dlSelToggle(d, key, tile){
+  if(!state._dlSel) state._dlSel = new Set();
+  if(state._dlSel.has(key)){ state._dlSel.delete(key); tile.classList.remove('dl-msel'); }
+  else { state._dlSel.add(key); tile.classList.add('dl-msel'); }
+  if(!state._dlSel.size) state._dlSel = null;
+  const dd = getDeck(state.activeDeckId); if(dd) updateDeckMeter(dd);
+}
+function dlSelApply(d, mode){
+  const es = Array.from(state._dlSel || []).map(k=>{ const [loc, i] = k.split(':'); return { loc, idx: parseInt(i, 10) }; });
+  if(mode === 'maybe'){
+    ensureMaybeboard(d);
+    es.filter(e=>e.loc === 'main').sort((a,b)=>b.idx - a.idx).forEach(e=>{ const [c] = d.cards.splice(e.idx, 1); if(c) d.maybeboard.push(c); });
+  } else {
+    es.filter(e=>e.loc === 'main').sort((a,b)=>b.idx - a.idx).forEach(e=>d.cards.splice(e.idx, 1));
+    es.filter(e=>e.loc === 'maybe').sort((a,b)=>b.idx - a.idx).forEach(e=>d.maybeboard.splice(e.idx, 1));
+  }
+  state._dlSel = null;
+  scheduleSave(d);
+  render();
 }
 function updateDeckMeter(d){
   const row = document.getElementById('deckMeterRow');
@@ -9589,6 +9636,9 @@ function wireMeterRow(d){
     }
   }
   document.getElementById('dockNext')?.addEventListener('click', ()=>{ state.dockSet = ((state.dockSet||0) + 1) % 2; updateDeckMeter(d); });
+  document.getElementById('dlSelX')?.addEventListener('click', ()=>{ state._dlSel = null; updateDeckMeter(d); refreshDecklistBox(d); });
+  document.getElementById('dlSelMaybe')?.addEventListener('click', ()=>dlSelApply(d, 'maybe'));
+  document.getElementById('dlSelDel')?.addEventListener('click', ()=>dlSelApply(d, 'del'));
   document.getElementById('dockMainCount')?.addEventListener('click', ()=>{
     state.dockCount = state.dockCount === 'maybe' ? 'main' : 'maybe';
     updateDeckMeter(d);
