@@ -661,6 +661,12 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .binder-glyphs{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-right:3px;}
 .binder-glyphs svg{width:14px;height:14px;}
 .vg-card.dl-msel{outline:2px solid var(--brass);outline-offset:-2px;border-radius:10px;}
+.ls-tile{width:46%;max-width:230px;border:2px solid transparent;border-radius:12px;padding:4px;position:relative;}
+.ls-tile img{width:100%;border-radius:9px;display:block;}
+.ls-noimg{min-height:120px;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border:1px solid var(--line);border-radius:9px;font-size:13px;}
+.ls-tile .ls-p{text-align:center;font-family:'JetBrains Mono',monospace;color:var(--brass);padding:4px 0 0;font-size:13px;}
+.ls-tile.on{border-color:var(--brass);}
+.ls-tile.on::after{content:'✓';position:absolute;top:10px;right:10px;background:var(--brass);color:#1c1710;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;}
 #dlPanelBox{scroll-margin-bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom));}
 .binder-glyph-row{display:flex;justify-content:center;align-items:center;gap:3px;min-height:15px;margin:-9px 0 2px;flex-wrap:wrap;}
 .binder-glyphs .mana-ic{width:14px;height:14px;}
@@ -3766,13 +3772,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.412';
+const APP_VERSION = '2.51.413';
 const CHANGELOG_NOTES = {
   en: [
-    'The Bulk edit list box shortened so the panel\u2019s foot \u2014 Suggest lands and Check & Save \u2014 rises fully above the toolbar; drag it taller anytime for big pastes.'
+    'Suggest lands became a proper two-column card grid \u2014 images with prices beneath, most-played at the bottom, tap to select with the brass check, and Add shows the count. The basics fill line rides the footer as before.'
   ],
   nl: [
-    'Het lijstvak van Bulkbewerken werd korter zodat de voet van het paneel \u2014 Stel landen voor en Controleer & bewaar \u2014 volledig boven de werkbalk uitkomt; sleep het gerust hoger voor grote plakacties.'
+    'Stel landen voor werd een echt tweekoloms kaartenraster \u2014 afbeeldingen met prijzen eronder, meest gespeeld onderaan, tikken om te selecteren met het messing vinkje, en Toevoegen toont het aantal. De basics-vulregel rijdt zoals voorheen mee in de voettekst.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12532,40 +12538,28 @@ async function openLandSuggest(d){
     const basicOf = { W:'Plains', U:'Island', B:'Swamp', R:'Mountain', G:'Forest' };
     const r = await searchAndVerifyLegal((idClauseForDeck(d) + ' t:land').trim(), 'edhrec', 100);
     const pool = ((r && r.results) || []).filter(x=>!isBanned(x) && !inDeck.has(String(x.name).toLowerCase()) && !String(x.type_line||'').includes('Basic'));
+    const sel = new Set();
     const preN = Math.min(target, 12, pool.length);
-    const rowsHtml = pool.map((x, i)=>{
+    for(let i = 0; i < preN; i++) sel.add(i);
+    // Two-column card grid, wrap-reverse: array is EDHREC-ordered (most
+    // played first), so index 0 — the best land — lands at the page FOOT.
+    main.innerHTML = `<div id="lsGrid" style="display:flex;flex-wrap:wrap-reverse;gap:10px;justify-content:center;align-content:flex-start;">${pool.map((x, i)=>{
       const p = shownEurOf(x);
-      return `<label style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--line);"><input type="checkbox" data-lsug="${i}" ${i < preN ? 'checked' : ''}><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(x.name)}</span><span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">${p != null ? '€' + p.toFixed(2) : '—'}</span></label>`;
-    }).reverse().join('');
-    main.innerHTML = `<div style="display:flex;flex-direction:column;">
-      ${rowsHtml}
-      <p class="hint" style="margin:6px 0;">${landCount} land${landCount===1?'':'s'} in the deck · target 37 · most-played first at the bottom</p>
-    </div>`;
+      const img = cardImageMed(x);
+      return `<div class="ls-tile${sel.has(i) ? ' on' : ''}" data-i="${i}">${img ? `<img loading="lazy" src="${img}" alt="">` : `<div class="ls-noimg">${escapeHtml(x.name)}</div>`}<div class="ls-p">${p != null ? '\u20ac' + p.toFixed(2) : '\u2014'}</div></div>`;
+    }).join('')}</div>
+    <p class="hint" style="margin:6px 0;text-align:center;">${landCount} land${landCount===1?'':'s'} in the deck \u00b7 target 37 \u00b7 most played at the bottom</p>`;
     const foot = document.createElement('div');
     foot.style.cssText = 'flex:0 0 auto;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;';
     el.querySelector('.overlay-inner').appendChild(foot);
-    const totalPips = ()=>Math.max(1, ['W','U','B','R','G'].reduce((a,k)=>a+pips[k], 0));
-    const basicsPlan = (rest)=>{
-      const tp = totalPips(); const plan = [];
-      let assigned = 0;
-      ['W','U','B','R','G'].forEach(k=>{ const n = Math.floor(rest * pips[k] / tp); if(n > 0){ plan.push([basicOf[k], n]); assigned += n; } });
-      let extra = rest - assigned;
-      const order = ['W','U','B','R','G'].filter(k=>pips[k] > 0).sort((a,b)=>pips[b]-pips[a]);
-      for(let i = 0; extra > 0 && order.length; i = (i + 1) % order.length, extra--){
-        const nm = basicOf[order[i]];
-        const hit = plan.find(p=>p[0] === nm);
-        if(hit) hit[1]++; else plan.push([nm, 1]);
-      }
-      return plan;
-    };
     const refresh = ()=>{
-      const picked = main.querySelectorAll('[data-lsug]:checked').length;
+      const picked = sel.size;
       const rest = Math.max(0, target - picked);
       const plan = basicsPlan(rest);
       foot.innerHTML = `<label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;"><input type="checkbox" id="lsugBasics" checked><span style="font-size:12.5px;overflow:hidden;text-overflow:ellipsis;">${rest > 0 ? 'Fill ' + rest + ' with basics: ' + plan.map(p=>p[1] + ' ' + p[0]).join(' · ') : 'Basics: none needed'}</span></label>
-        <button type="button" class="primary-btn" id="lsugGo" style="width:auto;flex:0 0 auto;">Add</button>`;
+        <button type="button" class="primary-btn" id="lsugGo" style="width:auto;flex:0 0 auto;">Add${sel.size ? ' (' + sel.size + ')' : ''}</button>`;
       foot.querySelector('#lsugGo').addEventListener('click', async ()=>{
-        const picks = Array.from(main.querySelectorAll('[data-lsug]:checked')).map(cb=>pool[parseInt(cb.dataset.lsug, 10)]);
+        const picks = Array.from(sel).map(i=>pool[i]);
         picks.forEach(x=>d.cards.push(x));
         if(foot.querySelector('#lsugBasics')?.checked){
           for(const [nm, n] of basicsPlan(Math.max(0, target - picks.length))){
@@ -12581,9 +12575,17 @@ async function openLandSuggest(d){
         render();
       });
     };
-    main.addEventListener('change', (ev)=>{ if(ev.target.matches && ev.target.matches('[data-lsug]')) refresh(); });
+    main.addEventListener('click', (ev)=>{
+      const t = ev.target.closest && ev.target.closest('.ls-tile');
+      if(!t) return;
+      const i = parseInt(t.dataset.i, 10);
+      if(sel.has(i)){ sel.delete(i); t.classList.remove('on'); }
+      else { sel.add(i); t.classList.add('on'); }
+      refresh();
+    });
     refresh();
-    scrollToPageFoot();
+    // The overlay's own main is the scroller — land the view at ITS foot.
+    main.scrollTop = main.scrollHeight;
   }catch(e){ main.innerHTML = `<div class="empty-note">Couldn't reach Scryfall.</div>`; }
 }
 /* ── Proxy sheet ─ nine 63×88 mm cards per A4, printed from the browser ── */
