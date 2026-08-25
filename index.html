@@ -308,6 +308,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 .otag-wrap{position:relative;}
 .otag-pop[hidden]{display:none !important;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
+.otag-pop{top:auto;bottom:calc(100% + 4px);}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
 /* Inside .searchbar the generic button rule paints brass — override back
@@ -416,7 +417,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 .cs-combos-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 10px);right:12px;z-index:70;width:auto;padding:7px 11px;}
 #deckCombosPanel .panel-h svg{width:12px;height:12px;vertical-align:-2px;margin-right:3px;}
 .overlay[id^="cardSheetOverlay_bg"] .cs-combos-btn{display:none!important;}
-.tag-drop-h{padding:7px 10px 3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-top:1px solid var(--pop-line);}
+.tag-drop-h{padding:3px 10px 7px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-bottom:1px solid var(--pop-line);}
 /* On deckless card pages the picker is the app's one allowed drop-DOWN:
    the editor sits under the buttons and the list opens below the input. */
 #ciTagBox .tag-drop{bottom:auto;top:calc(100% + 6px);}
@@ -657,6 +658,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 #bindersPop > button:last-child{border-bottom:none;}
 .binder-glyphs{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-right:3px;}
 .binder-glyphs svg{width:14px;height:14px;}
+.binder-glyph-row{display:flex;justify-content:center;align-items:center;gap:3px;min-height:18px;margin-bottom:4px;flex-wrap:wrap;}
 .binder-glyphs .mana-ic{width:14px;height:14px;}
 .rar-dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,0.45);}
 .rar-C{background:#6B665C;} .rar-U{background:#9AA6AE;} .rar-R{background:#C9A24B;} .rar-M{background:#D4602A;}
@@ -699,13 +701,13 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-cover{position:absolute;inset:0;z-index:6;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;}
 .dl-popup{position:fixed;left:12px;right:12px;top:50%;transform:translateY(-50%);z-index:120;max-height:82vh;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;box-shadow:0 12px 44px rgba(0,0,0,0.6);}
 .dl-cover .panel-card{margin:0;min-height:100%;box-sizing:border-box;}
-.df-compact{padding:14px;}
-.df-compact .panel-h{margin:0 0 12px;}
-.df-compact .adv-row{grid-template-columns:88px minmax(0,1fr);gap:4px 10px;margin-bottom:13px;}
-.df-compact .adv-row label{font-size:13px;}
-.df-compact .col-filter-input{padding:10px 11px;font-size:14.5px;}
-.df-compact .cselect-btn{padding:10px 11px;font-size:14.5px;}
-.df-compact .mana-check svg{width:27px;height:27px;}
+.df-compact{padding:12px;}
+.df-compact .panel-h{margin:0 0 8px;}
+.df-compact .adv-row{grid-template-columns:82px minmax(0,1fr);gap:3px 10px;margin-bottom:8px;}
+.df-compact .adv-row label{font-size:12.5px;}
+.df-compact .col-filter-input{padding:8px 10px;font-size:13.5px;}
+.df-compact .cselect-btn{padding:8px 10px;font-size:13.5px;}
+.df-compact .mana-check svg{width:24px;height:24px;}
 .df-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
 .df-btn-row button{width:100%;padding:13px 8px;font-size:13px;}
 .df-compact .df-btn-row{margin-top:6px;}
@@ -3756,13 +3758,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.400';
+const APP_VERSION = '2.51.402';
 const CHANGELOG_NOTES = {
   en: [
-    'Prices became hard facts: budget suggestions and search results are filtered by the euro their tile actually DISPLAYS, so nothing above the line or outside the range slips through. Binder icons now stack across categories (Colorless Lands Foils = three glyphs), guild names wear real two-color hybrid mana symbols, and \u201cmulticolor\u201d earned a five-color pie.'
+    'The tag picker shows the WHOLE Scryfall catalog now (a cap was cutting the list off around M), closes on any tap outside it, and each category stripe sits below its own header. This card\u2019s own Scryfall tags remain the bottom section \u2014 one tap adds them as deck tags.'
   ],
   nl: [
-    'Prijzen werden harde feiten: budgetsuggesties en zoekresultaten filteren op de euro die hun tegel \u00e9cht TOONT, dus niets boven de lijn of buiten het bereik glipt er nog door. Mapiconen stapelen nu over categorie\u00ebn (Colorless Lands Foils = drie glyphs), gildenamen dragen echte tweekleurige hybride manasymbolen, en \u201cmulticolor\u201d kreeg een vijfkleurige taart.'
+    'De tagkiezer toont nu de H\u00c9LE Scryfall-catalogus (een limiet knipte de lijst rond de M af), sluit bij elke tik erbuiten, en elke categoriestreep staat onder zijn eigen kop. De eigen Scryfall-tags van deze kaart blijven de onderste sectie \u2014 \u00e9\u00e9n tik voegt ze toe als decktags.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5132,7 +5134,7 @@ function deckTileHtml(d){
   const price = deckPriceFromCache(d);
   return `<div class="deck-tile ${isActive?'active-marker':''}" data-id="${d.id}">
       <button class="tile-fav ${d.fav?'on':''}" data-fav="${d.id}" title="${d.fav?'Unfavorite':'Favorite'}">${d.fav?'★':'☆'}</button>
-      <button class="tile-menu" data-menu="${d.id}" title="Deck options">⋯</button>
+      
       <div class="art" style="${art?`background-image:url('${art}')`:''}">${art?'':`<div class="ph">${deckFormat(d)==='commander'?'⚔':anchorSvg(34)}</div>`}</div>
       <div class="id-strip" style="background:${identityStripCss(d.admiral&&deckColorIdentity(d))}"></div>
       <div class="body">
@@ -5169,7 +5171,7 @@ function folderTileHtml(f){
   if(deckN) bits.push(deckN+' deck'+(deckN>1?'s':''));
   if(subN) bits.push(subN+' folder'+(subN>1?'s':''));
   return `<div class="folder-tile" data-folder="${f.id}">
-      <button class="tile-menu" data-foldermenu="${f.id}" title="Folder options">⋯</button>
+      
       <div class="folder-face">${folderIconSvg(f.icon, 56)}</div>
       <div class="folder-name">${escapeHtml(f.name)}</div>
       <div class="folder-sub">${bits.join(' · ')||'empty'}</div>
@@ -5299,14 +5301,26 @@ function wireHome(){
     });
   }
   // Open a deck (but not when a tile button was tapped)
-  document.querySelectorAll('.deck-tile').forEach(t=>t.addEventListener('click', (e)=>{
-    if(e.target.closest('.tile-fav') || e.target.closest('.tile-menu')) return;
-    openDeck(t.dataset.id);
-  }));
-  document.querySelectorAll('.folder-tile').forEach(t=>t.addEventListener('click', (e)=>{
-    if(e.target.closest('.tile-menu')) return;
-    navToFolder(t.dataset.folder);
-  }));
+  // Long-press = the tile's menu, exactly like binders; a plain tap opens.
+  const wireLp = (t, onOpen, onTap)=>{
+    let lpT = null, lpFired = false;
+    const arm = ()=>{ lpFired = false; clearTimeout(lpT); lpT = setTimeout(()=>{ lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} onOpen(); }, 480); };
+    const disarm = ()=>clearTimeout(lpT);
+    t.addEventListener('pointerdown', arm);
+    ['pointerup','pointercancel','pointerleave'].forEach(ev=>t.addEventListener(ev, disarm));
+    t.addEventListener('contextmenu', e=>e.preventDefault());
+    t.addEventListener('click', (e)=>{
+      if(lpFired){ lpFired = false; e.preventDefault(); return; }
+      onTap(e);
+    });
+  };
+  document.querySelectorAll('.deck-tile').forEach(t=>wireLp(t,
+    ()=>openDeckTileMenu(t.dataset.id, t),
+    (e)=>{ if(e.target.closest('.tile-fav')) return; openDeck(t.dataset.id); }));
+  document.querySelectorAll('.folder-tile').forEach(t=>{
+    if(!t.dataset.folder) return;   // only true deck folders — binder tiles keep their own wiring
+    wireLp(t, ()=>openFolderMenu(t.dataset.folder, t), ()=>navToFolder(t.dataset.folder));
+  });
   document.querySelectorAll('[data-fav]').forEach(b=>b.addEventListener('click', (e)=>{
     e.stopPropagation();
     const d = getDeck(b.dataset.fav);
@@ -5746,7 +5760,7 @@ function collectionPageHtml(){
         .sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
       const setOpts = [{v:'',l:'All sets'}].concat(sets.map(([code,name])=>({v:code, l:name})));
       const colorOrder = ['W','U','B','R','G','C'];
-      return `<div class="panel-card" id="colAdvPanel" style="margin-bottom:12px;">
+      return `<div class="panel-card" id="colAdvPanel" style="margin-bottom:12px;display:flex;flex-direction:column-reverse;">
         <div class="adv-row"><label>Name</label><input id="colFq" class="col-filter-input" placeholder="Card name…" value="${escapeHtml(f.q)}"></div>
         <div class="adv-row"><label>Set</label>${cselectHtml('colSet', setOpts, f.set, 'All sets', {search:true})}</div>
         <div class="adv-row"><label>Type</label><input id="colTypeText" class="col-filter-input" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(f.type)}"></div>
@@ -5958,8 +5972,9 @@ function binderTileHtml(b){
   const eur = items.reduce((a,it)=>a+((it.eur!=null?it.eur:0)*(it.qty||1)), 0);
   const face = b.face || (first ? artCropFrom(first.img) : null);
   return `<div class="folder-tile binder-tile" data-binderopen="${b.id}">
+      <div class="binder-glyph-row">${binderGlyphsHtml(b.name)}</div>
       <div class="folder-face">${face ? `<img loading="lazy" src="${face}" alt="">` : '<span style="font-size:44px;line-height:1;">🗂</span>'}</div>
-      <div class="folder-name">${binderGlyphsHtml(b.name)} ${escapeHtml(b.name)}</div>
+      <div class="folder-name">${escapeHtml(b.name)}</div>
       <div class="folder-sub">${qty} card${qty===1?'':'s'}${eur?` · €${eur.toFixed(2)}`:''}</div>
     </div>`;
 }
@@ -9924,7 +9939,7 @@ function renderTagEditor(d, card, box){
     if(!drop) return;
     const q = (input.value || '').trim().toLowerCase();
     const secs = pickerSections()
-      .map(sec=>({ label: sec.label, items: sec.items.filter(t=>!q || t.toLowerCase().includes(q)).slice(0, 100) }))
+      .map(sec=>({ label: sec.label, items: sec.items.filter(t=>!q || t.toLowerCase().includes(q)).slice(0, 400) }))
       .filter(sec=>sec.items.length);
     if(!secs.length){ drop.hidden = true; return; }
     drop.innerHTML = secs.map(sec=>
@@ -9952,6 +9967,14 @@ function renderTagEditor(d, card, box){
   input.addEventListener('input', renderDrop);
   let _dropHideT = null;
   input.addEventListener('blur', ()=>{ _dropHideT = setTimeout(()=>{ if(drop) drop.hidden = true; }, 150); });
+  // A tap anywhere outside the tag row folds the list immediately — blur
+  // alone missed taps on regions that never steal focus.
+  document.addEventListener('pointerdown', (ev)=>{
+    if(!drop || drop.hidden || !drop.isConnected) return;
+    if(ev.target.closest && ev.target.closest('.tag-add-row')) return;
+    if(_dropHideT){ clearTimeout(_dropHideT); _dropHideT = null; }
+    drop.hidden = true;
+  }, true);
   input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
   box.querySelectorAll('[data-rmtag]').forEach(b=>b.addEventListener('click', ()=>{
     const t = decodeURIComponent(b.dataset.rmtag);
@@ -10437,6 +10460,12 @@ function advancedPanelHtml(){
       <p class="adv-hint">For exact phrases, put quotes (") around your search query.</p>
     </div>
     <div class="adv-row"><label>Card Type</label><input id="typeText" type="text" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(s.searchTypeText)}"></div>
+    <div class="adv-row"><label>Tag</label><div class="otag-wrap">
+      <input id="otagText" type="text" placeholder="e.g. removal, ramp, tutor" value="${escapeHtml(s.searchOtag || '')}" autocomplete="off" autocapitalize="off">
+      <div id="otagPop" class="otag-pop" hidden></div>
+    </div>
+      <p class="adv-hint">Scryfall function tags — what a card DOES. Type to filter the list, tap to pick.</p>
+    </div>
     <div class="adv-row"><label>Colors</label>${colorChecks('data-ccolor', s.searchCardColors)}
       <div class="adv-sub" style="max-width:220px;">${cselectHtml('ccmSel', [
         {v:'all', l:'Must have all selected'},
@@ -10473,13 +10502,6 @@ function advancedPanelHtml(){
     </div></div>
     <div class="adv-row"><label>Price</label>${priceSliderHtml('srchPr', s.searchEurMin, s.searchEurMax)}
       <p class="adv-hint">Cardmarket price. The top end is open — leave the right thumb on \u221E for no limit.</p>
-    </div>
-    <div class="adv-row"><label>Keyword</label><input id="kwText" type="text" placeholder="e.g. flying, lifelink" value="${escapeHtml(s.searchKeyword)}"></div>
-    <div class="adv-row"><label>Tag</label><div class="otag-wrap">
-      <input id="otagText" type="text" placeholder="e.g. removal, ramp, tutor" value="${escapeHtml(s.searchOtag || '')}" autocomplete="off" autocapitalize="off">
-      <div id="otagPop" class="otag-pop" hidden></div>
-    </div>
-      <p class="adv-hint">Scryfall function tags — what a card DOES. Type to filter the list, tap to pick.</p>
     </div>
     <div class="adv-row"><label>Flavor Text</label><input id="flavText" type="text" placeholder="e.g. dragon" value="${escapeHtml(s.searchFlavorText)}"></div>
     <div class="adv-row"><label>Artist</label><input id="artistText" type="text" placeholder="e.g. Rebecca Guay" value="${escapeHtml(s.searchArtist)}"></div>
@@ -10625,7 +10647,6 @@ function wireAdvancedPanel(){
   wireCSelects();
   document.querySelectorAll('[data-rarity]').forEach(chk=>chk.addEventListener('change', ()=>{ state.searchRarity[chk.dataset.rarity] = chk.checked; }));
   wirePriceSlider('srchPr', (mn, mx)=>{ state.searchEurMin = mn; state.searchEurMax = mx; });
-  document.getElementById('kwText')?.addEventListener('input', e=>state.searchKeyword=e.target.value);
   // Tag (Scryfall function): a searchable DROP-UP over the preloaded local
   // catalog (~170 slugs — the same list Similar/Budget rank with, so no
   // network and no wait). Column-reverse: best matches sit by the input.
