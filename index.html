@@ -308,7 +308,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 .otag-wrap{position:relative;}
 .otag-pop[hidden]{display:none !important;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
-.otag-pop{top:auto;bottom:calc(100% + 4px);}
+.otag-pop{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;overflow-y:auto;}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
 /* Inside .searchbar the generic button rule paints brass — override back
@@ -658,7 +658,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 #bindersPop > button:last-child{border-bottom:none;}
 .binder-glyphs{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-right:3px;}
 .binder-glyphs svg{width:14px;height:14px;}
-.binder-glyph-row{display:flex;justify-content:center;align-items:center;gap:3px;min-height:18px;margin-bottom:4px;flex-wrap:wrap;}
+.binder-glyph-row{display:flex;justify-content:center;align-items:center;gap:3px;min-height:16px;margin:-5px 0 3px;flex-wrap:wrap;}
 .binder-glyphs .mana-ic{width:14px;height:14px;}
 .rar-dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,0.45);}
 .rar-C{background:#6B665C;} .rar-U{background:#9AA6AE;} .rar-R{background:#C9A24B;} .rar-M{background:#D4602A;}
@@ -3758,13 +3758,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.402';
+const APP_VERSION = '2.51.403';
 const CHANGELOG_NOTES = {
   en: [
-    'The tag picker shows the WHOLE Scryfall catalog now (a cap was cutting the list off around M), closes on any tap outside it, and each category stripe sits below its own header. This card\u2019s own Scryfall tags remain the bottom section \u2014 one tap adds them as deck tags.'
+    'The Tags panel closes on any tap outside it; binder icons hug the tile\u2019s rim so the art gets the room; the search page\u2019s tag list shows the whole catalog, A at the bottom by the input; and the deck search\u2019s Tag field carries the same full drop-up picker.'
   ],
   nl: [
-    'De tagkiezer toont nu de H\u00c9LE Scryfall-catalogus (een limiet knipte de lijst rond de M af), sluit bij elke tik erbuiten, en elke categoriestreep staat onder zijn eigen kop. De eigen Scryfall-tags van deze kaart blijven de onderste sectie \u2014 \u00e9\u00e9n tik voegt ze toe als decktags.'
+    'Het Tags-paneel sluit bij elke tik erbuiten; mapiconen schurken tegen de rand van de tegel zodat de kunst de ruimte krijgt; de taglijst van de zoekpagina toont de hele catalogus, A onderaan bij het invoerveld; en het Tag-veld van het deck-zoeken draagt dezelfde volledige drop-up-kiezer.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8429,7 +8429,7 @@ function dlPanelHtml(d){
         <div style="flex:0 0 92px;">${cselectHtml('dfMvOp', [{v:'<=',l:'≤'},{v:'=',l:'='},{v:'>=',l:'≥'}], f.mvOp||'<=', '≤')}</div>
         <input id="dfMvVal" class="col-filter-input" type="number" inputmode="numeric" style="flex:1;" value="${escapeHtml(f.mvVal||'')}">
       </div></div>
-      <div class="adv-row"><label>Tag</label><input id="dfTag" class="col-filter-input" placeholder="Tag…" value="${escapeHtml(f.tag||'')}" autocomplete="off"></div>
+      <div class="adv-row"><label>Tag</label><div class="otag-wrap"><input id="dfTag" class="col-filter-input" placeholder="Tag…" value="${escapeHtml(f.tag||'')}" autocomplete="off"><div id="dfTagPop" class="otag-pop" hidden></div></div></div>
       <div class="panel-h" style="display:flex;align-items:center;"><span>${trS('Search deck')}</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
     </div>`;
   }
@@ -9278,6 +9278,30 @@ function wireDlPanel(d){
       el2.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); el2.blur(); } });
       el2.setAttribute('enterkeyhint', 'search');
     };
+    // The Tag field carries the same full-catalog drop-up as the search
+    // page: ascending, A at the bottom by the input, tap fills and filters.
+    {
+      const inp = document.getElementById('dfTag');
+      const pop = document.getElementById('dfTagPop');
+      const fill = ()=>{
+        if(!inp || !pop) return;
+        const q = inp.value.trim().toLowerCase().replace(/\s+/g, '-');
+        const hits = BUDGET_OTAGS.filter(t=>!q || t.includes(q)).slice().sort((a,b)=>a.localeCompare(b)).slice(0, 400);
+        pop.innerHTML = hits.map(t=>`<button type="button" data-dftagpick="${t}">${t}</button>`).join('');
+        pop.hidden = !hits.length;
+        pop.querySelectorAll('[data-dftagpick]').forEach(o=>o.addEventListener('mousedown', (ev)=>{
+          ev.preventDefault();
+          inp.value = o.dataset.dftagpick;
+          f.tag = o.dataset.dftagpick;
+          state.dlFilterOn = true;
+          refreshDecklistBox(d);
+          pop.hidden = true;
+        }));
+      };
+      inp?.addEventListener('focus', fill);
+      inp?.addEventListener('input', fill);
+      inp?.addEventListener('blur', ()=>setTimeout(()=>{ if(pop) pop.hidden = true; }, 250));
+    }
     bind('dfName', 'name'); bind('dfText', 'text'); bind('dfType', 'type'); bind('dfTag', 'tag'); bind('dfMvVal', 'mvVal');
     // The panel opens ready to type: cursor in Name, keyboard up (the tap
     // that opened the panel is the gesture the keyboard needs).
@@ -9669,6 +9693,17 @@ function renderCardSheet(d, card, loc, idx){
     }
     box.dataset.open='1';
     pushOverlay('tagBox', ()=>{ const b = document.getElementById('csTagBox'); if(b){ b.dataset.open='0'; b.innerHTML=''; } });
+    if(!window._tagBoxOutside){
+      window._tagBoxOutside = true;
+      document.addEventListener('pointerdown', (ev)=>{
+        const b = document.getElementById('csTagBox');
+        if(!b || b.dataset.open !== '1') return;
+        if(ev.target.closest && (ev.target.closest('#csTagBox') || ev.target.closest('#csTags'))) return;
+        const st = state.overlayStack;
+        if(st.length && st[st.length-1].id === 'tagBox') st.pop();   // inert-history retire
+        b.dataset.open = '0'; b.innerHTML = '';
+      }, true);
+    }
     renderTagEditor(d, card, box);
   });
   document.getElementById('csToMaybe')?.addEventListener('click', ()=>{
@@ -10656,7 +10691,7 @@ function wireAdvancedPanel(){
     const fill = ()=>{
       if(!inp || !pop) return;
       const q = inp.value.trim().toLowerCase().replace(/\s+/g, '-');
-      const hits = BUDGET_OTAGS.filter(t=>!q || t.includes(q)).slice(0, 40);
+      const hits = BUDGET_OTAGS.filter(t=>!q || t.includes(q)).slice().sort((a,b)=>a.localeCompare(b)).slice(0, 400);
       pop.innerHTML = hits.map(t=>`<button type="button" data-otagpick="${t}">${t}</button>`).join('');
       pop.hidden = !hits.length;
       pop.querySelectorAll('[data-otagpick]').forEach(o=>o.addEventListener('click', ()=>{
