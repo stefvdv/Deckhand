@@ -3754,13 +3754,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.393';
+const APP_VERSION = '2.51.394';
 const CHANGELOG_NOTES = {
   en: [
-    'Both search panels read bottom-up now \u2014 Card Name at the foot, Sort Direction on top \u2014 and the deck search filters LIVE as you type (its Search and Reset buttons retired); the Budget page grew a slider (\u20ac0.10\u2013\u20ac10) that sets which cards count as pricey; the dock\u2019s price row is gone since the deck price lives in the top bar; and the commander block tightened \u2014 the empty band under the label vanished and the winrate sits at the true foot, giving the description more room.'
+    'Three bottom-up corrections: the budget slider sits at the page FOOT in app brass; the Search filters open showing their bottom (Card Name first); and the winrate line rests exactly on the commander cards\u2019 baseline \u2014 not above it, not below it.'
   ],
   nl: [
-    'Beide zoekpanelen lezen nu bottom-up \u2014 Kaartnaam onderaan, Sorteerrichting bovenaan \u2014 en het deck-zoeken filtert LIVE terwijl je typt (de Zoek- en Reset-knoppen zijn weg); de Budgetpagina kreeg een schuif (\u20ac0,10\u2013\u20ac10) die bepaalt welke kaarten als prijzig tellen; de prijsregel van de dock is weg omdat de deckprijs in de bovenbalk staat; en het commanderblok is strakker \u2014 de lege strook onder het label verdween en de winrate staat op de echte voet, met meer ruimte voor de beschrijving.'
+    'Drie bottom-up-correcties: de budgetschuif staat aan de VOET van de pagina in app-messing; de zoekfilters openen met hun onderkant in beeld (Kaartnaam eerst); en de winrate-regel rust precies op de basislijn van de commander-kaarten \u2014 niet erboven, niet eronder.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8265,7 +8265,7 @@ function listTabHtml(d){
           ? escapeHtml(d.description).replace(/\n/g, '<br>')
           : `<span class="hint" style="margin:0;">${trS('No description yet — write one on the Deck Log page.')}</span><button class="icon-btn dl-mini-add" id="descAddBtn" title="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">＋</button>`}</div>
         ${(()=>{ const st = logStatsFor(d);
-          return `<div class="dl-winrate"><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}" style="margin-left:0;">＋</button><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span></div>`; })()}
+          return `<div class="dl-winrate"><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}" style="margin-left:0;">＋</button><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span></div><div class="dl-leader-cat" style="visibility:hidden;margin-top:0;" aria-hidden="true">&nbsp;</div>`; })()}
       </div>
       <div id="dlPanelBox" class="${dlBoxClass()}">${dlPanelHtml(d)}</div>
       <div class="edh-jump-row dl-jump"><button class="icon-btn edh-jump" id="dlCatJump" title="${trS('Jump to section')}">☰</button></div>
@@ -10461,7 +10461,7 @@ function wireSearchPage(){
     const slot = document.getElementById('advSlot');
     if(!slot) return;
     slot.innerHTML = state.advOpen ? advancedPanelHtml() : '';
-    if(state.advOpen) wireAdvancedPanel();
+    if(state.advOpen){ wireAdvancedPanel(); scrollToPageFoot(); }   // open showing the BOTTOM of the menu
     // The Random Card steps aside while the filter menu is open, so the
     // menu sits right at the page foot by the search bar.
     const cotd = document.getElementById('cotdBox');
@@ -14842,10 +14842,12 @@ async function loadBudgetAlternatives(d){
       row = document.createElement('div');
       row.id = 'bgFloorRow';
       row.style.cssText = 'position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px 12px;display:flex;align-items:center;gap:10px;';
-      mainEl.appendChild(row);
+      // Bottom-up: this main is column-reverse — DOM-FIRST renders at the
+      // page FOOT, which is where the slider belongs.
+      mainEl.insertBefore(row, mainEl.firstChild);
     }
     row.innerHTML = `<span style="font-size:12.5px;color:var(--sub-text);white-space:nowrap;">${appLang()==='nl'?'Budgetgrens':'Budget line'}</span>
-      <input type="range" id="bgFloor" min="0.1" max="10" step="0.1" value="${BUDGET_FLOOR}" style="flex:1;">
+      <input type="range" id="bgFloor" min="0.1" max="10" step="0.1" value="${BUDGET_FLOOR}" style="flex:1;accent-color:var(--brass);">
       <span style="font-family:'JetBrains Mono',monospace;color:var(--brass);min-width:56px;text-align:right;" id="bgFloorVal">€${BUDGET_FLOOR.toFixed(2)}</span>`;
     const sl = row.querySelector('#bgFloor');
     sl.addEventListener('input', ()=>{ const v = document.getElementById('bgFloorVal'); if(v) v.textContent = '€' + parseFloat(sl.value).toFixed(2); });
