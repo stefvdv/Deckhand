@@ -264,6 +264,7 @@ main.card-detail > div:nth-child(2){order:10;}
 #decklistBox{display:flex;flex-direction:column-reverse;}
 main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bottom)) !important;}
 main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(safe-area-inset-bottom)) !important;}
+main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom)) !important;}
 
 /* ---------- persistent brand banner (symbol + wordmark + tabs), same on every page ---------- */
 :root{ --nav-h: 66px; }
@@ -3765,13 +3766,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.410';
+const APP_VERSION = '2.51.411';
 const CHANGELOG_NOTES = {
   en: [
-    'Multi-select asks before it acts \u2014 house confirm for moving and deleting \u2014 and reads the selection: maybeboard-only offers \u201cTo main deck\u201d, mixed zones offer only Delete; and the Bulk edit / Search deck panels finally anchor their own bottom edge above the toolbar when opening.'
+    'Bulk edit and Search deck truly clear the toolbar now: the deck page\u2019s short foot (which removed the old empty band) left too little scroll runway for open panels \u2014 the foot now grows to full clearance only while a panel is open, and shrinks back when it closes.'
   ],
   nl: [
-    'Multiselectie vraagt eerst \u2014 huisbevestiging voor verplaatsen en verwijderen \u2014 en leest de selectie: alleen-maybeboard biedt \u201cNaar hoofddek\u201d, gemengde zones bieden alleen Verwijderen; en de panelen Bulkbewerken / Zoek-in-deck ankeren bij openen eindelijk hun eigen onderrand boven de werkbalk.'
+    'Bulkbewerken en Zoek-in-deck komen nu \u00e9cht boven de werkbalk uit: de korte voet van de deckpagina (die de oude lege strook weghaalde) liet te weinig scrollruimte voor open panelen \u2014 de voet groeit nu alleen naar volledige vrije hoogte terwijl een paneel open is, en krimpt terug zodra het sluit.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
