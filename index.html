@@ -3759,13 +3759,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.405';
+const APP_VERSION = '2.51.406';
 const CHANGELOG_NOTES = {
   en: [
-    'A card\u2019s price and salt score live in its name bar now \u2014 top right, exactly where decks, collections and folders show their totals \u2014 and left their old spot above the buttons; the \u221e keeps its right-aligned row.'
+    'The card view\u2019s set line dropped its collector number and rarity, and the salt score moved back below the image \u2014 the name bar keeps just the price, so long card names have their room again.'
   ],
   nl: [
-    'De prijs en het zoutcijfer van een kaart staan nu in zijn naambalk \u2014 rechtsboven, precies waar decks, collecties en mappen hun totalen tonen \u2014 en verlieten hun oude plek boven de knoppen; de \u221e behoudt zijn rechts uitgelijnde rij.'
+    'De setregel van het kaartvenster liet zijn verzamelnummer en zeldzaamheid vallen, en het zoutcijfer verhuisde terug onder de afbeelding \u2014 de naambalk houdt alleen de prijs, zodat lange kaartnamen weer ruimte hebben.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9658,8 +9658,8 @@ function renderCardSheet(d, card, loc, idx){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div style="position:relative;max-width:330px;margin:0 auto;min-height:36px;"><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
+        <div style="position:relative;max-width:330px;margin:0 auto;min-height:36px;display:flex;align-items:center;justify-content:center;"><span id="csSaltRow" class="card-price" style="margin:0;font-size:12px;"></span><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
@@ -9815,11 +9815,14 @@ async function loadCardPrice(card){
   if(!live) return;   // sheet closed while fetching
   live.innerHTML = (v===null)
     ? `<span class="cp-none">No Cardmarket price listed</span>`
-    : `<span class="cp-val" data-priceinfo style="cursor:pointer;">${fmtEur(v)}</span> <span class="cp-sub" data-saltseat></span>`;
+    : `<span class="cp-val" data-priceinfo style="cursor:pointer;">${fmtEur(v)}</span>`;
+  // The salt seat sits back BELOW the image, in the ∞ button's row.
+  const saltRow = document.getElementById('csSaltRow');
+  if(saltRow) saltRow.innerHTML = '<span class="cp-sub" data-saltseat></span>';
   // The old subtitle lives on as a toast behind the price itself…
   live.querySelector('[data-priceinfo]')?.addEventListener('click', ()=>toast(specific ? 'This printing · Cardmarket trend' : 'Cheapest printing · Cardmarket trend'));
   // …and its seat belongs to the salt score now.
-  const seat = live.querySelector('[data-saltseat]');
+  const seat = (document.getElementById('csSaltRow') || live).querySelector('[data-saltseat]');
   if(seat) edhrecSaltFor(card).then(sv=>{
     if(sv != null && sv > 0 && seat.isConnected){
       seat.textContent = '🧂 ' + sv.toFixed(2) + ' salt';
@@ -11499,8 +11502,8 @@ function openCardInfo(card, opts){
     <main class="card-detail">
       <div style="text-align:center;">
         <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
-        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${card.collector_number?' · #'+card.collector_number:''}${card.rarity?' · '+card.rarity:''}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
-        <div style="position:relative;max-width:330px;margin:0 auto;min-height:36px;"><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
+        <div style="color:var(--sub-text);font-size:12.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
+        <div style="position:relative;max-width:330px;margin:0 auto;min-height:36px;display:flex;align-items:center;justify-content:center;"><span id="csSaltRow" class="card-price" style="margin:0;font-size:12px;"></span><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
