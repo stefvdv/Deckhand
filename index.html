@@ -308,7 +308,8 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 .otag-wrap{position:relative;}
 .otag-pop[hidden]{display:none !important;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
-.otag-pop{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;overflow-y:auto;}
+.otag-pop{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;overflow-y:auto;max-height:min(48vh,380px);z-index:40;}
+.df-compact, .df-compact .adv-row, #dlPanelBox{overflow:visible;}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
 /* Inside .searchbar the generic button rule paints brass — override back
@@ -658,7 +659,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 #bindersPop > button:last-child{border-bottom:none;}
 .binder-glyphs{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-right:3px;}
 .binder-glyphs svg{width:14px;height:14px;}
-.binder-glyph-row{display:flex;justify-content:center;align-items:center;gap:3px;min-height:16px;margin:-5px 0 3px;flex-wrap:wrap;}
+.binder-glyph-row{display:flex;justify-content:center;align-items:center;gap:3px;min-height:15px;margin:-9px 0 2px;flex-wrap:wrap;}
 .binder-glyphs .mana-ic{width:14px;height:14px;}
 .rar-dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,0.45);}
 .rar-C{background:#6B665C;} .rar-U{background:#9AA6AE;} .rar-R{background:#C9A24B;} .rar-M{background:#D4602A;}
@@ -3758,13 +3759,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.403';
+const APP_VERSION = '2.51.404';
 const CHANGELOG_NOTES = {
   en: [
-    'The Tags panel closes on any tap outside it; binder icons hug the tile\u2019s rim so the art gets the room; the search page\u2019s tag list shows the whole catalog, A at the bottom by the input; and the deck search\u2019s Tag field carries the same full drop-up picker.'
+    'The deck-search tag list may spill past its panel now instead of being clipped to two entries, and binder icons sit tighter against the tile\u2019s rim.'
   ],
   nl: [
-    'Het Tags-paneel sluit bij elke tik erbuiten; mapiconen schurken tegen de rand van de tegel zodat de kunst de ruimte krijgt; de taglijst van de zoekpagina toont de hele catalogus, A onderaan bij het invoerveld; en het Tag-veld van het deck-zoeken draagt dezelfde volledige drop-up-kiezer.'
+    'De taglijst van het deck-zoeken mag nu buiten zijn paneel uitsteken in plaats van op twee regels afgeknipt te worden, en mapiconen zitten strakker tegen de rand van de tegel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
