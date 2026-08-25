@@ -1886,6 +1886,10 @@ document.addEventListener('click', (e)=>{
   btn.dataset.showing = toBack ? 'back' : 'front';
   btn.classList.toggle('flipped', toBack);
 }, true);
+document.addEventListener('click', (e)=>{
+  if(e.target && e.target.id === 'blSuggestLands'){ const d = getDeck(state.activeDeckId); if(d) openLandSuggest(d); }
+  if(e.target && e.target.id === 'proxyExport'){ const d = getDeck(state.activeDeckId); if(d) openProxySheet(d); }
+});
 /* Quoted-name links in the deck's description & primer: tap opens the card's
    normal detail sheet — fetched fuzzily so small typos still land. */
 document.addEventListener('click', async (e)=>{
@@ -3759,13 +3763,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.406';
+const APP_VERSION = '2.51.407';
 const CHANGELOG_NOTES = {
   en: [
-    'The card view\u2019s set line dropped its collector number and rarity, and the salt score moved back below the image \u2014 the name bar keeps just the price, so long card names have their room again.'
+    'Two new tools: ⛰ Suggest lands on Bulk edit (Commander decks) proposes the most-played lands for the deck\u2019s identity \u2014 best picks by the confirm bar, basics auto-split by the deck\u2019s mana pips, one Add does the rest \u2014 and the Export sheet grew a \ud83d\udda8 Proxies button that prints nine true-size cards per A4 page.'
   ],
   nl: [
-    'De setregel van het kaartvenster liet zijn verzamelnummer en zeldzaamheid vallen, en het zoutcijfer verhuisde terug onder de afbeelding \u2014 de naambalk houdt alleen de prijs, zodat lange kaartnamen weer ruimte hebben.'
+    'Twee nieuwe gereedschappen: ⛰ Stel landen voor op Bulkbewerken (Commander-decks) stelt de meest gespeelde landen voor de identiteit van het deck voor \u2014 beste keuzes bij de bevestigingsbalk, basics automatisch verdeeld naar de manapips van het deck, \u00e9\u00e9n Toevoegen doet de rest \u2014 en het Exportvenster kreeg een \ud83d\udda8 Proxies-knop die negen kaarten op ware grootte per A4 afdrukt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8411,6 +8415,7 @@ function dlPanelHtml(d){
     return `<div class="panel-card">
       <div class="panel-h" style="display:flex;align-items:center;"><span>Bulk Edit</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
       <textarea id="bulkText" class="bulk-textarea">${lines.join('\n')}</textarea>
+      ${isCmdrMode() ? '<button type="button" class="ghost-btn" id="blSuggestLands" style="width:100%;margin:0 0 8px;">⛰ Suggest lands</button>' : ''}
       <button class="primary-btn" id="applyBulkBtn">Check &amp; Save Changes</button>
       <div id="bulkReport"></div>
     </div>`;
@@ -8462,7 +8467,7 @@ function dlPanelHtml(d){
         ${EXPORT_FORMATS.map(f=>`<button data-expfmt="${f.key}" class="${fmt===f.key?'active':''}">${f.label}</button>`).join('')}
       </div>
       <textarea class="bulk-textarea" id="exportText" readonly>${escapeHtml(text)}</textarea>
-      <div class="action-row"><button class="ghost-btn" id="copyExport">Copy</button><button class="ghost-btn" id="downloadExport">Download .${exportExt(fmt)}</button></div>
+      <div class="action-row"><button class="ghost-btn" id="copyExport">Copy</button><button class="ghost-btn" id="proxyExport">🖨 Proxies</button><button class="ghost-btn" id="downloadExport">Download .${exportExt(fmt)}</button></div>
     </div>`;
   }
   return '';
@@ -12434,6 +12439,95 @@ async function openCombosOverlay(title, combos){
     clearTimeout(_ft);
     _ft = setTimeout(()=>{ q = fi.value.trim(); shown = 20; renderRows(); main.scrollTop = 0; }, 140);
   });
+}
+/* ── Landbase suggester ─ the most-played lands for this deck's identity,
+   EDHREC-ordered, best at the FOOT (array renders worst-first, so the top
+   pick lands by the confirm bar). Basics fill the remainder split by the
+   deck's own mana-pip ratio. Confirm adds everything selected. ── */
+async function openLandSuggest(d){
+  const ex = document.getElementById('landSugOverlay');
+  if(ex) ex.remove();
+  const el = document.createElement('div');
+  el.className = 'overlay'; el.id = 'landSugOverlay';
+  el.innerHTML = `<div class="overlay-inner">${overlayCapHtml('⛰ ' + escapeHtml(d.name))}<main style="flex:1;overflow-y:auto;padding:12px 14px;"><div class="empty-note">Curving out…</div></main></div>`;
+  document.body.appendChild(el);
+  pushOverlay('landsug', ()=>{ document.getElementById('landSugOverlay')?.remove(); });
+  const main = el.querySelector('main');
+  try{
+    const inDeck = new Set(d.cards.map(c=>String(c.name).toLowerCase()));
+    const landCount = d.cards.filter(c=>String(c.type_line||'').includes('Land')).length;
+    const target = Math.max(0, 37 - landCount);
+    // Mana pips of the nonland deck decide the basics split
+    const pips = { W:0, U:0, B:0, R:0, G:0 };
+    d.cards.concat(deckLeaders(d)).forEach(c=>{
+      if(String(c.type_line||'').includes('Land')) return;
+      String(c.mana_cost||'').replace(/\{([WUBRG])\}/g, (m, p)=>{ pips[p]++; return m; });
+    });
+    const basicOf = { W:'Plains', U:'Island', B:'Swamp', R:'Mountain', G:'Forest' };
+    const r = await searchAndVerifyLegal((idClauseForDeck(d) + ' t:land').trim(), 'edhrec', 100);
+    const pool = ((r && r.results) || []).filter(x=>!isBanned(x) && !inDeck.has(String(x.name).toLowerCase()) && !String(x.type_line||'').includes('Basic'));
+    const preN = Math.min(target, 12, pool.length);
+    const rowsHtml = pool.map((x, i)=>{
+      const p = shownEurOf(x);
+      return `<label style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--line);"><input type="checkbox" data-lsug="${i}" ${i < preN ? 'checked' : ''}><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(x.name)}</span><span style="font-family:'JetBrains Mono',monospace;color:var(--brass);">${p != null ? '€' + p.toFixed(2) : '—'}</span></label>`;
+    }).reverse().join('');
+    main.innerHTML = `<div style="display:flex;flex-direction:column;">
+      ${rowsHtml}
+      <p class="hint" style="margin:6px 0;">${landCount} land${landCount===1?'':'s'} in the deck · target 37 · most-played first at the bottom</p>
+    </div>`;
+    const foot = document.createElement('div');
+    foot.style.cssText = 'flex:0 0 auto;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;';
+    el.querySelector('.overlay-inner').appendChild(foot);
+    const totalPips = ()=>Math.max(1, ['W','U','B','R','G'].reduce((a,k)=>a+pips[k], 0));
+    const basicsPlan = (rest)=>{
+      const tp = totalPips(); const plan = [];
+      let assigned = 0;
+      ['W','U','B','R','G'].forEach(k=>{ const n = Math.floor(rest * pips[k] / tp); if(n > 0){ plan.push([basicOf[k], n]); assigned += n; } });
+      let extra = rest - assigned;
+      const order = ['W','U','B','R','G'].filter(k=>pips[k] > 0).sort((a,b)=>pips[b]-pips[a]);
+      for(let i = 0; extra > 0 && order.length; i = (i + 1) % order.length, extra--){
+        const nm = basicOf[order[i]];
+        const hit = plan.find(p=>p[0] === nm);
+        if(hit) hit[1]++; else plan.push([nm, 1]);
+      }
+      return plan;
+    };
+    const refresh = ()=>{
+      const picked = main.querySelectorAll('[data-lsug]:checked').length;
+      const rest = Math.max(0, target - picked);
+      const plan = basicsPlan(rest);
+      foot.innerHTML = `<label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;"><input type="checkbox" id="lsugBasics" checked><span style="font-size:12.5px;overflow:hidden;text-overflow:ellipsis;">${rest > 0 ? 'Fill ' + rest + ' with basics: ' + plan.map(p=>p[1] + ' ' + p[0]).join(' · ') : 'Basics: none needed'}</span></label>
+        <button type="button" class="primary-btn" id="lsugGo" style="width:auto;flex:0 0 auto;">Add</button>`;
+      foot.querySelector('#lsugGo').addEventListener('click', async ()=>{
+        const picks = Array.from(main.querySelectorAll('[data-lsug]:checked')).map(cb=>pool[parseInt(cb.dataset.lsug, 10)]);
+        picks.forEach(x=>d.cards.push(x));
+        if(foot.querySelector('#lsugBasics')?.checked){
+          for(const [nm, n] of basicsPlan(Math.max(0, target - picks.length))){
+            try{
+              const rr = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(nm)}`);
+              if(rr.ok){ const bc = await rr.json(); for(let i = 0; i < n; i++) d.cards.push(bc); }
+            }catch(err){}
+          }
+        }
+        scheduleSave(d);
+        toast(trS('Added.'));
+        closeTopOverlay();
+        render();
+      });
+    };
+    main.addEventListener('change', (ev)=>{ if(ev.target.matches && ev.target.matches('[data-lsug]')) refresh(); });
+    refresh();
+    scrollToPageFoot();
+  }catch(e){ main.innerHTML = `<div class="empty-note">Couldn't reach Scryfall.</div>`; }
+}
+/* ── Proxy sheet ─ nine 63×88 mm cards per A4, printed from the browser ── */
+function openProxySheet(d){
+  const imgs = deckLeaders(d).concat(d.cards).map(c=>cardImageMed(c)).filter(Boolean);
+  if(!imgs.length){ toast('No card images to print yet.'); return; }
+  const w = window.open('', '_blank');
+  if(!w){ toast('Allow pop-ups to print proxies.'); return; }
+  w.document.write(`<html><head><title>${escapeHtml(d.name)} — proxies</title><style>@page{size:A4;margin:8mm;}*{margin:0;padding:0;}body{display:flex;flex-wrap:wrap;align-content:flex-start;}img{width:63mm;height:88mm;object-fit:cover;display:block;page-break-inside:avoid;}</style></head><body>${imgs.map(u=>`<img src="${u}">`).join('')}<script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script></body></html>`);
+  w.document.close();
 }
 /* The community's 100 saltiest cards, from EDHREC's top-salt page (same
    week cache as everything EDHREC). Bottom-up, per the charter: saltiest at
