@@ -3772,13 +3772,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.413';
+const APP_VERSION = '2.51.414';
 const CHANGELOG_NOTES = {
   en: [
-    'Suggest lands became a proper two-column card grid \u2014 images with prices beneath, most-played at the bottom, tap to select with the brass check, and Add shows the count. The basics fill line rides the footer as before.'
+    'The Hand tester opened at the Deck Log\u2019s foot: Draw 7, mulligan down, +1 per turn \u2014 goldfish your curve right under Log a game. And Suggest lands now names its actual problem instead of blaming Scryfall for everything.'
   ],
   nl: [
-    'Stel landen voor werd een echt tweekoloms kaartenraster \u2014 afbeeldingen met prijzen eronder, meest gespeeld onderaan, tikken om te selecteren met het messing vinkje, en Toevoegen toont het aantal. De basics-vulregel rijdt zoals voorheen mee in de voettekst.'
+    'De Handtester opende aan de voet van het Decklog: Trek 7, mulligan omlaag, +1 per beurt \u2014 goldfish je curve direct onder Noteer een potje. En Stel landen voor benoemt nu zijn echte probleem in plaats van Scryfall overal de schuld van te geven.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9036,14 +9036,21 @@ function primerTabHtml(d){
     <button class="primary-btn" id="logGameBtn" style="margin-top:6px;">⊕ Log a game</button>
     ${rows?`<button class="ghost-btn" id="glogToggle" data-lbl="${appLang()==='nl'?'Potjes':'Games'} (${log.length})" style="width:100%;margin-top:8px;">${state._glogOpen?'▾':'▸'} ${appLang()==='nl'?'Potjes':'Games'} (${log.length})</button><div class="glog-list" id="glogList"${state._glogOpen?'':' style="display:none;"'}>${rows}</div>`:''}
   </div>`;
-  return `<div class="panel-card"><div class="panel-h">${appLang()==='nl'?'Beschrijving & primer':'Description & primer'}</div>
+  const handPanel = `<div class="panel-card"><div class="panel-h">${appLang()==='nl'?'Handtester':'Hand tester'}</div>
+    <div id="htHand" style="display:flex;flex-wrap:wrap;gap:6px;min-height:44px;align-items:flex-start;"></div>
+    <div style="margin-top:8px;display:flex;gap:8px;">
+      <button type="button" class="primary-btn" id="htNew" style="flex:1;">${appLang()==='nl'?'Trek 7':'Draw 7'}</button>
+      <button type="button" class="ghost-btn" id="htMull" style="flex:1;" disabled>Mulligan</button>
+      <button type="button" class="ghost-btn" id="htDraw" style="flex:1;" disabled>+1</button>
+    </div></div>`;
+  return `${handPanel}${playLogPanel}<div class="panel-card"><div class="panel-h">${appLang()==='nl'?'Beschrijving & primer':'Description & primer'}</div>
     ${dpEditing ? `
       <textarea id="deckDescText" class="bulk-textarea" style="min-height:70px;" placeholder="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">${escapeHtml(d.description||'')}</textarea>
       <textarea id="primerText" class="bulk-textarea" style="min-height:200px;margin-top:8px;" placeholder="${escapeHtml(trS('Primer — strategy notes'))}">${escapeHtml(d.primer||'')}</textarea>
       <p class="hint" style="margin:4px 0 2px;"># headers, **bold**, *italics*, - lists · ${appLang()==='nl'?'een kaartnaam tussen &quot;aanhalingstekens&quot; wordt een link':'a card name between &quot;quotes&quot; becomes a link'}</p>
     ` : `<div class="rules-text" id="dpView">${renderPrimerHtml([String(d.description||'').trim(), String(d.primer||'').trim()].filter(Boolean).join('\n\n'))}</div>`}
     <button class="primary-btn" id="dpSaveEdit" style="margin-top:8px;">${dpEditing ? trS('Save') : '✎ ' + trS('Edit')}</button>
-  </div>${playLogPanel}`;
+  </div>`;
 }
 function openLogGameOverlay(d){
   document.getElementById('logGameOverlay')?.remove();
@@ -9253,6 +9260,26 @@ function wireBuilderBody(d){
       const box = document.getElementById('builderBody');
       box.innerHTML = primerTabHtml(d); wireBuilderBody(d);
     });
+    // Hand tester: goldfish opening hands from the maindeck. Classic
+    // simulator mulligan: redraw with one fewer card each time.
+    {
+      const hand = [];
+      let lib = [], mull = 7;
+      const paint = ()=>{
+        const b = document.getElementById('htHand');
+        if(!b) return;
+        b.innerHTML = hand.map(c=>{ const u = cardImageMed(c); return u ? `<img src="${u}" style="width:23%;border-radius:6px;" alt="">` : `<span style="font-size:11px;border:1px solid var(--line);border-radius:6px;padding:4px;">${escapeHtml(c.name)}</span>`; }).join('') || `<span class="hint">${appLang()==='nl'?'Trek een starthand.':'Draw an opening hand.'}</span>`;
+        const m = document.getElementById('htMull'), dr = document.getElementById('htDraw');
+        if(m){ m.disabled = !hand.length || mull <= 1; m.textContent = 'Mulligan' + (hand.length && mull > 1 ? ' (' + (mull - 1) + ')' : ''); }
+        if(dr) dr.disabled = !hand.length;
+      };
+      const shuffle = ()=>{ lib = d.cards.slice(); for(let i = lib.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [lib[i], lib[j]] = [lib[j], lib[i]]; } };
+      const deal = (n)=>{ shuffle(); hand.length = 0; for(let i = 0; i < n && lib.length; i++) hand.push(lib.pop()); paint(); };
+      document.getElementById('htNew')?.addEventListener('click', ()=>{ mull = 7; deal(7); });
+      document.getElementById('htMull')?.addEventListener('click', ()=>{ mull = Math.max(1, mull - 1); deal(mull); });
+      document.getElementById('htDraw')?.addEventListener('click', ()=>{ if(lib.length){ hand.push(lib.pop()); paint(); } });
+      paint();
+    }
     document.getElementById('logGameBtn')?.addEventListener('click', ()=>openLogGameOverlay(d));
     const dta = document.getElementById('deckDescText');
     dta?.addEventListener('input', ()=>{ d.description = dta.value; scheduleSave(d); });
@@ -12536,7 +12563,7 @@ async function openLandSuggest(d){
       String(c.mana_cost||'').replace(/\{([WUBRG])\}/g, (m, p)=>{ pips[p]++; return m; });
     });
     const basicOf = { W:'Plains', U:'Island', B:'Swamp', R:'Mountain', G:'Forest' };
-    const r = await searchAndVerifyLegal((idClauseForDeck(d) + ' t:land').trim(), 'edhrec', 100);
+    const r = await searchAndVerifyLegal(((d.admiral ? idClauseForDeck(d) : '') + ' t:land').trim(), 'edhrec', 100);
     const pool = ((r && r.results) || []).filter(x=>!isBanned(x) && !inDeck.has(String(x.name).toLowerCase()) && !String(x.type_line||'').includes('Basic'));
     const sel = new Set();
     const preN = Math.min(target, 12, pool.length);
@@ -12586,7 +12613,10 @@ async function openLandSuggest(d){
     refresh();
     // The overlay's own main is the scroller — land the view at ITS foot.
     main.scrollTop = main.scrollHeight;
-  }catch(e){ main.innerHTML = `<div class="empty-note">Couldn't reach Scryfall.</div>`; }
+  }catch(e){
+    console.error('suggest lands', e);
+    main.innerHTML = `<div class="empty-note">Couldn't load suggestions — ${escapeHtml((e && e.message) || String(e))}</div>`;
+  }
 }
 /* ── Proxy sheet ─ nine 63×88 mm cards per A4, printed from the browser ── */
 function openProxySheet(d){
