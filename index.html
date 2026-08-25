@@ -598,7 +598,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 .ghost-btn{flex:1;min-width:0;background:var(--field);border:1px solid var(--field-line);color:var(--ink-text);padding:9px 6px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;}
 .ghost-btn:hover{border-color:var(--brass);}
 .ghost-btn.active{background:var(--brass);color:#1a1204;border-color:var(--brass);}
-.bulk-textarea{width:100%;min-height:140px;max-height:38vh;background:var(--field);border:1px solid var(--field-line);border-radius:8px;color:var(--ink-text);font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:12px;resize:vertical;margin-bottom:10px;}
+.bulk-textarea{width:100%;min-height:320px;max-height:54vh;background:var(--field);border:1px solid var(--field-line);border-radius:8px;color:var(--ink-text);font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:12px;resize:vertical;margin-bottom:10px;}
 .primary-btn{background:var(--brass);color:#1a1204;border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:13.5px;width:100%;}
 .primary-btn.danger-fill{background:var(--danger);color:#fff;}
 .report-list{margin-top:10px;max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;}
@@ -656,6 +656,7 @@ main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(sa
 #bindersPop .bp-row .bp-edit{width:44px;flex:none;color:var(--sub-text);}
 #bindersPop > button:last-child{border-bottom:none;}
 .binder-glyphs{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-right:3px;}
+.binder-glyphs svg{width:14px;height:14px;}
 .binder-glyphs .mana-ic{width:14px;height:14px;}
 .rar-dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,0.45);}
 .rar-C{background:#6B665C;} .rar-U{background:#9AA6AE;} .rar-R{background:#C9A24B;} .rar-M{background:#D4602A;}
@@ -698,13 +699,13 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-cover{position:absolute;inset:0;z-index:6;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;}
 .dl-popup{position:fixed;left:12px;right:12px;top:50%;transform:translateY(-50%);z-index:120;max-height:82vh;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;box-shadow:0 12px 44px rgba(0,0,0,0.6);}
 .dl-cover .panel-card{margin:0;min-height:100%;box-sizing:border-box;}
-.df-compact{padding:10px 12px;}
-.df-compact .panel-h{margin:0 0 6px;}
-.df-compact .adv-row{grid-template-columns:72px minmax(0,1fr);gap:2px 8px;margin-bottom:4px;}
-.df-compact .adv-row label{font-size:11.5px;}
-.df-compact .col-filter-input{padding:5px 8px;font-size:12.5px;}
-.df-compact .cselect-btn{padding:5px 8px;font-size:12.5px;}
-.df-compact .mana-check svg{width:21px;height:21px;}
+.df-compact{padding:14px;}
+.df-compact .panel-h{margin:0 0 12px;}
+.df-compact .adv-row{grid-template-columns:88px minmax(0,1fr);gap:4px 10px;margin-bottom:13px;}
+.df-compact .adv-row label{font-size:13px;}
+.df-compact .col-filter-input{padding:10px 11px;font-size:14.5px;}
+.df-compact .cselect-btn{padding:10px 11px;font-size:14.5px;}
+.df-compact .mana-check svg{width:27px;height:27px;}
 .df-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
 .df-btn-row button{width:100%;padding:13px 8px;font-size:13px;}
 .df-compact .df-btn-row{margin-top:6px;}
@@ -733,7 +734,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-mid:has(.dk-tool){gap:5px;}
 .dl-bridge-desc{display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;}
 .dl-mini-add{width:30px;height:30px;border-radius:9px;flex:none;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:6px;}
-.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:12px 46px 0 0;border-top:1px solid var(--line);font-size:13px;color:var(--ink-text);}
+.dl-winrate{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:12px 46px 0 0;border-top:1px solid var(--line);margin-top:auto;font-size:13px;color:var(--ink-text);}
 .dl-winrate b{color:var(--brass);}
 .dl-bridge-adm{display:flex;flex-direction:column;}
 .dl-leader-cat{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.6px;padding:6px 2px 2px;margin-top:auto;}
@@ -3755,13 +3756,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.395';
+const APP_VERSION = '2.51.398';
 const CHANGELOG_NOTES = {
   en: [
-    'The empty band under the COMMANDERS label is gone \u2014 the deck pages\u2019 foot padding overshot the toolbar stack by a toolbar\u2019s worth; it now ends where the dock begins.'
+    'All cards and Wants show their card count and total value like every other binder, and binder-name recognition grew up: card types now wear the deck dock\u2019s own type icons \u2014 stacking when a name holds several \u2014 and a \u201cfoil\u201d binder earns the brass foil star.'
   ],
   nl: [
-    'De lege strook onder het COMMANDERS-label is weg \u2014 de voetmarge van de deckpagina\u2019s schoot een werkbalk te ver door; hij eindigt nu waar de dock begint.'
+    'Alle kaarten en Wants tonen hun kaartenaantal en totale waarde zoals elke andere map, en de mapnaamherkenning is volwassen geworden: kaarttypes dragen nu de eigen type-iconen van de deckdock \u2014 gestapeld als een naam er meerdere bevat \u2014 en een \u201cfoil\u201d-map verdient de messing foilster.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5993,18 +5994,22 @@ async function openBinderArtPicker(binder){
 function collectionBindersGridHtml(){
   const binders = state.collection.binders;
   const qtyAll = state.collection.items.reduce((a,it)=>a+(it.qty||1), 0);
+  const eurAll = state.collection.items.reduce((a,it)=>a+((it.eur!=null?it.eur:0)*(it.qty||1)), 0);
+  // Wants are computed, not stored — same tally as the wants view itself.
+  let qtyW = 0, eurW = 0;
+  try{ computeWants().forEach(it=>{ qtyW += (it.qty||1); eurW += (it.eur!=null?it.eur:0)*(it.qty||1); }); }catch(e){}
   // Automatic folders are computed views, not stored lists: All cards is
   // simply every card you own — filed or loose — so filing a card into any
   // binder "adds" it here by definition, and nothing can ever desync.
   const allTile = `<div class="folder-tile binder-tile" data-binderopen="__all__">
       <div class="folder-face colfold-ico">${ICONS.collection || '🗂'}</div>
       <div class="folder-name">All cards</div>
-      <div class="folder-sub">${qtyAll} card${qtyAll===1?'':'s'} owned</div>
+      <div class="folder-sub">${qtyAll} card${qtyAll===1?'':'s'}${eurAll?` · €${eurAll.toFixed(2)}`:''}</div>
     </div>`;
   const wantsTile = `<div class="folder-tile binder-tile" data-binderopen="__wants__">
       <div class="folder-face"><span style="font-size:44px;line-height:1;">🔖</span></div>
       <div class="folder-name">Wants</div>
-      <div class="folder-sub">missing from your decks</div>
+      <div class="folder-sub">${qtyW} card${qtyW===1?'':'s'}${eurW?` · €${eurW.toFixed(2)}`:''}</div>
     </div>`;
   return `${binders.length ? `<div class="section-label">Binders</div>
     <div class="deck-grid" style="margin-bottom:12px;">${binders.map(binderTileHtml).join('')}</div>` : ''}
@@ -6306,8 +6311,16 @@ function binderGlyphsHtml(name){
   }
   const rar = { mythic:'M',mythics:'M',rare:'R',rares:'R',uncommon:'U',uncommons:'U',common:'C',commons:'C' };
   for(const w in rar){ if(toks.has(w)) return `<span class="binder-glyphs"><span class="rar-dot rar-${rar[w]}" title="${w}"></span></span>`; }
-  const typeIco = { creature:'🐾',creatures:'🐾',instant:'⚡',instants:'⚡',sorcery:'🔮',sorceries:'🔮',artifact:'⚙️',artifacts:'⚙️',enchantment:'✨',enchantments:'✨',planeswalker:'🔥',planeswalkers:'🔥',land:'🗺️',lands:'🗺️',token:'🎫',tokens:'🎫' };
-  for(const w in typeIco){ if(toks.has(w)) return `<span class="binder-glyphs">${typeIco[w]}</span>`; }
+  const typeWord = { creature:'Creature',creatures:'Creature',instant:'Instant',instants:'Instant',sorcery:'Sorcery',sorceries:'Sorcery',artifact:'Artifact',artifacts:'Artifact',enchantment:'Enchantment',enchantments:'Enchantment',planeswalker:'Planeswalker',planeswalkers:'Planeswalker',battle:'Battle',battles:'Battle',land:'Land',lands:'Land' };
+  const kinds = [];
+  for(const w in typeWord){ if(toks.has(w) && !kinds.includes(typeWord[w])) kinds.push(typeWord[w]); }
+  const foil = toks.has('foil') || toks.has('foils') || toks.has('foiled');
+  const tokn = toks.has('token') || toks.has('tokens');
+  if(kinds.length || foil || tokn){
+    const order = ['Creature','Instant','Sorcery','Artifact','Enchantment','Planeswalker','Battle','Land'];
+    kinds.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+    return `<span class="binder-glyphs">${kinds.map(k=>DOCK_TYPE_ICONS[k]||'').join('')}${tokn?'🎫':''}${foil?'<span style="color:var(--brass);">✦</span>':''}</span>`;
+  }
   return '🗂';
 }
 
@@ -14718,7 +14731,7 @@ async function prefetchBudgetData(d){
       const ck = idClause + '|' + tag;
       if(poolCache[ck]) return;
       try{
-        const r = await searchAndVerifyLegal((idClause + ' eur<=5 otag:' + tag).trim(), 'edhrec', 60);
+        const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' otag:' + tag).trim(), 'edhrec', 60);
         poolCache[ck] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !isBanned(x));
       }catch(e){}
     }, 2);
@@ -14726,7 +14739,7 @@ async function prefetchBudgetData(d){
       const ck = idClause + '|land';
       if(!poolCache[ck]){
         try{
-          const r = await searchAndVerifyLegal((idClause + ' t:land eur<=5').trim(), 'edhrec', 120);
+          const r = await searchAndVerifyLegal((idClause + ' t:land eur<=' + BUDGET_FLOOR).trim(), 'edhrec', 120);
           poolCache[ck] = ((r && r.results) || []).filter(x=>!isBanned(x));
         }catch(e){}
       }
@@ -14838,14 +14851,17 @@ async function loadBudgetAlternatives(d){
   // dragging, rebuild on release (prices are cached — the redo is instant).
   (()=>{
     const mainEl = box.closest('main') || box.parentElement;
+    // The slider is a FOOTER of the overlay, not a row of the scroller: the
+    // overlay-inner is a normal flex column (cap on top, main scrolling),
+    // so appendChild AFTER main pins it flush to the page bottom with
+    // nothing scrolling beneath it.
+    const host = (mainEl && mainEl.parentElement) || mainEl;
     let row = document.getElementById('bgFloorRow');
     if(!row){
       row = document.createElement('div');
       row.id = 'bgFloorRow';
-      row.style.cssText = 'position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px 12px;display:flex;align-items:center;gap:10px;';
-      // Bottom-up: this main is column-reverse — DOM-FIRST renders at the
-      // page FOOT, which is where the slider belongs.
-      mainEl.insertBefore(row, mainEl.firstChild);
+      row.style.cssText = 'flex:0 0 auto;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;';
+      host.appendChild(row);
     }
     row.innerHTML = `<span style="font-size:12.5px;color:var(--sub-text);white-space:nowrap;">${appLang()==='nl'?'Budgetgrens':'Budget line'}</span>
       <input type="range" id="bgFloor" min="0.1" max="10" step="0.1" value="${BUDGET_FLOOR}" style="flex:1;accent-color:var(--brass);">
@@ -14895,7 +14911,7 @@ async function loadBudgetAlternatives(d){
     const budgetNamesP = (isCmdrMode() && lead)
       ? edhrecFetchJson('/pages/commanders/' + edhrecSlug(lead.name) + '/budget.json').then(j=> j ? edhrecNamesFrom(j).slice(0, 80) : []).catch(()=>[])
       : Promise.resolve([]);
-    const staplesP = searchAndVerifyLegal((idClause + ' eur<=5').trim(), 'edhrec', 250).catch(()=>({results:[]}));
+    const staplesP = searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR).trim(), 'edhrec', 250).catch(()=>({results:[]}));
     const [bn, st] = await Promise.all([budgetNamesP, staplesP]);
     let bCards = [];
     if(bn.length){
@@ -14928,7 +14944,7 @@ async function loadBudgetAlternatives(d){
     const ck = idClause + '|' + tag;
     if(poolCache[ck]){ tagPools[tag] = poolCache[ck]; return; }
     try{
-      const r = await searchAndVerifyLegal((idClause + ' eur<=5 otag:' + tag).trim(), 'edhrec', 60);
+      const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' otag:' + tag).trim(), 'edhrec', 60);
       tagPools[tag] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !isBanned(x));
       poolCache[ck] = tagPools[tag];
     }catch(e){ tagPools[tag] = []; }
@@ -14939,7 +14955,7 @@ async function loadBudgetAlternatives(d){
     const ck = idClause + '|land';
     if(poolCache[ck]) landPool = poolCache[ck];
     else try{
-      const r = await searchAndVerifyLegal((idClause + ' t:land eur<=5').trim(), 'edhrec', 120);
+      const r = await searchAndVerifyLegal((idClause + ' t:land eur<=' + BUDGET_FLOOR).trim(), 'edhrec', 120);
       landPool = ((r && r.results) || []).filter(x=>!isBanned(x));
       poolCache[ck] = landPool;
     }catch(e){}
@@ -14975,7 +14991,7 @@ async function loadBudgetAlternatives(d){
         const ck = idClause + '|txt:' + f.k;
         if(!poolCache[ck]){
           try{
-            const r = await searchAndVerifyLegal((idClause + ' eur<=5 ' + f.q).trim(), 'edhrec', 40);
+            const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' ' + f.q).trim(), 'edhrec', 40);
             poolCache[ck] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !isBanned(x));
           }catch(e){ poolCache[ck] = []; }
         }
