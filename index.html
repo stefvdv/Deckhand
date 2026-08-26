@@ -751,6 +751,8 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-bridge-adm{display:flex;flex-direction:column;}
 .dl-leader-cat{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.6px;padding:6px 2px 2px;margin-top:auto;}
 .dl-desc-text{cursor:pointer;}
+.dl-bracket{font-size:11.5px;color:var(--brass);letter-spacing:0.04em;margin:0 0 6px;}
+.bkt-mini{color:var(--brass);font-weight:600;}
 .dl-desc-text{font-size:12px;line-height:1.4;color:var(--ink-text);overflow-wrap:anywhere;}
 .dk-type svg{width:14px;height:14px;opacity:0.8;flex:none;}
 .dk-mid:has(.dk-type){gap:4px;}
@@ -3772,13 +3774,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.417';
+const APP_VERSION = '2.51.419';
 const CHANGELOG_NOTES = {
   en: [
-    'Suggest lands merges BOTH partners\u2019 EDHREC landbases and says on the page which ranking it used \u2014 the commander data or the global fallback \u2014 so odd picks can be judged against their true source.'
+    'Brackets arrived: every Commander deck shows a power-bracket estimate \u2014 above the description on the decklist (Game Changers and 2-card combos counted) and as a B-chip on the deck tiles.'
   ],
   nl: [
-    'Stel landen voor voegt de EDHREC-landbases van BEIDE partners samen en zegt op de pagina welke rangschikking is gebruikt \u2014 de commanderdata of de wereldwijde terugval \u2014 zodat vreemde keuzes tegen hun echte bron beoordeeld kunnen worden.'
+    'Brackets zijn er: elk Commander-deck toont een krachtbracket-schatting \u2014 boven de beschrijving op de decklijst (Game Changers en 2-kaartscombo\u2019s geteld) en als B-chip op de decktegels.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5154,7 +5156,7 @@ function deckTileHtml(d){
       <div class="id-strip" style="background:${identityStripCss(d.admiral&&deckColorIdentity(d))}"></div>
       <div class="body">
         <div class="nm">${escapeHtml(d.name||'Untitled Fleet')}</div>
-        <div class="meta"><span>${count}/${deckTotal(d)}${(d.maybeboard&&d.maybeboard.length)?` <span class="mb-mini">· M ${d.maybeboard.length}</span>`:''}${d.primer&&d.primer.trim()?' · ✎':''}</span><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span></div>
+        <div class="meta"><span>${isCmdrMode() ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span> · ` : ''}${count}/${deckTotal(d)}${(d.maybeboard&&d.maybeboard.length)?` <span class="mb-mini">· M ${d.maybeboard.length}</span>`:''}${d.primer&&d.primer.trim()?' · ✎':''}</span><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span></div>
         <div class="edited">${relTime(d.updatedAt)}${price.complete?` · ${fmtEur(price.total)}`:''}</div>
       </div>
     </div>`;
@@ -8364,6 +8366,7 @@ function listTabHtml(d){
   return `<div class="dl-bridge">
       <div class="dl-bridge-adm">${leaderZoneHtml(d)}<div class="dl-leader-cat">${isCmdrMode() ? (deckLeaders(d).length > 1 ? 'Commanders' : 'Commander') : (deckLeaders(d).length > 1 ? 'Admirals' : 'Admiral')}</div></div>
       <div class="dl-bridge-desc">
+        ${isCmdrMode() ? `<div class="dl-bracket" id="dlBracket" title="Estimate from Game Changers and 2-card combos">⚔ Bracket ~${bracketEstimate(d, null).b} · ${bracketEstimate(d, null).gc} GC</div>` : ''}
         <div class="dl-desc-text">${d.description
           ? escapeHtml(d.description).replace(/\n/g, '<br>')
           : `<span class="hint" style="margin:0;">${trS('No description yet — write one on the Deck Log page.')}</span><button class="icon-btn dl-mini-add" id="descAddBtn" title="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">＋</button>`}</div>
@@ -9688,6 +9691,18 @@ function wireMeterRow(d){
   document.getElementById('dlSelMaybe')?.addEventListener('click', ()=>openInAppConfirm(`Move ${selN()} card${selN()===1?'':'s'} to the maybeboard?`, (ok)=>{ if(ok) dlSelApply(d, 'maybe'); }));
   document.getElementById('dlSelToMain')?.addEventListener('click', ()=>openInAppConfirm(`Move ${selN()} card${selN()===1?'':'s'} to the main deck?`, (ok)=>{ if(ok) dlSelApply(d, 'main'); }));
   document.getElementById('dlSelDel')?.addEventListener('click', ()=>openInAppConfirm(`Delete ${selN()} card${selN()===1?'':'s'} from the deck?`, (ok)=>{ if(ok) dlSelApply(d, 'del'); }));
+  // Bracket chip: refine with 2-card combos when the fast lane answers
+  (async ()=>{
+    try{
+      const chip = document.getElementById('dlBracket');
+      if(!chip) return;
+      const ix = await combosReady();
+      const names = new Set(d.cards.map(c=>String(c.name).toLowerCase()).concat(deckLeaders(d).map(c=>String(c.name).toLowerCase())));
+      const c2 = (combosInNames(ix, names) || []).filter(c=>c.nm.length === 2).length;
+      const e = bracketEstimate(d, c2);
+      chip.textContent = `⚔ Bracket ~${e.b} · ${e.gc} GC · ${c2} × 2-card`;
+    }catch(err){}
+  })();
   document.getElementById('dockMainCount')?.addEventListener('click', ()=>{
     state.dockCount = state.dockCount === 'maybe' ? 'main' : 'maybe';
     updateDeckMeter(d);
@@ -12571,16 +12586,22 @@ async function openLandSuggest(d){
     // tribal cities, off-plan legendaries) sink beneath every listed land.
     // Offline or pageless, the global order stands untouched.
     let rankNote = '';
+    const dbg = [];
     try{
       const rk = new Map();
       for(const lead of deckLeaders(d)){
         try{
           const page = await edhrecCommanderPage(lead);
-          _edhrecWalkLists(page).forEach(L=>{
+          const Ls = _edhrecWalkLists(page);
+          dbg.push(lead.name + ': [' + (Ls.map(L=>(L.tag || '?') + ':' + L.names.length).join(', ') || 'no lists') + ']');
+          Ls.forEach(L=>{
             if(!/land/i.test(L.tag)) return;
             L.names.forEach(nm=>{ const k = String(nm).toLowerCase(); if(!rk.has(k)) rk.set(k, rk.size); });
           });
-        }catch(err){ console.warn('suggest lands: page failed for', lead && lead.name, err); }
+        }catch(err){
+          dbg.push(lead.name + ': ERR ' + ((err && err.message) || err));
+          console.warn('suggest lands: page failed for', lead && lead.name, err);
+        }
       }
       if(rk.size){
         pool.sort((x, y)=>{
@@ -12590,7 +12611,7 @@ async function openLandSuggest(d){
         });
         rankNote = 'Ranked by ' + deckLeaders(d).map(l=>l.name).join(' & ') + '\u2019s EDHREC landbase (' + rk.size + ' lands).';
       } else {
-        rankNote = 'EDHREC landbase unavailable \u2014 showing global popularity.';
+        rankNote = 'EDHREC landbase unavailable \u2014 showing global popularity.\\n' + dbg.join('\\n');
       }
     }catch(e){ rankNote = 'EDHREC landbase unavailable \u2014 showing global popularity.'; console.warn('suggest lands: edhrec landbase unavailable', e); }
     const sel = new Set();
@@ -12603,7 +12624,7 @@ async function openLandSuggest(d){
       const img = cardImageMed(x);
       return `<div class="ls-tile${sel.has(i) ? ' on' : ''}" data-i="${i}">${img ? `<img loading="lazy" src="${img}" alt="">` : `<div class="ls-noimg">${escapeHtml(x.name)}</div>`}<div class="ls-p">${p != null ? '\u20ac' + p.toFixed(2) : '\u2014'}</div></div>`;
     }).join('')}</div>
-    <p class="hint" style="margin:6px 0;text-align:center;">${landCount} land${landCount===1?'':'s'} in the deck \u00b7 target 37 \u00b7 most played at the bottom<br>${escapeHtml(rankNote)}</p>`;
+    <p class="hint" style="margin:6px 0;text-align:center;">${landCount} land${landCount===1?'':'s'} in the deck \u00b7 target 37 \u00b7 most played at the bottom<br><span style="white-space:pre-line;">${escapeHtml(rankNote)}</span></p>`;
     const foot = document.createElement('div');
     foot.style.cssText = 'flex:0 0 auto;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;';
     el.querySelector('.overlay-inner').appendChild(foot);
@@ -12668,6 +12689,19 @@ function openProxySheet(d){
   if(!w){ toast('Allow pop-ups to print proxies.'); return; }
   w.document.write(`<html><head><title>${escapeHtml(d.name)} — proxies</title><style>@page{size:A4;margin:8mm;}*{margin:0;padding:0;}body{display:flex;flex-wrap:wrap;align-content:flex-start;}img{width:63mm;height:88mm;object-fit:cover;display:block;page-break-inside:avoid;}</style></head><body>${imgs.map(u=>`<img src="${u}">`).join('')}<script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script></body></html>`);
   w.document.close();
+}
+/* ── Bracket estimate ─ the WotC power brackets, approximated from local
+   signals: Game Changer count and 2-card combos. No GC and no combo ≈
+   bracket 2 (core); a few of either ≈ 3 (upgraded); heavy ≈ 4 (optimized).
+   Bracket 5 (cEDH) is a human claim, never an app's — we cap at 4. ── */
+function bracketEstimate(d, combos2){
+  let gc = 0;
+  d.cards.concat(deckLeaders(d)).forEach(c=>{ try{ if(isGameChanger(c)) gc++; }catch(e){} });
+  const c2 = combos2 == null ? 0 : combos2;
+  let b = 2;
+  if(gc > 0 || c2 > 0) b = 3;
+  if(gc > 3 || c2 >= 2) b = 4;
+  return { b, gc, c2 };
 }
 /* The community's 100 saltiest cards, from EDHREC's top-salt page (same
    week cache as everything EDHREC). Bottom-up, per the charter: saltiest at
