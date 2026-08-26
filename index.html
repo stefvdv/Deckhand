@@ -3772,13 +3772,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.415';
+const APP_VERSION = '2.51.416';
 const CHANGELOG_NOTES = {
   en: [
-    'Suggest lands works again \u2014 the grid rebuild had accidentally swept away the basics-split helpers, exactly what the new error message pointed at.'
+    'Suggest lands now ranks by the COMMANDER\u2019S own EDHREC landbase \u2014 the lands real decks of this commander actually play rise to the foot, and context-blind global staples (devotion shrines, tribal cities) sink below them.'
   ],
   nl: [
-    'Stel landen voor werkt weer \u2014 de rasterherbouw had per ongeluk de basics-verdeelhulpjes meegeveegd, precies waar de nieuwe foutmelding naar wees.'
+    'Stel landen voor rangschikt nu op de EIGEN EDHREC-landbasis van de commander \u2014 de landen die echte decks van deze commander daadwerkelijk spelen stijgen naar de voet, en contextblinde wereldwijde staples (devotieschrijnen, stamsteden) zakken eronder.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12565,6 +12565,27 @@ async function openLandSuggest(d){
     const basicOf = { W:'Plains', U:'Island', B:'Swamp', R:'Mountain', G:'Forest' };
     const r = await searchAndVerifyLegal(((d.admiral ? idClauseForDeck(d) : '') + ' t:land').trim(), 'edhrec', 100);
     const pool = ((r && r.results) || []).filter(x=>!isBanned(x) && !inDeck.has(String(x.name).toLowerCase()) && !String(x.type_line||'').includes('Basic'));
+    // Rank by THIS COMMANDER'S own EDHREC landbase — the same week-cached
+    // page Inspiration reads. Lands EDHREC lists for the deck's commander
+    // rise to the foot; context-blind global staples (devotion shrines,
+    // tribal cities, off-plan legendaries) sink beneath every listed land.
+    // Offline or pageless, the global order stands untouched.
+    try{
+      const lead = deckLeaders(d)[0];
+      if(lead){
+        const page = await edhrecCommanderPage(lead);
+        const rk = new Map();
+        _edhrecWalkLists(page).forEach(L=>{
+          if(!/land/i.test(L.tag)) return;
+          L.names.forEach(nm=>{ const k = String(nm).toLowerCase(); if(!rk.has(k)) rk.set(k, rk.size); });
+        });
+        if(rk.size) pool.sort((x, y)=>{
+          const rx = rk.has(String(x.name).toLowerCase()) ? rk.get(String(x.name).toLowerCase()) : 1e6;
+          const ry = rk.has(String(y.name).toLowerCase()) ? rk.get(String(y.name).toLowerCase()) : 1e6;
+          return rx - ry;
+        });
+      }
+    }catch(e){ console.warn('suggest lands: edhrec landbase unavailable', e); }
     const sel = new Set();
     const preN = Math.min(target, 12, pool.length);
     for(let i = 0; i < preN; i++) sel.add(i);
