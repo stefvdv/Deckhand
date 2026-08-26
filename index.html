@@ -3772,13 +3772,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.416';
+const APP_VERSION = '2.51.417';
 const CHANGELOG_NOTES = {
   en: [
-    'Suggest lands now ranks by the COMMANDER\u2019S own EDHREC landbase \u2014 the lands real decks of this commander actually play rise to the foot, and context-blind global staples (devotion shrines, tribal cities) sink below them.'
+    'Suggest lands merges BOTH partners\u2019 EDHREC landbases and says on the page which ranking it used \u2014 the commander data or the global fallback \u2014 so odd picks can be judged against their true source.'
   ],
   nl: [
-    'Stel landen voor rangschikt nu op de EIGEN EDHREC-landbasis van de commander \u2014 de landen die echte decks van deze commander daadwerkelijk spelen stijgen naar de voet, en contextblinde wereldwijde staples (devotieschrijnen, stamsteden) zakken eronder.'
+    'Stel landen voor voegt de EDHREC-landbases van BEIDE partners samen en zegt op de pagina welke rangschikking is gebruikt \u2014 de commanderdata of de wereldwijde terugval \u2014 zodat vreemde keuzes tegen hun echte bron beoordeeld kunnen worden.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12570,22 +12570,29 @@ async function openLandSuggest(d){
     // rise to the foot; context-blind global staples (devotion shrines,
     // tribal cities, off-plan legendaries) sink beneath every listed land.
     // Offline or pageless, the global order stands untouched.
+    let rankNote = '';
     try{
-      const lead = deckLeaders(d)[0];
-      if(lead){
-        const page = await edhrecCommanderPage(lead);
-        const rk = new Map();
-        _edhrecWalkLists(page).forEach(L=>{
-          if(!/land/i.test(L.tag)) return;
-          L.names.forEach(nm=>{ const k = String(nm).toLowerCase(); if(!rk.has(k)) rk.set(k, rk.size); });
-        });
-        if(rk.size) pool.sort((x, y)=>{
+      const rk = new Map();
+      for(const lead of deckLeaders(d)){
+        try{
+          const page = await edhrecCommanderPage(lead);
+          _edhrecWalkLists(page).forEach(L=>{
+            if(!/land/i.test(L.tag)) return;
+            L.names.forEach(nm=>{ const k = String(nm).toLowerCase(); if(!rk.has(k)) rk.set(k, rk.size); });
+          });
+        }catch(err){ console.warn('suggest lands: page failed for', lead && lead.name, err); }
+      }
+      if(rk.size){
+        pool.sort((x, y)=>{
           const rx = rk.has(String(x.name).toLowerCase()) ? rk.get(String(x.name).toLowerCase()) : 1e6;
           const ry = rk.has(String(y.name).toLowerCase()) ? rk.get(String(y.name).toLowerCase()) : 1e6;
           return rx - ry;
         });
+        rankNote = 'Ranked by ' + deckLeaders(d).map(l=>l.name).join(' & ') + '\u2019s EDHREC landbase (' + rk.size + ' lands).';
+      } else {
+        rankNote = 'EDHREC landbase unavailable \u2014 showing global popularity.';
       }
-    }catch(e){ console.warn('suggest lands: edhrec landbase unavailable', e); }
+    }catch(e){ rankNote = 'EDHREC landbase unavailable \u2014 showing global popularity.'; console.warn('suggest lands: edhrec landbase unavailable', e); }
     const sel = new Set();
     const preN = Math.min(target, 12, pool.length);
     for(let i = 0; i < preN; i++) sel.add(i);
@@ -12596,7 +12603,7 @@ async function openLandSuggest(d){
       const img = cardImageMed(x);
       return `<div class="ls-tile${sel.has(i) ? ' on' : ''}" data-i="${i}">${img ? `<img loading="lazy" src="${img}" alt="">` : `<div class="ls-noimg">${escapeHtml(x.name)}</div>`}<div class="ls-p">${p != null ? '\u20ac' + p.toFixed(2) : '\u2014'}</div></div>`;
     }).join('')}</div>
-    <p class="hint" style="margin:6px 0;text-align:center;">${landCount} land${landCount===1?'':'s'} in the deck \u00b7 target 37 \u00b7 most played at the bottom</p>`;
+    <p class="hint" style="margin:6px 0;text-align:center;">${landCount} land${landCount===1?'':'s'} in the deck \u00b7 target 37 \u00b7 most played at the bottom<br>${escapeHtml(rankNote)}</p>`;
     const foot = document.createElement('div');
     foot.style.cssText = 'flex:0 0 auto;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;';
     el.querySelector('.overlay-inner').appendChild(foot);
