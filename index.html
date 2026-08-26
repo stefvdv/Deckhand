@@ -3772,13 +3772,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.414';
+const APP_VERSION = '2.51.415';
 const CHANGELOG_NOTES = {
   en: [
-    'The Hand tester opened at the Deck Log\u2019s foot: Draw 7, mulligan down, +1 per turn \u2014 goldfish your curve right under Log a game. And Suggest lands now names its actual problem instead of blaming Scryfall for everything.'
+    'Suggest lands works again \u2014 the grid rebuild had accidentally swept away the basics-split helpers, exactly what the new error message pointed at.'
   ],
   nl: [
-    'De Handtester opende aan de voet van het Decklog: Trek 7, mulligan omlaag, +1 per beurt \u2014 goldfish je curve direct onder Noteer een potje. En Stel landen voor benoemt nu zijn echte probleem in plaats van Scryfall overal de schuld van te geven.'
+    'Stel landen voor werkt weer \u2014 de rasterherbouw had per ongeluk de basics-verdeelhulpjes meegeveegd, precies waar de nieuwe foutmelding naar wees.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12579,6 +12579,20 @@ async function openLandSuggest(d){
     const foot = document.createElement('div');
     foot.style.cssText = 'flex:0 0 auto;background:var(--ink);border-top:1px solid var(--line);padding:10px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;';
     el.querySelector('.overlay-inner').appendChild(foot);
+    const totalPips = ()=>Math.max(1, ['W','U','B','R','G'].reduce((a,k)=>a+pips[k], 0));
+    const basicsPlan = (rest)=>{
+      const tp = totalPips(); const plan = [];
+      let assigned = 0;
+      ['W','U','B','R','G'].forEach(k=>{ const n = Math.floor(rest * pips[k] / tp); if(n > 0){ plan.push([basicOf[k], n]); assigned += n; } });
+      let extra = rest - assigned;
+      const order = ['W','U','B','R','G'].filter(k=>pips[k] > 0).sort((a,b)=>pips[b]-pips[a]);
+      for(let i = 0; extra > 0 && order.length; i = (i + 1) % order.length, extra--){
+        const nm = basicOf[order[i]];
+        const hit = plan.find(p=>p[0] === nm);
+        if(hit) hit[1]++; else plan.push([nm, 1]);
+      }
+      return plan;
+    };
     const refresh = ()=>{
       const picked = sel.size;
       const rest = Math.max(0, target - picked);
