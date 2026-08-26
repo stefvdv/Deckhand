@@ -3774,13 +3774,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.419';
+const APP_VERSION = '2.51.420';
 const CHANGELOG_NOTES = {
   en: [
-    'Brackets arrived: every Commander deck shows a power-bracket estimate \u2014 above the description on the decklist (Game Changers and 2-card combos counted) and as a B-chip on the deck tiles.'
+    'Castability arrived on the Stats page \u2014 per colour: how many library cards produce it and the odds of seeing a source in your first ten draws \u2014 sitting right above Color Distribution. Deck tiles cleaned up: bracket chip under the colour pips, maybeboard count gone, and prices show partial cache sums with a + instead of hiding.'
   ],
   nl: [
-    'Brackets zijn er: elk Commander-deck toont een krachtbracket-schatting \u2014 boven de beschrijving op de decklijst (Game Changers en 2-kaartscombo\u2019s geteld) en als B-chip op de decktegels.'
+    'Speelbaarheid kwam naar de Stats-pagina \u2014 per kleur: hoeveel bibliotheekkaarten haar produceren en de kans op een bron in je eerste tien getrokken kaarten \u2014 direct boven Kleurverdeling. Decktegels opgeruimd: bracketchip onder de kleurpips, maybeboard-aantal weg, en prijzen tonen deelsommen uit de cache met een + in plaats van zich te verbergen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5156,8 +5156,8 @@ function deckTileHtml(d){
       <div class="id-strip" style="background:${identityStripCss(d.admiral&&deckColorIdentity(d))}"></div>
       <div class="body">
         <div class="nm">${escapeHtml(d.name||'Untitled Fleet')}</div>
-        <div class="meta"><span>${isCmdrMode() ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span> · ` : ''}${count}/${deckTotal(d)}${(d.maybeboard&&d.maybeboard.length)?` <span class="mb-mini">· M ${d.maybeboard.length}</span>`:''}${d.primer&&d.primer.trim()?' · ✎':''}</span><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span></div>
-        <div class="edited">${relTime(d.updatedAt)}${price.complete?` · ${fmtEur(price.total)}`:''}</div>
+        <div class="meta"><span>${count}/${deckTotal(d)}${d.primer&&d.primer.trim()?' · ✎':''}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span>${isCmdrMode() ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span>` : ''}</span></div>
+        <div class="edited">${relTime(d.updatedAt)}${price.total > 0 ? ` · ${fmtEur(price.total)}${price.complete ? '' : '+'}` : ''}</div>
       </div>
     </div>`;
 }
@@ -8736,6 +8736,35 @@ function statsTabHtml(d){
       <div class="curve-panel">${curve.map((n,i)=>`<div class="curve-col" data-cmc="${i}" style="cursor:${n?'pointer':'default'};"><div class="curve-bar" style="height:${n?(14+(n/maxB)*54):2}px"></div><div class="curve-n">${n||''}</div><div class="curve-lbl">${i===6?'6+':i}</div></div>`).join('')}</div>
       <div id="curveDetail"></div>
     </div>
+    ${isCmdrMode() ? (()=>{
+      // CASTABILITY: for each colour the deck's spells need, how many
+      // LIBRARY cards produce it (lands, rocks, dorks — produced_mana) and
+      // the hypergeometric chance of at least one among the first ten
+      // draws ≈ turn three on the draw. Commanders sit in the command
+      // zone, so they count toward needs but not toward the library.
+      const N = d.cards.length;
+      if(!N) return '';
+      const need = { W:0, U:0, B:0, R:0, G:0 };
+      d.cards.concat(deckLeaders(d)).forEach(c=>{ String(c.mana_cost || '').replace(/\{([WUBRG])\}/g, (m, p)=>{ need[p]++; return m; }); });
+      const src = { W:0, U:0, B:0, R:0, G:0 };
+      d.cards.forEach(c=>{
+        const pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
+        pm.forEach(k=>{ if(src[k] != null) src[k]++; });
+      });
+      const lnF = (a)=>{ let t = 0; for(let i = 2; i <= a; i++) t += Math.log(i); return t; };
+      const logC = (n, k)=>lnF(n) - lnF(k) - lnF(n - k);
+      const pHit = (S)=>{
+        if(S <= 0) return 0;
+        if(N - S < 10) return 1;
+        return 1 - Math.exp(logC(N - S, 10) - logC(N, 10));
+      };
+      const rows = ['W','U','B','R','G'].filter(k=>need[k] > 0).map(k=>{
+        const p = Math.round(pHit(src[k]) * 100);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;">${manaIconSvg(k, 18)}<span style="flex:1;font-size:12.5px;">${src[k]} source${src[k]===1?'':'s'}</span><span style="font-family:'JetBrains Mono',monospace;color:${p >= 90 ? 'var(--brass)' : p >= 75 ? 'var(--ink-text)' : 'var(--danger)'};">${p}%</span></div>`;
+      }).join('');
+      if(!rows) return '';
+      return `<div class="panel-card"><div class="panel-h">Castability</div>${rows}<p class="hint" style="margin:4px 0 0;">Chance of at least one source in your first ten draws.</p></div>`;
+    })() : ''}
     ${(()=>{
       // Moxfield-proper: each colour gets its BIG mana pip with the symbol
       // percentage inside it, and (Commander mode) a bar in that colour below
