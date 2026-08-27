@@ -753,6 +753,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-desc-text{cursor:pointer;}
 .dl-bracket{font-size:11.5px;color:var(--brass);letter-spacing:0.04em;margin:0 0 6px;}
 .bkt-mini{color:var(--brass);font-weight:600;font-size:14px;}
+.cap-note.cap-tap, #csPrice{border:1px solid var(--brass);border-radius:999px;padding:2px 9px;cursor:pointer;}
 .dl-desc-text{font-size:12px;line-height:1.4;color:var(--ink-text);overflow-wrap:anywhere;}
 .dk-type svg{width:14px;height:14px;opacity:0.8;flex:none;}
 .dk-mid:has(.dk-type){gap:4px;}
@@ -3780,13 +3781,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.425';
+const APP_VERSION = '2.51.426';
 const CHANGELOG_NOTES = {
   en: [
-    'The price in every name bar is now the History button \u2014 on card views, on binders, and on the whole collection, whose daily totals now record too. The bracket chip shows just bracket and Game Changers, suggested lands write the deck history like hand-made adds, and multi-select claims the entire dock, arrow included.'
+    'Tappable prices in the name bars wear a fitted brass rim now \u2014 the ring hugs whatever number is showing, so they read as the buttons they are.'
   ],
   nl: [
-    'De prijs in elke naambalk is nu de Historie-knop \u2014 op kaartvensters, op mappen en op de hele collectie, waarvan de dagtotalen nu ook worden vastgelegd. De bracketchip toont alleen bracket en Game Changers, voorgestelde landen schrijven de deckgeschiedenis zoals handmatige toevoegingen, en multiselectie claimt de hele dock, pijl inbegrepen.'
+    'Tikbare prijzen in de naambalken dragen nu een passende messing rand \u2014 de ring omsluit welk getal er ook staat, zodat ze lezen als de knoppen die ze zijn.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4698,7 +4699,7 @@ function navHtml(){
       const bad = issues.some(i=>i.level==='error') || dd.cards.length > deckTotal(dd) - 1;
       return `<span id="capDeckCount" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-family:'JetBrains Mono',monospace;color:${bad?'var(--danger)':'var(--brass)'};white-space:nowrap;">${tot}/${deckTotal(dd)}${issues.length?' ⚠':''}</span>`; })()}
     <div class="brand-txt ${editable?'editable':''} two-line" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner">${escapeHtml(title)}</span></div>
-    ${state._capNote ? `<span class="cap-note" id="capNoteBtn"${state.screen === 'collection' ? ' style="cursor:pointer;"' : ''}>${state._capNote}</span>` : ''}
+    ${state._capNote ? `<span class="cap-note${state.screen === 'collection' ? ' cap-tap' : ''}" id="capNoteBtn">${state._capNote}</span>` : ''}
   </div><div class="brand-banner">
     <div class="compass ${state.screen==='home'?'active':''}" id="homeBtn" title="Home">${compassSvg()}</div>
     <button class="banner-tab" id="capBack" aria-label="Back" title="Back">${ICONS.back}</button>
