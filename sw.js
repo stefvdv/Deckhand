@@ -1,127 +1,64 @@
-/* Gaea service worker — VERSION altijd gelijk aan APP_VERSION in index.html */
-const VERSION = "0.63.0";
-const SHELL = "wildpluk-shell-v" + VERSION;
-const LIB   = "wildpluk-lib-v" + VERSION;
-const TILES = "wildpluk-tiles";          /* niet versiegebonden */
-const BEELD = "wildpluk-beeld";          /* foto's van soorten, ook niet versiegebonden */
-const BEELD_MAX = 900;
-const TILE_MAX = 1500;
+/* Admiral Deck Log — service worker
+   Strategy:
+   - App shell (this page, icons, manifest): network-first with cache fallback,
+     so hosted updates arrive immediately but the app still opens offline.
+   - Fonts + Scryfall card images: cache-first (they never change for a given
+     URL), keeping repeat browsing fast and cheap.
+   - Scryfall API responses are NOT cached — searches and prices stay live. */
+const VERSION = 'admiral-v2.51.429';
+// Card images and fonts survive app updates: this cache is deliberately
+// NOT version-named, so activating a new version never wipes it.
+const ASSETS = 'admiral-assets-v1';
+const SHELL = ['./', './index.html', './manifest.json', './format.txt', './icon-192.png', './icon-512.png'];
 
-const SHELL_FILES = ["./", "./index.html", "./manifest.webmanifest",
-  "./icon-192.png", "./icon-512.png", "./badge-96.png"];
-
-/* Al het sierbeeld zit als data-URI in index.html, dus er is geen
-   losse art-map meer om te cachen. */
-const LIB_FILES = [
-  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
-];
-
-self.addEventListener("install", e => {
-  e.waitUntil((async () => {
-    const c = await caches.open(SHELL);
-    await c.addAll(SHELL_FILES);
-    const l = await caches.open(LIB);
-    await Promise.all(LIB_FILES.map(u => fetch(u, {mode:"cors"}).then(r => r.ok && l.put(u, r)).catch(()=>{})));
-    self.skipWaiting();
-  })());
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
-self.addEventListener("activate", e => {
-  e.waitUntil((async () => {
-    for (const k of await caches.keys()) {
-      if (k !== SHELL && k !== LIB && k !== TILES && k !== BEELD && k.startsWith("wildpluk-")) await caches.delete(k);
-    }
-    await self.clients.claim();
-  })());
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-const isTile = u => /service\.pdok\.nl|tile\.openstreetmap\.org/.test(u.hostname);
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== ASSETS).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
 
-async function trimTiles() {
-  const c = await caches.open(TILES);
-  const keys = await c.keys();
-  for (let i = 0; i < keys.length - TILE_MAX; i++) await c.delete(keys[i]);
-}
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET') return;
 
-self.addEventListener("fetch", e => {
-  const req = e.request;
-  if (req.method !== "GET") return;
-  const url = new URL(req.url);
+  // Live data must stay live
+  if (url.hostname === 'api.scryfall.com') return;
 
-  /* GBIF nooit via de service worker cachen — dat doet de app zelf in IndexedDB */
-  /* Netwerkverkeer naar de beeld- en soortbronnen laten we met rust: dat is
-     verse data, geen app-bestand. Naast GBIF nu ook iNaturalist en Wikimedia,
-     die als reserve dienen wanneer GBIF niets heeft. */
-  if (url.pathname.startsWith("/gbif/") || /(^|\.)gbif\.org$/.test(url.hostname)) return;
-  if (url.pathname.startsWith("/inat/") || /(^|\.)inaturalist\.org$/.test(url.hostname)) return;
-  if (url.pathname.startsWith("/wiki/") || /(^|\.)wikimedia\.org$/.test(url.hostname)
-      || /(^|\.)wikipedia\.org$/.test(url.hostname)) return;
-  if (/(^|\.)staticflickr\.com$/.test(url.hostname)) return;
-  /* Omgekeerd geocoderen voor de plaatsnaam bij een vondst: ook verse data,
-     en het antwoord hangt aan coördinaten die nooit twee keer hetzelfde zijn. */
-  if (/(^|\.)openstreetmap\.org$/.test(url.hostname)) return;
-
-  /* kaarttegels: cache-first, zo werkt een eerder bezocht gebied offline */
-  if (isTile(url)) {
-    e.respondWith((async () => {
-      const c = await caches.open(TILES);
-      const hit = await c.match(req);
-      if (hit) return hit;
-      try {
-        const res = await fetch(req);
-        if (res && (res.ok || res.type === "opaque")) { c.put(req, res.clone()); trimTiles(); }
-        return res;
-      } catch (err) { return new Response("", {status:504}); }
-    })());
+  // Static, immutable assets: cache-first
+  const isFont = url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com');
+  const isCardImage = url.hostname === 'cards.scryfall.io' || url.hostname.endsWith('.scryfall.io');
+  if (isFont || isCardImage) {
+    e.respondWith(
+      caches.open(ASSETS).then(cache =>
+        cache.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+          if (res.ok) cache.put(e.request, res.clone());
+          return res;
+        }))
+      )
+    );
     return;
   }
 
-  /* soortfoto's van willekeurige hosts: cache-first, ook ondoorzichtige antwoorden.
-     Zo blijft alles wat je een keer hebt gezien of voorgeladen offline werken. */
-  if (req.destination === "image" && url.origin !== self.location.origin && !isTile(url)) {
-    e.respondWith((async () => {
-      const c = await caches.open(BEELD);
-      const hit = await c.match(req);
-      if (hit) return hit;
-      try {
-        const res = await fetch(req);
-        if (res && (res.ok || res.type === "opaque")) {
-          c.put(req, res.clone());
-          const keys = await c.keys();
-          for (let i = 0; i < keys.length - BEELD_MAX; i++) await c.delete(keys[i]);
-        }
+  // App shell: network-first, fall back to cache when offline
+  if (url.origin === location.origin) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const copy = res.clone();
+        caches.open(VERSION).then(c => c.put(e.request, copy));
         return res;
-      } catch (err) { return new Response("", { status: 504 }); }
-    })());
-    return;
-  }
-
-  /* libs en fonts: cache-first */
-  if (/cdnjs\.cloudflare\.com|fonts\.(googleapis|gstatic)\.com/.test(url.hostname)) {
-    e.respondWith((async () => {
-      const c = await caches.open(LIB);
-      const hit = await c.match(req);
-      if (hit) return hit;
-      try {
-        const res = await fetch(req);
-        if (res && (res.ok || res.type === "opaque")) c.put(req, res.clone());
-        return res;
-      } catch (err) { return hit || new Response("", {status:504}); }
-    })());
-    return;
-  }
-
-  /* eigen bestanden: network-first met terugval op cache */
-  if (url.origin === self.location.origin) {
-    e.respondWith((async () => {
-      try {
-        const res = await fetch(req);
-        if (res && res.ok) (await caches.open(SHELL)).put(req, res.clone());
-        return res;
-      } catch (err) {
-        return (await caches.match(req)) || caches.match("./index.html");
-      }
-    })());
+      }).catch(() =>
+        caches.match(e.request, {ignoreSearch:true}).then(hit => hit || caches.match('./index.html'))
+      )
+    );
   }
 });
