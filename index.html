@@ -1006,6 +1006,7 @@ main.has-dock{padding-bottom:84px;}
 .cselect-btn .cs-car{font-size:10px;color:var(--sub-text);flex:0 0 auto;}
 .cselect-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;background:var(--pop-bg);border:1px solid var(--pop-line);border-radius:10px;max-height:280px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,0.5);}
 .cselect-panel.tall{max-height:none;}
+.cselect.cs-up .cselect-panel{top:auto;bottom:calc(100% + 4px);}
 .ci-nav-wrap{position:relative;display:inline-block;}
 .ci-nav-arrow{position:absolute;top:63%;transform:translateY(-50%);width:44px;height:64px;border:none;background:none;color:var(--brass);font-size:38px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;z-index:3;text-shadow:0 2px 8px rgba(0,0,0,0.7);}
 .ci-nav-arrow.left{left:-42px;}
@@ -1753,6 +1754,7 @@ let state = {
   searchCardColorMode: 'all',
   searchSetCode: '',
   searchFormat: '',            // '' = any format; a pinned deck pre-fills its own
+  browseFormat: 'commander',   // Inspiration's leader pool
   searchManaCost: '',
   searchRarity: {common:false, uncommon:false, rare:false, mythic:false},
   searchEurMin: 0, searchEurMax: null,
@@ -3874,13 +3876,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.444';
+const APP_VERSION = '2.51.445';
 const CHANGELOG_NOTES = {
   en: [
-    'Format folders now hold your own folders too: make one inside, or move one in \u2014 and a deck born in it takes that format. The move dialog walks into format folders like any other level. The Format rules and Ban lists accordions fold on hardware back. Search gained a Format filter under Set / Expansion: every format Scryfall can judge, plus Admiral\u2019s own pool \u2014 and adding cards to a deck pre-sets it to that deck\u2019s format.'
+    'Picking a format in the new-deck dialog no longer closes it \u2014 it waits for Create. The Search format filter drops up. Inspiration gained a Format drop-up: the leader pool follows it (uncommon creatures for Pauper Commander, PreDH- and Duel-legal commanders, Admiral\u2019s own pool) and decks built from there carry that format. The home page lost its closing line and button; the My Decks filter box reads simply Filter by folder.'
   ],
   nl: [
-    'Formaatmappen bevatten nu ook je eigen mappen: maak er een in, of verplaats er een naartoe \u2014 en een deck dat daar ontstaat krijgt dat formaat. Het verplaatsvenster loopt formaatmappen in als elk ander niveau. De accordeons Formaatregels en Banlijsten vouwen dicht met de hardware-terugknop. Zoeken kreeg een Formaat-filter onder Set / Expansie: elk formaat dat Scryfall kan beoordelen, plus de eigen kaartenpool van Admiral \u2014 en kaarten aan een deck toevoegen zet hem alvast op het formaat van dat deck.'
+    'Een formaat kiezen in het nieuw-deckvenster sluit het niet meer \u2014 het wacht op Aanmaken. Het formaatfilter bij Zoeken klapt omhoog open. Inspiratie kreeg een Formaat-keuze: de leiderpool volgt die (uncommon wezens voor Pauper Commander, PreDH- en Duel-legale commanders, de eigen pool van Admiral) en decks die je daar bouwt krijgen dat formaat. De startpagina verloor de slotregel en knop; het filtervak van Mijn decks zegt nu kortweg Filter op map.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4962,11 +4964,6 @@ function homePageHtml(){
     <div class="home-facts">
       ${facts.map(f=>`<div class="home-fact"><div class="hf-n">${f.n}</div><div class="hf-l">${f.l}</div><div class="hf-s">${f.s}</div></div>`).join('')}
     </div>
-    <p class="home-callout">Your Commander awaits.</p>
-    <button class="home-search-btn" id="homeStartBtn">
-      <span class="hsb-anchor">⚔</span>
-      Take Command
-    </button>
   </main>`;
 }
 function setAppMode(){ return false; }   // retired: there is one app now
@@ -5135,7 +5132,7 @@ function openCROverlay(){
 }
 function wireHomePage(){
   state._crossLanded = false;   // landing animation classes were baked into this render; don't repeat
-  document.getElementById('homeStartBtn').addEventListener('click', ()=>switchPage('browse'));
+  document.getElementById('homeStartBtn')?.addEventListener('click', ()=>switchPage('browse'));
   document.getElementById('homeReadRules').addEventListener('click', ()=>{
     state.settingsRulesOpen = true;
     state.settingsFullRulesOpen = true;
@@ -5264,7 +5261,7 @@ function homeHtml(){
   <main>
     ${decksNoticeHtml()}
     <div class="searchbar" style="margin-bottom:12px;">
-      <input id="deckFilter" placeholder="Filter by folder or commander…" value="${escapeHtml(state.deckFilter||'')}">
+      <input id="deckFilter" placeholder="Filter by folder…" value="${escapeHtml(state.deckFilter||'')}">
     </div>
     ${otherView
       ? `<button class="deck-fab" id="deckSwitchFab" title="Switch to ${isCmdrMode()?'Admiral':'Commander'}">${isCmdrMode()?anchorSvg(20):'⚔'}</button>`
@@ -10757,7 +10754,7 @@ function advancedPanelHtml(){
     ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<div class="toggle-row" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Include off-color cards')}</div><div style="color:var(--sub-text);font-size:10.5px;margin-top:2px;">${trS('Off — only cards legal in this deck. On — every format-legal card, off-color included.')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
     <div class="adv-row"><label>Card Name</label><input id="advName" type="text" placeholder="Any words in the name" value="${escapeHtml(s.searchName)}"></div>
     <div class="adv-row"><label>Format</label>
-      ${cselectHtml('fmtSel', [{v:'',l:'Any format'}].concat(SEARCH_FORMATS.map(([v,l])=>({v, l}))), s.searchFormat, 'Any format', {})}
+      ${cselectHtml('fmtSel', [{v:'',l:'Any format'}].concat(SEARCH_FORMATS.map(([v,l])=>({v, l}))), s.searchFormat, 'Any format', {cls:'cs-up'})}
       ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<p class="adv-hint">Pre-set to the deck you\u2019re adding to.</p>` : ''}
     </div>
     <div class="adv-row"><label>Set / Expansion</label>
@@ -14638,6 +14635,7 @@ function browsePageHtml(){
       <button id="bsClear" class="icon-btn" style="flex:none;" title="${trS('Clear filters')}">✕</button>
     </div>
     <div class="browse-selects">
+      <div class="bs-row">${cselectHtml('bsFmt', FMT_ORDER.map(f=>({v:f, l:fmtFolderGlyph(f, 14)+' '+fmtLabelOf(f)})), state.browseFormat||'commander', 'Format')}</div>
       <div class="bs-row">${cselectHtml('bsCount',
         [{v:'', l:modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors'}].concat(COLOR_COUNTS.filter(c=>c.key).map(c=>({v:c.key, l:c.label}))),
         sel.count, modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors')}</div>
@@ -14656,7 +14654,7 @@ function browsePageHtml(){
    standalone — then land on the recommendations page (solo or as a pair). */
 function maybePairThenReco(c){
   if(!pairAbility(c)){ openAdmiralReco(c); return; }
-  const standin = { admiral: c, partner: null, format: isCmdrMode() ? 'commander' : 'admiral', name: c.name };
+  const standin = { admiral: c, partner: null, format: state.browseFormat || 'commander', name: c.name };
   openPartnerSearch(standin, (partner)=>openAdmiralReco(c, partner), { skippable: true, onSkip: ()=>openAdmiralReco(c) });
 }
 function wireBrowsePage(){
@@ -14673,11 +14671,18 @@ function wireBrowsePage(){
     box().innerHTML = `<div class="status"><div class="spinner"></div></div>`;
     // The exact eligibility pipeline the Appoint sheet uses: verified pool
     // legality plus the client-side leader rules for the current fleet.
-    const clause = isCmdrMode() ? `is:commander ${q}` : `t:legendary ${q}`;
+    // Leader pool per format: Scryfall's is:commander for the commander
+    // family (PDH commanders are the uncommon creatures Scryfall marks
+    // 'restricted' there), Admiral's own legendary pool with P/T.
+    const bf = state.browseFormat || 'commander';
+    const clause = bf === 'admiral' ? `t:legendary ${q}`
+                 : bf === 'paupercommander' ? `t:creature restricted:paupercommander ${q}`
+                 : `is:commander ${q}`;
+    const sfFmt = bf === 'paupercommander' ? 'any' : bf;
     let results = [];
-    try{ const r = await searchAndVerifyLegal(clause, 'name', 40); results = r.results || []; }catch(e){}
+    try{ const r = await searchAndVerifyLegal(clause, 'name', 40, { format: sfFmt }); results = r.results || []; }catch(e){}
     if(mySeq !== _bsSeq) return;   // superseded by a newer search
-    results = results.filter(c => isNonlandFront(c) && !isBanned(c) && (isCmdrMode() ? true : (isLegendary(c) && hasPowerToughness(c))));
+    results = results.filter(c => isNonlandFront(c) && !isBanned(c) && (bf === 'admiral' ? (isLegendary(c) && hasPowerToughness(c)) : true));
     if(!box()) return;
     if(!results.length){ box().innerHTML = `<div class="empty-note" style="margin:8px 0;">No eligible ${isCmdrMode()?'Commander':'Admiral'} matches “${escapeHtml(q)}”.</div>`; return; }
     box().innerHTML = `<div class="sr-grid">${results.slice(0,30).map((c,i)=>`<div class="sr-tile ta-tile" data-i="${i}" role="button">
@@ -14691,6 +14696,13 @@ function wireBrowsePage(){
   document.getElementById('bsName')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); runLeaderSearch(); } });
   if(state.browseNameQ) runLeaderSearch();   // restore results after a re-render
   if(state.browseSel && state.browseSel.combo) ensureComboTagRanks(state.browseSel.combo);
+  _csHandlers.bsFmt = v=>{
+    state.browseFormat = v || 'commander';
+    state.browseCache = {};   // leader results are format-specific
+    render();
+    const q = (document.getElementById('bsName')?.value||'').trim();
+    if(q) document.getElementById('bsNameGo')?.click();
+  };
   _csHandlers.bsCount = v=>{
     state.browseSel.count = v;
     state.browseSel.combo = '';       // combos belong to a color count
@@ -16498,7 +16510,7 @@ function createDeckFromReco(){
   openInAppPrompt('Name your new deck', 'Deck name', `${R.admiral.name}'s Fleet`, (name)=>{
     if(name === null) return;   // cancelled
     const picks = R.pool.filter(c=>R.selected.has(c.name));
-    const d = { id: uid(), name: (name.trim() || `${R.admiral.name}'s Fleet`), admiral: R.admiral, partner: R.partner || null, cards: [], maybeboard: [], tags: {}, primer: '', format: appMode(), createdAt: Date.now(), updatedAt: Date.now() };
+    const d = { id: uid(), name: (name.trim() || `${R.admiral.name}'s Fleet`), admiral: R.admiral, partner: R.partner || null, cards: [], maybeboard: [], tags: {}, primer: '', format: state.browseFormat || appMode(), createdAt: Date.now(), updatedAt: Date.now() };
     state.decksIndex.unshift(d);
     logDeckChange(d, {type:'admiral', name:R.admiral.name, card:R.admiral, prev:null});
     if(R.partner) logDeckChange(d, {type:'admiral', name:R.partner.name, card:R.partner, prev:null});
@@ -17566,9 +17578,9 @@ function renderModal(){
       const fb = document.getElementById('newDeckFmtBtn');
       const fp = document.getElementById('newDeckFmtPop');
       if(fb && fp){
-        fb.addEventListener('click', ()=>{ fp.hidden = !fp.hidden; });
-        fp.querySelectorAll('[data-ndfmt]').forEach(o=>o.addEventListener('mousedown', (ev)=>{
-          ev.preventDefault();
+        fb.addEventListener('click', (ev)=>{ ev.stopPropagation(); fp.hidden = !fp.hidden; });
+        fp.querySelectorAll('[data-ndfmt]').forEach(o=>o.addEventListener('click', (ev)=>{
+          ev.preventDefault(); ev.stopPropagation();   // the pick must never reach the modal backdrop
           window._ndFmt = o.dataset.ndfmt;
           fb.innerHTML = `${o.textContent} <span style="float:right;opacity:0.6;">▾</span>`;
           fp.hidden = true;
