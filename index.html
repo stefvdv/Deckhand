@@ -474,6 +474,9 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .logo-gleam.sweep{opacity:1;background:conic-gradient(from -90deg, rgba(255,236,180,0.95) 0deg, rgba(255,236,180,0.35) 14deg, transparent 30deg 360deg);-webkit-mask:radial-gradient(circle, transparent 0 calc(50% - 5px), #000 calc(50% - 4px) calc(50% - 1px), transparent 50%);mask:radial-gradient(circle, transparent 0 calc(50% - 5px), #000 calc(50% - 4px) calc(50% - 1px), transparent 50%);animation:gleamSweep 1s ease-in-out .15s 1 both;}
 @keyframes gleamSweep{0%{transform:rotate(0);opacity:0;}15%{opacity:1;}85%{opacity:1;}100%{transform:rotate(180deg);opacity:0;}}
 @media (prefers-reduced-motion:reduce){.home-logo,.logo-land-drop,.logo-land-swing{animation:none !important;}.logo-gleam.sweep{animation:none;opacity:0;}}
+.home-desc{z-index:1;max-width:370px;margin:4px auto 6px;text-align:left;}
+.home-desc p{font-size:13px;line-height:1.5;color:var(--ink-text);opacity:0.92;margin:8px 0;}
+.home-desc strong{font-family:'Cinzel',serif;font-size:11.5px;letter-spacing:0.5px;color:var(--brass);}
 .home-formats{z-index:1;width:min(370px,100%);margin:2px auto 8px;display:flex;flex-direction:column;gap:6px;}
 .hfm-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;}
 .hfm-k{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--brass);margin-right:2px;}
@@ -3876,13 +3879,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.448';
+const APP_VERSION = '2.51.449';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration\u2019s colour, combination, Kindred and partner-pair pages now query Scryfall in the chosen format from the start \u2014 PreDH and Duel legality, uncommon creatures for Pauper Commander, Admiral\u2019s pool \u2014 so an illegal commander never loads. Curated theme staples pass the same check, and the \u2694 button appears on Pauper Commander leaders.'
+    'Pauper Commander on Inspiration now finds its leaders: any creature with an uncommon printing. The home page trades its pills, rules link and fact tiles for a fuller description of what the app does.'
   ],
   nl: [
-    'De kleur-, combinatie-, Kindred- en partnerpaar-pagina\u2019s van Inspiratie bevragen Scryfall nu vanaf het begin in het gekozen formaat \u2014 PreDH- en Duel-legaliteit, uncommon wezens voor Pauper Commander, de pool van Admiral \u2014 zodat een illegale commander nooit laadt. Samengestelde thema-staples doorlopen dezelfde toets, en de \u2694-knop verschijnt bij Pauper Commander-leiders.'
+    'Pauper Commander op Inspiratie vindt nu zijn leiders: elk wezen met een uncommon-druk. De startpagina ruilt zijn pillen, regel-link en feitentegels in voor een vollediger beschrijving van wat de app kan.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4928,13 +4931,6 @@ function wireNeedDeck(){ document.getElementById('goDecksBtn')?.addEventListener
 /* ---------------- HOME (welcome page) ---------------- */
 
 function homePageHtml(){
-  const facts = [
-    {n:'5', l:'formats', s:'to build in'},
-    {n:'11', l:'rulebooks', s:'with ban lists'},
-    {n:'100%', l:'offline', s:'on your phone'}
-  ];
-  const build = FMT_ORDER.map(fmtLabelOf);
-  const ref = ['Standard','Modern','Legacy','Vintage','Pauper','Premodern'];
   return `
   <main class="home-page">
     <div class="home-sea"></div>
@@ -4956,13 +4952,13 @@ function homePageHtml(){
       <li>Test opening hands, castability and power bracket before you sit down</li>
       <li>Count life, log games and share decks — everything offline-ready</li>
     </ul>
-    <div class="home-formats">
-      <div class="hfm-row"><span class="hfm-k">Build in</span>${build.map(f=>`<span class="hfm-chip">${f}</span>`).join('')}</div>
-      <div class="hfm-row"><span class="hfm-k">Rules &amp; bans</span>${ref.map(f=>`<span class="hfm-chip dim">${f}</span>`).join('')}</div>
-    </div>
-    <p class="home-tagline home-tagline-2" style="margin-top:2px;"><button class="inline-link" id="homeReadRules">Read the format rules →</button></p>
-    <div class="home-facts">
-      ${facts.map(f=>`<div class="home-fact"><div class="hf-n">${f.n}</div><div class="hf-l">${f.l}</div><div class="hf-s">${f.s}</div></div>`).join('')}
+    <div class="home-desc">
+      <p><strong>Formats.</strong> Build decks in Commander, Admiral, Pauper Commander, PreDH and Duel Commander. Every deck carries its own format; searches, suggestions and legality checks follow it, and My Decks files each deck under its format automatically. Rules and current ban lists for eleven formats, from Standard to Vintage, live under Extras.</p>
+      <p><strong>Deck building.</strong> Search Scryfall with full advanced filters, add cards straight into the deck you\u2019re working on, and see colour identity, ban list and format legality judged live. Import from Moxfield, Archidekt, MTGO or plain text; export, print proxies, or share a deck as a link or image.</p>
+      <p><strong>Inspiration.</strong> Find a commander by colours, theme or Kindred, then open its recommendation page: the most-played cards, high-synergy picks, combos from Commander Spellbook, and budget alternatives that do the same job for less.</p>
+      <p><strong>Collection.</strong> Track what you own in binders, keep a wants list, log trades, and watch Cardmarket prices with a history graph on every card.</p>
+      <p><strong>Testing.</strong> Draw opening hands with mulligans, check each card\u2019s castability from your mana base, estimate the deck\u2019s power bracket, and let the land suggester round out your mana.</p>
+      <p><strong>At the table.</strong> A multiplayer life counter with commander damage and poison, a game log with winrates, and everything stored on your phone so it works offline.</p>
     </div>
   </main>`;
 }
@@ -5133,7 +5129,7 @@ function openCROverlay(){
 function wireHomePage(){
   state._crossLanded = false;   // landing animation classes were baked into this render; don't repeat
   document.getElementById('homeStartBtn')?.addEventListener('click', ()=>switchPage('browse'));
-  document.getElementById('homeReadRules').addEventListener('click', ()=>{
+  document.getElementById('homeReadRules')?.addEventListener('click', ()=>{
     state.settingsRulesOpen = true;
     state.settingsFullRulesOpen = true;
     switchPage('settings');
@@ -13947,7 +13943,7 @@ function browseQuery(){
 /* Inspiration's chosen format drives every leader query on the page. */
 function browseFmt(){ return state.browseFormat || 'commander'; }
 function browseKey(){ return JSON.stringify(state.browseSel) + '|' + browseFmt(); }
-function browseLeaderBase(){ return browseFmt() === 'paupercommander' ? 't:creature restricted:paupercommander' : 't:legendary t:creature'; }
+function browseLeaderBase(){ return browseFmt() === 'paupercommander' ? 't:creature r:uncommon' : 't:legendary t:creature'; }
 function browseSfOpts(){ return { format: browseFmt() === 'paupercommander' ? 'any' : browseFmt() }; }
 /* Pauper Commander leaders are uncommon creatures, legendary or not. */
 function leaderTypeOk(c){ return isLegendary(c) || (state.screen === 'browse' && browseFmt() === 'paupercommander'); }
@@ -14503,7 +14499,7 @@ async function filterCardsByFormat(cards, fmt, role){
     const names = '(' + ch.map(n=>`!"${n.replace(/"/g,'')}"`).join(' or ') + ')';
     let pre = '', sfFmt = fmt;
     if(role === 'leader'){
-      pre = fmt === 'paupercommander' ? 't:creature restricted:paupercommander ' : fmt === 'admiral' ? 't:legendary ' : 'is:commander ';
+      pre = fmt === 'paupercommander' ? 't:creature r:uncommon ' : fmt === 'admiral' ? 't:legendary ' : 'is:commander ';
       if(fmt === 'paupercommander') sfFmt = 'any';
     }
     try{
@@ -14728,7 +14724,7 @@ function wireBrowsePage(){
     // 'restricted' there), Admiral's own legendary pool with P/T.
     const bf = state.browseFormat || 'commander';
     const clause = bf === 'admiral' ? `t:legendary ${q}`
-                 : bf === 'paupercommander' ? `t:creature restricted:paupercommander ${q}`
+                 : bf === 'paupercommander' ? `t:creature r:uncommon ${q}`
                  : `is:commander ${q}`;
     const sfFmt = bf === 'paupercommander' ? 'any' : bf;
     let results = [];
@@ -15062,7 +15058,7 @@ async function loadLeaderPairs(key, combo, theme){
   let results = [];
   try{
     const themeClause = theme ? themeQueryClause(theme, true) : '';
-    const r = await searchAndVerifyLegal([browseFmt() === 'paupercommander' ? 'restricted:paupercommander' : 't:legendary', colClause, ANY_PAIR_CLAUSE, themeClause].filter(Boolean).join(' '), 'edhrec', 350, browseSfOpts());
+    const r = await searchAndVerifyLegal([browseFmt() === 'paupercommander' ? 't:creature r:uncommon' : 't:legendary', colClause, ANY_PAIR_CLAUSE, themeClause].filter(Boolean).join(' '), 'edhrec', 350, browseSfOpts());
     results = r.results || [];
   }catch(e){}
   const cands = results.filter(c=> isNonlandFront(c) && leaderTypeOk(c)
