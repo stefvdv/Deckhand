@@ -312,7 +312,8 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .otag-pop{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;overflow-y:auto;max-height:min(48vh,380px);z-index:40;}
 .df-compact, .df-compact .adv-row, #dlPanelBox{overflow:visible;}
 .modal-sheet{overflow:visible;}
-#newDeckFmtPop{bottom:auto;top:calc(100% + 4px);flex-direction:column;}
+#newDeckFmtPop{z-index:300;}
+.modal-backdrop{overflow:visible;}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
 /* Inside .searchbar the generic button rule paints brass — override back
@@ -3822,13 +3823,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.435';
+const APP_VERSION = '2.51.436';
 const CHANGELOG_NOTES = {
   en: [
-    'The New Deck format list opens downward now \u2014 upward ran it off the top of the popup, hiding Admiral.'
+    'THE MERGE: one decks page for every format \u2014 Admiral and Commander decks stand together, and the old app-version switch retired from Extras. The New Deck format list opens upward again and may extend past the popup\u2019s edge. Format folder tiles with set icons arrive next.'
   ],
   nl: [
-    'De formaatlijst van Nieuw deck opent nu naar beneden \u2014 omhoog liep hij van de bovenkant van de popup af, waardoor Admiral verborgen bleef.'
+    'DE SAMENVOEGING: \u00e9\u00e9n deckpagina voor elk formaat \u2014 Admiral- en Commander-decks staan samen, en de oude app-versieschakelaar verdween uit Extra\u2019s. De formaatlijst van Nieuw deck opent weer omhoog en mag voorbij de rand van de popup reiken. Formaatmap-tegels met seticonen volgen hierna.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5261,7 +5262,7 @@ function homeHtml(){
   // When searching, flatten across all folders; otherwise show current folder.
   const nav = state.folderNav || null;
   const matchDeck = d=> (d.name||'').toLowerCase().includes(q) || deckLeaders(d).some(L=>(L.name||'').toLowerCase().includes(q));
-  const inMode = d => deckFormat(d) === appMode();
+  const inMode = d => true;   // ONE decks page — all formats together (auto format folders refine this view)
   const otherMode = state.decksIndex.filter(d=>!inMode(d));
   const otherView = nav === '__otherfmt__';
   const favs = (searching || otherView) ? [] : state.decksIndex.filter(d=>inMode(d) && d.fav && !d.collected && (d.folderId||null)===nav);
@@ -16492,14 +16493,6 @@ function settingsPageHtml(){
     </div>
     <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">Comprehensive Rules</div><div class="l2">The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back</div></div></div>
     <div class="settings-section">
-      <div class="settings-row"><div><div class="l1">Game format</div><div class="l2">${isCmdrMode() ? 'Regular Commander: 100 cards, official legality, 40 life, 21 cmdr damage. Admiral decks wait in their own folder.' : 'Admiral — or switch the whole app to regular Commander. Decks of the other format wait in their own folder.'}</div></div>
-        <div class="seg seg-inline">
-          <button data-mode-choice="admiral" class="${!isCmdrMode()?'active':''}">Admiral</button>
-          <button data-mode-choice="commander" class="${isCmdrMode()?'active':''}">Commander</button>
-        </div>
-      </div>
-    </div>
-    <div class="settings-section">
       <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Eleven formats this app knows — tap to unfold.</div></div><span class="l2">▾</span></div>
       <div id="fmtRulesBody" hidden style="padding:0 12px 10px;"></div>
     </div>
@@ -16758,9 +16751,6 @@ function wireSettingsPage(){
     toast(code === 'nl' ? 'Taal opgeslagen.' : 'Language saved.');
   }));
   if(isCmdrMode()) ensureCmdrBans(!((state.cmdrBans||{}).names||[]).length);
-  document.querySelectorAll('[data-mode-choice]').forEach(b=>b.addEventListener('click', ()=>{
-    if(setAppMode(b.dataset.modeChoice === 'commander' ? 'commander' : 'admiral')) render();
-  }));
   document.getElementById('backupBtn').addEventListener('click', ()=>{ try{localStorage.setItem(LS_PREFIX+'lastBackup',String(Date.now()));}catch(e){} backupAllDecks(); });
   document.getElementById('restoreBtn').addEventListener('click', ()=>document.getElementById('restoreFile').click());
   document.getElementById('restoreFile').addEventListener('change', e=>{
