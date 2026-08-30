@@ -311,6 +311,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .otag-pop{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;overflow-y:auto;max-height:min(48vh,380px);z-index:40;}
 .df-compact, .df-compact .adv-row, #dlPanelBox{overflow:visible;}
+.modal-sheet{overflow:visible;}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
 /* Inside .searchbar the generic button rule paints brass — override back
@@ -3820,13 +3821,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.433';
+const APP_VERSION = '2.51.434';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck creation grew the full Moxfield-style flow: name, format, a commander search that only offers commanders legal in the chosen format \u2014 and a Partner box that appears when your pick allows one. The deck is born with its command zone filled.'
+    'The New Deck popup speaks the app\u2019s language now: an in-house format drop-up (Admiral included, five formats), and the commander search shows its live result list as you type \u2014 the modal had been clipping it. Switching format resets the picks, since legality changed.'
   ],
   nl: [
-    'Deck aanmaken kreeg de volledige Moxfield-stijl: naam, formaat, een commanderzoeker die alleen commanders toont die legaal zijn in het gekozen formaat \u2014 en een Partnervak dat verschijnt wanneer je keuze er een toelaat. Het deck wordt geboren met gevulde commandozone.'
+    'De Nieuw-deck-popup spreekt nu de taal van de app: een eigen formaat-uitklapper (Admiral inbegrepen, vijf formaten), en de commanderzoeker toont zijn live resultatenlijst terwijl je typt \u2014 het venster knipte hem eerder af. Van formaat wisselen wist de keuzes, want de legaliteit veranderde.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -17528,14 +17529,34 @@ function renderModal(){
       });
     });
   } else if(m.type==='newdeck'){
-    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>${isCmdrMode()?'New Deck':'New Fleet'}</h3>${isCmdrMode() ? `<select id="newDeckFmt" class="col-filter-input" style="width:100%;margin-bottom:10px;">
-<option value="commander">Commander</option>
-<option value="paupercommander">Pauper Commander</option>
-<option value="predh">PreDH</option>
-<option value="duel">Duel Commander</option>
-</select>
+    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>${isCmdrMode()?'New Deck':'New Fleet'}</h3>${isCmdrMode() ? `<div class="otag-wrap" style="margin-bottom:10px;"><button type="button" id="newDeckFmtBtn" class="col-filter-input" style="width:100%;text-align:left;">Commander <span style="float:right;opacity:0.6;">▾</span></button>
+<div id="newDeckFmtPop" class="otag-pop" hidden>
+<button type="button" data-ndfmt="commander">Commander</button>
+<button type="button" data-ndfmt="admiral">Admiral</button>
+<button type="button" data-ndfmt="paupercommander">Pauper Commander</button>
+<button type="button" data-ndfmt="predh">PreDH</button>
+<button type="button" data-ndfmt="duel">Duel Commander</button>
+</div></div>
 <div class="otag-wrap" style="margin-bottom:10px;"><input id="ndCmd" class="col-filter-input" placeholder="Who is your commander? (optional)" autocomplete="off" style="width:100%;"><div id="ndCmdPop" class="otag-pop" hidden></div></div>
 <div class="otag-wrap" id="ndP2Wrap" hidden style="margin-bottom:10px;"><input id="ndCmd2" class="col-filter-input" placeholder="Partner…" autocomplete="off" style="width:100%;"><div id="ndCmd2Pop" class="otag-pop" hidden></div></div>` : ''}<input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
+    window._ndFmt = 'commander';
+    {
+      const fb = document.getElementById('newDeckFmtBtn');
+      const fp = document.getElementById('newDeckFmtPop');
+      if(fb && fp){
+        fb.addEventListener('click', ()=>{ fp.hidden = !fp.hidden; });
+        fp.querySelectorAll('[data-ndfmt]').forEach(o=>o.addEventListener('mousedown', (ev)=>{
+          ev.preventDefault();
+          window._ndFmt = o.dataset.ndfmt;
+          fb.innerHTML = `${o.textContent} <span style="float:right;opacity:0.6;">▾</span>`;
+          fp.hidden = true;
+          window._ndPick = null; window._ndPick2 = null;
+          const c1 = document.getElementById('ndCmd'); if(c1) c1.value = '';
+          const w2 = document.getElementById('ndP2Wrap'); if(w2) w2.hidden = true;
+        }));
+        document.addEventListener('pointerdown', (ev)=>{ if(!fp.hidden && ev.target.closest && !ev.target.closest('#newDeckFmtBtn') && !ev.target.closest('#newDeckFmtPop')) fp.hidden = true; }, true);
+      }
+    }
     // Commander pickers: per-format-legal search, partner box unlocks
     // when the chosen commander's text allows one.
     window._ndPick = null; window._ndPick2 = null;
@@ -17546,9 +17567,9 @@ function renderModal(){
       const fill = async ()=>{
         const q = inp.value.trim();
         if(q.length < 2){ pop.hidden = true; return; }
-        const fmt2 = document.getElementById('newDeckFmt')?.value || 'commander';
+        const fmt2 = window._ndFmt || 'commander';
         try{
-          const r = await sfFetch(`${SF_BASE}/cards/search?q=${encodeURIComponent('is:commander legal:' + fmt2 + ' ' + q)}`);
+          const r = await sfFetch(`${SF_BASE}/cards/search?q=${encodeURIComponent((fmt2 === 'admiral' ? 'is:commander ' : 'is:commander legal:' + fmt2 + ' ') + q)}`);
           if(!r.ok) throw 0;
           const j = await r.json();
           const hits = (j.data || []).slice(0, 24);
@@ -17575,7 +17596,7 @@ function renderModal(){
     wirePicker('ndCmd2', 'ndCmd2Pop', 2);
     document.getElementById('createBtn').addEventListener('click', ()=>{
       const name = document.getElementById('newDeckName').value.trim() || 'Untitled Fleet';
-      const fmt = document.getElementById('newDeckFmt')?.value;
+      const fmt = isCmdrMode() ? (window._ndFmt || 'commander') : 'admiral';
       const cmd = window._ndPick, p2 = window._ndPick2;
       closeModal(); createNewDeck(name, fmt, cmd, p2);
     });
