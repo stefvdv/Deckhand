@@ -3823,13 +3823,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.437';
+const APP_VERSION = '2.51.438';
 const CHANGELOG_NOTES = {
   en: [
-    'Admiral decks are truly reachable now \u2014 folders still carried the old format filter \u2014 and the New Deck format list floats free over everything, clipped by nothing.'
+    'Extras shed its old Format Rules and Banned List rows \u2014 the new eleven-format accordions carry both jobs now.'
   ],
   nl: [
-    'Admiral-decks zijn nu \u00e9cht bereikbaar \u2014 mappen droegen nog het oude formaatfilter \u2014 en de formaatlijst van Nieuw deck zweeft vrij over alles heen, door niets afgeknipt.'
+    'Extra\u2019s liet zijn oude Formaatregels- en Banlijst-rijen vallen \u2014 de nieuwe elf-formaten-accordeons dragen beide taken nu.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -16479,11 +16479,7 @@ function settingsPageHtml(){
   return `
   <main class="settings-main">
     <div class="settings-section"><div class="settings-row" id="lifeRow"><div class="l1">Life Counter</div><div class="l2">Open the multiplayer life tracker</div></div></div>
-    <div class="settings-section">
-      <div class="settings-row" data-expand="rules"><div class="l1">Format Rules</div><div class="l2">Deckbuilding &amp; play rules for ${fmtName()}</div></div>
-      <div class="settings-body ${state.settingsRulesOpen?'':'collapsed'}" id="rulesBody">${quickRulesHtml()}<button class="ghost-btn" id="fullRulesToggle" style="width:100%;margin:6px 0 10px;">${state.settingsFullRulesOpen?'▾':'▸'} Read the full rules — every mechanic in detail</button><div id="fullRulesBody">${state.settingsFullRulesOpen ? rulesTextHtml() : ''}</div>${autoSets.codes.length?`<div class="rules-text" style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:12px;background:var(--brass-glow);"><h4>Newly Legalized Sets</h4><p>These sets joined the format automatically on release — Standard-legal (the format once known as Type 2), in-universe Magic sets per Scryfall's data:</p><ul>${autoSets.codes.map(c=>`<li>${escapeHtml(autoSets.names[c]||c.toUpperCase())}</li>`).join('')}</ul><p style="font-size:11px;color:var(--sub-text);">Universes Beyond sets never auto-join — only the publisher's curated selection applies.</p></div>`:''}</div>
-    </div>
-    <div class="settings-section">
+        <div class="settings-section">
       <div class="settings-row" data-expand="banlist"><div class="l1">Banned List</div><div class="l2">${visibleBans().length} cards — ${isCmdrMode()?'the official Commander list, live from Scryfall':'tap a name to see it'}${!isCmdrMode() && anyUBOn()?` · incl ${EFFECTIVE_BANS.filter(n=>EFFECTIVE_UB_BANS.has(norm(n))).length} Universes Beyond`:''}</div></div>
       <div class="settings-body ${state.settingsBanOpen?'':'collapsed'}" id="banBody">
         ${isCmdrMode()?'':`<button class="ghost-btn" id="banWhyToggle" style="width:100%;margin-bottom:10px;">${state.settingsBanWhyOpen?'▾':'▸'} Why these bans? The pillars behind the list</button>
