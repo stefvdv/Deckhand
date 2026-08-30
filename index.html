@@ -3823,13 +3823,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.438';
+const APP_VERSION = '2.51.439';
 const CHANGELOG_NOTES = {
   en: [
-    'Extras shed its old Format Rules and Banned List rows \u2014 the new eleven-format accordions carry both jobs now.'
+    'The old Banned List row left Extras \u2014 the per-format Ban lists accordion is the single home now.'
   ],
   nl: [
-    'Extra\u2019s liet zijn oude Formaatregels- en Banlijst-rijen vallen \u2014 de nieuwe elf-formaten-accordeons dragen beide taken nu.'
+    'De oude Banlijst-rij verliet Extra\u2019s \u2014 de banlijsten-accordeon per formaat is nu het enige thuis.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -16479,15 +16479,7 @@ function settingsPageHtml(){
   return `
   <main class="settings-main">
     <div class="settings-section"><div class="settings-row" id="lifeRow"><div class="l1">Life Counter</div><div class="l2">Open the multiplayer life tracker</div></div></div>
-        <div class="settings-section">
-      <div class="settings-row" data-expand="banlist"><div class="l1">Banned List</div><div class="l2">${visibleBans().length} cards — ${isCmdrMode()?'the official Commander list, live from Scryfall':'tap a name to see it'}${!isCmdrMode() && anyUBOn()?` · incl ${EFFECTIVE_BANS.filter(n=>EFFECTIVE_UB_BANS.has(norm(n))).length} Universes Beyond`:''}</div></div>
-      <div class="settings-body ${state.settingsBanOpen?'':'collapsed'}" id="banBody">
-        ${isCmdrMode()?'':`<button class="ghost-btn" id="banWhyToggle" style="width:100%;margin-bottom:10px;">${state.settingsBanWhyOpen?'▾':'▸'} Why these bans? The pillars behind the list</button>
-        <div id="banWhyBody">${state.settingsBanWhyOpen ? banPillarsHtml() : ''}</div>`}
-        <div class="banlist-grid">${visibleBans().map(n=>`<button class="ban-item" data-name="${encodeURIComponent(n)}">${escapeHtml(n)}${EFFECTIVE_UB_BANS.has(norm(n))?' <span class="ub-mark" style="position:static;padding:1px 4px;">UB</span>':''}</button>`).join('')}</div>
-      </div>
-    </div>
-    <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">Comprehensive Rules</div><div class="l2">The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back</div></div></div>
+            <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">Comprehensive Rules</div><div class="l2">The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back</div></div></div>
     <div class="settings-section">
       <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Eleven formats this app knows — tap to unfold.</div></div><span class="l2">▾</span></div>
       <div id="fmtRulesBody" hidden style="padding:0 12px 10px;"></div>
