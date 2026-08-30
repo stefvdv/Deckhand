@@ -458,7 +458,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .home-points li{position:relative;padding-left:18px;margin:7px 0;font-size:13.5px;line-height:1.45;color:var(--ink-text);opacity:0.92;}
 .home-points li::before{content:'✦';position:absolute;left:0;top:1px;color:var(--brass);font-size:10px;}
 .home-hero-wrap{position:relative;}
-.home-logo{cursor:pointer;animation:logoIdle 3.4s ease-in-out infinite;}
+.home-logo{cursor:default;animation:logoIdle 3.4s ease-in-out infinite;}
 @keyframes logoIdle{0%,100%{transform:scale(1);filter:drop-shadow(0 0 6px rgba(217,164,65,0.18));}50%{transform:scale(1.035);filter:drop-shadow(0 0 16px rgba(217,164,65,0.42));}}
 .logo-depart-swing .cl-sword-l{animation:swordL .55s ease-in-out 1 !important;}
 .logo-depart-swing .cl-sword-r{animation:swordR .55s ease-in-out 1 !important;}
@@ -474,6 +474,11 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .logo-gleam.sweep{opacity:1;background:conic-gradient(from -90deg, rgba(255,236,180,0.95) 0deg, rgba(255,236,180,0.35) 14deg, transparent 30deg 360deg);-webkit-mask:radial-gradient(circle, transparent 0 calc(50% - 5px), #000 calc(50% - 4px) calc(50% - 1px), transparent 50%);mask:radial-gradient(circle, transparent 0 calc(50% - 5px), #000 calc(50% - 4px) calc(50% - 1px), transparent 50%);animation:gleamSweep 1s ease-in-out .15s 1 both;}
 @keyframes gleamSweep{0%{transform:rotate(0);opacity:0;}15%{opacity:1;}85%{opacity:1;}100%{transform:rotate(180deg);opacity:0;}}
 @media (prefers-reduced-motion:reduce){.home-logo,.logo-land-drop,.logo-land-swing{animation:none !important;}.logo-gleam.sweep{animation:none;opacity:0;}}
+.home-formats{z-index:1;width:min(370px,100%);margin:2px auto 8px;display:flex;flex-direction:column;gap:6px;}
+.hfm-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;}
+.hfm-k{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--brass);margin-right:2px;}
+.hfm-chip{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--brass-dim);color:var(--ink-text);background:var(--panel);}
+.hfm-chip.dim{opacity:0.62;}
 .home-kicker{z-index:1;font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--brass);margin:0 0 6px;opacity:0.95;}
 .home-tagline{z-index:1;font-size:12.5px;color:var(--sub-text);max-width:350px;line-height:1.5;margin:0 0 6px;}
 .home-tagline-2{margin-bottom:10px;}
@@ -1543,11 +1548,7 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
   <div class="splash-appname">Admirals &amp; Commanders MTG</div>
 </div>
 <script>
-try{
-  if(localStorage.getItem('admiral_app:appMode') === 'commander'){
-    document.documentElement.setAttribute('data-mode','commander');
-  }
-}catch(e){}
+document.documentElement.setAttribute('data-mode','commander');
 </script>
 <div id="root"></div>
 <div class="toast" id="toast"></div>
@@ -1605,7 +1606,9 @@ const BANNED_NAMES = [
 ];
 const DECK_TOTAL = 60;
 /* ---------- Dual format: Admiral & Commander ---------- */
-function appMode(){ return state.appMode === 'commander' ? 'commander' : 'admiral'; }
+/* ONE app since v2.51.442: the Commander look is the app's look. Admiral survives
+   only as a deck FORMAT (deckFormat), never as an app mode. */
+function appMode(){ return 'commander'; }
 function isCmdrMode(){ return appMode() === 'commander'; }
 function fmtName(d){
   const f = d && d.format ? d.format : appMode();
@@ -1940,11 +1943,13 @@ document.addEventListener('click', (e)=>{
   if(blRow){
     const b = document.getElementById('banListsBody');
     if(b){
-      if(!b.innerHTML) b.innerHTML = FORMAT_RULES.filter(f=>f[0] !== 'admiral' && f[0] !== 'premodern').map(([id, label])=>`<div class="settings-row" data-banfmt="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-banbox="${id}" hidden></div></div></div>`).join('') + `<div class="settings-row"><div><div class="l1">Admiral</div><div class="l2">Custom list — enforced by every Admiral deck check; see the Admiral rules card above.</div></div></div>`;
+      if(!b.innerHTML) b.innerHTML = FORMAT_RULES.filter(f=>f[0] !== 'admiral' && f[0] !== 'premodern').map(([id, label])=>`<div class="settings-row" data-banfmt="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-banbox="${id}" hidden></div></div></div>`).join('') + `<div class="settings-row" data-banfmt="admiral" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">Admiral</div><div class="l2" data-banbox="admiral" hidden></div></div></div>`;
       b.hidden = !b.hidden;
     }
     return;
   }
+  const bi = e.target.closest && e.target.closest('.ban-item');
+  if(bi && bi.closest('[data-banbox]')){ e.stopPropagation(); openBanCardPreview(bi); return; }
   const bf = e.target.closest && e.target.closest('[data-banfmt]');
   if(bf){
     const box = bf.querySelector('[data-banbox]');
@@ -3836,13 +3841,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.440';
+const APP_VERSION = '2.51.443';
 const CHANGELOG_NOTES = {
   en: [
-    'My Decks now files every deck automatically: format folders \u2014 Commander, Admiral, Pauper Commander, PreDH, Duel Commander \u2014 sit at the foot of the page, and a deck you have not placed in a folder of your own lives in its format\u2019s folder. Creating a deck inside one preselects that format.'
+    'Ban lists are back in two columns: every format\u2019s list \u2014 Admiral\u2019s own included \u2014 unfolds as tappable card names that open the card image. Folders gained Move to\u2026 on long-press, so a folder can be nested into another (never into itself).'
   ],
   nl: [
-    'Mijn decks sorteert nu elk deck automatisch: formaatmappen \u2014 Commander, Admiral, Pauper Commander, PreDH, Duel Commander \u2014 staan onderaan de pagina, en een deck dat je niet zelf in een map hebt gezet, woont in de map van zijn formaat. Een deck aanmaken in zo\u2019n map kiest dat formaat alvast.'
+    'Banlijsten staan weer in twee kolommen: elke lijst \u2014 ook die van Admiral \u2014 vouwt open als tikbare kaartnamen die de kaartafbeelding openen. Mappen kregen Move to\u2026 bij lang drukken, zodat een map in een andere map kan (nooit in zichzelf).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -3863,31 +3868,24 @@ function maybeShowWelcome(){
           <p style="margin:8px 0;">${NL
             ? 'Bouw decks, beheer je collectie en verlanglijst, volg Cardmarket-prijzen, vind combo\u2019s en budgetalternatieven, log je potjes en deel je decks \u2014 alles offline-klaar op je telefoon.'
             : 'Build decks, manage your collection and wants, track Cardmarket prices, find combos and budget alternatives, log your games and share your decks \u2014 all offline-ready on your phone.'}</p>
-          <p style="margin:8px 0;">${NL ? 'Deze app is het thuis van twee singleton Magic-formats voor vier spelers:' : 'This app is home to two four-player, singleton Magic formats:'}</p>
           <p style="margin:8px 0;">${NL
-            ? `<strong>${anchorSvg(14)} Admiral</strong> — een 60-kaarten-format geleid door een legendarische Admiral. Decks bevatten geen landen (mana komt uit een gedeelde <strong>Landing Zone</strong> met basics), en de kaartenpool is alles wat ooit Standard-legaal was.`
-            : `<strong>${anchorSvg(14)} Admiral</strong> — a 60-card format led by a legendary Admiral. Decks hold no lands (mana comes from a shared <strong>Landing Zone</strong> of basics), and the card pool is everything that's ever been Standard-legal.`}</p>
+            ? 'Bouw in <strong>Commander</strong>, <strong>Admiral</strong>, <strong>Pauper Commander</strong>, <strong>PreDH</strong> en <strong>Duel Commander</strong> \u2014 elk deck kent zijn eigen formaat en wordt daarop gecontroleerd. Regels en banlijsten van elf formaten staan onder Extra\u2019s.'
+            : 'Build in <strong>Commander</strong>, <strong>Admiral</strong>, <strong>Pauper Commander</strong>, <strong>PreDH</strong> and <strong>Duel Commander</strong> \u2014 every deck carries its own format and is checked against it. Rules and ban lists for eleven formats live under Extras.'}</p>
           <p style="margin:8px 0;">${NL
-            ? `<strong>⚔ Commander</strong> — het klassieke 100-kaarten-format geleid door een legendarische Commander, 40 levens, met Magic's volledige kaartenpool en de officiële banlijst.`
-            : `<strong>⚔ Commander</strong> — the classic 100-card format led by a legendary Commander, 40 life, using Magic's full card pool and the official banlist.`}</p>
-          <p style="margin:8px 0;">${NL
-            ? `<strong>Voor welk format ga je deze app gebruiken?</strong> Kies er één om te beginnen — wisselen kan altijd onder <strong>Extra's</strong>, of door op het logo op de startpagina te tikken.`
-            : `<strong>Which format do you plan to use this app for?</strong> Pick one to begin — you can switch anytime under <strong>Extras</strong>, or by tapping the logo on the home page.`}</p>
+            ? `<strong>${anchorSvg(14)} Admiral</strong> is het eigen format van deze app: 60 kaarten singleton, geen landen (mana komt uit een gedeelde <strong>Landing Zone</strong>), alles wat ooit Standard-legaal was.`
+            : `<strong>${anchorSvg(14)} Admiral</strong> is this app\u2019s own format: 60-card singleton, no lands (mana comes from a shared <strong>Landing Zone</strong>), everything that was ever Standard-legal.`}</p>
           <p style="margin:8px 0;font-size:12px;color:var(--sub-text);"><strong>📲 Tip:</strong> ${NL
             ? 'installeer dit als app \u2014 Android (Chrome): \u22ee \u2192 <em>App installeren</em>. Kies \u00e9cht \u201cApp installeren\u201d, niet \u201cToevoegen aan startscherm\u201d: alleen de app-installatie overleeft een herstart van je telefoon. iPhone (Safari): Delen \u2192 Zet op beginscherm.'
             : 'install this as an app \u2014 Android (Chrome): \u22ee \u2192 <em>Install app</em>. Pick the real \u201cInstall app\u201d, not \u201cAdd to Home screen\u201d: only the app install survives a phone restart. iPhone (Safari): Share \u2192 Add to Home Screen.'}</p>
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;">
-          <button class="primary-btn" id="welcomeAdmiral" style="flex:1;">${anchorSvg(15)} Admiral</button>
-          <button class="primary-btn" id="welcomeCommander" style="flex:1;">⚔ Commander</button>
+          <button class="primary-btn" id="welcomeGo" style="flex:1;">⚔ ${NL ? 'Aan de slag' : 'Take command'}</button>
         </div>
       </div>`;
       document.body.appendChild(el);
       el.style.alignItems = 'center';
       const done = ()=>{ el.remove(); try{ localStorage.setItem(LS_PREFIX+'welcomed','1'); }catch(e){} };
-      const choose = (mode)=>{ setAppMode(mode, {quiet:true}); done(); render(); };
-      document.getElementById('welcomeAdmiral').addEventListener('click', ()=>choose('admiral'));
-      document.getElementById('welcomeCommander').addEventListener('click', ()=>choose('commander'));
+      document.getElementById('welcomeGo').addEventListener('click', ()=>{ done(); render(); });
       el.addEventListener('click', e=>{ if(e.target===el) done(); });
     };
     if(pendingShareToken() || document.getElementById('showcaseOverlay')){
@@ -4058,7 +4056,7 @@ function createFolder(name, parentId, icon){
   return f;
 }
 function folderFormat(f){ return f && f.format ? f.format : 'admiral'; }
-function childFolders(parentId){ return (state.folders||[]).filter(f=>(f.parentId||null)===(parentId||null) && folderFormat(f)===appMode()); }
+function childFolders(parentId){ return (state.folders||[]).filter(f=>(f.parentId||null)===(parentId||null)); }   // ONE app: every folder shows
 function decksInFolder(folderId){ return state.decksIndex.filter(d=>(d.folderId||null)===(folderId||null)); }
 /* decks of the CURRENTLY ACTIVE format only, for folder membership + counts */
 function decksInFolderMode(folderId){ return decksInFolder(folderId); }   // THE MERGE: folders show every format
@@ -4175,7 +4173,6 @@ async function deleteDeckStorage(id){
 
 async function loadSettings(){
   state.priceCache = loadPriceCache();
-  try{ const m = localStorage.getItem(LS_PREFIX+'appMode'); if(m==='commander') state.appMode = 'commander'; }catch(e){}
   state.collection = loadCollection();
   try{
     const raw = localStorage.getItem(LS_PREFIX+'settings:app');
@@ -4864,31 +4861,8 @@ function wireNav(){
   document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click', ()=>switchPage(b.dataset.page, true)));
   const hb = document.getElementById('homeBtn');
   if(hb){
-    // Tap: home. Long-press (~½s): switch between Admiral and Commander.
-    let lpT = null, lpFired = false;
-    const lpStart = ()=>{ lpFired = false; lpT = setTimeout(()=>{
-      lpFired = true;
-      try{ navigator.vibrate && navigator.vibrate(18); }catch(e){}
-      setAppMode(isCmdrMode() ? 'admiral' : 'commander');
-      state.browseCache = {};   // browse results are mode-specific
-      if(state.screen === 'decklist' || state.screen === 'decks'){
-        // Deck views belong to the fleet you were in — cross over to the
-        // other side's My Stuff instead of staring at the wrong fleet's deck.
-        switchPage('decks');
-      } else {
-        render();   // stay on the page, re-dressed in the other side's colours
-      }
-    }, 550); };
-    const lpCancel = ()=>{ if(lpT){ clearTimeout(lpT); lpT = null; } };
-    hb.addEventListener('touchstart', lpStart, {passive:true});
-    hb.addEventListener('touchend', lpCancel);
-    hb.addEventListener('touchmove', lpCancel);
-    hb.addEventListener('touchcancel', lpCancel);
-    hb.addEventListener('mousedown', lpStart);
-    hb.addEventListener('mouseup', lpCancel);
-    hb.addEventListener('mouseleave', lpCancel);
     hb.addEventListener('contextmenu', e=>e.preventDefault());
-    hb.addEventListener('click', ()=>{ if(lpFired){ lpFired = false; return; } switchPage('home'); });
+    hb.addEventListener('click', ()=>switchPage('home'));
   }
   // Inside a binder, the chevroned page word steps back to the binder overview.
   if(state.screen === 'collection' && state.colFilter && state.colFilter.binder){
@@ -4917,36 +4891,41 @@ function wireNeedDeck(){ document.getElementById('goDecksBtn')?.addEventListener
 /* ---------------- HOME (welcome page) ---------------- */
 
 function homePageHtml(){
-  if(isCmdrMode()){
-    const cfacts = [
-      {n:'100', l:'cards', s:'singleton'},
-      {n:'40', l:'starting life', s:'multiplayer classic'},
-      {n:'21', l:'commander damage', s:'wins outright'}
-    ];
-    return `
+  const facts = [
+    {n:'5', l:'formats', s:'to build in'},
+    {n:'11', l:'rulebooks', s:'with ban lists'},
+    {n:'100%', l:'offline', s:'on your phone'}
+  ];
+  const build = FMT_ORDER.map(fmtLabelOf);
+  const ref = ['Standard','Modern','Legacy','Vintage','Pauper','Premodern'];
+  return `
   <main class="home-page">
     <div class="home-sea"></div>
     <div class="home-hero-wrap">
       <div class="home-glow"></div>
-      <span class="home-logo crest-stack${state._crossLanded ? ' logo-land-swing' : ''}" id="homeModeLogo" title="Switch to the Admiral version" style="cursor:pointer;" role="img" aria-label="Switch to Admiral">
+      <span class="home-logo crest-stack" id="homeModeLogo" role="img" aria-label="Admirals &amp; Commanders crest" style="cursor:default;">
         <img class="cl-base" src="data:image/png;base64,${COMMANDER_RING_B64}" alt="">
         <img class="cl-part cl-sword-l" src="data:image/png;base64,${COMMANDER_SWORD_L_B64}" alt="">
         <img class="cl-part cl-sword-r" src="data:image/png;base64,${COMMANDER_SWORD_R_B64}" alt="">
       </span>
-      <div class="logo-gleam${state._crossLanded ? ' sweep' : ''}"></div>
+      <div class="logo-gleam"></div>
     </div>
     <div class="home-rule"><span class="home-rule-line"></span><span class="home-rule-star">⚔</span><span class="home-rule-line"></span></div>
-    <p class="home-kicker">Magic's grandest multiplayer battlefield</p>
+    <p class="home-kicker">Your deck builder for Commander &amp; beyond</p>
     <ul class="home-points">
-      <li>A legendary creature leads your 100-card singleton deck</li>
-      <li>Brew from every set ever printed</li>
-      <li>Politics, alliances and comebacks at a four-player table</li>
-      <li>Your Commander returns from the command zone, again and again</li>
-      <li>Official banned list, always current</li>
+      <li>Build decks with live legality, ban lists and colour identity checked per format</li>
+      <li>Track your collection, wants and binders with Cardmarket prices and history</li>
+      <li>Find commanders, staples, combos and budget swaps from play data</li>
+      <li>Test opening hands, castability and power bracket before you sit down</li>
+      <li>Count life, log games and share decks — everything offline-ready</li>
     </ul>
-    <p class="home-tagline home-tagline-2" style="margin-top:2px;"><button class="inline-link" id="homeReadRules">Read the rules →</button></p>
+    <div class="home-formats">
+      <div class="hfm-row"><span class="hfm-k">Build in</span>${build.map(f=>`<span class="hfm-chip">${f}</span>`).join('')}</div>
+      <div class="hfm-row"><span class="hfm-k">Rules &amp; bans</span>${ref.map(f=>`<span class="hfm-chip dim">${f}</span>`).join('')}</div>
+    </div>
+    <p class="home-tagline home-tagline-2" style="margin-top:2px;"><button class="inline-link" id="homeReadRules">Read the format rules →</button></p>
     <div class="home-facts">
-      ${cfacts.map(f=>`<div class="home-fact"><div class="hf-n">${f.n}</div><div class="hf-l">${f.l}</div><div class="hf-s">${f.s}</div></div>`).join('')}
+      ${facts.map(f=>`<div class="home-fact"><div class="hf-n">${f.n}</div><div class="hf-l">${f.l}</div><div class="hf-s">${f.s}</div></div>`).join('')}
     </div>
     <p class="home-callout">Your Commander awaits.</p>
     <button class="home-search-btn" id="homeStartBtn">
@@ -4954,58 +4933,8 @@ function homePageHtml(){
       Take Command
     </button>
   </main>`;
-  }
-  const facts = [
-    {n:'60', l:'cards', s:'singleton'},
-    {n:'30', l:'starting life', s:'faster games'},
-    {n:'18', l:'Admiral damage', s:'wins outright'}
-  ];
-  return `
-  <main class="home-page">
-    <div class="home-sea"></div>
-    <div class="home-hero-wrap">
-      <div class="home-glow"></div>
-      <span class="home-logo crest-stack${state._crossLanded ? ' logo-land-drop' : ''}" id="homeModeLogo" title="Switch to the Commander version" style="cursor:pointer;" role="img" aria-label="Switch to Commander">
-        <img class="cl-base" src="data:image/png;base64,${ADMIRAL_RING_B64}" alt="">
-        <img class="cl-part cl-anchor" src="data:image/png;base64,${ADMIRAL_ANCHOR_B64}" alt="">
-      </span>
-      <div class="logo-gleam${state._crossLanded ? ' sweep' : ''}"></div>
-    </div>
-
-    <div class="home-rule"><span class="home-rule-line"></span><span class="home-rule-star">✦</span><span class="home-rule-line"></span></div>
-
-    <p class="home-kicker">Set sail on a bold new Magic adventure</p>
-    <ul class="home-points">
-      <li>A legendary creature leads your 60-card singleton deck</li>
-      <li>No lands to buy — a shared Landing Zone provides the mana</li>
-      <li>Every card that was ever Standard-legal</li>
-      <li>Fast four-player games with real strategic depth</li>
-      <li>Magic's own universes only — story over power creep</li>
-    </ul>
-    <p class="home-tagline home-tagline-2" style="margin-top:2px;"><button class="inline-link" id="homeReadRules">Read the full rules →</button></p>
-
-    <div class="home-facts">
-      ${facts.map(f=>`<div class="home-fact"><div class="hf-n">${f.n}</div><div class="hf-l">${f.l}</div><div class="hf-s">${f.s}</div></div>`).join('')}
-    </div>
-
-    <p class="home-callout">Your Admiral awaits.</p>
-
-    <button class="home-search-btn" id="homeStartBtn">
-      <span class="hsb-anchor">${anchorSvg(20)}</span>
-      Weigh Anchor
-    </button>
-  </main>`;
 }
-function setAppMode(want, opts){
-  want = want === 'commander' ? 'commander' : 'admiral';
-  if(want === appMode()) return false;
-  state.appMode = want;
-  try{ localStorage.setItem(LS_PREFIX+'appMode', state.appMode); }catch(e){}
-  if(isCmdrMode()) ensureCmdrBans();
-  applyTheme();
-  if(!opts || !opts.quiet) toast(isCmdrMode() ? 'Commander mode — the red fleet takes the helm.' : 'Admiral mode — back under the blue flag.');
-  return true;
-}
+function setAppMode(){ return false; }   // retired: there is one app now
 /* ---------------- COMPREHENSIVE RULES ORACLE ----------------
    The full official CR, fetched once from the Academy Ruins API (the
    community's CORS-enabled mirror of WotC's rules, updated each set) and
@@ -5171,21 +5100,6 @@ function openCROverlay(){
 }
 function wireHomePage(){
   state._crossLanded = false;   // landing animation classes were baked into this render; don't repeat
-  const logo = document.getElementById('homeModeLogo');
-  if(logo) logo.addEventListener('click', ()=>{
-    // Crossing ceremony: the departing crest animates (swords swing, anchor
-    // dips), then the switch happens and the arriving crest plays its landing
-    // move under a gleam that sweeps the rim from top to bottom.
-    if(state._crossing) return;
-    state._crossing = true;
-    logo.classList.add(isCmdrMode() ? 'logo-depart-swing' : 'logo-depart-dip');
-    setTimeout(()=>{
-      state._crossing = false;
-      state._crossLanded = true;
-      setAppMode(isCmdrMode() ? 'admiral' : 'commander');
-      render();
-    }, 520);
-  });
   document.getElementById('homeStartBtn').addEventListener('click', ()=>switchPage('browse'));
   document.getElementById('homeReadRules').addEventListener('click', ()=>{
     state.settingsRulesOpen = true;
@@ -5307,12 +5221,12 @@ function homeHtml(){
   const favTiles = favs.map(deckTileHtml).join('');
   const folderTiles = shownFolders.map(folderTileHtml).join('');
   const deckTiles = shownDecks.map(deckTileHtml).join('');
-  const hasAny = state.decksIndex.length || (state.folders||[]).some(f=>folderFormat(f)===appMode());
+  const hasAny = state.decksIndex.length || (state.folders||[]).length;
   return `
   <main>
     ${decksNoticeHtml()}
     <div class="searchbar" style="margin-bottom:12px;">
-      <input id="deckFilter" placeholder="Filter by folder or ${isCmdrMode()?'Commander':'Admiral'}…" value="${escapeHtml(state.deckFilter||'')}">
+      <input id="deckFilter" placeholder="Filter by folder or commander…" value="${escapeHtml(state.deckFilter||'')}">
     </div>
     ${otherView
       ? `<button class="deck-fab" id="deckSwitchFab" title="Switch to ${isCmdrMode()?'Admiral':'Commander'}">${isCmdrMode()?anchorSvg(20):'⚔'}</button>`
@@ -5363,18 +5277,6 @@ function wireHome(){
   wireDecksNotice();
   document.getElementById('newDeckBtn2')?.addEventListener('click', ()=>openModal('newdeck'));
   document.querySelector('[data-opencollection]')?.addEventListener('click', ()=>switchPage('collection'));
-  const switchFab = document.getElementById('deckSwitchFab');
-  if(switchFab){
-    switchFab.addEventListener('click', ()=>{
-      state.appMode = isCmdrMode() ? 'admiral' : 'commander';
-      try{ localStorage.setItem(LS_PREFIX+'appMode', state.appMode); }catch(e){}
-      if(isCmdrMode()) ensureCmdrBans();
-      state.folderNav = null;   // the other fleet is now the current fleet — land at its root
-      applyTheme();
-      toast(isCmdrMode() ? 'Commander mode — the red fleet takes the helm.' : 'Admiral mode — back under the blue flag.');
-      render();
-    });
-  }
   const fab = document.getElementById('deckFab');
   if(fab){
     fab.addEventListener('click', (e)=>{
@@ -5513,7 +5415,8 @@ function openInAppConfirm(msg, onResult, o){
 function openDeckTileMenu(id, anchorEl){
   const d = getDeck(id); if(!d) return;
   openTileMenu(anchorEl, [
-    {label:'📁 Add to folder', fn:()=>openFolderPicker(d)},
+    {label:'📁 Move to…', fn:()=>openFolderPicker(d)},
+    {label:'⚔ Set format…', fn:()=>openFormatPicker(d)},
     {label:'⧉ Duplicate deck', fn:()=>{ duplicateDeck(d); }},
     {label:'↗ Share deck', fn:()=>shareDeck(d)},
     {label:'🗑 Delete deck', danger:true, fn:()=>{ state.activeDeckId=d.id; openModal('delete'); }}
@@ -5525,6 +5428,7 @@ function openFolderMenu(id, anchorEl){
     {label:'✎ Rename', fn:()=>openInAppPrompt('Rename folder','Folder name',f.name,(v)=>{ if(v&&v.trim()){ f.name=v.trim(); saveFolders(); render(); } })},
     {label: modeGlyph()+' Change icon', fn:()=>openFolderIconPicker(f)},
     {label:'📁 New subfolder', fn:()=>openNewFolderPrompt(f.id)},
+    {label:'📁 Move to…', fn:()=>openFolderPicker(f, {folder:true})},
     {label:'🗑 Delete folder', danger:true, fn:()=>{ openModal('deleteFolder', {folderId:f.id}); }}
   ]);
 }
@@ -5549,10 +5453,47 @@ function openFolderIconPicker(f){
    (its subfolders then appear), tap "Move here" to commit at the current
    level. Handles duplicate names across branches because you navigate the
    tree rather than pick from one flat list. */
-function openFolderPicker(d){
+/* Format picker: relabel a deck's format. The deck stays where it is if
+   user-placed; an unfiled deck simply re-files under the new format. */
+function setDeckFormat(d, fmt){
+  if(!FMT_LABELS[fmt] || deckFormat(d) === fmt) return;
+  d.format = fmt;
+  d.updatedAt = Date.now();
+  persistDeck(d);
+  toast(`${escapeHtml(d.name)} is now a ${fmtLabelOf(fmt)} deck.`);
+  render();
+  if(state.screen === 'decklist'){ try{ refreshLegality(d); updateDeckMeter(d); }catch(e){} }
+}
+function openFormatPicker(d){
+  let el = document.getElementById('formatPicker');
+  if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='formatPicker'; }
+  document.body.appendChild(el);
+  el.style.alignItems='center';
+  const cur = deckFormat(d);
+  el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
+    <h4>Format of “${escapeHtml(d.name)}”</h4>
+    <div class="deckpick-list" style="max-height:46vh;">
+      ${FMT_ORDER.map(f=>`<button class="dp-row ${f===cur?'active':''}" data-setfmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)}${f===cur?' <span style="color:var(--sub-text);">· current</span>':''}</span></button>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="dp-cancel" id="fmtpCancel" style="flex:1;margin:0;">Cancel</button>
+    </div>
+  </div>`;
+  const close=()=>el.remove();
+  document.getElementById('fmtpCancel').addEventListener('click', close);
+  el.addEventListener('click', e=>{ if(e.target===el) close(); });
+  el.querySelectorAll('[data-setfmt]').forEach(b=>b.addEventListener('click', ()=>{ close(); setDeckFormat(d, b.dataset.setfmt); }));
+}
+function openFolderPicker(d, opts){
   state._fpDeck = d;
+  state._fpIsFolder = !!(opts && opts.folder);   // moving a FOLDER, not a deck
   state._fpNav = null;   // current level being shown
   renderFolderPicker();
+}
+function folderDescendantIds(id){
+  const out = new Set([id]); let grew = true;
+  while(grew){ grew = false; (state.folders||[]).forEach(f=>{ if(f.parentId && out.has(f.parentId) && !out.has(f.id)){ out.add(f.id); grew = true; } }); }
+  return out;
 }
 function renderFolderPicker(){
   const d = state._fpDeck; if(!d) return;
@@ -5561,14 +5502,17 @@ function renderFolderPicker(){
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
   el.style.alignItems='center';
   const nav = state._fpNav;
-  const here = childFolders(nav);
+  const mvFolder = state._fpIsFolder;
+  const banned = mvFolder ? folderDescendantIds(d.id) : new Set();   // a folder can't move into itself
+  const here = childFolders(nav).filter(f=>!banned.has(f.id));
   const path = (nav && nav !== '__otherfmt__') ? folderPath(nav) : [];
   const crumb = `<button class="fp-crumb" data-fp="root">${modeGlyph()} Top</button>` + path.map(f=>`<span class="fc-sep">›</span><button class="fp-crumb" data-fp="${f.id}">${escapeHtml(f.name)}</button>`).join('');
-  const curName = nav ? (folderPath(nav).slice(-1)[0].name) : 'Top level (auto-filed by format)';
+  const curName = nav ? (folderPath(nav).slice(-1)[0].name) : (mvFolder ? 'Top level' : 'Top level (auto-filed by format)');
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
     <h4>Move “${escapeHtml(d.name)}”</h4>
     <div class="fp-crumbs">${crumb}</div>
     <div class="deckpick-list" style="max-height:46vh;">
+      ${(!nav && !mvFolder) ? FMT_ORDER.map(f=>`<button class="dp-row" data-intofmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)} <span style="color:var(--sub-text);">· auto folder</span></span></button>`).join('') : ''}
       ${here.length ? here.map(f=>`<button class="dp-row" data-into="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,22)}</span><span class="dp-txt" style="display:inline;">${escapeHtml(f.name)}${childFolders(f.id).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : `<p class="hint" style="padding:6px 2px;">No subfolders here.</p>`}
     </div>
     <div style="display:flex;gap:8px;margin-top:10px;">
@@ -5581,15 +5525,30 @@ function renderFolderPicker(){
   document.getElementById('fpCancel').addEventListener('click', close);
   el.addEventListener('click', e=>{ if(e.target===el) close(); });
   el.querySelectorAll('[data-into]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = b.dataset.into; renderFolderPicker(); }));
+  el.querySelectorAll('[data-intofmt]').forEach(b=>b.addEventListener('click', ()=>{
+    // Into an auto folder: unfile the deck and give it that folder's format.
+    const fmt = b.dataset.intofmt;
+    d.folderId = null;
+    close();
+    if(deckFormat(d) !== fmt) setDeckFormat(d, fmt); else { persistDeck(d); toast(`Moved to ${fmtLabelOf(fmt)}.`); render(); }
+  }));
   el.querySelectorAll('[data-fp]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = b.dataset.fp==='root'?null:b.dataset.fp; renderFolderPicker(); }));
   document.getElementById('fpNewSub').addEventListener('click', ()=>{
     openInAppPrompt('New subfolder','Folder name','',(name)=>{ if(name&&name.trim()){ const f=createFolder(name.trim(), state._fpNav||null); state._fpNav=f.id; renderFolderPicker(); } });
   });
   document.getElementById('fpHere').addEventListener('click', ()=>{
+    if(mvFolder){
+      d.parentId = state._fpNav || null;
+      saveFolders();
+      close();
+      toast(`Moved to ${state._fpNav ? folderPath(state._fpNav).slice(-1)[0].name : 'top level'}.`);
+      render();
+      return;
+    }
     d.folderId = state._fpNav || null;
     persistDeck(d);
     close();
-    const where = state._fpNav ? folderPath(state._fpNav).slice(-1)[0].name : 'top level';
+    const where = state._fpNav ? folderPath(state._fpNav).slice(-1)[0].name : fmtLabelOf(deckFormat(d)) + ' (auto folder)';
     toast(`Moved to ${where}.`);
     render();
   });
@@ -6985,7 +6944,7 @@ function decklistPageHtml(){
   </main>`;
 }
 function menuPopHtml(){
-  return `<div class="menu-pop" id="menuPop"><button id="mImpExp">Import / Export</button><button id="mSortBy">Sort by ⌄</button><button id="mAddFolder">Add to folder</button><button id="mDuplicate">Duplicate deck</button><button id="mShare">Share deck</button><hr><button id="mDelete" class="danger">Delete deck</button></div>`;
+  return `<div class="menu-pop" id="menuPop"><button id="mImpExp">Import / Export</button><button id="mSortBy">Sort by ⌄</button><button id="mFormat">Format ⌄</button><button id="mAddFolder">Move to folder…</button><button id="mDuplicate">Duplicate deck</button><button id="mShare">Share deck</button><hr><button id="mDelete" class="danger">Delete deck</button></div>`;
 }
 /* ---- legality ----------------------------------------------------------
    Re-derived from scratch on every deck change, so swapping your Admiral or
@@ -8413,6 +8372,7 @@ function wireMenu(d){
   document.getElementById('mImpExp')?.addEventListener('click', ()=>{ popDeckMenu(); updateDeckMeter(d); toggleDlPanel(d, 'impexp'); });
   document.getElementById('mSortBy')?.addEventListener('click', ()=>{ popDeckMenu(); updateDeckMeter(d); openModal('sort'); });
   document.getElementById('mAddFolder')?.addEventListener('click', ()=>{ popDeckMenu(); render(); openFolderPicker(d); });
+  document.getElementById('mFormat')?.addEventListener('click', ()=>{ popDeckMenu(); openFormatPicker(d); });
   document.getElementById('mDuplicate')?.addEventListener('click', ()=>{ popDeckMenu(); duplicateDeck(d); });
   document.getElementById('mShare')?.addEventListener('click', ()=>{ popDeckMenu(); updateDeckMeter(d); shareDeck(d); });
   document.getElementById('mDelete')?.addEventListener('click', ()=>{ popDeckMenu(); openModal('delete'); });
@@ -12967,15 +12927,29 @@ async function fillBanList(fmt, box){
   box.innerHTML = '<span class="l2">Loading…</span>';
   try{
     if(!window._banCache) window._banCache = {};
-    if(!window._banCache[fmt]){
+    if(fmt === 'admiral'){
+      window._banCache.admiral = { names: BANNED_NAMES.slice().sort((a,b)=>a.localeCompare(b)), more: false, total: BANNED_NAMES.length };
+    } else if(!window._banCache[fmt]){
       const r = await sfFetch(`${SF_BASE}/cards/search?order=name&q=${encodeURIComponent('banned:' + fmt)}`);
       if(!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
       window._banCache[fmt] = { names: (j.data || []).map(c=>c.name), more: !!j.has_more, total: j.total_cards || (j.data || []).length };
     }
     const b = window._banCache[fmt];
-    box.innerHTML = `<div class="l2" style="line-height:1.5;">${b.names.map(escapeHtml).join(' · ')}${b.more ? ` … (${b.total} total — full list on Scryfall)` : ''}</div>`;
+    // Two columns of tappable names — tap one for the card image.
+    box.innerHTML = `${fmt === 'admiral' ? '<div class="l2" style="margin-bottom:4px;">Custom list, enforced by every Admiral deck check. Tap a name for the card.</div>' : '<div class="l2" style="margin-bottom:4px;">Tap a name for the card.</div>'}<div class="banlist-grid">${b.names.map(n=>`<button type="button" class="ban-item" data-name="${encodeURIComponent(n)}">${escapeHtml(n)}</button>`).join('')}</div>${b.more ? `<div class="l2" style="margin-top:6px;">… ${b.total} total — full list on Scryfall.</div>` : ''}`;
   }catch(e){ box.innerHTML = '<span class="l2">Couldn\u2019t load this ban list right now.</span>'; }
+}
+async function openBanCardPreview(btn){
+  const name = decodeURIComponent(btn.dataset.name);
+  if(btn.disabled) return;
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Loading…';
+  try{
+    const res = await sfFetch(SF_BASE + '/cards/named?fuzzy=' + encodeURIComponent(name));
+    if(res.ok){ const card = await res.json(); showPreview(cardImageLarge(card), card.border_color==='white'); }
+    else toast("Couldn't find that card on Scryfall.");
+  }catch(e){ toast("Couldn't reach Scryfall."); }
+  btn.disabled = false; btn.textContent = orig;
 }
 /* The community's 100 saltiest cards, from EDHREC's top-salt page (same
    week cache as everything EDHREC). Bottom-up, per the charter: saltiest at
@@ -14597,7 +14571,7 @@ function browsePageHtml(){
     ${swd ? `<div class="panel-card" style="margin-bottom:10px;border-color:var(--brass);"><div class="panel-h">${modeGlyph()} Switching ${fmtName(swd)}</div><p class="hint" style="margin:4px 0 0;">Tap any leader below to make it the new ${fmtName(swd)} of <strong style="color:var(--brass);">${escapeHtml(swd.name)}</strong> — the current one ${isCmdrMode()?'returns to the deck':'joins the crew'}${swd.partner?', and a still-compatible second seat stays':''}.</p></div>` : ''}
     <div class="browse-hero">
       ${isCmdrMode() ? `
-      <span class="bh-logo crest-stack${state._crossLanded ? ' logo-land-swing' : ''}" id="browseModeLogo" title="Switch to the Admiral version" role="img" aria-label="Switch to Admiral">
+      <span class="bh-logo crest-stack" id="browseModeLogo" role="img" aria-label="Commander crest">
         <img class="cl-base" src="data:image/png;base64,${COMMANDER_RING_B64}" alt="">
         <img class="cl-part cl-sword-l" src="data:image/png;base64,${COMMANDER_SWORD_L_B64}" alt="">
         <img class="cl-part cl-sword-r" src="data:image/png;base64,${COMMANDER_SWORD_R_B64}" alt="">
@@ -14639,22 +14613,6 @@ function maybePairThenReco(c){
 function wireBrowsePage(){
   ensureEdhrecTags();
   state._crossLanded = false;   // landing classes were baked into this render
-  const bLogo = document.getElementById('browseModeLogo');
-  if(bLogo) bLogo.addEventListener('click', ()=>{
-    if(state._crossing) return;
-    state._crossing = true;
-    bLogo.classList.add(isCmdrMode() ? 'logo-depart-swing' : 'logo-depart-dip');
-    setTimeout(()=>{
-      state._crossing = false;
-      state._crossLanded = true;
-      setAppMode(isCmdrMode() ? 'admiral' : 'commander');
-      state.browseCache = {};
-      state.browseSel = {count:'', combo:'', theme:'', type:''};
-      state.browseTypal = null;
-      render();
-      scrollToPageFoot();
-    }, 560);
-  });
   let _bsSeq = 0;
   const runLeaderSearch = async ()=>{
     const q = (document.getElementById('bsName')?.value||'').trim();
@@ -18045,7 +18003,7 @@ function appBackStep(viaHistory){
   return false;
 }
 render();
-loadSettings().then(render);
+loadSettings().then(()=>{ render(); try{ ensureCmdrBans(); }catch(e){} });
 /* iOS pinch-zoom still fires gesture events even with user-scalable=no,
    and the attempted zoom is what was shoving parts of the page offscreen.
    Blocking the gesture (and double-tap zoom) keeps the layout anchored. */
