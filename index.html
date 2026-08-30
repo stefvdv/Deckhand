@@ -3876,13 +3876,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.447';
+const APP_VERSION = '2.51.448';
 const CHANGELOG_NOTES = {
   en: [
-    'Format enforcement on Inspiration is complete: theme and Kindred card sections are checked card by card (Pauper Commander shows commons only), and the recommendation page for any commander checks every suggested card against the chosen format \u2014 from Inspiration\u2019s picker or from the deck being inspired \u2014 before it shows.'
+    'Inspiration\u2019s colour, combination, Kindred and partner-pair pages now query Scryfall in the chosen format from the start \u2014 PreDH and Duel legality, uncommon creatures for Pauper Commander, Admiral\u2019s pool \u2014 so an illegal commander never loads. Curated theme staples pass the same check, and the \u2694 button appears on Pauper Commander leaders.'
   ],
   nl: [
-    'Formaatafdwinging op Inspiratie is compleet: thema- en Kindred-kaartsecties worden kaart voor kaart getoetst (Pauper Commander toont alleen commons), en de aanbevelingspagina van elke commander toetst elke voorgestelde kaart aan het gekozen formaat \u2014 uit de keuze op Inspiratie of van het deck dat inspiratie zoekt \u2014 voordat ze verschijnt.'
+    'De kleur-, combinatie-, Kindred- en partnerpaar-pagina\u2019s van Inspiratie bevragen Scryfall nu vanaf het begin in het gekozen formaat \u2014 PreDH- en Duel-legaliteit, uncommon wezens voor Pauper Commander, de pool van Admiral \u2014 zodat een illegale commander nooit laadt. Samengestelde thema-staples doorlopen dezelfde toets, en de \u2694-knop verschijnt bij Pauper Commander-leiders.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -11213,7 +11213,7 @@ function searchRowHtml(c, d, opts){
     else if(!colorOk){tag='banned';tagTxt='Off-color';}
     else if(alreadyIn){tag='dupe';tagTxt='In deck';}
   } else if(banned){ tag='banned'; tagTxt='Banned'; }
-  const canBeAdmiral = opts.showAdmiralBtn && isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !banned;
+  const canBeAdmiral = opts.showAdmiralBtn && leaderTypeOk(c) && hasPowerToughness(c) && isNonlandFront(c) && !banned;
   return `<div class="sr-tile" data-name="${encodeURIComponent(c.name)}">
     <img class="${wbClass(c)}" src="${cardImageMed(c)}" data-preview="${cardImageLarge(c)}" data-wb="${wbClass(c)?1:''}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}${gcMarkHtml(c)}
     <div class="st-body">
@@ -13944,6 +13944,13 @@ function browseQuery(){
 }
 /* Admiral mode = everything except the staples-by-card-type chips. A theme on
    its own now means "Admirals with this theme, any colors". */
+/* Inspiration's chosen format drives every leader query on the page. */
+function browseFmt(){ return state.browseFormat || 'commander'; }
+function browseKey(){ return JSON.stringify(state.browseSel) + '|' + browseFmt(); }
+function browseLeaderBase(){ return browseFmt() === 'paupercommander' ? 't:creature restricted:paupercommander' : 't:legendary t:creature'; }
+function browseSfOpts(){ return { format: browseFmt() === 'paupercommander' ? 'any' : browseFmt() }; }
+/* Pauper Commander leaders are uncommon creatures, legendary or not. */
+function leaderTypeOk(c){ return isLegendary(c) || (state.screen === 'browse' && browseFmt() === 'paupercommander'); }
 function browseAdmiralMode(){
   return !state.browseSel.type;
 }
@@ -14610,14 +14617,14 @@ async function loadEdhrecSectionedBrowse(box, key, slug, what){
   // .status > .spinner automatically, so the wait is never a blank page.
   box.innerHTML = '<div class="status" style="margin:16px 0;"><div class="spinner"></div></div>';
   const sec = await edhrecTagSections(slug, state.browseSel.combo);
-  if(key !== JSON.stringify(state.browseSel)) return;
+  if(key !== browseKey()) return;
   if(!(sec.newCmd.length || sec.topCmd.length)){
     box.innerHTML = `<div class="empty-note">No play data for this ${what} right now — check your connection, or try another.</div>`;
     return;
   }
   const union = [...new Set([...sec.newCmd, ...sec.topCmd, ...(sec.cardSections||[]).flatMap(x=>x.names)])];
   const cards = await namesToLegalCards(union);
-  if(key !== JSON.stringify(state.browseSel)) return;
+  if(key !== browseKey()) return;
   const byName = new Map();
   cards.forEach(c=>{
     if(!byName.has(c.name)) byName.set(c.name, c);
@@ -14785,13 +14792,13 @@ async function loadTypal(box, key, keepScroll){
   const colClause = browseColorClause() || '';
   if(state.browseTypal){
     const tribe = state.browseTypal;
-    const q = `t:legendary t:creature t:${tribe.toLowerCase()} ${colClause}`.trim();
-    const { results, error } = await searchAndVerifyLegal(q, 'edhrec', 200);
+    const q = `${browseLeaderBase()} t:${tribe.toLowerCase()} ${colClause}`.trim();
+    const { results, error } = await searchAndVerifyLegal(q, 'edhrec', 200, browseSfOpts());
     if(state.browseSel.theme!=='typal' || state.browseTypal!==tribe) return;
     const live = document.getElementById('browseResults');
     if(!live) return;
     if(error){ live.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
-    const pool = results.filter(c=> isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c)).slice(0, 200);
+    const pool = results.filter(c=> leaderTypeOk(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c)).slice(0, 200);
     const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
     live.innerHTML = `<button class="ghost-btn" id="typalBack" style="margin:8px 0 4px;">‹ All creature types</button>
       <p class="hint" style="margin:0 0 4px;">${escapeHtml(tribe)} Admirals — most played first.</p>
@@ -14809,12 +14816,12 @@ async function loadTypal(box, key, keepScroll){
   state._typalIndex = state._typalIndex || {};
   let items = state._typalIndex[idxKey];
   if(!items){
-    const { results, error } = await searchAndVerifyLegal(`t:legendary t:creature ${colClause}`.trim(), 'edhrec', 600);
+    const { results, error } = await searchAndVerifyLegal(`${browseLeaderBase()} ${colClause}`.trim(), 'edhrec', 600, browseSfOpts());
     if(state.browseSel.theme!=='typal' || state.browseTypal) return;
     const live0 = document.getElementById('browseResults');
     if(!live0) return;
     if(error){ live0.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
-    const pool = results.filter(c=> isLegendary(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c));
+    const pool = results.filter(c=> leaderTypeOk(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c));
     items = [];
     TYPAL_TRIBES.forEach(tribe=>{
       const rep = pool.find(c=>{
@@ -14847,7 +14854,7 @@ async function loadBrowse(){
     box.innerHTML = '';
     return;
   }
-  const key = JSON.stringify(state.browseSel);
+  const key = browseKey();
   if(browseAdmiralMode() && state.browseSel.combo){
     loadLeaderPairs(key, state.browseSel.combo, (!state.browseSel.tribe && state.browseSel.theme && state.browseSel.theme.indexOf('ed:')!==0) ? state.browseSel.theme : '');
     const th = state.browseSel.theme;
@@ -14873,7 +14880,7 @@ async function loadBrowse(){
   // popularity rank so recognisable Admirals lead. No external data source.
   let filtered = null;
   const themeClause = sel.theme ? themeQueryClause(sel.theme, admiralMode) : '';
-  const base = admiralMode ? 't:legendary t:creature' : (function(){
+  const base = admiralMode ? browseLeaderBase() : (function(){
     const t = TYPE_CHIPS.find(c=>c.key===sel.type); return (t&&t.clause)||'';
   })();
   const colClause = browseColorClause();
@@ -14899,16 +14906,19 @@ async function loadBrowse(){
         return cards;
       })();
     }
-    return (await state._curatedCache[sel.theme]).filter(c=>!isBanned(c));
+    const cur = (await state._curatedCache[sel.theme]).filter(c=>!isBanned(c));
+    if(browseFmt() === 'commander') return cur;
+    const okc = await filterCardsByFormat(cur, browseFmt(), 'leader');
+    return cur.filter(c=>okc.has(c.name));
   })() : Promise.resolve([]);
 
   const [{ results, error }, curatedAll] = await Promise.all([
-    searchAndVerifyLegal(fullClause, 'edhrec', 300),
+    searchAndVerifyLegal(fullClause, 'edhrec', 300, admiralMode ? browseSfOpts() : {}),
     curatedPromise.catch(()=>[])
   ]);
-  if(key !== JSON.stringify(state.browseSel)) return;   // selection changed mid-flight
+  if(key !== browseKey()) return;   // selection changed mid-flight
   let list = (results||[]).filter(c=> landOk(c) && !isBanned(c));
-  if(admiralMode) list = list.filter(c=> isLegendary(c) && hasPowerToughness(c));
+  if(admiralMode) list = list.filter(c=> leaderTypeOk(c) && hasPowerToughness(c));
 
   const inColor = (curatedAll||[]).filter(colorSelectionAllows);
   if(inColor.length){
@@ -14923,7 +14933,7 @@ async function loadBrowse(){
   }
   filtered = list;
   filtered._complete = true;
-  if(key !== JSON.stringify(state.browseSel)) return;
+  if(key !== browseKey()) return;
   state.browseCache[key] = filtered;
   renderBrowseResults(key);
 }
@@ -15024,7 +15034,7 @@ async function loadEdhrecDeckCounts(key, combo, tagSlug){
   // Re-render only if the pool itself has landed. Firing before that wiped
   // the loading spinner: with pairs already in, the render skipped the
   // still-loading branch and painted the caption over an empty page.
-  if(key === JSON.stringify(state.browseSel) && state.browseCache[key]) renderBrowseResults(key);
+  if(key === browseKey() && state.browseCache[key]) renderBrowseResults(key);
 }
 function edhrecDeckCountsFrom(data){
   // Walk the page JSON for anything carrying a name and a num_decks. Partner
@@ -15052,15 +15062,15 @@ async function loadLeaderPairs(key, combo, theme){
   let results = [];
   try{
     const themeClause = theme ? themeQueryClause(theme, true) : '';
-    const r = await searchAndVerifyLegal(['t:legendary', colClause, ANY_PAIR_CLAUSE, themeClause].filter(Boolean).join(' '), 'edhrec', 350);
+    const r = await searchAndVerifyLegal([browseFmt() === 'paupercommander' ? 'restricted:paupercommander' : 't:legendary', colClause, ANY_PAIR_CLAUSE, themeClause].filter(Boolean).join(' '), 'edhrec', 350, browseSfOpts());
     results = r.results || [];
   }catch(e){}
-  const cands = results.filter(c=> isNonlandFront(c) && isLegendary(c)
-    && (isCmdrMode() || hasPowerToughness(c))
-    && !(c.legalities && (c.legalities.commander==='banned' || c.legalities.commander==='not_legal'))
+  const cands = results.filter(c=> isNonlandFront(c) && leaderTypeOk(c)
+    && (browseFmt() !== 'admiral' || hasPowerToughness(c))
+    && !isBanned(c)
     && pairAbility(c));
   state.browseCache[pk] = computeLeaderPairs(cands, combo);
-  if(key === JSON.stringify(state.browseSel) && state.browseCache[key]) renderBrowseResults(key);
+  if(key === browseKey() && state.browseCache[key]) renderBrowseResults(key);
 }
 function computeLeaderPairs(cands, combo){
   const want = combo === 'c' ? '' : combo.toUpperCase().split('').sort().join('');
