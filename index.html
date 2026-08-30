@@ -1619,6 +1619,9 @@ function fmtName(d){
    later) so early renders never trip a temporal dead zone. */
 const FMT_ORDER = ['commander', 'admiral', 'paupercommander', 'predh', 'duel'];
 const FMT_LABELS = { commander:'Commander', admiral:'Admiral', paupercommander:'Pauper Commander', predh:'PreDH', duel:'Duel Commander' };
+/* Every format the search filter knows: the five buildable ones, then the
+   reference formats Scryfall can judge with legal:<id>. */
+const SEARCH_FORMATS = [['commander','Commander'],['admiral','Admiral'],['paupercommander','Pauper Commander'],['predh','PreDH'],['duel','Duel Commander'],['standard','Standard'],['modern','Modern'],['legacy','Legacy'],['vintage','Vintage'],['pauper','Pauper'],['premodern','Premodern']];
 function fmtLabelOf(id){ return FMT_LABELS[id] || (id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Commander'); }
 /* Auto format folders: virtual, never stored. A deck with no user folder is
    filed under its own format's folder; a user-placed deck stays where it was put. */
@@ -1627,6 +1630,16 @@ function isFmtFolder(id){ return typeof id === 'string' && id.startsWith(FMT_FOL
 function fmtOfFolder(id){ return isFmtFolder(id) ? id.slice(FMT_FOLDER_PREFIX.length) : null; }
 function fmtFolderId(fmt){ return FMT_FOLDER_PREFIX + fmt; }
 function fmtFolderDecks(fmt){ return state.decksIndex.filter(d=>deckFormat(d)===fmt && !(d.folderId||null) && !d.collected); }
+/* Which format folder (if any) a user folder ultimately sits under. */
+function fmtAncestorOf(folderId){
+  let cur = folderId, guard = 0;
+  while(cur && guard++ < 50){
+    if(isFmtFolder(cur)) return fmtOfFolder(cur);
+    const f = (state.folders||[]).find(x=>x.id===cur); if(!f) return null;
+    cur = f.parentId || null;
+  }
+  return null;
+}
 function fmtFolderGlyph(fmt, sz){ return fmt === 'admiral' ? anchorSvg(sz||40) : '⚔'; }
 function leaderLineLabel(d){ return deckFormat(d)==='commander' ? 'COMMANDER' : 'ADMIRAL'; }
 function deckTotal(d){ return deckFormat(d) === 'commander' ? 100 : DECK_TOTAL; }
@@ -1739,6 +1752,7 @@ let state = {
   searchCardColors: {W:false,U:false,B:false,R:false,G:false,C:false},
   searchCardColorMode: 'all',
   searchSetCode: '',
+  searchFormat: '',            // '' = any format; a pinned deck pre-fills its own
   searchManaCost: '',
   searchRarity: {common:false, uncommon:false, rare:false, mythic:false},
   searchEurMin: 0, searchEurMax: null,
@@ -1926,11 +1940,24 @@ document.addEventListener('click', (e)=>{
   btn.dataset.showing = toBack ? 'back' : 'front';
   btn.classList.toggle('flipped', toBack);
 }, true);
+/* An unfolded Extras accordion joins the overlay ladder, so hardware back
+   folds it instead of leaving Extras. Folding by tap drops its entry the
+   dismissAll way (history entry left inert; the ladder re-arms). */
+function toggleAccordionBody(body, id){
+  if(body.hidden){
+    body.hidden = false;
+    pushOverlay(id, ()=>{ const b = document.getElementById(body.id); if(b) b.hidden = true; });
+  } else {
+    body.hidden = true;
+    const st = state.overlayStack;
+    if(st.length && st[st.length-1].id === id) st.pop();
+  }
+}
 document.addEventListener('click', (e)=>{
   const frRow = e.target.closest && e.target.closest('#fmtRulesRow');
   if(frRow){
     const b = document.getElementById('fmtRulesBody');
-    if(b){ if(!b.innerHTML) b.innerHTML = fmtRulesBodyHtml(); b.hidden = !b.hidden; }
+    if(b){ if(!b.innerHTML) b.innerHTML = fmtRulesBodyHtml(); toggleAccordionBody(b, 'fmtRules'); }
     return;
   }
   const fr = e.target.closest && e.target.closest('[data-fmtrule]');
@@ -1944,7 +1971,7 @@ document.addEventListener('click', (e)=>{
     const b = document.getElementById('banListsBody');
     if(b){
       if(!b.innerHTML) b.innerHTML = FORMAT_RULES.filter(f=>f[0] !== 'admiral' && f[0] !== 'premodern').map(([id, label])=>`<div class="settings-row" data-banfmt="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-banbox="${id}" hidden></div></div></div>`).join('') + `<div class="settings-row" data-banfmt="admiral" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">Admiral</div><div class="l2" data-banbox="admiral" hidden></div></div></div>`;
-      b.hidden = !b.hidden;
+      toggleAccordionBody(b, 'banLists');
     }
     return;
   }
@@ -3589,7 +3616,10 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
   // The exact sorted pool is the cache key: any per-set choice change makes
   // its own cache lane, so mixed selections can never serve each other's data.
   const setsSig = (activeLegalSetCodes()||[]).slice().sort().join('.');
-  const qcKey = [appMode(), baseClause||'', sortOrder||'', limit, (opts.dir||''), (opts.restrictSet||''), 's'+setsSig].join('|');
+  // Format routing: callers that never said (name lookups, reco flows) keep
+  // the Commander pool they always had; the Search page passes its filter.
+  const fmtWanted = opts.format === undefined ? 'commander' : (opts.format || 'any');
+  const qcKey = ['f:'+fmtWanted, baseClause||'', sortOrder||'', limit, (opts.dir||''), (opts.restrictSet||''), 's'+setsSig].join('|');
   if(!opts._revalidate){
     if(_queryCache.has(qcKey)) return { results: _queryCache.get(qcKey).slice(), error: false };
     const disk = await qdbGet(qcKey);
@@ -3610,9 +3640,10 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
   await resolveLegalSets();
   const orderParam = sortOrder==='cmc' ? 'cmc' : sortOrder==='edhrec' ? 'edhrec' : 'name';
   const dir = opts.dir === 'desc' ? 'desc' : 'auto';
-  if(isCmdrMode()){
-    // Commander mode: Scryfall's own format flag IS the legality engine —
-    // one query, all sets, official ban list included, lands welcome.
+  if(fmtWanted !== 'admiral'){
+    // Scryfall's own format flag IS the legality engine — one query, all
+    // sets, the format's ban list included, lands welcome. 'any' asks for
+    // no legality at all.
     let base = (baseClause||'').replace(/\s*-t:land/g, '');
     if(opts.restrictSet) base += ' set:'+opts.restrictSet;
     // A previewing set's cards are often still marked not_legal until
@@ -3620,7 +3651,7 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
     // being searched for. The format flag returns the moment it releases.
     let rsPreview = false;
     try{ rsPreview = !!opts.restrictSet && (currentPreviewSets()||[]).some(x=>x.code===opts.restrictSet); }catch(e){}
-    const q = `${base} ${rsPreview ? '' : 'legal:commander '}game:paper -is:digital`.trim();
+    const q = `${base} ${(rsPreview || fmtWanted === 'any') ? '' : 'legal:' + fmtWanted + ' '}game:paper -is:digital`.trim();
     const url = `${SF_BASE}/cards/search?unique=cards&order=${orderParam}&dir=${dir}&q=${encodeURIComponent(q)}`;
     const out = [];
     let next = url, guard = 0;
@@ -3682,6 +3713,8 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
     });
   }
   let list = Array.from(byName.values());
+  // Admiral: the ever-Standard-legal pool above, minus lands and the custom ban list.
+  list = list.filter(c=>{ try{ return isNonlandFront(c) && !bannedSet.has(norm(c.name)); }catch(e){ return true; } });
   // We merge several set-restricted queries, so re-sort the combined list ourselves
   const desc = opts.dir === 'desc';
   if(sortOrder==='edhrec') list.sort((a,b)=>(a.edhrec_rank??999999)-(b.edhrec_rank??999999));
@@ -3841,13 +3874,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.443';
+const APP_VERSION = '2.51.444';
 const CHANGELOG_NOTES = {
   en: [
-    'Ban lists are back in two columns: every format\u2019s list \u2014 Admiral\u2019s own included \u2014 unfolds as tappable card names that open the card image. Folders gained Move to\u2026 on long-press, so a folder can be nested into another (never into itself).'
+    'Format folders now hold your own folders too: make one inside, or move one in \u2014 and a deck born in it takes that format. The move dialog walks into format folders like any other level. The Format rules and Ban lists accordions fold on hardware back. Search gained a Format filter under Set / Expansion: every format Scryfall can judge, plus Admiral\u2019s own pool \u2014 and adding cards to a deck pre-sets it to that deck\u2019s format.'
   ],
   nl: [
-    'Banlijsten staan weer in twee kolommen: elke lijst \u2014 ook die van Admiral \u2014 vouwt open als tikbare kaartnamen die de kaartafbeelding openen. Mappen kregen Move to\u2026 bij lang drukken, zodat een map in een andere map kan (nooit in zichzelf).'
+    'Formaatmappen bevatten nu ook je eigen mappen: maak er een in, of verplaats er een naartoe \u2014 en een deck dat daar ontstaat krijgt dat formaat. Het verplaatsvenster loopt formaatmappen in als elk ander niveau. De accordeons Formaatregels en Banlijsten vouwen dicht met de hardware-terugknop. Zoeken kreeg een Formaat-filter onder Set / Expansie: elk formaat dat Scryfall kan beoordelen, plus de eigen kaartenpool van Admiral \u2014 en kaarten aan een deck toevoegen zet hem alvast op het formaat van dat deck.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4069,8 +4102,9 @@ function deleteFolder(id){
   // Re-home children and decks to this folder's parent, then remove it.
   const f = (state.folders||[]).find(x=>x.id===id); if(!f) return;
   const parent = f.parentId || null;
+  const deckHome = isFmtFolder(parent) ? null : parent;   // decks never point at a virtual folder
   (state.folders||[]).forEach(x=>{ if(x.parentId===id) x.parentId = parent; });
-  state.decksIndex.forEach(d=>{ if(d.folderId===id){ d.folderId = parent; persistDeck(d); } });
+  state.decksIndex.forEach(d=>{ if(d.folderId===id){ d.folderId = deckHome; persistDeck(d); } });
   state.folders = (state.folders||[]).filter(x=>x.id!==id);
   saveFolders();
 }
@@ -4313,6 +4347,7 @@ function resetSearchFilters(){
   Object.keys(state.searchCardColors).forEach(k=>state.searchCardColors[k]=false);
   state.searchColorMode='atmost'; state.searchCardColorMode='all';
   state.searchSetCode=''; state.searchManaCost='';
+  { const _pd = state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId); state.searchFormat = _pd ? deckFormat(_pd) : ''; }
   state.searchCmcOp=''; state.searchCmcVal='';
   state.searchPowOp=''; state.searchPowVal='';
   state.searchTouOp=''; state.searchTouVal='';
@@ -4330,7 +4365,7 @@ function searchFiltersActive(){
   const s = state;
   return !!(Object.values(s.searchColors).some(Boolean) || Object.values(s.searchCardColors).some(Boolean)
     || s.searchColorMode !== 'atmost' || s.searchCardColorMode !== 'all'
-    || s.searchSetCode || s.searchManaCost
+    || s.searchSetCode || s.searchFormat || s.searchManaCost
     || s.searchCmcOp || s.searchCmcVal || s.searchPowOp || s.searchPowVal
     || s.searchTouOp || s.searchTouVal || s.searchLoyOp || s.searchLoyVal
     || s.searchTypeText || s.searchOracleText
@@ -5161,11 +5196,14 @@ function otherFmtTileHtml(count){
     </div>`;
 }
 function fmtFolderTileHtml(fmt){
-  const n = fmtFolderDecks(fmt).length;
+  const n = fmtFolderDecks(fmt).length, sub = childFolders(fmtFolderId(fmt)).length;
+  const bits = [];
+  if(n) bits.push(n+' deck'+(n===1?'':'s'));
+  if(sub) bits.push(sub+' folder'+(sub===1?'':'s'));
   return `<div class="folder-tile" data-folder="${fmtFolderId(fmt)}" data-fmtfolder="${fmt}">
       <div class="folder-face" style="font-size:44px;line-height:1;color:var(--brass);">${fmtFolderGlyph(fmt, 40)}</div>
       <div class="folder-name">${fmtLabelOf(fmt)}</div>
-      <div class="folder-sub">${n} deck${n===1?'':'s'} · auto</div>
+      <div class="folder-sub">${bits.join(' · ')||'empty'} · auto</div>
     </div>`;
 }
 function folderTileHtml(f){
@@ -5210,12 +5248,12 @@ function homeHtml(){
                    : fmtNav ? fmtFolderDecks(fmtNav).filter(d=>!d.fav)
                    : nav ? decksInFolder(nav).filter(d=>inMode(d) && !d.fav && !d.collected)
                          : [];                 // root: unfiled decks live in their format folders
-  const fmtFolders = (searching || nav) ? [] : FMT_ORDER.filter(f=>fmtFolderDecks(f).length);
+  const fmtFolders = (searching || nav) ? [] : FMT_ORDER.filter(f=>fmtFolderDecks(f).length || childFolders(fmtFolderId(f)).length);
   const fmtTiles = fmtFolders.map(fmtFolderTileHtml).join('');
   // ♥ Collected: decks saved from other players' shared pages — shown on the
   // top level as their own shelf (they can be organised into folders too).
   const collected = (searching || nav) ? [] : state.decksIndex.filter(d=>inMode(d) && d.collected && (d.folderId||null)===null);
-  const shownFolders = (searching || otherView || fmtNav) ? [] : childFolders(nav);
+  const shownFolders = (searching || otherView) ? [] : childFolders(nav);   // format folders hold user folders too
   const path = (nav && nav !== '__otherfmt__') ? folderPath(nav) : [];
   const crumb = '';
   const favTiles = favs.map(deckTileHtml).join('');
@@ -5506,13 +5544,14 @@ function renderFolderPicker(){
   const banned = mvFolder ? folderDescendantIds(d.id) : new Set();   // a folder can't move into itself
   const here = childFolders(nav).filter(f=>!banned.has(f.id));
   const path = (nav && nav !== '__otherfmt__') ? folderPath(nav) : [];
-  const crumb = `<button class="fp-crumb" data-fp="root">${modeGlyph()} Top</button>` + path.map(f=>`<span class="fc-sep">›</span><button class="fp-crumb" data-fp="${f.id}">${escapeHtml(f.name)}</button>`).join('');
-  const curName = nav ? (folderPath(nav).slice(-1)[0].name) : (mvFolder ? 'Top level' : 'Top level (auto-filed by format)');
+  const fmtAnc = fmtAncestorOf(nav);
+  const crumb = `<button class="fp-crumb" data-fp="root">${modeGlyph()} Top</button>` + (fmtAnc ? `<span class="fc-sep">›</span><button class="fp-crumb" data-fp="${fmtFolderId(fmtAnc)}">${fmtLabelOf(fmtAnc)}</button>` : '') + path.map(f=>`<span class="fc-sep">›</span><button class="fp-crumb" data-fp="${f.id}">${escapeHtml(f.name)}</button>`).join('');
+  const curName = isFmtFolder(nav) ? fmtLabelOf(fmtOfFolder(nav)) : nav ? (folderPath(nav).slice(-1)[0].name) : (mvFolder ? 'Top level' : 'Top level (auto-filed by format)');
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
     <h4>Move “${escapeHtml(d.name)}”</h4>
     <div class="fp-crumbs">${crumb}</div>
     <div class="deckpick-list" style="max-height:46vh;">
-      ${(!nav && !mvFolder) ? FMT_ORDER.map(f=>`<button class="dp-row" data-intofmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)} <span style="color:var(--sub-text);">· auto folder</span></span></button>`).join('') : ''}
+      ${!nav ? FMT_ORDER.map(f=>`<button class="dp-row" data-intofmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)} <span style="color:var(--sub-text);">· auto folder</span>${childFolders(fmtFolderId(f)).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : ''}
       ${here.length ? here.map(f=>`<button class="dp-row" data-into="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,22)}</span><span class="dp-txt" style="display:inline;">${escapeHtml(f.name)}${childFolders(f.id).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : `<p class="hint" style="padding:6px 2px;">No subfolders here.</p>`}
     </div>
     <div style="display:flex;gap:8px;margin-top:10px;">
@@ -5525,27 +5564,30 @@ function renderFolderPicker(){
   document.getElementById('fpCancel').addEventListener('click', close);
   el.addEventListener('click', e=>{ if(e.target===el) close(); });
   el.querySelectorAll('[data-into]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = b.dataset.into; renderFolderPicker(); }));
-  el.querySelectorAll('[data-intofmt]').forEach(b=>b.addEventListener('click', ()=>{
-    // Into an auto folder: unfile the deck and give it that folder's format.
-    const fmt = b.dataset.intofmt;
-    d.folderId = null;
-    close();
-    if(deckFormat(d) !== fmt) setDeckFormat(d, fmt); else { persistDeck(d); toast(`Moved to ${fmtLabelOf(fmt)}.`); render(); }
-  }));
+  el.querySelectorAll('[data-intofmt]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = fmtFolderId(b.dataset.intofmt); renderFolderPicker(); }));
   el.querySelectorAll('[data-fp]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = b.dataset.fp==='root'?null:b.dataset.fp; renderFolderPicker(); }));
   document.getElementById('fpNewSub').addEventListener('click', ()=>{
     openInAppPrompt('New subfolder','Folder name','',(name)=>{ if(name&&name.trim()){ const f=createFolder(name.trim(), state._fpNav||null); state._fpNav=f.id; renderFolderPicker(); } });
   });
   document.getElementById('fpHere').addEventListener('click', ()=>{
+    const dest = state._fpNav || null;
     if(mvFolder){
-      d.parentId = state._fpNav || null;
+      d.parentId = dest;   // a format folder id is a legal parent for a FOLDER
       saveFolders();
       close();
-      toast(`Moved to ${state._fpNav ? folderPath(state._fpNav).slice(-1)[0].name : 'top level'}.`);
+      toast(`Moved to ${curName}.`);
       render();
       return;
     }
-    d.folderId = state._fpNav || null;
+    if(isFmtFolder(dest)){
+      // Into an auto folder: unfile the deck and give it that folder's format.
+      const fmt = fmtOfFolder(dest);
+      d.folderId = null;
+      close();
+      if(deckFormat(d) !== fmt) setDeckFormat(d, fmt); else { persistDeck(d); toast(`Moved to ${fmtLabelOf(fmt)}.`); render(); }
+      return;
+    }
+    d.folderId = dest;
     persistDeck(d);
     close();
     const where = state._fpNav ? folderPath(state._fpNav).slice(-1)[0].name : fmtLabelOf(deckFormat(d)) + ' (auto folder)';
@@ -5704,7 +5746,7 @@ function importDeckFromFile(text, filename){
 function createNewDeck(name, fmt, cmd, partner){
   // Born where you stand: creating a deck while inside a folder files it there.
   const homeFolder = (state.screen === 'decks' && !isFmtFolder(state.folderNav)) ? (state.folderNav || null) : null;
-  const d = { id: uid(), name: name || 'Untitled Fleet', admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', format: fmt || fmtOfFolder(state.screen === 'decks' ? state.folderNav : null) || appMode(), folderId: homeFolder, createdAt: Date.now(), updatedAt: Date.now() };
+  const d = { id: uid(), name: name || 'Untitled Fleet', admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', format: fmt || fmtAncestorOf(state.screen === 'decks' ? state.folderNav : null) || appMode(), folderId: homeFolder, createdAt: Date.now(), updatedAt: Date.now() };
   if(cmd){ d.admiral = cmd; logDeckChange(d, {type:'add', name:cmd.name, card:cmd}); }
   if(cmd && partner){ d.partner = partner; logDeckChange(d, {type:'add', name:partner.name, card:partner}); }
   state.decksIndex.unshift(d);
@@ -9746,6 +9788,7 @@ function wireMeterRow(d){
     // this deck. The pin dissolves as soon as the user navigates elsewhere.
     state.searchPinnedDeckId = d.id;
     state._pinArm = true;
+    state.searchFormat = deckFormat(d);   // search pre-filters on this deck's format
     switchPage('search');
   });
   document.querySelectorAll('.dk-type').forEach(b=>b.addEventListener('click', ()=>{
@@ -9980,6 +10023,7 @@ function renderCardSheet(d, card, loc, idx){
     // current leader joins the main deck. A compatible partner stays seated.
     state.searchPinnedDeckId = d.id;
     state._pinArm = true;
+    state.searchFormat = deckFormat(d);
     state.switchSeat = d.id;
     closeTopOverlay();
     toast(`Choosing a new ${fmtName(d)} for ${d.name} — tap any leader to swap.`);
@@ -10712,6 +10756,10 @@ function advancedPanelHtml(){
   return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;">
     ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<div class="toggle-row" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Include off-color cards')}</div><div style="color:var(--sub-text);font-size:10.5px;margin-top:2px;">${trS('Off — only cards legal in this deck. On — every format-legal card, off-color included.')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
     <div class="adv-row"><label>Card Name</label><input id="advName" type="text" placeholder="Any words in the name" value="${escapeHtml(s.searchName)}"></div>
+    <div class="adv-row"><label>Format</label>
+      ${cselectHtml('fmtSel', [{v:'',l:'Any format'}].concat(SEARCH_FORMATS.map(([v,l])=>({v, l}))), s.searchFormat, 'Any format', {})}
+      ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<p class="adv-hint">Pre-set to the deck you\u2019re adding to.</p>` : ''}
+    </div>
     <div class="adv-row"><label>Set / Expansion</label>
       ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name)}))), s.searchSetCode, 'Any Set', {search:true})}
       ${sets.length?'':`<p class="adv-hint">Set list still loading…</p>`}
@@ -10904,6 +10952,7 @@ function wireAdvancedPanel(){
   _csHandlers.touOp = v=>{ state.searchTouOp=v; render(); };
   _csHandlers.loyOp = v=>{ state.searchLoyOp=v; render(); };
   _csHandlers.setSel = v=>{ state.searchSetCode=v; render(); };
+  _csHandlers.fmtSel = v=>{ state.searchFormat=v; render(); };
   wireCSelects();
   document.querySelectorAll('[data-rarity]').forEach(chk=>chk.addEventListener('change', ()=>{ state.searchRarity[chk.dataset.rarity] = chk.checked; }));
   wirePriceSlider('srchPr', (mn, mx)=>{ state.searchEurMin = mn; state.searchEurMax = mx; });
@@ -11010,7 +11059,7 @@ function buildAdvancedClause(){
 async function runAdvancedSearch(){
   const clause = buildAdvancedClause();
   state.searchRan = true; state.searchError = false;
-  if(!clause && !state.searchSetCode){ document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">Enter a name or set at least one filter.</div>`; return; }
+  if(!clause && !state.searchSetCode && !state.searchFormat){ document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">Enter a name or set at least one filter.</div>`; return; }
   const _rsIsPreview = state.searchSetCode && (()=>{ try{ return (currentPreviewSets()||[]).some(x=>x.code===state.searchSetCode); }catch(e){ return false; } })();
   if(state.searchSetCode && !activeLegalSetCodes().includes(state.searchSetCode) && !(isCmdrMode() && _rsIsPreview)){
     const nm = (state.legalSetsMeta||{})[state.searchSetCode] || 'That set';
@@ -11018,7 +11067,7 @@ async function runAdvancedSearch(){
     return;
   }
   state.searching = true; renderSearchResultsBox();
-  const { results, error } = await searchAndVerifyLegal(clause, state.searchSort, 300, { restrictSet: state.searchSetCode, dir: state.searchSortDir });
+  const { results, error } = await searchAndVerifyLegal(clause, state.searchSort, 300, { restrictSet: state.searchSetCode, dir: state.searchSortDir, format: state.searchFormat || 'any' });
   let shownRes = results.filter(c=>landOk(c));
   if(state.searchEurMin > 0 || state.searchEurMax != null){
     // HARD price bounds: Scryfall's queried eur can disagree with the euro
@@ -17508,7 +17557,7 @@ function renderModal(){
 <div class="otag-wrap" id="ndP2Wrap" hidden style="margin-bottom:10px;"><input id="ndCmd2" class="col-filter-input" placeholder="Partner…" autocomplete="off" style="width:100%;"><div id="ndCmd2Pop" class="otag-pop" hidden></div></div>` : ''}<input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
     window._ndFmt = 'commander';
     {
-      const _ff = fmtOfFolder(state.screen === 'decks' ? state.folderNav : null);
+      const _ff = fmtAncestorOf(state.screen === 'decks' ? state.folderNav : null);
       if(_ff && FMT_LABELS[_ff]){
         window._ndFmt = _ff;
         const _fb = document.getElementById('newDeckFmtBtn');
