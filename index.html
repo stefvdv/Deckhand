@@ -668,6 +668,14 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .ls-tile.on{border-color:var(--brass);}
 .ls-tile.on::after{content:'✓';position:absolute;top:10px;right:10px;background:var(--brass);color:#1c1710;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;}
 #dlPanelBox{scroll-margin-bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom));}
+.leg-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;}
+.leg-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.leg-name{font-size:12.5px;color:var(--sub-text);}
+.leg-chip{font-size:10.5px;padding:2px 8px;border-radius:999px;letter-spacing:0.03em;}
+.leg-chip.ok{background:rgba(80,160,90,0.18);color:#7fc98b;}
+.leg-chip.no{background:rgba(120,120,120,0.14);color:var(--sub-text-2);}
+.leg-chip.ban{background:rgba(190,70,70,0.18);color:var(--danger);}
+.leg-chip.res{background:rgba(200,150,60,0.2);color:var(--brass);}
 .binder-glyph-row{display:flex;justify-content:center;align-items:center;gap:3px;min-height:15px;margin:-9px 0 2px;flex-wrap:wrap;}
 .binder-glyphs .mana-ic{width:14px;height:14px;}
 .rar-dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,0.45);}
@@ -1900,6 +1908,36 @@ document.addEventListener('click', (e)=>{
   btn.classList.toggle('flipped', toBack);
 }, true);
 document.addEventListener('click', (e)=>{
+  const frRow = e.target.closest && e.target.closest('#fmtRulesRow');
+  if(frRow){
+    const b = document.getElementById('fmtRulesBody');
+    if(b){ if(!b.innerHTML) b.innerHTML = fmtRulesBodyHtml(); b.hidden = !b.hidden; }
+    return;
+  }
+  const fr = e.target.closest && e.target.closest('[data-fmtrule]');
+  if(fr){
+    const t = fr.querySelector('[data-fmtruletxt]');
+    if(t) t.hidden = !t.hidden;
+    return;
+  }
+  const blRow = e.target.closest && e.target.closest('#banListsRow');
+  if(blRow){
+    const b = document.getElementById('banListsBody');
+    if(b){
+      if(!b.innerHTML) b.innerHTML = FORMAT_RULES.filter(f=>f[0] !== 'admiral' && f[0] !== 'premodern').map(([id, label])=>`<div class="settings-row" data-banfmt="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-banbox="${id}" hidden></div></div></div>`).join('') + `<div class="settings-row"><div><div class="l1">Admiral</div><div class="l2">Custom list — enforced by every Admiral deck check; see the Admiral rules card above.</div></div></div>`;
+      b.hidden = !b.hidden;
+    }
+    return;
+  }
+  const bf = e.target.closest && e.target.closest('[data-banfmt]');
+  if(bf){
+    const box = bf.querySelector('[data-banbox]');
+    if(box){
+      box.hidden = !box.hidden;
+      if(!box.hidden && !box.dataset.loaded){ box.dataset.loaded = '1'; fillBanList(bf.dataset.banfmt, box); }
+    }
+    return;
+  }
   if(e.target && e.target.id === 'capNoteBtn' && state.screen === 'collection'){
     const b = state.colFilter.binder || 'all';
     const title = b === 'all' ? 'My Collection' : (b === '__wants__' ? 'Wants' : ((state.collection.binders.find(x=>x.id === b) || {}).name || 'Binder'));
@@ -3782,13 +3820,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.429';
+const APP_VERSION = '2.51.432';
 const CHANGELOG_NOTES = {
   en: [
-    'Collection and binder value graphs now list the biggest risers and fallers beneath the line; the price-history and land-suggestion pages carry the bottom navigation; and the card count moved left of the page name as a plain number \u2014 no more crowding the title.'
+    'Every deck now carries a FORMAT: new Commander-side decks ask at birth \u2014 Commander, Pauper Commander, PreDH, or Duel Commander \u2014 and existing decks are stamped automatically. The field is data for now; format-scoped rules arrive in the next phases.'
   ],
   nl: [
-    'Waardegrafieken van collectie en mappen tonen nu de grootste stijgers en dalers onder de lijn; de prijsgeschiedenis- en landsuggestiepagina\u2019s dragen de ondernavigatie; en het kaartenaantal verhuisde als kaal getal links van de paginanaam \u2014 geen gedrang meer met de titel.'
+    'Elk deck draagt nu een FORMAAT: nieuwe decks aan Commander-zijde vragen het bij geboorte \u2014 Commander, Pauper Commander, PreDH of Duel Commander \u2014 en bestaande decks worden automatisch gestempeld. Het veld is nu nog data; formaatgebonden regels komen in de volgende fasen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5671,10 +5709,10 @@ function importDeckFromFile(text, filename){
   }, 60);
 }
 
-function createNewDeck(name){
+function createNewDeck(name, fmt){
   // Born where you stand: creating a deck while inside a folder files it there.
   const homeFolder = (state.screen === 'decks' ? (state.folderNav || null) : null);
-  const d = { id: uid(), name: name || 'Untitled Fleet', admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', format: appMode(), folderId: homeFolder, createdAt: Date.now(), updatedAt: Date.now() };
+  const d = { id: uid(), name: name || 'Untitled Fleet', admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', format: fmt || appMode(), folderId: homeFolder, createdAt: Date.now(), updatedAt: Date.now() };
   state.decksIndex.unshift(d);
   persistDeck(d);
   openDeck(d.id);
@@ -9845,6 +9883,7 @@ function renderCardSheet(d, card, loc, idx){
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
       <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
+      <div class="detail-sec"><div class="detail-h">Legality</div>${legalityBlockHtml(card)}</div>
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
     </main>
   </div>`;
@@ -11715,6 +11754,7 @@ function openCardInfo(card, opts){
       </div>
       <div id="ciTagBox"></div>
       <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
+      <div class="detail-sec"><div class="detail-h">Legality</div>${legalityBlockHtml(card)}</div>
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
     </main>
   </div>`;
@@ -12770,6 +12810,10 @@ function comboEndsGames(c){
   if(/win(s)? the game|lose(s)? the game/.test(r)) return true;
   return /(near-)?infinite/.test(r) && /(mana|damage|draw|life)/.test(r);
 }
+function deckFormat(d){
+  if(d && !d.format) d.format = appMode();
+  return (d && d.format) || 'commander';
+}
 function bracketEstimate(d, combos2){
   let gc = 0;
   d.cards.concat(deckLeaders(d)).forEach(c=>{ try{ if(isGameChanger(c)) gc++; }catch(e){} });
@@ -12848,6 +12892,55 @@ function openPriceHistory(card, key){
   document.body.appendChild(el);
   wireOverlayNav(el);
   pushOverlay('pricehist', ()=>{ document.getElementById('phOverlay')?.remove(); });
+}
+/* ── Format legality ─ Scryfall's legalities map as a chip grid, the
+   Moxfield way: green = legal, red = banned, amber = restricted, grey =
+   not legal. Sits between Oracle text and Rulings on every card view. ── */
+function legalityBlockHtml(card){
+  const L = (card && card.legalities) || {};
+  const rows = [
+    ['standard', 'Standard'], ['modern', 'Modern'], ['legacy', 'Legacy'],
+    ['vintage', 'Vintage'], ['pauper', 'Pauper'], ['premodern', 'Premodern'],
+    ['commander', 'Commander'], ['paupercommander', 'Pauper Cmdr'],
+    ['duel', 'Duel Cmdr'], ['predh', 'PreDH']
+  ];
+  return `<div class="leg-grid">${rows.map(([k, label])=>{
+    const v = L[k] || 'not_legal';
+    const cls = v === 'legal' ? 'ok' : v === 'banned' ? 'ban' : v === 'restricted' ? 'res' : 'no';
+    const word = v === 'legal' ? 'Legal' : v === 'banned' ? 'Banned' : v === 'restricted' ? 'Restr.' : 'Not legal';
+    return `<div class="leg-row"><span class="leg-name">${label}</span><span class="leg-chip ${cls}">${word}</span></div>`;
+  }).join('')}</div>`;
+}
+/* ── Format reference ─ rules digests for the accordion in Extras. ── */
+const FORMAT_RULES = [
+  ['standard', 'Standard', '60-card minimum, 4 copies max, only the last couple of years of sets. Rotates yearly.'],
+  ['modern', 'Modern', '60-card minimum, 4 copies max, every set from Eighth Edition (2003) forward.'],
+  ['legacy', 'Legacy', '60-card minimum, 4 copies max, all of Magic with a substantial ban list.'],
+  ['vintage', 'Vintage', 'All of Magic; almost nothing banned, the most powerful cards restricted to 1 copy.'],
+  ['pauper', 'Pauper', '60-card minimum, 4 copies max, only cards ever printed at common rarity.'],
+  ['premodern', 'Premodern', '60-card minimum, 4 copies max, sets from Fourth Edition through Scourge (1995–2003).'],
+  ['commander', 'Commander', '100-card singleton led by a legendary commander, 40 life, colour identity rules, official ban list.'],
+  ['paupercommander', 'Pauper Commander', 'Commander, but the 99 are commons and the commander is any uncommon creature. 30 life.'],
+  ['duel', 'Duel Commander', 'Competitive 1v1 Commander: 20 life, its own stricter ban list.'],
+  ['predh', 'PreDH', 'Commander frozen in time: only cards printed before New Phyrexia (2011), no cards or rules from after.'],
+  ['admiral', 'Admiral', 'This app\u2019s own format: 60-card singleton led by a legendary Admiral, no lands in the deck — mana comes from a shared Landing Zone of basics — with a card pool of everything that was ever Standard-legal and a custom ban list built on gameplay pillars.']
+];
+function fmtRulesBodyHtml(){
+  return FORMAT_RULES.map(([id, label, txt])=>`<div class="settings-row" data-fmtrule="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-fmtruletxt="${id}" hidden>${txt}</div></div></div>`).join('');
+}
+async function fillBanList(fmt, box){
+  box.innerHTML = '<span class="l2">Loading…</span>';
+  try{
+    if(!window._banCache) window._banCache = {};
+    if(!window._banCache[fmt]){
+      const r = await sfFetch(`${SF_BASE}/cards/search?order=name&q=${encodeURIComponent('banned:' + fmt)}`);
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      window._banCache[fmt] = { names: (j.data || []).map(c=>c.name), more: !!j.has_more, total: j.total_cards || (j.data || []).length };
+    }
+    const b = window._banCache[fmt];
+    box.innerHTML = `<div class="l2" style="line-height:1.5;">${b.names.map(escapeHtml).join(' · ')}${b.more ? ` … (${b.total} total — full list on Scryfall)` : ''}</div>`;
+  }catch(e){ box.innerHTML = '<span class="l2">Couldn\u2019t load this ban list right now.</span>'; }
 }
 /* The community's 100 saltiest cards, from EDHREC's top-salt page (same
    week cache as everything EDHREC). Bottom-up, per the charter: saltiest at
@@ -16402,6 +16495,14 @@ function settingsPageHtml(){
         </div>
       </div>
     </div>
+    <div class="settings-section">
+      <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Eleven formats this app knows — tap to unfold.</div></div><span class="l2">▾</span></div>
+      <div id="fmtRulesBody" hidden style="padding:0 12px 10px;"></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-row" id="banListsRow" style="cursor:pointer;"><div><div class="l1">Ban lists</div><div class="l2">Current banned cards per format.</div></div><span class="l2">▾</span></div>
+      <div id="banListsBody" hidden style="padding:0 12px 10px;"></div>
+    </div>
     ${isCmdrMode()?'':`<div class="settings-section">
       <div class="settings-row" id="ubRow" style="cursor:pointer;"><div><div class="l1">Universes Beyond sets</div><div class="l2">Standard-legal crossover sets — choose which your games include <span style="color:var(--brass);">${state.ubListOpen?'Hide ▾':'Choose ▸'}</span></div></div></div>
       ${state.ubListOpen?`<div class="theme-seg">
@@ -17425,10 +17526,16 @@ function renderModal(){
       });
     });
   } else if(m.type==='newdeck'){
-    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>${isCmdrMode()?'New Deck':'New Fleet'}</h3><input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
+    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>${isCmdrMode()?'New Deck':'New Fleet'}</h3>${isCmdrMode() ? `<select id="newDeckFmt" class="col-filter-input" style="width:100%;margin-bottom:10px;">
+<option value="commander">Commander</option>
+<option value="paupercommander">Pauper Commander</option>
+<option value="predh">PreDH</option>
+<option value="duel">Duel Commander</option>
+</select>` : ''}<input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
     document.getElementById('createBtn').addEventListener('click', ()=>{
       const name = document.getElementById('newDeckName').value.trim() || 'Untitled Fleet';
-      closeModal(); createNewDeck(name);
+      const fmt = document.getElementById('newDeckFmt')?.value;
+      closeModal(); createNewDeck(name, fmt);
     });
   } else if(m.type==='delete'){
     const d = getDeck(state.activeDeckId);
