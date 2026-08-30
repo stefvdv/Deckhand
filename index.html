@@ -3820,13 +3820,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.432';
+const APP_VERSION = '2.51.433';
 const CHANGELOG_NOTES = {
   en: [
-    'Every deck now carries a FORMAT: new Commander-side decks ask at birth \u2014 Commander, Pauper Commander, PreDH, or Duel Commander \u2014 and existing decks are stamped automatically. The field is data for now; format-scoped rules arrive in the next phases.'
+    'Deck creation grew the full Moxfield-style flow: name, format, a commander search that only offers commanders legal in the chosen format \u2014 and a Partner box that appears when your pick allows one. The deck is born with its command zone filled.'
   ],
   nl: [
-    'Elk deck draagt nu een FORMAAT: nieuwe decks aan Commander-zijde vragen het bij geboorte \u2014 Commander, Pauper Commander, PreDH of Duel Commander \u2014 en bestaande decks worden automatisch gestempeld. Het veld is nu nog data; formaatgebonden regels komen in de volgende fasen.'
+    'Deck aanmaken kreeg de volledige Moxfield-stijl: naam, formaat, een commanderzoeker die alleen commanders toont die legaal zijn in het gekozen formaat \u2014 en een Partnervak dat verschijnt wanneer je keuze er een toelaat. Het deck wordt geboren met gevulde commandozone.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5709,10 +5709,12 @@ function importDeckFromFile(text, filename){
   }, 60);
 }
 
-function createNewDeck(name, fmt){
+function createNewDeck(name, fmt, cmd, partner){
   // Born where you stand: creating a deck while inside a folder files it there.
   const homeFolder = (state.screen === 'decks' ? (state.folderNav || null) : null);
   const d = { id: uid(), name: name || 'Untitled Fleet', admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', format: fmt || appMode(), folderId: homeFolder, createdAt: Date.now(), updatedAt: Date.now() };
+  if(cmd){ d.admiral = cmd; logDeckChange(d, {type:'add', name:cmd.name, card:cmd}); }
+  if(cmd && partner){ d.partner = partner; logDeckChange(d, {type:'add', name:partner.name, card:partner}); }
   state.decksIndex.unshift(d);
   persistDeck(d);
   openDeck(d.id);
@@ -17531,11 +17533,51 @@ function renderModal(){
 <option value="paupercommander">Pauper Commander</option>
 <option value="predh">PreDH</option>
 <option value="duel">Duel Commander</option>
-</select>` : ''}<input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
+</select>
+<div class="otag-wrap" style="margin-bottom:10px;"><input id="ndCmd" class="col-filter-input" placeholder="Who is your commander? (optional)" autocomplete="off" style="width:100%;"><div id="ndCmdPop" class="otag-pop" hidden></div></div>
+<div class="otag-wrap" id="ndP2Wrap" hidden style="margin-bottom:10px;"><input id="ndCmd2" class="col-filter-input" placeholder="Partner…" autocomplete="off" style="width:100%;"><div id="ndCmd2Pop" class="otag-pop" hidden></div></div>` : ''}<input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
+    // Commander pickers: per-format-legal search, partner box unlocks
+    // when the chosen commander's text allows one.
+    window._ndPick = null; window._ndPick2 = null;
+    const wirePicker = (inpId, popId, slot)=>{
+      const inp = document.getElementById(inpId), pop = document.getElementById(popId);
+      if(!inp || !pop) return;
+      let t = null;
+      const fill = async ()=>{
+        const q = inp.value.trim();
+        if(q.length < 2){ pop.hidden = true; return; }
+        const fmt2 = document.getElementById('newDeckFmt')?.value || 'commander';
+        try{
+          const r = await sfFetch(`${SF_BASE}/cards/search?q=${encodeURIComponent('is:commander legal:' + fmt2 + ' ' + q)}`);
+          if(!r.ok) throw 0;
+          const j = await r.json();
+          const hits = (j.data || []).slice(0, 24);
+          pop.innerHTML = hits.map((c, i)=>`<button type="button" data-ndp="${i}">${escapeHtml(c.name)}</button>`).join('');
+          pop.hidden = !hits.length;
+          pop.querySelectorAll('[data-ndp]').forEach(o=>o.addEventListener('mousedown', (ev)=>{
+            ev.preventDefault();
+            const c = hits[parseInt(o.dataset.ndp, 10)];
+            if(slot === 1){ window._ndPick = c; } else { window._ndPick2 = c; }
+            inp.value = c.name;
+            pop.hidden = true;
+            if(slot === 1){
+              const ox = String(c.oracle_text || (c.card_faces && c.card_faces[0] && c.card_faces[0].oracle_text) || '');
+              const w2 = document.getElementById('ndP2Wrap');
+              if(w2) w2.hidden = !/\bPartner\b/.test(ox) && !(c.keywords || []).some(k=>/partner/i.test(k));
+            }
+          }));
+        }catch(e){ pop.hidden = true; }
+      };
+      inp.addEventListener('input', ()=>{ clearTimeout(t); t = setTimeout(fill, 320); if(slot === 1){ window._ndPick = null; window._ndPick2 = null; const w2 = document.getElementById('ndP2Wrap'); if(w2){ w2.hidden = true; } } else { window._ndPick2 = null; } });
+      inp.addEventListener('blur', ()=>setTimeout(()=>{ pop.hidden = true; }, 250));
+    };
+    wirePicker('ndCmd', 'ndCmdPop', 1);
+    wirePicker('ndCmd2', 'ndCmd2Pop', 2);
     document.getElementById('createBtn').addEventListener('click', ()=>{
       const name = document.getElementById('newDeckName').value.trim() || 'Untitled Fleet';
       const fmt = document.getElementById('newDeckFmt')?.value;
-      closeModal(); createNewDeck(name, fmt);
+      const cmd = window._ndPick, p2 = window._ndPick2;
+      closeModal(); createNewDeck(name, fmt, cmd, p2);
     });
   } else if(m.type==='delete'){
     const d = getDeck(state.activeDeckId);
