@@ -1611,7 +1611,20 @@ function fmtName(d){
   const f = d && d.format ? d.format : appMode();
   return f === 'commander' ? 'Commander' : 'Admiral';
 }
-function deckFormat(d){ return d && d.format === 'commander' ? 'commander' : 'admiral'; }
+/* Format catalog — the buildable formats, in the order their auto folders
+   appear on My Decks. Labels live here (not in FORMAT_RULES, declared much
+   later) so early renders never trip a temporal dead zone. */
+const FMT_ORDER = ['commander', 'admiral', 'paupercommander', 'predh', 'duel'];
+const FMT_LABELS = { commander:'Commander', admiral:'Admiral', paupercommander:'Pauper Commander', predh:'PreDH', duel:'Duel Commander' };
+function fmtLabelOf(id){ return FMT_LABELS[id] || (id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Commander'); }
+/* Auto format folders: virtual, never stored. A deck with no user folder is
+   filed under its own format's folder; a user-placed deck stays where it was put. */
+const FMT_FOLDER_PREFIX = '__fmt__:';
+function isFmtFolder(id){ return typeof id === 'string' && id.startsWith(FMT_FOLDER_PREFIX); }
+function fmtOfFolder(id){ return isFmtFolder(id) ? id.slice(FMT_FOLDER_PREFIX.length) : null; }
+function fmtFolderId(fmt){ return FMT_FOLDER_PREFIX + fmt; }
+function fmtFolderDecks(fmt){ return state.decksIndex.filter(d=>deckFormat(d)===fmt && !(d.folderId||null) && !d.collected); }
+function fmtFolderGlyph(fmt, sz){ return fmt === 'admiral' ? anchorSvg(sz||40) : '⚔'; }
 function leaderLineLabel(d){ return deckFormat(d)==='commander' ? 'COMMANDER' : 'ADMIRAL'; }
 function deckTotal(d){ return deckFormat(d) === 'commander' ? 100 : DECK_TOTAL; }
 function startLifeFor(d){ return deckFormat(d) === 'commander' ? 40 : START_LIFE; }
@@ -3823,13 +3836,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.439';
+const APP_VERSION = '2.51.440';
 const CHANGELOG_NOTES = {
   en: [
-    'The old Banned List row left Extras \u2014 the per-format Ban lists accordion is the single home now.'
+    'My Decks now files every deck automatically: format folders \u2014 Commander, Admiral, Pauper Commander, PreDH, Duel Commander \u2014 sit at the foot of the page, and a deck you have not placed in a folder of your own lives in its format\u2019s folder. Creating a deck inside one preselects that format.'
   ],
   nl: [
-    'De oude Banlijst-rij verliet Extra\u2019s \u2014 de banlijsten-accordeon per formaat is nu het enige thuis.'
+    'Mijn decks sorteert nu elk deck automatisch: formaatmappen \u2014 Commander, Admiral, Pauper Commander, PreDH, Duel Commander \u2014 staan onderaan de pagina, en een deck dat je niet zelf in een map hebt gezet, woont in de map van zijn formaat. Een deck aanmaken in zo\u2019n map kiest dat formaat alvast.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4720,7 +4733,8 @@ function navHtml(){
   const titles = { home: isCmdrMode() ? 'COMMANDER' : 'ADMIRAL', decks:'DECKS', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', trade:'TRADE', collection:'MY COLLECTION' };
   let title = titles[state.screen] || 'ADMIRAL';
   if(state.screen === 'decks' && state.folderNav){
-    const _p = state.folderNav === '__otherfmt__' ? [{name: isCmdrMode() ? 'Admiral decks' : 'Commander decks'}] : folderPath(state.folderNav);
+    const _p = state.folderNav === '__otherfmt__' ? [{name: isCmdrMode() ? 'Admiral decks' : 'Commander decks'}]
+             : isFmtFolder(state.folderNav) ? [{name: fmtLabelOf(fmtOfFolder(state.folderNav))}] : folderPath(state.folderNav);
     if(_p.length) title = _p[_p.length - 1].name;
   }
   let editable = false;
@@ -5232,6 +5246,14 @@ function otherFmtTileHtml(count){
       <div class="folder-sub">${count} deck${count===1?'':'s'} · waiting for the flag to change</div>
     </div>`;
 }
+function fmtFolderTileHtml(fmt){
+  const n = fmtFolderDecks(fmt).length;
+  return `<div class="folder-tile" data-folder="${fmtFolderId(fmt)}" data-fmtfolder="${fmt}">
+      <div class="folder-face" style="font-size:44px;line-height:1;color:var(--brass);">${fmtFolderGlyph(fmt, 40)}</div>
+      <div class="folder-name">${fmtLabelOf(fmt)}</div>
+      <div class="folder-sub">${n} deck${n===1?'':'s'} · auto</div>
+    </div>`;
+}
 function folderTileHtml(f){
   const deckN = countFolderDecks(f.id);
   const subN = childFolders(f.id).length;
@@ -5265,14 +5287,21 @@ function homeHtml(){
   const inMode = d => true;   // ONE decks page — all formats together (auto format folders refine this view)
   const otherMode = state.decksIndex.filter(d=>!inMode(d));
   const otherView = nav === '__otherfmt__';
-  const favs = (searching || otherView) ? [] : state.decksIndex.filter(d=>inMode(d) && d.fav && !d.collected && (d.folderId||null)===nav);
+  const fmtNav = fmtOfFolder(nav);            // inside an auto format folder?
+  const favs = (searching || otherView) ? []
+             : fmtNav ? fmtFolderDecks(fmtNav).filter(d=>d.fav)
+             : state.decksIndex.filter(d=>inMode(d) && d.fav && !d.collected && (d.folderId||null)===nav);
   const shownDecks = otherView ? otherMode
                    : searching ? state.decksIndex.filter(d=>inMode(d) && matchDeck(d))
-                               : decksInFolder(nav).filter(d=>inMode(d) && !d.fav && !d.collected);
+                   : fmtNav ? fmtFolderDecks(fmtNav).filter(d=>!d.fav)
+                   : nav ? decksInFolder(nav).filter(d=>inMode(d) && !d.fav && !d.collected)
+                         : [];                 // root: unfiled decks live in their format folders
+  const fmtFolders = (searching || nav) ? [] : FMT_ORDER.filter(f=>fmtFolderDecks(f).length);
+  const fmtTiles = fmtFolders.map(fmtFolderTileHtml).join('');
   // ♥ Collected: decks saved from other players' shared pages — shown on the
   // top level as their own shelf (they can be organised into folders too).
   const collected = (searching || nav) ? [] : state.decksIndex.filter(d=>inMode(d) && d.collected && (d.folderId||null)===null);
-  const shownFolders = (searching || otherView) ? [] : childFolders(nav);
+  const shownFolders = (searching || otherView || fmtNav) ? [] : childFolders(nav);
   const path = (nav && nav !== '__otherfmt__') ? folderPath(nav) : [];
   const crumb = '';
   const favTiles = favs.map(deckTileHtml).join('');
@@ -5290,12 +5319,13 @@ function homeHtml(){
       : `<button class="deck-fab" id="deckFab" title="New">＋</button>`}
     ${crumb}
     ${ !state.homeLoaded ? `<div class="status"><div class="spinner"></div>Loading your fleets…</div>` :
-       (favTiles||folderTiles||deckTiles||collected.length || (!searching && !nav && otherMode.length)) ? `
+       (favTiles||folderTiles||deckTiles||fmtTiles||collected.length || (!searching && !nav && otherMode.length)) ? `
          ${favs.length ? `<div class="section-label">★ Favorites</div><div class="deck-grid">${favTiles}</div>` : ''}
          ${shownFolders.length ? `<div class="section-label">Folders</div><div class="deck-grid">${folderTiles}</div>` : ''}
          ${shownDecks.length ? `${(favs.length||shownFolders.length)?`<div class="section-label">${searching?'Results':'Decks'}</div>`:''}<div class="deck-grid">${deckTiles}</div>` : ''}
          ${collected.length ? `<div class="section-label">♥ Collected</div><div class="deck-grid">${collected.map(deckTileHtml).join('')}</div>` : ''}
-         ${(!favTiles&&!folderTiles&&!deckTiles&&nav)?`<div class="empty-note">This folder is empty.</div>`:''}
+         ${fmtTiles ? `<div class="section-label">Formats</div><div class="deck-grid">${fmtTiles}</div>` : ''}
+         ${(!favTiles&&!folderTiles&&!deckTiles&&nav)?`<div class="empty-note">${fmtNav ? `No ${fmtLabelOf(fmtNav)} decks yet.` : 'This folder is empty.'}</div>`:''}
          ${(!favTiles&&!folderTiles&&!deckTiles&&!collected.length&&!nav&&otherMode.length)?`<div class="empty-note">No ${isCmdrMode()?'Commander':'Admiral'} decks yet — start a new fleet above. Your ${isCmdrMode()?'Admiral':'Commander'} decks are waiting below.</div>`:''}
          ${(!searching && !nav && otherMode.length) ? `<div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:20px;">
            <div style="display:flex;flex-direction:column-reverse;"><div class="section-label">${isCmdrMode()?'Admiral fleet':'Commander fleet'}</div><div class="deck-grid">${otherFmtTileHtml(otherMode.length)}</div></div>
@@ -5534,7 +5564,7 @@ function renderFolderPicker(){
   const here = childFolders(nav);
   const path = (nav && nav !== '__otherfmt__') ? folderPath(nav) : [];
   const crumb = `<button class="fp-crumb" data-fp="root">${modeGlyph()} Top</button>` + path.map(f=>`<span class="fc-sep">›</span><button class="fp-crumb" data-fp="${f.id}">${escapeHtml(f.name)}</button>`).join('');
-  const curName = nav ? (folderPath(nav).slice(-1)[0].name) : 'Top level';
+  const curName = nav ? (folderPath(nav).slice(-1)[0].name) : 'Top level (auto-filed by format)';
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
     <h4>Move “${escapeHtml(d.name)}”</h4>
     <div class="fp-crumbs">${crumb}</div>
@@ -5714,8 +5744,8 @@ function importDeckFromFile(text, filename){
 
 function createNewDeck(name, fmt, cmd, partner){
   // Born where you stand: creating a deck while inside a folder files it there.
-  const homeFolder = (state.screen === 'decks' ? (state.folderNav || null) : null);
-  const d = { id: uid(), name: name || 'Untitled Fleet', admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', format: fmt || appMode(), folderId: homeFolder, createdAt: Date.now(), updatedAt: Date.now() };
+  const homeFolder = (state.screen === 'decks' && !isFmtFolder(state.folderNav)) ? (state.folderNav || null) : null;
+  const d = { id: uid(), name: name || 'Untitled Fleet', admiral: null, cards: [], maybeboard: [], tags: {}, primer: '', format: fmt || fmtOfFolder(state.screen === 'decks' ? state.folderNav : null) || appMode(), folderId: homeFolder, createdAt: Date.now(), updatedAt: Date.now() };
   if(cmd){ d.admiral = cmd; logDeckChange(d, {type:'add', name:cmd.name, card:cmd}); }
   if(cmd && partner){ d.partner = partner; logDeckChange(d, {type:'add', name:partner.name, card:partner}); }
   state.decksIndex.unshift(d);
@@ -17520,6 +17550,12 @@ function renderModal(){
 <div class="otag-wrap" id="ndP2Wrap" hidden style="margin-bottom:10px;"><input id="ndCmd2" class="col-filter-input" placeholder="Partner…" autocomplete="off" style="width:100%;"><div id="ndCmd2Pop" class="otag-pop" hidden></div></div>` : ''}<input id="newDeckName" placeholder="Deck name" autofocus><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
     window._ndFmt = 'commander';
     {
+      const _ff = fmtOfFolder(state.screen === 'decks' ? state.folderNav : null);
+      if(_ff && FMT_LABELS[_ff]){
+        window._ndFmt = _ff;
+        const _fb = document.getElementById('newDeckFmtBtn');
+        if(_fb) _fb.innerHTML = `${FMT_LABELS[_ff]} <span style="float:right;opacity:0.6;">▾</span>`;
+      }
       const fb = document.getElementById('newDeckFmtBtn');
       const fp = document.getElementById('newDeckFmtPop');
       if(fb && fp){
@@ -17593,7 +17629,7 @@ function renderModal(){
       if(state.screen === 'decks'){
         render();                               // stay put — same folder, same view
       } else {
-        const home = d.folderId || null;        // deleted the open deck: land in its folder
+        const home = d.folderId || fmtFolderId(deckFormat(d));   // deleted the open deck: land in its (auto) folder
         switchPage('decks');
         state.folderNav = home;
         render();
