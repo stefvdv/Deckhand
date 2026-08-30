@@ -312,7 +312,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .otag-pop{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;overflow-y:auto;max-height:min(48vh,380px);z-index:40;}
 .df-compact, .df-compact .adv-row, #dlPanelBox{overflow:visible;}
 .modal-sheet{overflow:visible;}
-#newDeckFmtPop{z-index:300;}
+#newDeckFmtPop{position:fixed;left:24px;right:24px;top:16vh;bottom:auto;max-height:56vh;z-index:400;}
 .modal-backdrop{overflow:visible;}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
@@ -3823,13 +3823,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.436';
+const APP_VERSION = '2.51.437';
 const CHANGELOG_NOTES = {
   en: [
-    'THE MERGE: one decks page for every format \u2014 Admiral and Commander decks stand together, and the old app-version switch retired from Extras. The New Deck format list opens upward again and may extend past the popup\u2019s edge. Format folder tiles with set icons arrive next.'
+    'Admiral decks are truly reachable now \u2014 folders still carried the old format filter \u2014 and the New Deck format list floats free over everything, clipped by nothing.'
   ],
   nl: [
-    'DE SAMENVOEGING: \u00e9\u00e9n deckpagina voor elk formaat \u2014 Admiral- en Commander-decks staan samen, en de oude app-versieschakelaar verdween uit Extra\u2019s. De formaatlijst van Nieuw deck opent weer omhoog en mag voorbij de rand van de popup reiken. Formaatmap-tegels met seticonen volgen hierna.'
+    'Admiral-decks zijn nu \u00e9cht bereikbaar \u2014 mappen droegen nog het oude formaatfilter \u2014 en de formaatlijst van Nieuw deck zweeft vrij over alles heen, door niets afgeknipt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4048,7 +4048,7 @@ function folderFormat(f){ return f && f.format ? f.format : 'admiral'; }
 function childFolders(parentId){ return (state.folders||[]).filter(f=>(f.parentId||null)===(parentId||null) && folderFormat(f)===appMode()); }
 function decksInFolder(folderId){ return state.decksIndex.filter(d=>(d.folderId||null)===(folderId||null)); }
 /* decks of the CURRENTLY ACTIVE format only, for folder membership + counts */
-function decksInFolderMode(folderId){ return state.decksIndex.filter(d=>(d.folderId||null)===(folderId||null) && deckFormat(d)===appMode()); }
+function decksInFolderMode(folderId){ return decksInFolder(folderId); }   // THE MERGE: folders show every format
 function folderPath(id){
   const out = []; let cur = (state.folders||[]).find(f=>f.id===id);
   while(cur){ out.unshift(cur); cur = cur.parentId ? (state.folders||[]).find(f=>f.id===cur.parentId) : null; }
