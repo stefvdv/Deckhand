@@ -1470,12 +1470,12 @@ main.has-dock{padding-bottom:84px;}
 .splash-stage{position:absolute;inset:0;overflow:hidden;}
 .sp-layer{position:absolute;opacity:0;will-change:transform,opacity;}
 #spHand{bottom:-4vh;height:64vh;left:50%;transform:translateX(-50%) translateY(6vh);animation:spHandIn 800ms cubic-bezier(.22,.9,.32,1.12) 100ms forwards;}
-.sp-card{bottom:46vh;height:30vh;left:50%;transform-origin:50% 120%;}
-#spBuild{animation:spCardIn 620ms cubic-bezier(.2,.85,.3,1.15) 750ms forwards;--tx:-16vw;--rot:-2deg;}
-#spCollect{animation:spCardIn 620ms cubic-bezier(.2,.85,.3,1.15) 1080ms forwards;--tx:0vw;--rot:-12deg;height:32vh;bottom:49vh;}
-#spPlay{animation:spCardIn 620ms cubic-bezier(.2,.85,.3,1.15) 1410ms forwards;--tx:16vw;--rot:16deg;}
+.sp-card{bottom:40vh;height:38vh;left:50%;transform-origin:50% 110%;}
+#spBuild{animation:spCardIn 700ms cubic-bezier(.2,.8,.3,1.05) 750ms forwards;--tx:-13vw;--rot:6deg;z-index:1;}
+#spCollect{animation:spCardIn 700ms cubic-bezier(.2,.8,.3,1.05) 1080ms forwards;--tx:13vw;--rot:-4deg;z-index:2;}
+#spPlay{animation:spCardIn 700ms cubic-bezier(.2,.8,.3,1.05) 1410ms forwards;--tx:0vw;--rot:0deg;z-index:3;height:40vh;bottom:42vh;}
 @keyframes spHandIn{to{opacity:1;transform:translateX(-50%) translateY(0);}}
-@keyframes spCardIn{from{opacity:0;transform:translateX(calc(-50% + var(--tx)*0.6)) translateY(7vh) rotate(0deg) scale(.72);}to{opacity:1;transform:translateX(calc(-50% + var(--tx))) translateY(0) rotate(var(--rot)) scale(1);}}
+@keyframes spCardIn{from{opacity:0;transform:translateX(calc(-50% + var(--tx)*0.85)) translateY(3vh) rotate(var(--rot)) scale(.9);}to{opacity:1;transform:translateX(calc(-50% + var(--tx))) translateY(0) rotate(var(--rot)) scale(1);}}
 @media (prefers-reduced-motion:reduce){.sp-layer{animation:none !important;opacity:1;}#spHand{transform:translateX(-50%);}.sp-card{transform:translateX(calc(-50% + var(--tx))) rotate(var(--rot));}}
 .splash-appname{position:absolute;top:7vh;left:0;right:0;text-align:center;color:#FFFFFF;font-family:Roboto,'Inter',sans-serif;font-size:21px;font-weight:400;}
 
@@ -3885,13 +3885,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.450';
+const APP_VERSION = '2.51.451';
 const CHANGELOG_NOTES = {
   en: [
-    'A new opening: the conjuring. A hand rises and BUILD, COLLECT and PLAY materialize in a fan above it \u2014 the two-fleet crest animation retires. Cached after first launch, so it opens instantly and offline.'
+    'The conjuring composes tighter: bigger cards overlapping over the palm, PLAY in front and raised, BUILD and COLLECT tucked behind \u2014 each fading in with a short, calm lift.'
   ],
   nl: [
-    'Een nieuwe opening: de bezwering. Een hand rijst op en BUILD, COLLECT en PLAY verschijnen in een waaier erboven \u2014 de tweevloten-crestanimatie gaat met pensioen. Na de eerste start gecachet, dus opent direct en offline.'
+    'De bezwering componeert strakker: grotere kaarten die over de handpalm overlappen, PLAY vooraan en iets hoger, BUILD en COLLECT erachter \u2014 elk vervaagt in met een korte, rustige lift.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
