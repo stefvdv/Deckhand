@@ -1508,6 +1508,12 @@ main.has-dock{padding-bottom:84px;}
 .mini-val.danger{color:var(--danger);font-weight:700;}
 .dmg-list{max-height:120px;overflow-y:auto;}
 
+#lifeOverlay #lifeMenuPop{position:fixed;left:50%;top:50%;right:auto;transform:translate(-50%,-50%);z-index:260;min-width:230px;}
+#lifeMenuShield{position:fixed;inset:0;z-index:255;}
+.life-grid-v2{position:relative;}
+#lifeCogBtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;width:56px;height:56px;border-radius:50%;background:var(--ink-deep);border:2px solid var(--brass);color:var(--brass);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.55);}
+#lifeCogBtn svg{width:27px;height:27px;}
+.life-nav{flex:0 0 auto;}
 .life-panel{background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px;}
 .life-panel h4{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 8px;}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:2px solid var(--line);font-size:12.5px;gap:10px;}
@@ -1533,7 +1539,7 @@ main.has-dock{padding-bottom:84px;}
    starting while the previous is still only two-thirds in. */
 .sp-card{bottom:39vh;height:24vh;left:50%;transform-origin:50% 110%;}
 #spBuild{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 600ms forwards, spHover 3400ms ease-in-out 1800ms infinite;--tx:-18vw;--rot:-20deg;z-index:1;height:25vh;}
-#spCollect{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 950ms forwards, spHover 3800ms ease-in-out 2150ms infinite;--tx:26vw;--rot:0deg;z-index:2;height:25vh;}
+#spCollect{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 950ms forwards, spHover 3800ms ease-in-out 2150ms infinite;--tx:34vw;--rot:0deg;z-index:2;height:25vh;}
 #spPlay{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 1300ms forwards, spHover 3600ms ease-in-out 2500ms infinite;--tx:0vw;--rot:0deg;z-index:3;bottom:42vh;}
 @keyframes spHandIn{to{opacity:1;transform:translateX(-50%) translateY(0);}}
 @keyframes spCardIn{from{opacity:0;transform:translateX(calc(-50% + var(--tx)*0.85)) translateY(3vh) rotate(var(--rot)) scale(.9);}to{opacity:1;transform:translateX(calc(-50% + var(--tx))) translateY(0) rotate(var(--rot)) scale(1);}}
@@ -4010,13 +4016,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.465';
+const APP_VERSION = '2.51.467';
 const CHANGELOG_NOTES = {
   en: [
-    'Depth everywhere: the page and every panel, tile, field and pop-up now fade from their color at the top into a slight black at the foot.'
+    'Life counter: the app nav now sits at the foot like on every page, the top bar keeps only the title, and the menu moved to a gold cog at the center of the table — each player panel gets an angled cut to make room for it. The menu opens centered.',
+    'Launch animation: COLLECT further right. A proper maskable app icon ships alongside for crisper icons in the app switcher and launcher.'
   ],
   nl: [
-    'Diepte overal: de pagina en elk paneel, elke tegel, elk veld en elke pop-up lopen nu van hun kleur bovenaan naar een licht zwart aan de voet.'
+    'Levensteller: de app-navigatie staat nu onderaan zoals op elke pagina, de bovenbalk houdt alleen de titel, en het menu verhuisde naar een gouden tandwiel in het midden van de tafel — elk spelerspaneel krijgt een schuine snede om er ruimte voor te maken. Het menu opent gecentreerd.',
+    'Startanimatie: COLLECT verder naar rechts. Een echt maskable app-icoon gaat mee voor scherpere iconen in de app-wisselaar en launcher.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -17403,12 +17411,20 @@ function renderLifeOverlay(){
   ensureLifePlayers();
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='lifeOverlay'; }
   document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
+  // The page dresses like every other page now: a title-only top bar (the
+  // hardware back still closes the counter), the app's own nav row at the
+  // foot, and the menu — opened by the cog at the table's centre — pops
+  // centred over the table.
+  const navItems = [
+    {k:'decks', l:'Decks', i:ICONS.decks},
+    {k:'collection', l:'Collection', i:ICONS.binder},
+    {k:'search', l:'Search', i:ICONS.search},
+    {k:'browse', l:'Inspiration', i:ICONS.inspire},
+    {k:'settings', l:'Extras', i:ICONS.settings}
+  ];
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar" style="position:relative;">
-      <button class="icon-btn" id="lifeBack">${ICONS.back}</button>
+    <div class="topbar" style="position:relative;justify-content:center;">
       <div class="brand-txt" style="font-size:15px;">Life Totals</div>
-      <div class="spacer"></div>
-      <button class="icon-btn" id="lifeMenuBtn">${ICONS.dots}</button>
       ${state.life.menuOpen ? `<div id="lifeMenuShield"></div>${lifeMenuPopHtml()}` : ''}
     </div>
     <main>
@@ -17416,13 +17432,20 @@ function renderLifeOverlay(){
       <div id="lifeSettingsPanel"></div>
       <div id="lifeGrid"></div>
     </main>
+    <div class="brand-banner life-nav">
+      <div class="compass" id="lifeNavHome" title="Home"><img class="compass-badge" src="${DECKHAND_BADGE}" alt=""></div>
+      <div class="spacer"></div>
+      <div class="banner-tabs">${navItems.map(it=>`<button class="banner-tab" data-lifenav="${it.k}" title="${it.l}" aria-label="${it.l}">${it.i}</button>`).join('')}</div>
+    </div>
   </div>`;
-  document.getElementById('lifeBack').addEventListener('click', closeLifeOverlayUI);
-  document.getElementById('lifeMenuBtn').addEventListener('click', (e)=>{
-    e.stopPropagation();
-    state.life.menuOpen = !state.life.menuOpen;
-    renderLifeOverlay();
-  });
+  const lifeNavGo = (k)=>{
+    // Close via the overlay stack first (history.back settles the entry),
+    // THEN navigate — pushing a page during the popstate would race it.
+    closeLifeOverlayUI();
+    setTimeout(()=>{ try{ switchPage(k, true); }catch(e){} }, 90);
+  };
+  document.getElementById('lifeNavHome').addEventListener('click', ()=>lifeNavGo('home'));
+  el.querySelectorAll('[data-lifenav]').forEach(b=>b.addEventListener('click', ()=>lifeNavGo(b.dataset.lifenav)));
   if(state.life.menuOpen){
     document.getElementById('mNewGame').addEventListener('click', ()=>{ state.life.menuOpen=false; restartLife(); });
     document.getElementById('mHighRoll').addEventListener('click', ()=>{ state.life.menuOpen=false; renderLifeOverlay(); animatedHighRoll(); });
@@ -17590,10 +17613,21 @@ function renderLifeGrid(){
   box.innerHTML = players.map((p,i)=>lifeCardHtml(p,i,players.length)).join('');
   players.forEach(p=>{ delete p._deltaFresh; });
   Array.from(box.children).forEach((cell,i)=>{ cell.style.gridArea = 'abcdefgh'[i] || 'auto'; });
+  // The cog lives at the table's centre (absolutely positioned, so it is no
+  // grid cell); the cards around it get their facing corner cut in
+  // layoutLifeCards, where their pixel sizes are known.
+  box.insertAdjacentHTML('beforeend', `<button id="lifeCogBtn" title="Menu" aria-label="Menu">${ICONS.settings}</button>`);
+  document.getElementById('lifeCogBtn').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    state.life.menuOpen = !state.life.menuOpen;
+    renderLifeOverlay();
+  });
   wireLifeGrid();
   requestAnimationFrame(layoutLifeCards);
 }
 function layoutLifeCards(){
+  const grid = document.getElementById('lifeGrid');
+  const gr = grid ? grid.getBoundingClientRect() : null;
   document.querySelectorAll('.life-cell').forEach(cell=>{
     const card = cell.querySelector('.life-card-v2');
     if(!card) return;
@@ -17602,6 +17636,43 @@ function layoutLifeCards(){
     if(!w || !h) return;
     if(rot===90 || rot===270){ card.style.width = h+'px'; card.style.height = w+'px'; }
     else { card.style.width = w+'px'; card.style.height = h+'px'; }
+    // Cut the corner (or mid-edge, when the cell straddles the centre line)
+    // that faces the table's centre, making room for the cog. Cell-space
+    // corner/edge indices (0 TL/top, 1 TR/right, 2 BR/bottom, 3 BL/left) are
+    // mapped into CARD space by undoing the card's rotation: a corner at
+    // index i shows at i + rot/90 after a clockwise rotation, so the local
+    // index is (facing − rot/90) mod 4.
+    if(gr){
+      const cr = cell.getBoundingClientRect();
+      const dx = (cr.left + cr.width/2) - (gr.left + gr.width/2);
+      const dy = (cr.top + cr.height/2) - (gr.top + gr.height/2);
+      const C = 60, D = 44;
+      let clip = '';
+      const steps = Math.round(((rot % 360) + 360) % 360 / 90) % 4;
+      if(Math.abs(dx) < 20 || Math.abs(dy) < 20){
+        // straddles the centre on one axis → notch the middle of the facing edge
+        const edge = Math.abs(dx) < 20 ? (dy > 0 ? 0 : 2) : (dx > 0 ? 3 : 1);   // facing edge in cell space
+        const e = (edge - steps + 4) % 4;
+        const notch = {
+          0: `polygon(0 0, calc(50% - ${C}px) 0, 50% ${D}px, calc(50% + ${C}px) 0, 100% 0, 100% 100%, 0 100%)`,
+          1: `polygon(0 0, 100% 0, 100% calc(50% - ${C}px), calc(100% - ${D}px) 50%, 100% calc(50% + ${C}px), 100% 100%, 0 100%)`,
+          2: `polygon(0 0, 100% 0, 100% 100%, calc(50% + ${C}px) 100%, 50% calc(100% - ${D}px), calc(50% - ${C}px) 100%, 0 100%)`,
+          3: `polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 calc(50% + ${C}px), ${D}px 50%, 0 calc(50% - ${C}px))`
+        };
+        clip = notch[e];
+      } else {
+        const corner = dy < 0 ? (dx < 0 ? 2 : 3) : (dx < 0 ? 1 : 0);   // facing corner in cell space
+        const k = (corner - steps + 4) % 4;
+        const cut = {
+          0: `polygon(${C}px 0, 100% 0, 100% 100%, 0 100%, 0 ${C}px)`,
+          1: `polygon(0 0, calc(100% - ${C}px) 0, 100% ${C}px, 100% 100%, 0 100%)`,
+          2: `polygon(0 0, 100% 0, 100% calc(100% - ${C}px), calc(100% - ${C}px) 100%, 0 100%)`,
+          3: `polygon(0 0, 100% 0, 100% 100%, ${C}px 100%, 0 calc(100% - ${C}px))`
+        };
+        clip = cut[k];
+      }
+      card.style.clipPath = clip;
+    }
   });
 }
 window.addEventListener('resize', ()=>{ if(state.lifeOpen) layoutLifeCards(); });
