@@ -1470,14 +1470,25 @@ main.has-dock{padding-bottom:84px;}
 .splash-stage{position:absolute;inset:0;overflow:hidden;}
 .sp-layer{position:absolute;opacity:0;will-change:transform,opacity;}
 #spHand{bottom:-4vh;height:64vh;left:50%;transform:translateX(-50%) translateY(6vh);animation:spHandIn 800ms cubic-bezier(.22,.9,.32,1.12) 100ms forwards;}
-.sp-card{bottom:40vh;height:38vh;left:50%;transform-origin:50% 110%;}
-#spBuild{animation:spCardIn 700ms cubic-bezier(.2,.8,.3,1.05) 750ms forwards;--tx:-13vw;--rot:6deg;z-index:1;}
-#spCollect{animation:spCardIn 700ms cubic-bezier(.2,.8,.3,1.05) 1080ms forwards;--tx:13vw;--rot:-4deg;z-index:2;}
-#spPlay{animation:spCardIn 700ms cubic-bezier(.2,.8,.3,1.05) 1410ms forwards;--tx:0vw;--rot:0deg;z-index:3;height:40vh;bottom:42vh;}
+/* The card art is cropped to the card itself (no transparent halo), so these
+   heights are the real painted card. They hover just above the open palm,
+   inside the green conjuring, and each fade lasts ~1s with the next card
+   starting while the previous is still only two-thirds in. */
+.sp-card{bottom:33vh;height:24vh;left:50%;transform-origin:50% 110%;}
+#spBuild{animation:spCardIn 950ms cubic-bezier(.2,.8,.3,1.05) 600ms forwards;--tx:-19vw;--rot:4deg;z-index:1;height:25vh;}
+#spCollect{animation:spCardIn 950ms cubic-bezier(.2,.8,.3,1.05) 900ms forwards;--tx:19vw;--rot:-3deg;z-index:2;height:25vh;}
+#spPlay{animation:spCardIn 950ms cubic-bezier(.2,.8,.3,1.05) 1200ms forwards;--tx:0vw;--rot:0deg;z-index:3;bottom:35vh;}
 @keyframes spHandIn{to{opacity:1;transform:translateX(-50%) translateY(0);}}
 @keyframes spCardIn{from{opacity:0;transform:translateX(calc(-50% + var(--tx)*0.85)) translateY(3vh) rotate(var(--rot)) scale(.9);}to{opacity:1;transform:translateX(calc(-50% + var(--tx))) translateY(0) rotate(var(--rot)) scale(1);}}
 @media (prefers-reduced-motion:reduce){.sp-layer{animation:none !important;opacity:1;}#spHand{transform:translateX(-50%);}.sp-card{transform:translateX(calc(-50% + var(--tx))) rotate(var(--rot));}}
-.splash-appname{position:absolute;top:7vh;left:0;right:0;text-align:center;color:#FFFFFF;font-family:Roboto,'Inter',sans-serif;font-size:21px;font-weight:400;}
+/* The wordmark: Cinzel Decorative in brushed gold, a faint warm glow, and a
+   slow rise-and-fade of its own so it settles before the first card appears. */
+.splash-appname{position:absolute;top:7vh;left:0;right:0;text-align:center;font-family:'Cinzel Decorative','Cinzel',serif;font-size:clamp(34px,10.5vw,52px);font-weight:700;letter-spacing:.06em;line-height:1.1;
+  background:linear-gradient(180deg,#FFF1C2 0%,#E4BE62 42%,#B8862E 60%,#F3D889 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 0 rgba(80,50,0,.55)) drop-shadow(0 0 14px rgba(230,190,90,.35));
+  opacity:0;transform:translateY(-8px);animation:spNameIn 900ms ease-out 250ms forwards;}
+@keyframes spNameIn{to{opacity:1;transform:translateY(0);}}
+@media (prefers-reduced-motion:reduce){.splash-appname{animation:none;opacity:1;transform:none;}}
 
 /* Long-press text selection only where it has a use: card text, rulings,
    and editable fields. Everywhere else a long-press is never meant as
@@ -1555,7 +1566,7 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
     <img class="sp-layer sp-card" id="spCollect" src="card_collect.webp" alt="">
     <img class="sp-layer sp-card" id="spPlay" src="card_play.webp" alt="">
   </div>
-  <div class="splash-appname">Admirals &amp; Commanders MTG</div>
+  <div class="splash-appname">Deckhand</div>
 </div>
 <script>
 document.documentElement.setAttribute('data-mode','commander');
@@ -3885,13 +3896,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.451';
+const APP_VERSION = '2.51.452';
 const CHANGELOG_NOTES = {
   en: [
-    'The conjuring composes tighter: bigger cards overlapping over the palm, PLAY in front and raised, BUILD and COLLECT tucked behind \u2014 each fading in with a short, calm lift.'
+    'The launch animation now conjures the cards straight out of the open hand: they float above the palm inside the green glow, a fifth larger, and each one fades in slowly while the previous is still arriving. The wordmark reads Deckhand in gilded lettering.'
   ],
   nl: [
-    'De bezwering componeert strakker: grotere kaarten die over de handpalm overlappen, PLAY vooraan en iets hoger, BUILD en COLLECT erachter \u2014 elk vervaagt in met een korte, rustige lift.'
+    'De startanimatie tovert de kaarten nu recht uit de open hand: ze zweven boven de handpalm in de groene gloed, een vijfde groter, en elke kaart vervaagt langzaam in terwijl de vorige nog onderweg is. Het woordmerk leest Deckhand in gouden letters.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -18606,8 +18617,8 @@ setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
 function hideSplash(){
   const el = document.getElementById('appSplash');
   if(!el || el.classList.contains('out')) return;
-  // Long enough for the last card (PLAY) to land before the fade.
-  const wait = Math.max(0, 2150 - (Date.now() - _splashT0));
+  // Long enough for the last card (PLAY, lands at 2150ms) plus a short beat.
+  const wait = Math.max(0, 2300 - (Date.now() - _splashT0));
   setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(), 500); }, wait);
 }
 setTimeout(hideSplash, pendingShareToken() ? 6000 : 3200);   // safety: never trap the user behind it
