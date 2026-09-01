@@ -110,6 +110,7 @@ body{
 }
 html[data-mode="commander"] body{
   background:
+    linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.35) 100%),
     radial-gradient(ellipse at 20% -10%, rgba(240,185,74,0.09), transparent 45%),
     radial-gradient(ellipse at 100% 0%, var(--glow), transparent 40%),
     var(--ink);
@@ -535,7 +536,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 
 .home-facts{z-index:1;display:flex;gap:8px;width:min(370px,100%);margin-bottom:10px;}
 .home-fact{
-  flex:1;background:linear-gradient(180deg, var(--panel), var(--panel-2));
+  flex:1;background:var(--panel);
   border:2px solid var(--line);border-radius:10px;padding:7px 5px;
 }
 .hf-n{font-family:'Cinzel',serif;font-size:21px;font-weight:700;color:var(--brass);line-height:1;}
@@ -571,12 +572,12 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .deck-grid > *{flex:0 0 calc(50% - 6px);min-width:0;}
 /* the single-column tiles (other fleet, My Collection) keep full width */
 .deck-grid[style*="grid-template-columns:1fr"] > *{flex-basis:100%;}
-.deck-tile{position:relative;background:linear-gradient(180deg,var(--panel),var(--panel-2));border:2px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform 0.15s, box-shadow 0.15s;}
+.deck-tile{position:relative;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform 0.15s, box-shadow 0.15s;}
 .tile-fav,.tile-menu{position:absolute;top:6px;z-index:5;width:30px;height:30px;border-radius:50%;border:none;background:rgba(6,16,26,0.6);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
 .tile-fav{left:6px;color:var(--brass);}
 .tile-fav.on{color:#ffd34d;}
 .tile-menu{right:6px;font-size:18px;line-height:1;}
-.folder-tile{position:relative;background:linear-gradient(180deg,var(--panel),var(--panel-2));border:2px solid var(--brass-dim);border-radius:var(--radius);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;padding:18px 10px 14px;transition:transform 0.15s, box-shadow 0.15s;}
+.folder-tile{position:relative;background:var(--panel);border:2px solid var(--brass-dim);border-radius:var(--radius);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;padding:18px 10px 14px;transition:transform 0.15s, box-shadow 0.15s;}
 .folder-tile:active{transform:scale(0.97);}
 .folder-face{color:var(--brass);margin-bottom:10px;}
 .binder-tile .folder-face{width:100%;}
@@ -1126,7 +1127,7 @@ main.has-dock{padding-bottom:84px;}
 
 /* ---------- settings ---------- */
 .settings-section{background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
-.settings-main{background:var(--ink);}
+.settings-main{background-color:var(--ink);background-image:linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.35) 100%);}
 .settings-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;cursor:pointer;}
 .settings-row .l1{font-size:13.5px;font-weight:600;}
 .settings-row .l2{font-size:11px;color:var(--sub-text);margin-top:2px;}
@@ -1433,7 +1434,7 @@ main.has-dock{padding-bottom:84px;}
 .bh-logo{width:92px;height:92px;cursor:pointer;margin:0 auto 8px;animation:logoIdle 3.4s ease-in-out infinite;filter:drop-shadow(0 10px 24px rgba(0,0,0,0.5));}
 .browse-hero h2{font-family:'Cinzel',serif;font-size:17px;color:var(--ink-text);margin:0;}
 .browse-hero p{font-size:11.5px;color:var(--sub-text);margin:4px auto 0;max-width:340px;line-height:1.5;}
-.inspire-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:linear-gradient(180deg,var(--panel),var(--panel-2));border:2px solid var(--line);color:var(--brass);padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;}
+.inspire-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--panel);border:2px solid var(--line);color:var(--brass);padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;}
 .inspire-cta:hover{border-color:var(--brass);}
 
 /* ---------- deck history ---------- */
@@ -1617,6 +1618,14 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
   .sr-grid > *, .sc-grid > *, .visual-grid > *, .col-grid > *, .deck-grid > *{flex:0 0 180px;max-width:180px;}
   .pair-grid{grid-template-columns:repeat(auto-fill, 236px);justify-content:flex-start;}
 }
+
+/* Depth fade: every solid surface — panels, tiles, fields, pop-ups — runs
+   from its colour at the top into a slight black at its foot, and the page
+   itself does the same (see body). Sits at the END of the stylesheet so its
+   background-image outranks the components' own shorthands; states with
+   higher specificity (hover, .sel) intentionally paint flat. Generated from
+   the same scan as the surface-text rule. */
+.app > main > .adv-toggle, .app > main > .adv-panel, .app > main > #colAdvBox, .tw-row, .brand-banner #capBack, .brand-banner .ov-back, .oracle-face, .tag-editor, .hfm-chip, .home-fact, .deck-tile, .folder-tile, .ghost-btn, .bulk-textarea, .panel-card, .col-filter-input, .col-select, #bindersPop, #fabMenu, .pd-btn, .pd-panel, .searchbar input, .appoint-sheet, .appoint-row, .pair-btns .add-btn, .sp-jump-btn, .adv-toggle, .cmc-row select, .cmc-row input, .adv-row input[type=text], .adv-row select, .sc-primer, .sc-list, .sr-tile .st-btns .add-btn, .pr-rail, .cselect-btn, .cselect-panel, .cselect-search, .cselect-search input, .bs-row select, .settings-section, .guild-opt, .menu-pop, .toast, .dp-row, .cr-bar input, .tr-qty button, .edh-jump, .edh-rel-chip, .glog-frow .seg button, .glog-sel, .glog-num, .glog-chip, .inspire-cta, .life-card-v2, .life-panel{background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%);}
 </style>
 </head>
 <body>
@@ -4001,15 +4010,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.464';
+const APP_VERSION = '2.51.465';
 const CHANGELOG_NOTES = {
   en: [
-    'The app is now called Deckhand everywhere it speaks: browser title, share messages, diagnostics and the Extras footer.',
-    'Launch animation: BUILD and COLLECT spread a little wider so both banners read in full.'
+    'Depth everywhere: the page and every panel, tile, field and pop-up now fade from their color at the top into a slight black at the foot.'
   ],
   nl: [
-    'De app heet nu overal Deckhand waar hij spreekt: browsertitel, deelberichten, diagnose en de voettekst van Extra.',
-    'Startanimatie: BUILD en COLLECT staan iets wijder zodat beide banieren volledig leesbaar zijn.'
+    'Diepte overal: de pagina en elk paneel, elke tegel, elk veld en elke pop-up lopen nu van hun kleur bovenaan naar een licht zwart aan de voet.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
