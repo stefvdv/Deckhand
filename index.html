@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Admirals & Commanders MTG</title>
+<title>Deckhand — MTG deck builder</title>
 <meta name="description" content="Deck builder, card search, play-data recommendations, and a life tracker for the Commander and Admiral Magic: The Gathering formats — two fleets, one app.">
 <meta name="theme-color" content="#22103A">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1531,8 +1531,8 @@ main.has-dock{padding-bottom:84px;}
    inside the green conjuring, and each fade lasts ~1s with the next card
    starting while the previous is still only two-thirds in. */
 .sp-card{bottom:39vh;height:24vh;left:50%;transform-origin:50% 110%;}
-#spBuild{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 600ms forwards, spHover 3400ms ease-in-out 1800ms infinite;--tx:-14vw;--rot:-20deg;z-index:1;height:25vh;}
-#spCollect{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 950ms forwards, spHover 3800ms ease-in-out 2150ms infinite;--tx:22vw;--rot:0deg;z-index:2;height:25vh;}
+#spBuild{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 600ms forwards, spHover 3400ms ease-in-out 1800ms infinite;--tx:-18vw;--rot:-20deg;z-index:1;height:25vh;}
+#spCollect{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 950ms forwards, spHover 3800ms ease-in-out 2150ms infinite;--tx:26vw;--rot:0deg;z-index:2;height:25vh;}
 #spPlay{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 1300ms forwards, spHover 3600ms ease-in-out 2500ms infinite;--tx:0vw;--rot:0deg;z-index:3;bottom:42vh;}
 @keyframes spHandIn{to{opacity:1;transform:translateX(-50%) translateY(0);}}
 @keyframes spCardIn{from{opacity:0;transform:translateX(calc(-50% + var(--tx)*0.85)) translateY(3vh) rotate(var(--rot)) scale(.9);}to{opacity:1;transform:translateX(calc(-50% + var(--tx))) translateY(0) rotate(var(--rot)) scale(1);}}
@@ -1746,7 +1746,7 @@ function leaderLineLabel(d){ return deckFormat(d)==='commander' ? 'COMMANDER' : 
 function deckTotal(d){ return deckFormat(d) === 'commander' ? 100 : DECK_TOTAL; }
 function startLifeFor(d){ return deckFormat(d) === 'commander' ? 40 : START_LIFE; }
 function cmdDmgMaxFor(d){ return deckFormat(d) === 'commander' ? 21 : 18; }
-function brandTitle(){ return isCmdrMode() ? 'Commanders MTG' : 'Admirals MTG'; }
+function brandTitle(){ return 'Deckhand'; }
 function modeGlyph(){ return isCmdrMode() ? '⚔' : '⚓'; }
 function anchorSvg(sz){
   // The anchor, in-house style: gold line art like every other glyph — the
@@ -4001,13 +4001,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.463';
+const APP_VERSION = '2.51.464';
 const CHANGELOG_NOTES = {
   en: [
-    'Launch animation: COLLECT now sits as far right of PLAY as BUILD sits left of it, matching the app icon composition.'
+    'The app is now called Deckhand everywhere it speaks: browser title, share messages, diagnostics and the Extras footer.',
+    'Launch animation: BUILD and COLLECT spread a little wider so both banners read in full.'
   ],
   nl: [
-    'Startanimatie: COLLECT staat nu even ver rechts van PLAY als BUILD er links van staat, gelijk aan de compositie van het app-icoon.'
+    'De app heet nu overal Deckhand waar hij spreekt: browsertitel, deelberichten, diagnose en de voettekst van Extra.',
+    'Startanimatie: BUILD en COLLECT staan iets wijder zodat beide banieren volledig leesbaar zijn.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12475,7 +12477,7 @@ async function shareCardImage(card){
   }catch(e){ if(e && e.name !== 'AbortError') toast(trS('Sharing failed.')); }
 }
 function shareCardLink(card){
-  const text = `${card.name} — Admirals & Commanders MTG`;
+  const text = `${card.name} — Deckhand`;
   const url = `${location.origin}${location.pathname}?card=${encodeURIComponent(card.name)}`;
   if(navigator.share){
     navigator.share({ title: card.name, text, url }).catch(()=>{});
@@ -14450,7 +14452,7 @@ function wireDataSources(){
       const m = await bulkKvGet('meta');
       if(m) bulk = 'bulkdb: ' + m.cards + ' cards, ' + m.rulingCards + ' ruling sets, ' + (m.tagCards || 0) + ' tag sets · built ' + m.built + ' · saved ' + new Date(m.savedAt || 0).toISOString();
     }catch(e){}
-    const text = ['Admirals & Commanders v' + APP_VERSION, bulk, '--- network journal (newest last) ---']
+    const text = ['Deckhand v' + APP_VERSION, bulk, '--- network journal (newest last) ---']
       .concat((_sfLog && _sfLog.length) ? _sfLog : ['(empty)']).join('\n');
     navigator.clipboard?.writeText(text)
       .then(()=>toast(trS('Copied.')))
@@ -16796,7 +16798,7 @@ function settingsPageHtml(){
       <pre id="diagText" style="white-space:pre-wrap;word-break:break-all;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;padding:8px;font-size:11px;line-height:1.5;max-height:220px;overflow:auto;">${escapeHtml(JSON.stringify(state._inspoDiag, null, 1))}</pre>
       <button class="ghost-btn" id="diagCopy" style="width:100%;">📋 ${trS('Copy diagnostics')}</button>
     </div>` : ''}
-    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Admirals & Commanders MTG v${APP_VERSION} · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
+    <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Deckhand v${APP_VERSION} · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--brass);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--brass);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
   </main>`;
 }
 function commanderQuickRulesHtml(){
@@ -17131,7 +17133,7 @@ function wireSettingsPage(){
   document.getElementById('shareAppRow')?.addEventListener('click', async ()=>{
     const hosted = /^https?:/.test(location.protocol);
     const url = hosted ? (location.origin + location.pathname) : '';
-    const text = `⚓⚔ Admirals & Commanders MTG — one free app, two four-player singleton formats: classic 100-card Commander with official legality and the live banned list, and Admiral, a curated 60-card format where mana comes from a shared Landing Zone instead of lands in the deck. Deck builder, card search, real play-data recommendations, spoilers, and a life tracker for game night. Open the link in Chrome (Android) or Safari (iPhone) and use "Add to Home Screen" to install it${hosted ? ':' : '.'}`;
+    const text = `🖐🃏 Deckhand — the free MTG deck builder in my pocket: Commander, Admiral, Pauper Commander, PreDH and Duel Commander, with live legality and ban lists, collection tracking with Cardmarket prices, EDHREC-powered inspiration and combos — all offline-capable. Deal yourself in: ${location.origin}${location.pathname}`;
     if(navigator.share){
       try{ await navigator.share(hosted ? {title: brandTitle(), text, url} : {title: brandTitle(), text}); return; }
       catch(e){ if(e && e.name==='AbortError') return; }
