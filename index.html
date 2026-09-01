@@ -727,9 +727,13 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-bridge{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;align-items:stretch;}
 .dl-bridge-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:stretch;}
 .dl-bridge{position:relative;}
-.dl-cover{position:absolute;inset:0;z-index:6;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;}
+/* Bottom-up cover: glued to the bridge's foot, at least the bridge's height,
+   growing UPWARD over the decklist as its content (textarea, buttons, the
+   resolve report) needs — never boxed to the bridge and cut at the dock.
+   Only past the viewport's free height does it scroll, pinned to its foot. */
+.dl-cover{position:absolute;left:0;right:0;bottom:0;top:auto;min-height:100%;max-height:calc(100vh - var(--nav-h) - 250px - env(safe-area-inset-bottom));z-index:6;overflow:auto;display:flex;flex-direction:column;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;}
 .dl-popup{position:fixed;left:12px;right:12px;top:50%;transform:translateY(-50%);z-index:120;max-height:82vh;overflow:auto;background:rgba(22,7,10,1);border:1px solid var(--pop-line);border-radius:14px;box-shadow:0 12px 44px rgba(0,0,0,0.6);}
-.dl-cover .panel-card{margin:0;min-height:100%;box-sizing:border-box;}
+.dl-cover .panel-card{margin:0;flex:1 0 auto;box-sizing:border-box;}
 .df-compact{padding:12px;}
 .df-compact .panel-h{margin:0 0 8px;}
 .df-compact .adv-row{grid-template-columns:82px minmax(0,1fr);gap:3px 10px;margin-bottom:8px;}
@@ -1469,15 +1473,15 @@ main.has-dock{padding-bottom:84px;}
    transform + opacity only — GPU-composited, no repaints on the way in. */
 .splash-stage{position:absolute;inset:0;overflow:hidden;}
 .sp-layer{position:absolute;opacity:0;will-change:transform,opacity;}
-#spHand{bottom:-4vh;height:64vh;left:50%;transform:translateX(-50%) translateY(6vh);animation:spHandIn 800ms cubic-bezier(.22,.9,.32,1.12) 100ms forwards;}
+#spHand{bottom:3vh;height:64vh;left:50%;transform:translateX(-50%) translateY(6vh);animation:spHandIn 800ms cubic-bezier(.22,.9,.32,1.12) 100ms forwards;}
 /* The card art is cropped to the card itself (no transparent halo), so these
    heights are the real painted card. They hover just above the open palm,
    inside the green conjuring, and each fade lasts ~1s with the next card
    starting while the previous is still only two-thirds in. */
-.sp-card{bottom:33vh;height:24vh;left:50%;transform-origin:50% 110%;}
-#spBuild{animation:spCardIn 950ms cubic-bezier(.2,.8,.3,1.05) 600ms forwards;--tx:-19vw;--rot:4deg;z-index:1;height:25vh;}
-#spCollect{animation:spCardIn 950ms cubic-bezier(.2,.8,.3,1.05) 900ms forwards;--tx:19vw;--rot:-3deg;z-index:2;height:25vh;}
-#spPlay{animation:spCardIn 950ms cubic-bezier(.2,.8,.3,1.05) 1200ms forwards;--tx:0vw;--rot:0deg;z-index:3;bottom:35vh;}
+.sp-card{bottom:40vh;height:24vh;left:50%;transform-origin:50% 110%;}
+#spBuild{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 600ms forwards;--tx:-19vw;--rot:-17deg;z-index:1;height:25vh;}
+#spCollect{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 950ms forwards;--tx:19vw;--rot:-3deg;z-index:2;height:25vh;}
+#spPlay{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 1300ms forwards;--tx:0vw;--rot:0deg;z-index:3;bottom:42vh;}
 @keyframes spHandIn{to{opacity:1;transform:translateX(-50%) translateY(0);}}
 @keyframes spCardIn{from{opacity:0;transform:translateX(calc(-50% + var(--tx)*0.85)) translateY(3vh) rotate(var(--rot)) scale(.9);}to{opacity:1;transform:translateX(calc(-50% + var(--tx))) translateY(0) rotate(var(--rot)) scale(1);}}
 @media (prefers-reduced-motion:reduce){.sp-layer{animation:none !important;opacity:1;}#spHand{transform:translateX(-50%);}.sp-card{transform:translateX(calc(-50% + var(--tx))) rotate(var(--rot));}}
@@ -3896,13 +3900,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.452';
+const APP_VERSION = '2.51.454';
 const CHANGELOG_NOTES = {
   en: [
-    'The launch animation now conjures the cards straight out of the open hand: they float above the palm inside the green glow, a fifth larger, and each one fades in slowly while the previous is still arriving. The wordmark reads Deckhand in gilded lettering.'
+    'Bulk Edit, Deck search and the other decklist panels now open showing their foot — the Check & Save button and the resolve progress are in view instead of cut off behind the toolbar. The panel grows upward over the list as needed.',
+    'Copy diagnostics (Extras) now records how long each stage of a bulk import took, so a slow import can be traced.'
   ],
   nl: [
-    'De startanimatie tovert de kaarten nu recht uit de open hand: ze zweven boven de handpalm in de groene gloed, een vijfde groter, en elke kaart vervaagt langzaam in terwijl de vorige nog onderweg is. Het woordmerk leest Deckhand in gouden letters.'
+    'Bulkbewerking, Zoeken in deck en de andere decklijstpanelen openen nu met hun voet in beeld — de knop Controleren & opslaan en de voortgang staan in het zicht in plaats van afgesneden achter de werkbalk. Het paneel groeit naar boven over de lijst waar nodig.',
+    'Diagnose kopiëren (Extra) legt nu vast hoe lang elke stap van een bulkimport duurde, zodat een trage import te herleiden is.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9355,7 +9361,7 @@ function toggleDlPanel(d, panelKey){
       // The panel ELEMENT anchors the view: scrollIntoView with a
       // scroll-margin that clears the dock stack — immune to whichever
       // scroller the page uses, retried past the keyboard's animation.
-      const snapPanel = ()=>{ try{ document.getElementById('dlPanelBox')?.scrollIntoView({ block: 'end' }); }catch(e){} };
+      const snapPanel = ()=>{ try{ const b = document.getElementById('dlPanelBox'); if(b){ b.scrollTop = b.scrollHeight; b.scrollIntoView({ block: 'end' }); } }catch(e){} };
       snapPanel(); setTimeout(snapPanel, 160); setTimeout(snapPanel, 480);
 }
 function wireBuilderBody(d){
@@ -10582,7 +10588,15 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     } else cardNames.unshift(...isoLeaderNames);
   }
   document.getElementById(reportElId).innerHTML = `<div class="status"><div class="spinner"></div>Resolving ${cardNames.length+(admiralName?1:0)} cards…</div>`;
+  // The report grows at the panel's foot — keep that foot in view (the
+  // cover scrolls only when taller than the free viewport).
+  const _pinFoot = ()=>{ try{ const b = document.getElementById('dlPanelBox'); if(b) b.scrollTop = b.scrollHeight; }catch(e){} };
+  _pinFoot();
+  // Phase clock for Copy diagnostics: when an import crawls, this line says
+  // which stage ate the time and how deep the Scryfall lane was on arrival.
+  const _bt = { t0: Date.now(), q: _sfQ.hi.length + '/' + _sfQ.lo.length };
   await resolveLegalSets();
+  _bt.sets = Date.now();
   let newAdmiral = isImport ? null : d.admiral;
   let newPartner;   // undefined = leave d.partner untouched
   const report=[];
@@ -10610,7 +10624,9 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   const results = await resolveManyByName(cardNames, (done, all)=>{
     const el = document.getElementById(reportElId);
     if(el) el.innerHTML = `<div class="status"><div class="spinner"></div>Resolving ${done}/${all} cards…</div>`;
+    _pinFoot();
   });
+  _bt.resolve = Date.now();
 
   // Some lookups may have failed purely due to network/rate-limit issues even
   // after sfFetch's internal retries — give those specific cards one more
@@ -10622,6 +10638,11 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     const retried = await runLimited(retryIdxs.map(i=>cardNames[i]), resolveCardByName, 2);
     retryIdxs.forEach((idx,j)=>{ results[idx] = retried[j]; });
   }
+  _bt.retry = Date.now();
+  const _btLine = (tag)=>{ try{
+    const s = (a,b)=>((b - a) / 1000).toFixed(1) + 's';
+    sfJournal('BULK ' + tag + ' ' + cardNames.length + ' names, lane ' + _bt.q + ': sets ' + s(_bt.t0, _bt.sets) + ', resolve ' + s(_bt.sets, _bt.resolve) + ', retry ' + retryIdxs.length + 'x ' + s(_bt.resolve, _bt.retry) + ', finish ' + s(_bt.retry, Date.now()));
+  }catch(e){} };
 
   const newDeck=[];
   results.forEach(r=>{
@@ -10687,6 +10708,7 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     state.dlPanel = null;
     toast(isImport ? `Deck imported — ${added} cards ${isCmdrMode()?'added':'aboard'}.` : `Deck updated — ${added} cards.`);
     render();
+    _btLine('clean');
     return;
   }
   // Something needs attention: keep the panel open with the full report.
@@ -10697,6 +10719,8 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
   updateDeckMeter(d);
   document.getElementById('retryFailedBtn')?.addEventListener('click', ()=>retryFailedCards(d, retryable.map(r=>r.name), reportElId, newAdmiral));
+  _pinFoot();
+  _btLine('report');
 }
 
 async function retryFailedCards(d, names, reportElId, admiralForColorCheck){
@@ -18617,8 +18641,8 @@ setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
 function hideSplash(){
   const el = document.getElementById('appSplash');
   if(!el || el.classList.contains('out')) return;
-  // Long enough for the last card (PLAY, lands at 2150ms) plus a short beat.
-  const wait = Math.max(0, 2300 - (Date.now() - _splashT0));
+  // Long enough for the last card (PLAY, lands at 2500ms) plus a short beat.
+  const wait = Math.max(0, 2650 - (Date.now() - _splashT0));
   setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(), 500); }, wait);
 }
 setTimeout(hideSplash, pendingShareToken() ? 6000 : 3200);   // safety: never trap the user behind it
