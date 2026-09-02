@@ -110,14 +110,16 @@ button,input,select,textarea,.sr-tile,.vg-card,.tap-zone,.dmg-overlay,.chip{touc
 html,body{margin:0;padding:0;height:100%;background:var(--ink);overflow-x:clip;max-width:100%;overscroll-behavior-y:none;}   /* clip, not hidden: hidden silently kills position:sticky */
 body{
   font-family:'Inter',sans-serif; color:var(--ink-text);
-  background:
-    radial-gradient(ellipse at 20% -10%, rgba(201,162,75,0.09), transparent 45%),
-    radial-gradient(ellipse at 100% 0%, rgba(92,139,158,0.10), transparent 40%),
-    var(--ink);
+  background:transparent;
   min-height:100vh; overscroll-behavior-y:none;
   transition:background 0.2s;
 }
-html[data-mode="commander"] body{
+html[data-mode="commander"] body{ background:transparent; }
+/* The colour-to-black depth fade lives on a FIXED layer glued to the
+   viewport: scrolling moves the content over it, never the fade itself,
+   so the gradient can't visibly restart anywhere on any page. */
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
     linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.35) 100%),
     radial-gradient(ellipse at 20% -10%, rgba(240,185,74,0.09), transparent 45%),
@@ -173,7 +175,7 @@ button{font-family:'Inter';}
 }
 
 .icon-btn:hover{border-color:var(--brass);color:var(--brass);}
-.compass{width:40px;height:40px;flex:0 0 auto;cursor:pointer;border:1px solid transparent;border-radius:11px;padding:2px;box-sizing:content-box;}
+.compass{width:40px;height:40px;flex:0 0 auto;cursor:pointer;border:2px solid transparent;border-radius:11px;padding:1px;box-sizing:content-box;}
 .compass.active{background:var(--brass-glow);border-color:var(--brass);}
 .compass svg{width:25px;height:25px;animation:none;}
 .compass .compass-badge{width:100%;height:100%;display:block;border-radius:50%;}
@@ -221,13 +223,13 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > .searchbar,
 .app > main > div:has(> #deckFilter){
   order:100;position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:36;
-  background:var(--ink);border-top:2px solid var(--line);
+  background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);
   margin:8px -16px 0 !important;padding:10px 16px;
 }
 .app > main > .adv-toggle,
 .app > main > div:has(> #colAdvToggle){
   order:99;position:sticky;bottom:calc(var(--nav-h) + 64px + env(safe-area-inset-bottom));z-index:36;
-  background:var(--ink);border-top:2px solid var(--line);
+  background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);
   margin:0 -16px !important;padding:8px 16px;
 }
 /* The Advanced-filters bar is the BUTTON itself — it keeps its field face
@@ -326,7 +328,7 @@ main.card-detail > div:nth-child(2){order:10;}
 .app > main > .builder-tabs{
   position:fixed;left:0;right:0;top:auto;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
   z-index:41;margin:0;padding:5px 14px;height:44px;box-sizing:border-box;
-  background:var(--ink);border-top:2px solid var(--line);
+  background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);
 }
 /* Bottom-up: content packs at the FOOT even when a deck search leaves the
    list nearly empty — the min-height keeps the bridge (and any open tool
@@ -344,7 +346,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
      order stays untouched and the swipe-preview clone keeps working. */
   position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;box-sizing:border-box;
   height:calc(var(--nav-h) + env(safe-area-inset-bottom));
-  background:color-mix(in srgb, var(--ink) 97%, transparent); backdrop-filter:blur(8px);
+  background:color-mix(in srgb, var(--ink) 55%, transparent); backdrop-filter:blur(8px);
   border-top:2px solid var(--line);border-bottom:none;
   display:flex;align-items:center;gap:6px;padding:0 8px env(safe-area-inset-bottom);overflow:hidden;max-width:100%;
 }
@@ -546,6 +548,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 @keyframes gleamSweep{0%{transform:rotate(0);opacity:0;}15%{opacity:1;}85%{opacity:1;}100%{transform:rotate(180deg);opacity:0;}}
 @media (prefers-reduced-motion:reduce){.home-logo,.logo-land-drop,.logo-land-swing{animation:none !important;}.logo-gleam.sweep{animation:none;opacity:0;}}
 .home-desc{z-index:1;max-width:370px;margin:4px auto 6px;text-align:left;}
+.home-desc-toggle{z-index:1;flex:none;display:block;width:100%;max-width:370px;margin:6px auto;font-size:12.5px;}
 .home-desc p{font-size:13px;line-height:1.5;color:var(--ink-text);opacity:0.92;margin:8px 0;}
 .home-desc strong{font-family:'Cinzel',serif;font-size:11.5px;letter-spacing:0.5px;color:var(--brass);}
 .home-formats{z-index:1;width:min(370px,100%);margin:2px auto 8px;display:flex;flex-direction:column;gap:6px;}
@@ -824,7 +827,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .ib svg{width:20px;height:20px;color:currentColor;opacity:0.92;}
 .dl-adm-empty{aspect-ratio:63/88;border:2px dashed var(--line);border-radius:4.75% / 3.5%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--sub-text-2);font-size:12px;cursor:pointer;}
 /* Bottom dock: fixed status bar with cycling info sets */
-.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;background:var(--ink);border-top:2px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
+.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
 .dk-arr{background:none;border:2px solid var(--line);border-radius:8px;color:var(--sub-text);width:30px;height:34px;cursor:pointer;flex:none;font-size:13px;}
 /* display:contents lifts the set's items to be the dock's own flex
    children, so the bar's space-between spreads EVERYTHING evenly —
@@ -1159,7 +1162,7 @@ main.has-dock{padding-bottom:84px;}
 
 /* ---------- settings ---------- */
 .settings-section{background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
-.settings-main{background-color:var(--ink);background-image:linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.35) 100%);}
+.settings-main{background:transparent;}
 .settings-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;cursor:pointer;}
 .settings-row .l1{font-size:13.5px;font-weight:600;}
 .settings-row .l2{font-size:11px;color:var(--sub-text);margin-top:2px;}
@@ -1186,7 +1189,7 @@ main.has-dock{padding-bottom:84px;}
 .seg-inline button{padding:7px 16px;font-size:12px;}
 
 /* ---------- overlays / modals ---------- */
-.overlay{position:fixed;inset:0;z-index:100;background:var(--ink);display:flex;flex-direction:column;}
+.overlay{position:fixed;inset:0;z-index:100;background:linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.35) 100%), var(--ink);display:flex;flex-direction:column;}
 .overlay-inner{max-width:900px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;min-height:0;}
 .overlay main{flex:1;overflow-y:auto;padding-bottom:24px;}
 #recoOverlay main, #similarOverlay main, #printOverlay main, #colAddSheet main,
@@ -1397,7 +1400,7 @@ main.has-dock{padding-bottom:84px;}
 .overlay main .edh-sec > .section-label{top:auto;bottom:0;}
 #recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;border-bottom:2px solid var(--line);}
 #recoOverlay main{padding-bottom:0;}
-#recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:var(--ink);border-top:2px solid var(--line);margin:0;padding:8px 0;}
+#recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);margin:0;padding:8px 0;}
 #recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;transition:bottom 0.2s;}
 /* While the selection + fab is visible, the burger steps up to make room —
    and steps back down the moment the last selection is dropped. */
@@ -1705,6 +1708,25 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
   box-shadow:inset 0 1.5px 0 rgba(255,244,210,0.2), inset 0 -1.5px 0 rgba(90,55,10,0.4);
 }
 .banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:var(--panel-2);background-image:linear-gradient(var(--panel-2),var(--panel-2)), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
+
+/* Field faces flip to the MAIN colour when they sit on a SECONDARY surface:
+   a button inside a panel wears the page ink, standing off its card exactly
+   as the secondary plates stand off the main-coloured bars. The main-role
+   aliases are frozen at the html element — custom properties inherit their
+   COMPUTED value, so panel-level re-points can't reach them. */
+html{--main-field:var(--ink-2);--main-field-line:var(--line);--main-hl:var(--glow);--main-text:var(--ink-text);--main-sub:var(--sub-text);--main-sub-2:var(--sub-text-2);--main-brass:var(--brass);--main-brass-dim:var(--brass-dim);--main-brass-glow:var(--brass-glow);--main-parchment:var(--parchment);--main-parchment-dim:var(--parchment-dim);}
+:is(.panel-card, .settings-section, .adv-panel, #colAdvBox, .dl-cover, .pd-panel, .cselect-panel, .sc-primer, .sc-list, .life-panel, .life-card-v2, .deck-tile, .folder-tile, .pr-rail, .home-fact, .oracle-face, .tag-editor, .appoint-sheet) :is(.ghost-btn, .icon-btn, .dk-tool, .rt-chip, .chip, .col-filter-input, .col-select, .pd-btn, .adv-toggle, .cselect-btn, .cselect-search, .dp-row, .tr-qty button, .edh-rel-chip, .edh-jump, .glog-sel, .glog-num, .glog-chip, .hfm-chip, .sp-jump-btn, .inspire-cta, .appoint-row, .bulk-textarea, select, input, textarea, .seg button, .add-btn){
+  --field:var(--main-field);--field-line:var(--main-field-line);--hl:var(--main-hl);
+  --ink-text:var(--main-text);--sub-text:var(--main-sub);--sub-text-2:var(--main-sub-2);
+  --brass:var(--main-brass);--brass-dim:var(--main-brass-dim);--brass-glow:var(--main-brass-glow);
+  --parchment:var(--main-parchment);--parchment-dim:var(--main-parchment-dim);
+  --line:var(--main-field-line);
+}
+:is(.panel-card, .settings-section, .adv-panel, #colAdvBox, .dl-cover, .pd-panel, .cselect-panel, .sc-primer, .sc-list, .life-panel, .life-card-v2, .deck-tile, .folder-tile, .pr-rail, .home-fact, .oracle-face, .tag-editor, .appoint-sheet) :is(.icon-btn, .dk-tool, .banner-tab){
+  background-color:var(--main-field);
+  background-image:linear-gradient(var(--main-field),var(--main-field)), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);
+}
+:is(.panel-card, .settings-section, .adv-panel, #colAdvBox, .dl-cover, .pd-panel, .cselect-panel, .sc-primer, .sc-list, .life-panel, .life-card-v2, .deck-tile, .folder-tile, .pr-rail, .home-fact, .oracle-face, .tag-editor, .appoint-sheet) .rt-chip:not(.on){background:var(--main-field);border-color:var(--main-field-line);color:var(--main-text);}
 </style>
 </head>
 <body>
@@ -4089,13 +4111,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.481';
+const APP_VERSION = '2.51.482';
 const CHANGELOG_NOTES = {
   en: [
-    'The purple retired to the launch screen: bars wear your guild\u2019s main color again, and the nav, deck dock and burger buttons wear the secondary color. The dock\u2019s + and \u00bb are metallic gold now, and the home button is a proper house icon.'
+    'Buttons found their contrast: any field or button sitting on a secondary-coloured panel now wears the main colour instead of blending in. The page\u2019s dark depth fade is glued to the screen so it never visibly restarts, the dock tools work from the Stats and Deck Log tabs (they jump you back to the decklist first), the home page\u2019s long explanation starts folded behind a button, and the home button\u2019s gold rim matches its neighbours.'
   ],
   nl: [
-    'Het paars trok zich terug naar het startscherm: balken dragen weer de hoofdkleur van je gilde, en de navigatie-, deckdock- en burgerknoppen dragen de tweede kleur. De + en \u00bb van het dock zijn nu metaalgoud, en de home-knop is een echt huisje.'
+    'Knoppen kregen hun contrast: elk veld of elke knop op een paneel in de tweede kleur draagt nu de hoofdkleur in plaats van weg te vallen. De donkere dieptegradi\u00ebnt van de pagina zit vastgeplakt aan het scherm zodat hij nooit zichtbaar opnieuw begint, de dock-knoppen werken vanaf de Stats- en Decklog-tabs (ze springen eerst terug naar de decklijst), de lange uitleg op de homepagina start opgevouwen achter een knop, en de gouden rand van de home-knop is even dik als die van zijn buren.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5167,7 +5189,8 @@ function homePageHtml(){
       <li>Test opening hands, castability and power bracket before you sit down</li>
       <li>Count life, log games and share decks — everything offline-ready</li>
     </ul>
-    <div class="home-desc">
+    <button class="ghost-btn home-desc-toggle" id="homeDescToggle">About Deckhand — what can it do? ⌄</button>
+    <div class="home-desc" id="homeDescBody" hidden>
       <p><strong>Formats.</strong> Build decks in Commander, Admiral, Pauper Commander, PreDH and Duel Commander. Every deck carries its own format; searches, suggestions and legality checks follow it, and My Decks files each deck under its format automatically. Rules and current ban lists for eleven formats, from Standard to Vintage, live under Extras.</p>
       <p><strong>Deck building.</strong> Search Scryfall with full advanced filters, add cards straight into the deck you\u2019re working on, and see colour identity, ban list and format legality judged live. Import from Moxfield, Archidekt, MTGO or plain text; export, print proxies, or share a deck as a link or image.</p>
       <p><strong>Inspiration.</strong> Find a commander by colours, theme or Kindred, then open its recommendation page: the most-played cards, high-synergy picks, combos from Commander Spellbook, and budget alternatives that do the same job for less.</p>
@@ -5348,6 +5371,16 @@ function wireHomePage(){
     state.settingsRulesOpen = true;
     state.settingsFullRulesOpen = true;
     switchPage('settings');
+  });
+  // The long explanation starts folded so the home page isn't a wall of
+  // text; the toggle unfolds it in place and brings it into view.
+  document.getElementById('homeDescToggle')?.addEventListener('click', ()=>{
+    const b = document.getElementById('homeDescBody'), t = document.getElementById('homeDescToggle');
+    if(!b || !t) return;
+    const open = b.hidden;
+    b.hidden = !open;
+    t.textContent = open ? 'About Deckhand \u2014 what can it do? \u2303' : 'About Deckhand \u2014 what can it do? \u2304';
+    if(open){ try{ b.scrollIntoView({ block:'nearest' }); }catch(err){} }
   });
 }
 
@@ -9529,6 +9562,13 @@ function dlBoxClass(){
   return (p==='impexp' || p==='import' || p==='export') ? 'dl-popup' : 'dl-cover';
 }
 function toggleDlPanel(d, panelKey){
+      // Dock tools always work ON the decklist: pressed from Stats or Deck
+      // Log, the page first returns to the Decklist tab (rebuilding
+      // #dlPanelBox), then the pressed tool opens exactly as normal.
+      if(state.builderTab !== 'list'){
+        state.builderTab = 'list'; state.dlPanel = null;
+        try{ renderBuilderBody(d); syncTabsUI(); }catch(err){}
+      }
       const wasOpen = state.dlPanel;
       const ieFam = p => p==='impexp' || p==='import' || p==='export';
       const hit = panelKey==='impexp' ? ieFam(state.dlPanel) : state.dlPanel===panelKey;
