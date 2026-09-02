@@ -131,7 +131,9 @@ button{font-family:'Inter';}
 /* ---------- chrome ---------- */
 .topbar{
   position:sticky;top:0;z-index:40;
-  background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));
+  /* The frame of the app is constant: deep purple bars with gold rims,
+     whatever guild dresses the page between them. */
+  background:linear-gradient(180deg, rgba(36,16,64,0.97), rgba(28,12,50,0.94));
   backdrop-filter:blur(8px); border-bottom:2px solid var(--line);
   padding:12px 16px; display:flex; align-items:center; gap:10px; min-height:56px;
 }
@@ -342,7 +344,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
      order stays untouched and the swipe-preview clone keeps working. */
   position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;box-sizing:border-box;
   height:calc(var(--nav-h) + env(safe-area-inset-bottom));
-  background:color-mix(in srgb, var(--ink) 97%, transparent); backdrop-filter:blur(8px);
+  background:rgba(36,16,64,0.97); backdrop-filter:blur(8px);
   border-top:2px solid var(--line);border-bottom:none;
   display:flex;align-items:center;gap:6px;padding:0 8px env(safe-area-inset-bottom);overflow:hidden;max-width:100%;
 }
@@ -1691,8 +1693,8 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
    own background:none/var() declared above. */
 .banner-tab, .icon-btn, .dk-tool, .dk-arr, .dk-count, #lifeCogBtn, .compass, .brand-banner #capBack, .brand-banner .ov-back, .in-chev, .home-search-btn{
   border-color:transparent;
-  background-color:#241040;
-  background-image:linear-gradient(#241040,#241040), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);
+  background-color:var(--ink);
+  background-image:linear-gradient(var(--ink),var(--ink)), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);
   background-origin:padding-box,border-box;
   background-clip:padding-box,border-box;
   box-shadow:inset 0 1px 0 rgba(255,246,215,0.32), inset 0 -1px 0 rgba(96,58,10,0.5);
@@ -1702,7 +1704,7 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
 .settings-section, .panel-card, .deck-tile, .folder-tile, .adv-panel, .dl-cover{
   box-shadow:inset 0 1.5px 0 rgba(255,244,210,0.2), inset 0 -1.5px 0 rgba(90,55,10,0.4);
 }
-.banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:#38195E;}
+.banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:var(--ink-3);background-image:linear-gradient(var(--ink-3),var(--ink-3)), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
 </style>
 </head>
 <body>
@@ -4087,13 +4089,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.479';
+const APP_VERSION = '2.51.480';
 const CHANGELOG_NOTES = {
   en: [
-    'Fixed the gold flood: panels, tiles, sheets, dialogs and menu pills wear their guild colors again — the metal now lives only in the border ring, painted over each element\u2019s own opaquely repainted interior. Buttons stay dark purple with gold rims.'
+    'The frame flipped: the top bar and bottom nav are now always deep purple with gold rims on every page, and the icon buttons inside them wear your chosen guild\u2019s main color instead.'
   ],
   nl: [
-    'De goudvloed hersteld: panelen, tegels, sheets, dialogen en menupillen dragen weer hun gildekleuren — het metaal leeft nu alleen in de randring, geschilderd over het opnieuw dekkend gevulde binnenvlak van elk element. Knoppen blijven donkerpaars met gouden rand.'
+    'Het kader is omgedraaid: de bovenbalk en de ondernavigatie zijn nu op elke pagina altijd dieppaars met gouden randen, en de icoonknoppen erin dragen juist de hoofdkleur van je gekozen gilde.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
