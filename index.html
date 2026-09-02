@@ -78,7 +78,11 @@ html[data-side="G"]{--pop-bg:#00532D;--pop-line:#3B9068;--field:#00512B;--field-
 /* Gold, thicker: every Cinzel heading and gold label gets a hairline stroke
    of its own colour (the loaded weights top out at 700), and gold rims are
    1.5px instead of 1px. */
-.tb-titles .t1, .brand-txt, .cp-val, .detail-h, .home-logo-txt, .home-desc strong, .hfm-k, .home-kicker, .home-callout, .hf-n, .section-label, .deck-meter-row .count, .panel-h, .cat-head .t, .dpb-val, .dl-leader-cat, .sc-hero-nm, .typal-label, .rules-text h4, .modal-sheet h3, .deckpick h4, .cr-title, .cotd-h, .life-panel h4, .folder-name, .deck-tile .dt-bracket, .b-tab.active{-webkit-text-stroke:0.45px currentColor;paint-order:stroke fill;}
+.tb-titles .t1, .brand-txt, .cp-val, .detail-h, .home-logo-txt, .home-desc strong, .hfm-k, .home-kicker, .home-callout, .hf-n, .section-label, .deck-meter-row .count, .panel-h, .cat-head .t, .dpb-val, .dl-leader-cat, .sc-hero-nm, .typal-label, .rules-text h4, .modal-sheet h3, .deckpick h4, .cr-title, .cotd-h, .life-panel h4, .folder-name, .deck-tile .dt-bracket, .b-tab.active{-webkit-text-stroke:0.45px rgba(122,80,20,0.55);paint-order:stroke fill;
+  background:linear-gradient(180deg,#FFF1C2 0%,#F3CE74 38%,#C9942F 58%,#F6DC8C 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+/* On the cream (white-main) guilds the metallic sheen has nothing to shine
+   against — those pages keep solid dark gold. */
+html[data-main="W"] .tb-titles .t1, html[data-main="W"] .brand-txt, html[data-main="W"] .cp-val, html[data-main="W"] .detail-h, html[data-main="W"] .home-logo-txt, html[data-main="W"] .home-desc strong, html[data-main="W"] .hfm-k, html[data-main="W"] .home-kicker, html[data-main="W"] .home-callout, html[data-main="W"] .hf-n, html[data-main="W"] .section-label, html[data-main="W"] .deck-meter-row .count, html[data-main="W"] .panel-h, html[data-main="W"] .cat-head .t, html[data-main="W"] .dpb-val, html[data-main="W"] .dl-leader-cat, html[data-main="W"] .sc-hero-nm, html[data-main="W"] .typal-label, html[data-main="W"] .rules-text h4, html[data-main="W"] .modal-sheet h3, html[data-main="W"] .deckpick h4, html[data-main="W"] .cr-title, html[data-main="W"] .cotd-h, html[data-main="W"] .life-panel h4, html[data-main="W"] .folder-name, html[data-main="W"] .deck-tile .dt-bracket, html[data-main="W"] .b-tab.active{background:none;-webkit-text-fill-color:var(--brass);-webkit-text-stroke:0.3px currentColor;}
 html[data-mode="commander"][data-theme="light"]{
   --ink:#FBF3F1; --ink-2:#F3E2DE; --line:#DCC0BC;
   --ink-text:#2A1114; --sub-text:#6B4A4A; --sub-text-2:#96716F;
@@ -145,14 +149,17 @@ button{font-family:'Inter';}
   width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
 }
 .icon-btn svg{width:17px;height:17px;}
-/* Gold-and-purple icon dress: the original stroke icons, drawn in bright
-   gold with a hard deep-purple under-stroke (the app's purple), giving the
-   two-tone embossed look across nav, toolbars, dock tools and the life cog.
-   The + glyphs and dock chevrons are text and keep their plain colour. */
+/* Gold-on-purple buttons: the stroke icons are metallic gold (a light catch
+   above, a bronze shade below) and the purple lives in the button PLATES —
+   every icon button carries the app's deep purple as its ground. */
 .banner-tab svg, .icon-btn svg, .dk-tool svg, .dl-bridge-btns .bi svg, #lifeCogBtn svg, .home-search-btn svg, .in-chev svg{
   color:var(--brass);
-  filter:drop-shadow(1px 1.6px 0 #452378) drop-shadow(0 0 3px rgba(69,35,120,0.55));
+  filter:drop-shadow(0 -0.6px 0 rgba(255,242,205,0.75)) drop-shadow(0 1.1px 0 rgba(122,72,12,0.85));
 }
+.banner-tab, .icon-btn, .dk-tool, .dk-arr, .dk-count, #lifeCogBtn, .compass{
+  background:#241040;
+}
+.banner-tab.active, .icon-btn.active{background:#38195E;}
 .icon-btn:hover{border-color:var(--brass);color:var(--brass);}
 .compass{width:40px;height:40px;flex:0 0 auto;cursor:pointer;border:1px solid transparent;border-radius:11px;padding:2px;box-sizing:content-box;}
 .compass.active{background:var(--brass-glow);border-color:var(--brass);}
@@ -1560,7 +1567,7 @@ main.has-dock{padding-bottom:84px;}
    starting while the previous is still only two-thirds in. */
 .sp-card{bottom:39vh;height:24vh;left:50%;transform-origin:50% 110%;}
 #spBuild{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 600ms forwards, spHover 3400ms ease-in-out 1800ms infinite;--tx:-18vw;--rot:-20deg;z-index:1;height:25vh;}
-#spCollect{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 950ms forwards, spHover 3800ms ease-in-out 2150ms infinite;--tx:27vw;--rot:0deg;z-index:2;height:25vh;}
+#spCollect{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 950ms forwards, spHover 3800ms ease-in-out 2150ms infinite;--tx:29vw;--rot:0deg;z-index:2;height:25vh;}
 #spPlay{animation:spCardIn 1200ms cubic-bezier(.2,.8,.3,1.05) 1300ms forwards, spHover 3600ms ease-in-out 2500ms infinite;--tx:0vw;--rot:0deg;z-index:3;bottom:42vh;}
 @keyframes spHandIn{to{opacity:1;transform:translateX(-50%) translateY(0);}}
 @keyframes spCardIn{from{opacity:0;transform:translateX(calc(-50% + var(--tx)*0.85)) translateY(3vh) rotate(var(--rot)) scale(.9);}to{opacity:1;transform:translateX(calc(-50% + var(--tx))) translateY(0) rotate(var(--rot)) scale(1);}}
@@ -4038,15 +4045,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.473';
+const APP_VERSION = '2.51.474';
 const CHANGELOG_NOTES = {
   en: [
-    'The stroke icons are back, redressed: bright gold with a deep purple under-stroke across the nav, toolbars, deck dock and the life cog. The painted set is retired.',
-    'Launch animation: COLLECT one step left for true symmetry.'
+    'Real gold: headings and gold labels wear a brushed metallic gradient, icons get a metal emboss, and the purple moved from inside the icons to the button plates — every icon button now stands on deep purple.',
+    'Launch animation: COLLECT a step right for true symmetry.'
   ],
   nl: [
-    'De lijniconen zijn terug, opnieuw aangekleed: helder goud met een dieppaarse onderlijn in navigatie, werkbalken, deckdock en het tandwiel van de levensteller. De geschilderde set is met pensioen.',
-    'Startanimatie: COLLECT een stap naar links voor echte symmetrie.'
+    'Echt goud: koppen en gouden labels dragen een geborsteld metallic verloop, iconen krijgen een metaalreliëf, en het paars verhuisde van de iconen naar de knopvlakken — elke icoonknop staat nu op diep paars.',
+    'Startanimatie: COLLECT een stap naar rechts voor echte symmetrie.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
