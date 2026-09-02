@@ -131,9 +131,7 @@ button{font-family:'Inter';}
 /* ---------- chrome ---------- */
 .topbar{
   position:sticky;top:0;z-index:40;
-  /* The frame of the app is constant: deep purple bars with gold rims,
-     whatever guild dresses the page between them. */
-  background:linear-gradient(180deg, rgba(36,16,64,0.97), rgba(28,12,50,0.94));
+  background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));
   backdrop-filter:blur(8px); border-bottom:2px solid var(--line);
   padding:12px 16px; display:flex; align-items:center; gap:10px; min-height:56px;
 }
@@ -159,7 +157,9 @@ button{font-family:'Inter';}
 /* Gold-on-purple buttons: the stroke icons are metallic gold (a light catch
    above, a bronze shade below) and the purple lives in the button PLATES —
    every icon button carries the app's deep purple as its ground. */
-.banner-tab svg, .icon-btn svg, .dk-tool svg, .dl-bridge-btns .bi svg, #lifeCogBtn svg, .home-search-btn svg, .in-chev svg{
+.dk-tool, .dk-arr, .dk-count{color:var(--brass);text-shadow:0 1px 0 rgba(90,55,10,0.55), 0 -0.5px 0 rgba(255,244,205,0.45);}
+.compass{display:flex;align-items:center;justify-content:center;}
+.banner-tab svg, .icon-btn svg, .dk-tool svg, .dl-bridge-btns .bi svg, .compass svg, #lifeCogBtn svg, .home-search-btn svg, .in-chev svg{
   color:var(--brass);
 }
 /* Icons grew a quarter, but their LINES did not: the 24-unit icons carry
@@ -175,7 +175,7 @@ button{font-family:'Inter';}
 .icon-btn:hover{border-color:var(--brass);color:var(--brass);}
 .compass{width:40px;height:40px;flex:0 0 auto;cursor:pointer;border:1px solid transparent;border-radius:11px;padding:2px;box-sizing:content-box;}
 .compass.active{background:var(--brass-glow);border-color:var(--brass);}
-.compass svg{width:100%;height:100%;animation:spin 60s linear infinite;}
+.compass svg{width:25px;height:25px;animation:none;}
 .compass .compass-badge{width:100%;height:100%;display:block;border-radius:50%;}
 @media (prefers-reduced-motion:reduce){ .compass svg{animation:none;} }
 @keyframes spin{ to{ transform:rotate(360deg); } }
@@ -344,7 +344,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
      order stays untouched and the swipe-preview clone keeps working. */
   position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;box-sizing:border-box;
   height:calc(var(--nav-h) + env(safe-area-inset-bottom));
-  background:rgba(36,16,64,0.97); backdrop-filter:blur(8px);
+  background:color-mix(in srgb, var(--ink) 97%, transparent); backdrop-filter:blur(8px);
   border-top:2px solid var(--line);border-bottom:none;
   display:flex;align-items:center;gap:6px;padding:0 8px env(safe-area-inset-bottom);overflow:hidden;max-width:100%;
 }
@@ -1691,10 +1691,10 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
 
 /* Purple button plates — at the sheet's END so they outrank every component's
    own background:none/var() declared above. */
-.banner-tab, .icon-btn, .dk-tool, .dk-arr, .dk-count, #lifeCogBtn, .compass, .brand-banner #capBack, .brand-banner .ov-back, .in-chev, .home-search-btn{
+.banner-tab, .icon-btn, .dk-tool, .dk-arr, .dk-count, #lifeCogBtn, .compass, .edh-jump, .brand-banner #capBack, .brand-banner .ov-back, .in-chev, .home-search-btn{
   border-color:transparent;
-  background-color:var(--ink);
-  background-image:linear-gradient(var(--ink),var(--ink)), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);
+  background-color:var(--panel);
+  background-image:linear-gradient(var(--panel),var(--panel)), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);
   background-origin:padding-box,border-box;
   background-clip:padding-box,border-box;
   box-shadow:inset 0 1px 0 rgba(255,246,215,0.32), inset 0 -1px 0 rgba(96,58,10,0.5);
@@ -1704,7 +1704,7 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
 .settings-section, .panel-card, .deck-tile, .folder-tile, .adv-panel, .dl-cover{
   box-shadow:inset 0 1.5px 0 rgba(255,244,210,0.2), inset 0 -1.5px 0 rgba(90,55,10,0.4);
 }
-.banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:var(--ink-3);background-image:linear-gradient(var(--ink-3),var(--ink-3)), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
+.banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:var(--panel-2);background-image:linear-gradient(var(--panel-2),var(--panel-2)), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
 </style>
 </head>
 <body>
@@ -4089,13 +4089,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.480';
+const APP_VERSION = '2.51.481';
 const CHANGELOG_NOTES = {
   en: [
-    'The frame flipped: the top bar and bottom nav are now always deep purple with gold rims on every page, and the icon buttons inside them wear your chosen guild\u2019s main color instead.'
+    'The purple retired to the launch screen: bars wear your guild\u2019s main color again, and the nav, deck dock and burger buttons wear the secondary color. The dock\u2019s + and \u00bb are metallic gold now, and the home button is a proper house icon.'
   ],
   nl: [
-    'Het kader is omgedraaid: de bovenbalk en de ondernavigatie zijn nu op elke pagina altijd dieppaars met gouden randen, en de icoonknoppen erin dragen juist de hoofdkleur van je gekozen gilde.'
+    'Het paars trok zich terug naar het startscherm: balken dragen weer de hoofdkleur van je gilde, en de navigatie-, deckdock- en burgerknoppen dragen de tweede kleur. De + en \u00bb van het dock zijn nu metaalgoud, en de home-knop is een echt huisje.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4491,7 +4491,7 @@ function crownSwordSvg(){
   </svg>`;
 }
 function compassSvg(){
-  return `<img class="compass-badge" src="${DECKHAND_BADGE}" alt="">`;
+  return ICONS.home;
   if(isCmdrMode()) return crownSwordSvg();
   return `<svg viewBox="0 0 100 100">
     <circle cx="50" cy="50" r="46" fill="none" stroke="#C9A24B" stroke-width="2" opacity="0.55"/>
@@ -4559,7 +4559,8 @@ const ICONS = {
   removeOne: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12h7"/></svg>`,
   maybe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9.7 9.3a2.3 2.3 0 1 1 3.2 2.1c-.75.35-.9.95-.9 1.7"/><path d="M12 16.4v.2"/></svg>`,
   swap: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10l-2.6-2.6M17 7l-2.6 2.6M17 17H7l2.6 2.6M7 17l2.6-2.6"/></svg>`,
-  manage: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h8M19 7h1M4 12h2M13 12h7M4 17h10M21 17h-1"/><circle cx="15" cy="7" r="2.1"/><circle cx="9" cy="12" r="2.1"/><circle cx="17" cy="17" r="2.1"/></svg>`
+  manage: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h8M19 7h1M4 12h2M13 12h7M4 17h10M21 17h-1"/><circle cx="15" cy="7" r="2.1"/><circle cx="9" cy="12" r="2.1"/><circle cx="17" cy="17" r="2.1"/></svg>`,
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.4 12 4l9 7.4"/><path d="M5.4 9.9V20h13.2V9.9"/><path d="M9.7 20v-5.8h4.6V20"/></svg>`
 };
 
 
@@ -17541,7 +17542,7 @@ function renderLifeOverlay(){
       <div id="lifeGrid"></div>
     </main>
     <div class="brand-banner life-nav">
-      <div class="compass" id="lifeNavHome" title="Home"><img class="compass-badge" src="${DECKHAND_BADGE}" alt=""></div>
+      <div class="compass" id="lifeNavHome" title="Home">${ICONS.home}</div>
       <button class="banner-tab" id="lifeNavBack" aria-label="Back" title="Back">${ICONS.back}</button>
       <div class="spacer"></div>
       <div class="banner-tabs">${navItems.map(it=>`<button class="banner-tab" data-lifenav="${it.k}" title="${it.l}" aria-label="${it.l}">${it.i}</button>`).join('')}</div>
