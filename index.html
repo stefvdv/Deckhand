@@ -79,7 +79,7 @@ html[data-side="G"]{--pop-bg:#00532D;--pop-line:#3B9068;--field:#00512B;--field-
    of its own colour (the loaded weights top out at 700), and gold rims are
    1.5px instead of 1px. */
 .tb-titles .t1, .brand-txt, .cp-val, .detail-h, .home-logo-txt, .home-desc strong, .hfm-k, .home-kicker, .home-callout, .hf-n, .section-label, .deck-meter-row .count, .panel-h, .cat-head .t, .dpb-val, .dl-leader-cat, .sc-hero-nm, .typal-label, .rules-text h4, .modal-sheet h3, .deckpick h4, .cr-title, .cotd-h, .life-panel h4, .folder-name, .deck-tile .dt-bracket, .b-tab.active{-webkit-text-stroke:0.45px rgba(122,80,20,0.55);paint-order:stroke fill;
-  background:linear-gradient(180deg,#FFFBE6 0%,#FFE9A6 16%,#E7B84E 38%,#96671B 54%,#FBEBAC 68%,#E2AF3F 84%,#8F6318 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  background:linear-gradient(180deg,#FBF2D2 0%,#F3D27E 24%,#D9A741 48%,#A9761F 62%,#EFD289 84%,#C9982F 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
 /* On the cream (white-main) guilds the metallic sheen has nothing to shine
    against — those pages keep solid dark gold. */
 html[data-main="W"] .tb-titles .t1, html[data-main="W"] .brand-txt, html[data-main="W"] .cp-val, html[data-main="W"] .detail-h, html[data-main="W"] .home-logo-txt, html[data-main="W"] .home-desc strong, html[data-main="W"] .hfm-k, html[data-main="W"] .home-kicker, html[data-main="W"] .home-callout, html[data-main="W"] .hf-n, html[data-main="W"] .section-label, html[data-main="W"] .deck-meter-row .count, html[data-main="W"] .panel-h, html[data-main="W"] .cat-head .t, html[data-main="W"] .dpb-val, html[data-main="W"] .dl-leader-cat, html[data-main="W"] .sc-hero-nm, html[data-main="W"] .typal-label, html[data-main="W"] .rules-text h4, html[data-main="W"] .modal-sheet h3, html[data-main="W"] .deckpick h4, html[data-main="W"] .cr-title, html[data-main="W"] .cotd-h, html[data-main="W"] .life-panel h4, html[data-main="W"] .folder-name, html[data-main="W"] .deck-tile .dt-bracket, html[data-main="W"] .b-tab.active{background:none;-webkit-text-fill-color:var(--brass);-webkit-text-stroke:0.3px currentColor;}
@@ -148,13 +148,21 @@ button{font-family:'Inter';}
   background:none;border:2px solid var(--line);color:var(--sub-text);
   width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
 }
-.icon-btn svg{width:17px;height:17px;}
+.icon-btn svg{width:21px;height:21px;}
 /* Gold-on-purple buttons: the stroke icons are metallic gold (a light catch
    above, a bronze shade below) and the purple lives in the button PLATES —
    every icon button carries the app's deep purple as its ground. */
 .banner-tab svg, .icon-btn svg, .dk-tool svg, .dl-bridge-btns .bi svg, #lifeCogBtn svg, .home-search-btn svg, .in-chev svg{
   color:var(--brass);
-  filter:drop-shadow(0 -0.7px 0 rgba(255,250,225,0.95)) drop-shadow(0 1.2px 0 rgba(105,60,8,0.95)) drop-shadow(0 0 2.5px rgba(255,225,140,0.35));
+}
+/* Icons grew a quarter, but their LINES did not: the 24-unit icons carry
+   stroke-width="1.8" as an attribute, and 1.8 ÷ 1.25 = 1.44 set from CSS
+   (which outranks the attribute) keeps the drawn weight identical. */
+.banner-tab svg *, .icon-btn svg *, .dk-tool svg *, .dl-bridge-btns .bi svg *, #lifeCogBtn svg *, .home-search-btn svg *, .in-chev svg *, #dockSearchBtn svg *, .ib svg *{
+  stroke-width:1.44;
+}
+.banner-tab svg, .icon-btn svg, .dk-tool svg, .dl-bridge-btns .bi svg, #lifeCogBtn svg, .home-search-btn svg, .in-chev svg{
+  filter:drop-shadow(0 -0.7px 0 rgba(255,248,220,0.7)) drop-shadow(0 1.1px 0 rgba(105,60,8,0.8));
 }
 
 .icon-btn:hover{border-color:var(--brass);color:var(--brass);}
@@ -340,7 +348,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 }
 .banner-tab:hover{border-color:var(--brass);color:var(--brass);}
 .banner-tab.active{color:var(--brass);border-color:var(--brass);background:var(--brass-glow);}
-.banner-tab svg{width:23px;height:23px;flex:0 0 auto;}
+.banner-tab svg{width:29px;height:29px;flex:0 0 auto;}
 .banner-tab span{display:inline-block;}
 .banner-tab.active{color:var(--brass);background:var(--brass-glow);border-color:var(--line);}
 /* The back button wears the CROSS-fleet field colors — admiral blue while
@@ -562,7 +570,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
   box-shadow:0 10px 30px rgba(201,162,75,0.34), inset 0 1px 0 rgba(255,255,255,0.35);
   transition:transform 0.12s, box-shadow 0.12s;
 }
-.home-search-btn svg{width:17px;height:17px;stroke:#1a1204;}
+.home-search-btn svg{width:21px;height:21px;stroke:#1a1204;}
 .hsb-anchor{font-size:18px;line-height:1;}
 .home-sub{z-index:1;font-size:11.5px;color:var(--sub-text-2);margin:7px 0 0;letter-spacing:0.3px;}
 .home-search-btn:active{transform:translateY(1px);box-shadow:0 5px 16px rgba(201,162,75,0.3), inset 0 1px 0 rgba(255,255,255,0.35);}
@@ -624,7 +632,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .sp-shelf-ico svg,.sp-shelf-ico img{width:15px;height:15px;display:inline-block;}
 .dock-search{flex:1;min-width:0;background:rgba(10,26,40,0.55);border:1.5px solid var(--field-line);border-radius:10px;color:var(--text);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:13px;-webkit-appearance:none;appearance:none;}
 .dock-search:focus{outline:none;border-color:var(--brass);}
-#dockSearchBtn svg{width:16px;height:16px;display:block;}
+#dockSearchBtn svg{width:20px;height:20px;display:block;}
 .pip{border-radius:50%;font-weight:700;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,0.3);}
 .pip.sm{width:14px;height:14px;font-size:8px;}
 .pip.W{background:#F1E6C8;color:#5b4a1a;} .pip.U{background:#7CB8DB;color:#0d3550;}
@@ -803,10 +811,10 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .df-compact .df-btn-row button{padding:11px 8px;font-size:12.5px;}
 .dl-panel-x{flex:none;margin-left:auto;}
 .dl-bridge-btns .ghost-btn{width:100%;padding:7px 2px;font-size:10.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;line-height:1.05;white-space:nowrap;}
-.dl-bridge-btns .bi svg{width:17px;height:17px;display:block;color:var(--sub-text);}
+.dl-bridge-btns .bi svg{width:21px;height:21px;display:block;color:var(--sub-text);}
 .dl-bridge-btns .ghost-btn.active .bi svg{color:var(--brass);}
 .ib{display:inline-flex;vertical-align:-3px;margin-right:7px;}
-.ib svg{width:16px;height:16px;color:currentColor;opacity:0.92;}
+.ib svg{width:20px;height:20px;color:currentColor;opacity:0.92;}
 .dl-adm-empty{aspect-ratio:63/88;border:2px dashed var(--line);border-radius:4.75% / 3.5%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--sub-text-2);font-size:12px;cursor:pointer;}
 /* Bottom dock: fixed status bar with cycling info sets */
 .deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;background:var(--ink);border-top:2px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
@@ -820,7 +828,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-count.bad{color:var(--danger);}
 .dk-type{display:inline-flex;align-items:center;gap:3px;background:none;border:none;color:var(--ink-text);font-size:12px;font-family:'JetBrains Mono',monospace;padding:2px 2px;cursor:pointer;}
 .dk-tool{display:flex;align-items:center;justify-content:center;background:none;border:2px solid var(--line);color:var(--sub-text);width:33px;height:33px;border-radius:9px;flex:0 0 auto;cursor:pointer;padding:0;}
-.dk-tool svg{width:16px;height:16px;}
+.dk-tool svg{width:20px;height:20px;}
 .dk-tool.active{color:var(--brass);border-color:var(--brass);background:var(--brass-glow);}
 .dk-mid:has(.dk-tool){gap:5px;}
 .dl-bridge-desc{display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;}
@@ -1537,7 +1545,7 @@ main.has-dock{padding-bottom:84px;}
 .life-trim{position:absolute;height:3px;background:var(--brass);pointer-events:none;z-index:4;border-radius:2px;box-shadow:0 0 7px rgba(240,185,74,0.55);}
 .life-grid-v2{position:relative;}
 #lifeCogBtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;width:56px;height:56px;border-radius:50%;background:var(--ink-deep);border:2px solid var(--brass);color:var(--brass);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.55);}
-#lifeCogBtn svg{width:27px;height:27px;}
+#lifeCogBtn svg{width:34px;height:34px;}
 .life-nav{flex:0 0 auto;}
 .life-panel{background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px;}
 .life-panel h4{font-family:'Cinzel',serif;color:var(--brass);font-size:12.5px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 8px;}
@@ -1663,6 +1671,12 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
    own background:none/var() declared above. */
 .banner-tab, .icon-btn, .dk-tool, .dk-arr, .dk-count, #lifeCogBtn, .compass, .brand-banner #capBack, .brand-banner .ov-back, .in-chev, .home-search-btn{
   background-color:#241040;background-image:none;
+  box-shadow:inset 0 1px 0 rgba(255,246,215,0.32), inset 0 -1px 0 rgba(96,58,10,0.5);
+}
+/* Metal rims on the gold-bordered surfaces: a lit top edge and a shaded
+   lower edge make the flat gold border read as turned metal. */
+.settings-section, .panel-card, .deck-tile, .folder-tile, .adv-panel, .dl-cover{
+  box-shadow:inset 0 1.5px 0 rgba(255,244,210,0.2), inset 0 -1.5px 0 rgba(90,55,10,0.4);
 }
 .banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:#38195E;}
 </style>
@@ -4049,15 +4063,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.475';
+const APP_VERSION = '2.51.476';
 const CHANGELOG_NOTES = {
   en: [
-    'Every icon button now truly stands on its purple plate — the rule moved past the component styles that were overriding it — and the gold got shinier: a banded, high-contrast metal gradient on headings and brighter catches on the icons.',
-    'Launch animation: COLLECT a few pixels further right.'
+    'Gold everywhere is metal now, a notch calmer: softer banding on text, lit top edges and shaded lower edges on every gold-rimmed button, panel and tile. Icons grew a quarter while their line weight stayed exactly the same.'
   ],
   nl: [
-    'Elke icoonknop staat nu echt op zijn paarse vlak — de regel verhuisde voorbij de componentstijlen die hem overschreven — en het goud werd glanzender: een gestreept metaalverloop met meer contrast op koppen en fellere lichtvangers op de iconen.',
-    'Startanimatie: COLLECT een paar pixels verder naar rechts.'
+    'Goud is nu overal metaal, een tikje rustiger: zachtere banden op tekst, verlichte bovenranden en beschaduwde onderranden op elke goudomrande knop, elk paneel en elke tegel. Iconen groeiden een kwart terwijl hun lijndikte exact gelijk bleef.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
