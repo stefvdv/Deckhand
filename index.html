@@ -4115,13 +4115,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.483';
+const APP_VERSION = '2.51.484';
 const CHANGELOG_NOTES = {
   en: [
-    'The home page explanation now folds per section: tap a gold title \u2014 Formats, Deck building, Inspiration, Collection, Testing, At the table \u2014 to unfold just that part.'
+    'The card count in the deck page\u2019s top bar now updates live with every add, remove and maybeboard move \u2014 including its warning colour and \u26A0 mark.'
   ],
   nl: [
-    'De uitleg op de homepagina vouwt nu per sectie: tik op een gouden titel \u2014 Formats, Deck building, Inspiration, Collection, Testing, At the table \u2014 om alleen dat deel open te vouwen.'
+    'De kaartenteller in de bovenbalk van de deckpagina werkt nu live bij elke toevoeging, verwijdering en maybeboard-verplaatsing \u2014 inclusief de waarschuwingskleur en het \u26A0-teken.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -10024,6 +10024,24 @@ function updateDeckMeter(d){
 function refreshLegality(d){
   const wrap = document.getElementById('legalityWrap');
   if(wrap) wrap.innerHTML = legalityHtml(d);
+  refreshCapDeckCount(d);
+}
+/* The count in the top page cap follows every add, cut and maybeboard move
+   live: same math as the initial render, patched into the span in place.
+   Riding refreshLegality means every path that refreshes the deck's
+   legality line (all card mutations) refreshes the cap for free. */
+function refreshCapDeckCount(d){
+  try{
+    const el = document.getElementById('capDeckCount');
+    if(!el || state.screen !== 'decklist') return;
+    const dd = (d && d.id === state.activeDeckId) ? d : getDeck(state.activeDeckId);
+    if(!dd) return;
+    const tot = dd.cards.length + deckLeaders(dd).length;
+    const issues = checkDeckLegality(dd);
+    const bad = issues.some(i=>i.level==='error') || dd.cards.length > deckTotal(dd) - 1;
+    el.style.color = bad ? 'var(--danger)' : 'var(--brass)';
+    el.textContent = tot + '/' + deckTotal(dd) + (issues.length ? ' \u26A0' : '');
+  }catch(err){}
 }
 function wireMeterRow(d){
   document.getElementById('menuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation();
