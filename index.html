@@ -709,7 +709,12 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 /* Bottom-up charter: the category stripe sits BELOW the name, closing
    off this category from the next one's cards beneath it. */
 .cat-group > .cat-head{border-top:none;}
-.cat-head{display:flex;align-items:center;gap:8px;padding:8px 2px;cursor:pointer;border-bottom:2px solid var(--line);}
+.cat-head{display:flex;align-items:center;gap:8px;padding:8px 2px;cursor:pointer;border-bottom:2px solid var(--line);
+  /* The burger jump scrolls a head into view with block:'end' — this margin
+     lifts its landing spot clear of the dock + tab + nav stack (same
+     clearance the deck panel box uses), so the chosen category settles
+     just in sight above the dock instead of hiding behind it. */
+  scroll-margin-bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom));}
 .cat-head .t{font-family:'Cinzel',serif;font-size:12.5px;color:var(--brass);text-transform:uppercase;letter-spacing:0.5px;flex:1;}
 .cat-head .n{font-size:11px;color:var(--sub-text);font-family:'JetBrains Mono',monospace;}
 .cat-price{margin-left:auto;font-size:10px;color:var(--brass);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
@@ -4115,13 +4120,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.484';
+const APP_VERSION = '2.51.486';
 const CHANGELOG_NOTES = {
   en: [
-    'The card count in the deck page\u2019s top bar now updates live with every add, remove and maybeboard move \u2014 including its warning colour and \u26A0 mark.'
+    'The category jump menu (round burger button) now lands with the chosen category visible just above the dock bar, instead of hidden behind the bottom bars.'
   ],
   nl: [
-    'De kaartenteller in de bovenbalk van de deckpagina werkt nu live bij elke toevoeging, verwijdering en maybeboard-verplaatsing \u2014 inclusief de waarschuwingskleur en het \u26A0-teken.'
+    'Het categorie-springmenu (ronde burgerknop) landt nu met de gekozen categorie zichtbaar net boven de dockbalk, in plaats van verstopt achter de onderste balken.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4910,6 +4915,10 @@ function render(){
     state._dlSel = null;   // any multi-select ends with the page
     state.dlSearchOpen = false; state.dlSearchQ = '';   // the find bar lives on the decklist only
   }
+  // Category folds are page-scoped too: leaving the decklist (any way \u2014
+  // navigation, back press, swipe) clears them, so the next visit opens
+  // with the defaults \u2014 every category unfolded, the Maybeboard folded.
+  if(state.screen !== 'decklist' && Object.keys(state.collapsed || {}).length) state.collapsed = {};
   if(!state._ladderBack){
     const L = (state.navLadder = state.navLadder || ['home']);
     const sc = state.screen || 'home';
@@ -8949,8 +8958,15 @@ function categorizedListHtml(d){
       idxs = _dlMain(sortIdxs(idxs, d.cards, state.sortMode));
       if(!idxs.length) return;
       const collapsed = _dlq ? false : !!state.collapsed[cat];
+      // The Lands header counts PURE lands; modal double-faced cards filed
+      // under their nonland front add a note: 36 (40 incl. 4 mdfc).
+      let nLabel = String(idxs.length);
+      if(cat === 'Lands' && !_dlq){
+        const mdfcN = d.cards.filter(c=>{ const f = (c.type_line||'').split('//'); return f.length > 1 && !f[0].includes('Land') && f.slice(1).some(x=>x.includes('Land')); }).length;
+        if(mdfcN) nLabel = `${idxs.length} (${idxs.length + mdfcN} incl. ${mdfcN} mdfc)`;
+      }
       html += `<div class="cat-group">
-        <div class="cat-head ${collapsed?'collapsed':''}" data-cat="${cat}"><span class="t">${cat}</span><span class="cat-price">${groupPriceLabel(idxs.map(i=>d.cards[i]))}</span><span class="n">${idxs.length}</span><span class="car">▾</span></div>
+        <div class="cat-head ${collapsed?'collapsed':''}" data-cat="${cat}"><span class="t">${cat}</span><span class="cat-price">${groupPriceLabel(idxs.map(i=>d.cards[i]))}</span><span class="n">${nLabel}</span><span class="car">▾</span></div>
         <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${dedupeIdxs(idxs, d.cards).map(g=>cardTileHtml(d.cards[g.i],g.i,'main',g.qty)).join('')}</div></div>
       </div>`;
     });
