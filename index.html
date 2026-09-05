@@ -547,14 +547,11 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .logo-gleam.sweep{opacity:1;background:conic-gradient(from -90deg, rgba(255,236,180,0.95) 0deg, rgba(255,236,180,0.35) 14deg, transparent 30deg 360deg);-webkit-mask:radial-gradient(circle, transparent 0 calc(50% - 5px), #000 calc(50% - 4px) calc(50% - 1px), transparent 50%);mask:radial-gradient(circle, transparent 0 calc(50% - 5px), #000 calc(50% - 4px) calc(50% - 1px), transparent 50%);animation:gleamSweep 1s ease-in-out .15s 1 both;}
 @keyframes gleamSweep{0%{transform:rotate(0);opacity:0;}15%{opacity:1;}85%{opacity:1;}100%{transform:rotate(180deg);opacity:0;}}
 @media (prefers-reduced-motion:reduce){.home-logo,.logo-land-drop,.logo-land-swing{animation:none !important;}.logo-gleam.sweep{animation:none;opacity:0;}}
-.home-desc{z-index:1;max-width:370px;margin:4px auto 6px;text-align:left;}
-.hd-sec{border-bottom:1px solid var(--line);}
-.hd-sec:first-child{border-top:1px solid var(--line);}
-.hd-head{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:none;border:none;padding:9px 2px;cursor:pointer;text-align:left;}
-.hd-chev{color:var(--brass);font-size:12px;flex:none;}
-.hd-sec p{margin:0 0 9px;}
-.home-desc p{font-size:13px;line-height:1.5;color:var(--ink-text);opacity:0.92;margin:8px 0;}
-.home-desc strong{font-family:'Cinzel',serif;font-size:11.5px;letter-spacing:0.5px;color:var(--brass);}
+.home-play-btn{z-index:1;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:370px;margin:10px auto 8px;padding:13px 16px;border-radius:12px;border:2px solid transparent;font-family:'Cinzel',serif;font-weight:700;font-size:15px;letter-spacing:0.7px;color:#1a1204;cursor:pointer;text-shadow:0 1px 0 rgba(255,244,205,0.55);
+  background-image:linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(0,0,0,0.10) 100%), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 32%,#C89232 55%,#E9C979 74%,#B98A28 100%), linear-gradient(160deg,#F7E7B0 0%,#E3B34C 30%,#8F6318 52%,#E9C979 72%,#B98A28 100%);
+  background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;
+  box-shadow:0 4px 14px rgba(0,0,0,0.35);}
+.home-play-btn:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(0,0,0,0.35);}
 .home-formats{z-index:1;width:min(370px,100%);margin:2px auto 8px;display:flex;flex-direction:column;gap:6px;}
 .hfm-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;}
 .hfm-k{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--brass);margin-right:2px;}
@@ -4155,13 +4152,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.490';
+const APP_VERSION = '2.51.491';
 const CHANGELOG_NOTES = {
   en: [
-    'The bottom nav bar is solid again, dressed exactly like the top bar. Tapping the deck count now answers with a toast \u2014 all clear, or the actual issues. And the card page\u2019s legality grid stopped lying: missing data shows as \u2026 instead of \u201cNot legal\u201d, and the grid re-reads the live card and corrects itself on the spot.'
+    'The home page slimmed down: the foldable explanation sections are gone, and a golden \u201cStart a Game\u201d button at the foot takes you straight to the life counter table.'
   ],
   nl: [
-    'De onderste navigatiebalk is weer dekkend, in precies dezelfde kleding als de bovenbalk. Een tik op de deckteller antwoordt nu met een toast \u2014 alles in orde, of de daadwerkelijke problemen. En het legaliteitsraster op de kaartpagina liegt niet meer: ontbrekende data toont als \u2026 in plaats van \u201cNot legal\u201d, en het raster leest de live kaart opnieuw en corrigeert zichzelf ter plekke.'
+    'De homepagina is afgeslankt: de opvouwbare uitlegsecties zijn weg, en een gouden \u201cStart a Game\u201d-knop aan de voet brengt je rechtstreeks naar de levensteller-tafel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5258,14 +5255,7 @@ function homePageHtml(){
       <li>Test opening hands, castability and power bracket before you sit down</li>
       <li>Count life, log games and share decks — everything offline-ready</li>
     </ul>
-    <div class="home-desc">
-      <div class="hd-sec"><button class="hd-head" type="button"><strong>Formats</strong><span class="hd-chev">⌄</span></button><p hidden>Build decks in Commander, Admiral, Pauper Commander, PreDH and Duel Commander. Every deck carries its own format; searches, suggestions and legality checks follow it, and My Decks files each deck under its format automatically. Rules and current ban lists for eleven formats, from Standard to Vintage, live under Extras.</p></div>
-      <div class="hd-sec"><button class="hd-head" type="button"><strong>Deck building</strong><span class="hd-chev">⌄</span></button><p hidden>Search Scryfall with full advanced filters, add cards straight into the deck you\u2019re working on, and see colour identity, ban list and format legality judged live. Import from Moxfield, Archidekt, MTGO or plain text; export, print proxies, or share a deck as a link or image.</p></div>
-      <div class="hd-sec"><button class="hd-head" type="button"><strong>Inspiration</strong><span class="hd-chev">⌄</span></button><p hidden>Find a commander by colours, theme or Kindred, then open its recommendation page: the most-played cards, high-synergy picks, combos from Commander Spellbook, and budget alternatives that do the same job for less.</p></div>
-      <div class="hd-sec"><button class="hd-head" type="button"><strong>Collection</strong><span class="hd-chev">⌄</span></button><p hidden>Track what you own in binders, keep a wants list, log trades, and watch Cardmarket prices with a history graph on every card.</p></div>
-      <div class="hd-sec"><button class="hd-head" type="button"><strong>Testing</strong><span class="hd-chev">⌄</span></button><p hidden>Draw opening hands with mulligans, check each card\u2019s castability from your mana base, estimate the deck\u2019s power bracket, and let the land suggester round out your mana.</p></div>
-      <div class="hd-sec"><button class="hd-head" type="button"><strong>At the table</strong><span class="hd-chev">⌄</span></button><p hidden>A multiplayer life counter with commander damage and poison, a game log with winrates, and everything stored on your phone so it works offline.</p></div>
-    </div>
+    <button class="home-play-btn" id="homePlayBtn" type="button">⚔ Start a Game</button>
   </main>`;
 }
 function setAppMode(){ return false; }   // retired: there is one app now
@@ -5440,16 +5430,8 @@ function wireHomePage(){
     state.settingsFullRulesOpen = true;
     switchPage('settings');
   });
-  // Each explanation section starts folded to its title; tapping the title
-  // unfolds that section's text in place and brings it into view.
-  document.querySelectorAll('.hd-head').forEach(h=>h.addEventListener('click', ()=>{
-    const p = h.nextElementSibling, ch = h.querySelector('.hd-chev');
-    if(!p) return;
-    const open = p.hidden;
-    p.hidden = !open;
-    if(ch) ch.textContent = open ? '\u2303' : '\u2304';
-    if(open){ try{ p.scrollIntoView({ block:'nearest' }); }catch(err){} }
-  }));
+  // Start a Game: straight from the home foot to the life counter table.
+  document.getElementById('homePlayBtn')?.addEventListener('click', ()=>{ openLifeOverlay(); });
 }
 
 /* ---------------- HOME / MY DECKS ---------------- */
