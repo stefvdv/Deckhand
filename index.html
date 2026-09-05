@@ -410,7 +410,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .top-price-row img{width:26px;height:36px;border-radius:3px;object-fit:cover;flex:0 0 auto;background:#0006;}
 .tp-name{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tp-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--brass);font-weight:600;flex:0 0 auto;}
-.legality{border-radius:8px;border:2px solid var(--line);margin-bottom:8px;overflow:hidden;font-size:12.5px;}
+.legality{border-radius:8px;border:2px solid var(--line);margin-bottom:8px;overflow:hidden;font-size:12.5px;scroll-margin-top:80px;scroll-margin-bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom));}
 .legality.ok{background:rgba(92,139,110,0.12);border-color:rgba(92,139,110,0.45);color:var(--success);display:flex;align-items:center;gap:8px;padding:9px 12px;}
 .legality.bad{background:rgba(181,72,77,0.10);border-color:rgba(181,72,77,0.45);}
 .legality.warn{background:var(--brass-glow);border-color:var(--line);}
@@ -4120,13 +4120,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.486';
+const APP_VERSION = '2.51.487';
 const CHANGELOG_NOTES = {
   en: [
-    'The category jump menu (round burger button) now lands with the chosen category visible just above the dock bar, instead of hidden behind the bottom bars.'
+    'The card count in the deck page\u2019s top bar now answers when tapped: it opens the legality check listing exactly why the count is red \u2014 or \u201cReady to sail\u201d when nothing is wrong. Tap again to close it.'
   ],
   nl: [
-    'Het categorie-springmenu (ronde burgerknop) landt nu met de gekozen categorie zichtbaar net boven de dockbalk, in plaats van verstopt achter de onderste balken.'
+    'De kaartenteller in de bovenbalk van de deckpagina reageert nu op een tik: hij opent de legaliteitscontrole die precies laat zien waarom de teller rood is \u2014 of \u201cReady to sail\u201d als er niets mis is. Tik nogmaals om te sluiten.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4919,6 +4919,7 @@ function render(){
   // navigation, back press, swipe) clears them, so the next visit opens
   // with the defaults \u2014 every category unfolded, the Maybeboard folded.
   if(state.screen !== 'decklist' && Object.keys(state.collapsed || {}).length) state.collapsed = {};
+  if(state.screen !== 'decklist' && state.legalityOpen) state.legalityOpen = false;
   if(!state._ladderBack){
     const L = (state.navLadder = state.navLadder || ['home']);
     const sc = state.screen || 'home';
@@ -5045,7 +5046,7 @@ function navHtml(){
       const tot = dd.cards.length + deckLeaders(dd).length;
       const issues = checkDeckLegality(dd);
       const bad = issues.some(i=>i.level==='error') || dd.cards.length > deckTotal(dd) - 1;
-      return `<span id="capDeckCount" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-family:'JetBrains Mono',monospace;color:${bad?'var(--danger)':'var(--brass)'};white-space:nowrap;">${tot}/${deckTotal(dd)}${issues.length?' ⚠':''}</span>`; })()}
+      return `<span id="capDeckCount" title="Tap to see the deck's legality check" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-family:'JetBrains Mono',monospace;color:${bad?'var(--danger)':'var(--brass)'};white-space:nowrap;cursor:pointer;padding:8px 6px 8px 0;">${tot}/${deckTotal(dd)}${issues.length?' ⚠':''}</span>`; })()}
     ${state.screen === 'collection' && state._capCount != null ? `<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--sub-text);">${state._capCount}</span>` : ''}
     <div class="brand-txt ${editable?'editable':''} two-line" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner">${escapeHtml(title)}</span></div>
     ${state._capNote ? `<span class="cap-note${state.screen === 'collection' ? ' cap-tap' : ''}" id="capNoteBtn">${state._capNote}</span>` : ''}
@@ -5116,6 +5117,19 @@ if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>fitBran
 window.addEventListener('resize', fitBrandTitle);
 document.addEventListener('click', (e)=>{
   if(e.target && e.target.closest && e.target.closest('#capBack')){ try{ history.back(); }catch(_){} }
+  // The count in the cap ("100/100 \u26a0") answers when tapped: it toggles
+  // the legality box \u2014 the full list of WHY the count is red \u2014 which
+  // renders under the tab strip on every builder tab, then scrolls to it.
+  if(e.target && e.target.closest && e.target.closest('#capDeckCount') && state.screen === 'decklist'){
+    const d = getDeck(state.activeDeckId);
+    if(d){
+      state.legalityOpen = !state.legalityOpen;
+      refreshLegality(d);
+      if(state.legalityOpen){
+        try{ document.getElementById('legalityBox')?.scrollIntoView({ behavior:'smooth', block:'nearest' }); }catch(_){}
+      }
+    }
+  }
 });
 /* Drop-up menus and sheets dismiss on a downward swipe on their header —
    headers never scroll, so the gesture can't fight content scrolling. */
