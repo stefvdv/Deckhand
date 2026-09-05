@@ -868,6 +868,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 main.has-dock{padding-bottom:84px;}
 .admiral-tile{max-width:118px;}
 .vg-card{position:relative;cursor:pointer;overflow:hidden;border-radius:4.75% / 3.5%;border:2px solid var(--line);background:#0a0a0c;aspect-ratio:63/88;}
+.vg-card.vg-illegal{border-color:var(--danger);box-shadow:0 0 0 1.5px var(--danger), 0 0 10px rgba(200,60,60,0.55);}
 .vg-qty{position:absolute;top:10px;right:8px;background:rgba(10,10,12,0.85);color:#fff;font-weight:800;font-size:13px;padding:3px 8px;border-radius:7px;border:1px solid rgba(255,255,255,0.25);z-index:2;pointer-events:none;}
 /* The scans carry Magic's printed border (~4% per side); zoom-crop it away so
    the art and frame fill the tile — the gold rim lives on the tile itself. */
@@ -2370,6 +2371,17 @@ function visibleBans(){
 /* The Commander banned list comes live from Scryfall itself (banned:commander),
    cached for a day — always the official, current list, zero maintenance. */
 let _cmdrBansLoading = false;
+function _cmdrBansTouchUi(){
+  // A refreshed banlist re-judges whatever is on screen: the settings
+  // list, or the open deck's legality box, cap count and red rims.
+  if(state.screen === 'settings'){ render(); return; }
+  if(state.screen === 'decklist'){
+    try{
+      const d = getDeck(state.activeDeckId);
+      if(d){ refreshLegality(d); if(state.builderTab === 'list') renderBuilderBody(d); }
+    }catch(e){}
+  }
+}
 async function ensureCmdrBans(force){
   if(!state.cmdrBans){
     try{ state.cmdrBans = JSON.parse(localStorage.getItem(LS_PREFIX+'cmdrBans')||'null'); }catch(e){}
@@ -2386,7 +2398,7 @@ async function ensureCmdrBans(force){
       if(seed && Array.isArray(seed.names) && seed.names.length > 20){
         state.cmdrBans = { t: seed.t || 0, names: seed.names.slice().sort((a,b)=>a.localeCompare(b)) };
         try{ localStorage.setItem(LS_PREFIX+'cmdrBans', JSON.stringify(state.cmdrBans)); }catch(e){}
-        if(state.screen === 'settings') render();
+        _cmdrBansTouchUi();
       }
     }catch(e){}
   }
@@ -2411,7 +2423,7 @@ async function ensureCmdrBans(force){
     if(names.size){
       state.cmdrBans = { t: Date.now(), names: Array.from(names).sort((a,b)=>a.localeCompare(b)) };
       try{ localStorage.setItem(LS_PREFIX+'cmdrBans', JSON.stringify(state.cmdrBans)); }catch(e){}
-      if(state.screen==='settings') render();
+      _cmdrBansTouchUi();
     }
   }catch(e){}
   finally{ _cmdrBansLoading = false; }
@@ -2741,12 +2753,33 @@ function cmdrBanSet(){
   }
   return _cmdrBanSetCache;
 }
+/* Name-based, offline-first Commander legality. One verdict for the deck
+   check, the cap count and the red tile rims, built from data that stays
+   current by itself: the live official banlist (weekly bulk seed + daily
+   name refresh, one request a day for the whole app) plus fields every
+   stored card keeps (set_type, layout, released_at). Frozen per-card
+   legality snapshots — which slim storage drops anyway — only speak when
+   the banlist hasn't loaded yet, and for product-type illegality, which
+   never heals with time. No per-deck network, no stale verdicts. */
+function commanderVerdict(card){
+  if(!card) return 'legal';
+  if(isPreviewCard(card)) return 'preview';
+  const bans = cmdrBanSet();
+  const nm = norm((card.name||'').split(' // ')[0]);
+  if(bans.size ? bans.has(nm) : !!(card.legalities && card.legalities.commander === 'banned')) return 'banned';
+  if(['funny','memorabilia','token','minigame','alchemy'].includes(card.set_type)
+     || ['token','art_series','emblem','planar','scheme','vanguard','double_faced_token'].includes(card.layout)
+     || card.digital === true) return 'not_legal';
+  if(!bans.size && card.legalities && card.legalities.commander === 'not_legal') return 'not_legal';
+  return 'legal';
+}
 function isBanned(card){
   if(isCmdrMode()){
-    if(card && card.legalities) return card.legalities.commander === 'banned';
-    // Slim-stored cards dropped their legalities — fall back to the live
-    // official list rather than never flagging them.
-    return card ? cmdrBanSet().has(norm(card.name)) : false;
+    // The live name list is the truth; a per-card snapshot (when a card
+    // still carries one — slim storage drops it) only fills an empty list.
+    const bans = cmdrBanSet();
+    if(bans.size) return card ? bans.has(norm((card.name||'').split(' // ')[0])) : false;
+    return !!(card && card.legalities && card.legalities.commander === 'banned');
   }
   return bannedSet.has(norm(card.name)) || (card.card_faces||[]).some(f=>bannedSet.has(norm(f.name))); }
 function frontFace(card){ return (card.card_faces && card.card_faces.length) ? card.card_faces[0] : card; }
@@ -2851,7 +2884,7 @@ function partnerEligible(d, c){
   if(!canPair(d.admiral, c)) return false;
   if(!isNonlandFront(c) || !isLegendary(c)) return false;
   if(deckFormat(d) === 'commander'){
-    if(c.legalities && c.legalities.commander === 'banned') return false;
+    if(commanderVerdict(c) === 'banned') return false;
   } else {
     if(isBanned(c)) return false;
     // Admiral leaders need printed power/toughness — Backgrounds don't have it,
@@ -4120,13 +4153,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.487';
+const APP_VERSION = '2.51.489';
 const CHANGELOG_NOTES = {
   en: [
-    'The card count in the deck page\u2019s top bar now answers when tapped: it opens the legality check listing exactly why the count is red \u2014 or \u201cReady to sail\u201d when nothing is wrong. Tap again to close it.'
+    'Legality checking is now fully internal: one offline verdict built from the self-updating banlist of card names (weekly bulk seed, one daily refresh for the whole app) plus fields every stored card keeps. The deck check, the top-bar count and the red tile rims all share it \u2014 no per-deck network requests, no stale verdicts, and it works for slim-stored cards that never carried legality data at all.'
   ],
   nl: [
-    'De kaartenteller in de bovenbalk van de deckpagina reageert nu op een tik: hij opent de legaliteitscontrole die precies laat zien waarom de teller rood is \u2014 of \u201cReady to sail\u201d als er niets mis is. Tik nogmaals om te sluiten.'
+    'De legaliteitscontrole is nu volledig intern: \u00e9\u00e9n offline oordeel op basis van de zelf-bijwerkende banlijst met kaartnamen (wekelijkse bulk-seed, \u00e9\u00e9n dagelijkse verversing voor de hele app) plus velden die elke opgeslagen kaart bewaart. De deckcontrole, de teller in de bovenbalk en de rode kaartranden delen dat oordeel \u2014 geen netwerkverzoeken per deck, geen verouderde oordelen, en het werkt ook voor slank opgeslagen kaarten die nooit legaliteitsdata hadden.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4920,6 +4953,10 @@ function render(){
   // with the defaults \u2014 every category unfolded, the Maybeboard folded.
   if(state.screen !== 'decklist' && Object.keys(state.collapsed || {}).length) state.collapsed = {};
   if(state.screen !== 'decklist' && state.legalityOpen) state.legalityOpen = false;
+  // Opening a deck (re)loads the banlist at most once a day — the whole
+  // legality check is otherwise offline name comparison, zero per-deck
+  // network. ensureCmdrBans throttles itself via its 24h freshness stamp.
+  if(state.screen === 'decklist'){ try{ ensureCmdrBans(false); }catch(err){} }
   if(!state._ladderBack){
     const L = (state.navLadder = state.navLadder || ['home']);
     const sc = state.screen || 'home';
@@ -7247,9 +7284,9 @@ function decklistPageHtml(){
       <button class="b-tab ${state.builderTab==='stats'?'active':''}" data-btab="stats">Stats</button>
       <button class="b-tab ${state.builderTab==='primer'?'active':''}" data-btab="primer">Deck Log</button>
     </div>
-    <div id="legalityWrap">${legalityHtml(d)}</div>
     <div id="builderBody"></div>
     ${deckMeterHtml(d)}
+    <div id="legalityWrap">${legalityHtml(d)}</div>
   </main>`;
 }
 function menuPopHtml(){
@@ -7268,14 +7305,14 @@ function checkCommanderLegality(d){
   else {
     if(!isLegendary(d.admiral) || !(d.admiral.type_line||'').includes('Creature'))
       issues.push({ level:'error', text:`${d.admiral.name} can't be your Commander — it must be a legendary creature.` });
-    if(d.admiral.legalities && d.admiral.legalities.commander === 'banned')
+    if(commanderVerdict(d.admiral) === 'banned')
       issues.push({ level:'error', text:`${d.admiral.name} is banned in Commander.` });
   }
   if(d.partner){
     if(!d.admiral) issues.push({ level:'error', text:`${d.partner.name} is a second Commander, but no first Commander is appointed.` });
     else if(!canPair(d.admiral, d.partner))
       issues.push({ level:'error', text:`${d.admiral.name} and ${d.partner.name} can't share command — their abilities don't pair.` });
-    if(d.partner.legalities && d.partner.legalities.commander === 'banned')
+    if(commanderVerdict(d.partner) === 'banned')
       issues.push({ level:'error', text:`${d.partner.name} is banned in Commander.` });
   }
   const seen = new Map();
@@ -7287,13 +7324,12 @@ function checkCommanderLegality(d){
       seen.set(c.name, n);
       if(n === 2) issues.push({ level:'error', text:`${c.name} appears more than once — Commander is singleton (basic lands excepted).` });
     }
-    if(c.legalities){
-      if(c.legalities.commander === 'banned') issues.push({ level:'error', text:`${c.name} is banned in Commander.` });
-      // Previews report not_legal until release day — no issue at all: the
-      // 🔮 badge on the card already says it, and the deck check should not
-      // nag about cards that become legal by themselves.
-      else if(c.legalities.commander === 'not_legal' && !isPreviewCard(c)) issues.push({ level:'error', text:`${c.name} isn't legal in Commander.` });
-    }
+    // Name-based offline verdict: live banlist + stored product fields.
+    // 'preview' is no issue at all — the 🔮 badge already says it, and the
+    // card becomes legal by itself on release day.
+    const v = commanderVerdict(c);
+    if(v === 'banned') issues.push({ level:'error', text:`${c.name} is banned in Commander.` });
+    else if(v === 'not_legal') issues.push({ level:'error', text:`${c.name} isn't legal in Commander.` });
     if(d.admiral && (c.color_identity||[]).some(x=>!ci.has(x)))
       issues.push({ level:'error', text:`${c.name} is outside your Commanders' color identity.` });
     if(deckLeaders(d).some(L=>L.name===c.name))
@@ -9061,7 +9097,12 @@ function dedupeIdxs(idxs, arr){
 function cardTileHtml(card, idx, loc, qty){
   // No quick-remove cross on tiles: it was too easy to hit by accident.
   // Removing a card is a deliberate act — tap the card, then Remove.
-  return `<div class="vg-card" data-idx="${idx}" data-loc="${loc}"><img class="${wbClass(card)}" src="${cardImageMed(card)}" alt="${escapeHtml(card.name)}">${(qty&&qty>1)?`<span class="vg-qty">×${qty}</span>`:''}${cardBadgesHtml(card)}${gcMarkHtml(card)}</div>`;
+  // A card the format check would flag (banned, or not legal and not a
+  // preview) trades its gold rim for a clearly red one.
+  const _rd = getDeck(state.activeDeckId);
+  const _v = (_rd && deckFormat(_rd) === 'commander') ? commanderVerdict(card) : 'legal';
+  const _ill = _v === 'banned' || _v === 'not_legal';
+  return `<div class="vg-card${_ill?' vg-illegal':''}" data-idx="${idx}" data-loc="${loc}"><img class="${wbClass(card)}" src="${cardImageMed(card)}" alt="${escapeHtml(card.name)}">${(qty&&qty>1)?`<span class="vg-qty">×${qty}</span>`:''}${cardBadgesHtml(card)}${gcMarkHtml(card)}</div>`;
 }
 function statsTabHtml(d){
   const curve=[0,0,0,0,0,0,0]; const curveCards={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
