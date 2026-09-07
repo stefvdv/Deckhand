@@ -4152,13 +4152,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.491';
+const APP_VERSION = '2.51.492';
 const CHANGELOG_NOTES = {
   en: [
-    'The home page slimmed down: the foldable explanation sections are gone, and a golden \u201cStart a Game\u201d button at the foot takes you straight to the life counter table.'
+    'Budget Alternatives now obeys the slider as a hard limit: moving the budget line rebuilds the pools and every suggestion must cost at or under it \u2014 the old caches and a hidden \u20ac5 ceiling were serving the same two cards at every setting. Price history got honest too: every price load now leaves its daily breadcrumb, and collection prices thaw once a day from Cardmarket instead of staying frozen at their import-day value, so the total-value and per-card graphs finally move with the market.'
   ],
   nl: [
-    'De homepagina is afgeslankt: de opvouwbare uitlegsecties zijn weg, en een gouden \u201cStart a Game\u201d-knop aan de voet brengt je rechtstreeks naar de levensteller-tafel.'
+    'Budget-alternatieven gehoorzaamt de schuif nu als harde grens: het verplaatsen van de budgetlijn herbouwt de pools en elke suggestie moet op of onder de lijn kosten \u2014 oude caches en een verborgen \u20ac5-plafond toonden bij elke stand dezelfde twee kaarten. De prijshistorie werd ook eerlijk: elke prijslading laat nu zijn dagelijkse kruimel achter, en collectieprijzen ontdooien \u00e9\u00e9n keer per dag vanaf Cardmarket in plaats van bevroren te blijven op hun importwaarde, zodat de waardegrafieken eindelijk met de markt meebewegen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4956,6 +4956,7 @@ function render(){
   // legality check is otherwise offline name comparison, zero per-deck
   // network. ensureCmdrBans throttles itself via its 24h freshness stamp.
   if(state.screen === 'decklist'){ try{ ensureCmdrBans(false); }catch(err){} }
+  if(state.screen === 'collection'){ try{ repriceCollectionDaily(); }catch(err){} }
   if(!state._ladderBack){
     const L = (state.navLadder = state.navLadder || ['home']);
     const sc = state.screen || 'home';
@@ -7414,6 +7415,52 @@ function loadCollection(){
   }catch(e){}
   return {binders:[], items:[], wantsExclude:[], wantsManual:[]};
 }
+/* Collection items froze their price (it.eur) on the day they were added —
+   which made the total-value graph a flat recording of a number that could
+   not move. Once a day, when the collection opens, every unique printing is
+   re-priced in batches through /cards/collection (name+set identifiers via
+   postWithTimeout, honoring the POST rule), it.eur thaws to the live trend,
+   per-card breadcrumbs are left, and the header total re-renders — so the
+   graphs finally track the market instead of the import date. */
+async function repriceCollectionDaily(){
+  try{
+    const KEY = LS_PREFIX + 'colRepriceDay';
+    const today = new Date().toISOString().slice(0, 10);
+    if(localStorage.getItem(KEY) === today) return;
+    const items = state.collection && state.collection.items;
+    if(!items || !items.length) return;
+    if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    localStorage.setItem(KEY, today);
+    const uniq = new Map();
+    items.forEach(it=>{ if(it && it.name){ const k = it.name + '|' + (it.set || ''); if(!uniq.has(k)) uniq.set(k, it); } });
+    const ids = Array.from(uniq.values()).map(it=> it.set ? { name: it.name, set: it.set } : { name: it.name });
+    let changed = false;
+    for(let i = 0; i < ids.length; i += 75){
+      const chunk = ids.slice(i, i + 75);
+      try{
+        const r = await postWithTimeout(`${SF_BASE}/cards/collection`, { identifiers: chunk }, 6000);
+        if(!r || !r.ok) continue;
+        const data = await r.json();
+        const got = new Map();
+        (data.data || []).forEach(f=>{
+          const raw = f.prices && (f.prices.eur || f.prices.eur_foil);
+          const e = raw ? parseFloat(raw) : NaN;
+          if(isFinite(e)) got.set(f.name + '|' + (f.set || ''), e);
+        });
+        items.forEach(it=>{
+          const e = got.get(it.name + '|' + (it.set || ''));
+          if(e == null) return;
+          if(e !== it.eur){ it.eur = e; changed = true; }
+          notePrice(it.name, e);
+        });
+      }catch(err){}
+    }
+    if(changed){
+      saveCollection();
+      if(state.screen === 'collection') render();   // header total + '__col' breadcrumb re-record
+    }
+  }catch(err){}
+}
 function saveCollection(){ state._ownedSet = null; try{ localStorage.setItem(LS_PREFIX+'collection', JSON.stringify(state.collection)); }catch(e){} }
 const COL_CONDS = [['MT','Mint'],['NM','Near Mint'],['EX','Excellent'],['GD','Good'],['LP','Light Played'],['PL','Played'],['PO','Poor']];
 function slimForCollection(card){
@@ -7819,6 +7866,7 @@ async function cheapestEur(card, front, fresh){
     });
   }catch(e){ console.error('price lookup failed for', card.name, e); return cached !== undefined ? cached : null; }
   state.priceCache[card.name] = { v: min, t: Date.now() };
+  notePrice(card.name, min);
   savePriceCache();
   return min;
 }
@@ -7890,7 +7938,7 @@ async function priceDeck(d, onProgress, bg){
     await runLimited(batches, async (names)=>{
       const found = await fetchPricesForBatch(names, bg);
       if(found){
-        names.forEach(n=>{ state.priceCache[n] = { v: found[n], t: Date.now() }; });
+        names.forEach(n=>{ state.priceCache[n] = { v: found[n], t: Date.now() }; notePrice(n, found[n]); });
       } else {
         // Batch failed outright — fall back to per-card lookups so one bad
         // query doesn't wipe out the whole deck's pricing
@@ -7917,7 +7965,7 @@ async function priceDeck(d, onProgress, bg){
     refreshed = (async ()=>{
       for(const batch of chunkArr(staleNames, PRICE_BATCH)){
         const found = await fetchPricesForBatch(batch, true);   // background lane
-        if(found) batch.forEach(n=>{ state.priceCache[n] = { v: found[n], t: Date.now() }; });
+        if(found) batch.forEach(n=>{ state.priceCache[n] = { v: found[n], t: Date.now() }; notePrice(n, found[n]); });
       }
       savePriceCache();
     })().catch(()=>{});
@@ -15838,7 +15886,11 @@ async function prefetchBudgetData(d){
     if(state._budgetPrefetched[d.id]) return;
     state._budgetPrefetched[d.id] = true;
     const all = deckLeaders(d).concat(d.cards||[]);
-    const priced = all.filter(c=>{ const h = state.priceCache[c.name]; return h && typeof h.v==='number' && h.v >= 5; });
+    // The prefetch mirrors the page's own floor and hard gate — previously it
+    // referenced names outside its scope, so it died silently on line one.
+    const BUDGET_FLOOR = (()=>{ const v = parseFloat(localStorage.getItem(LS_PREFIX+'budgetFloor')); return (v >= 0.1 && v <= 10) ? v : 5; })();
+    const underLine = (x)=>{ const p = shownEurOf(x); return p != null && p <= BUDGET_FLOOR; };
+    const priced = all.filter(c=>{ const h = state.priceCache[c.name]; return h && typeof h.v==='number' && h.v >= BUDGET_FLOOR; });
     if(!priced.length) return;
     const isL = (x)=>/\bLand\b/.test(frontFace(x).type_line||'');
     const nonLand = priced.filter(c=>!isL(c));
@@ -15847,7 +15899,7 @@ async function prefetchBudgetData(d){
     const poolCache = (state._budgetPoolCache = state._budgetPoolCache || {});
     const union = new Set(); Object.values(tags).forEach(a=>a.forEach(t=>union.add(t)));
     await runLimited(Array.from(union), async (tag)=>{
-      const ck = idClause + '|' + tag;
+      const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|' + tag;
       if(poolCache[ck]) return;
       try{
         const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' otag:' + tag).trim(), 'edhrec', 60);
@@ -15855,7 +15907,7 @@ async function prefetchBudgetData(d){
       }catch(e){}
     }, 2);
     if(priced.some(isL)){
-      const ck = idClause + '|land';
+      const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|land';
       if(!poolCache[ck]){
         try{
           const r = await searchAndVerifyLegal((idClause + ' t:land eur<=' + BUDGET_FLOOR).trim(), 'edhrec', 120);
@@ -16026,7 +16078,7 @@ async function loadBudgetAlternatives(d){
     });
   })();
   if(!priced.length){ box.innerHTML = `<div class="empty-note">${trS('No cards at')} €${BUDGET_FLOOR} ${trS('or more in this deck')} — ${isCmdrMode()?trS('it\u2019s already built thrifty.'):trS('this crew is already sailing cheap.')}</div>`; return; }
-  box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €${BUDGET_FLOOR}+ ${infoBtnHtml('Every card at €5 or more gets two thriftier stand-ins for the same job. Tap + to swap one in.')}</p>`;
+  box.innerHTML = `<p class="hint" style="text-align:center;margin:0 0 8px;">${priced.length} card${priced.length>1?'s':''} at €${BUDGET_FLOOR}+ ${infoBtnHtml('Every card at €' + BUDGET_FLOOR + ' or more gets thriftier stand-ins for the same job, each at or under the budget line. Tap + to swap one in.')}</p>`;
   // Build ONE shared candidate pool up front — EDHREC's dedicated budget page
   // for this commander (real play data) plus the most-played cheap cards in
   // identity, fetched in parallel — then match every pricey card against it
@@ -16094,7 +16146,7 @@ async function loadBudgetAlternatives(d){
   const poolCache = (state._budgetPoolCache = state._budgetPoolCache || {});
   const tagPools = {}, candTags = {};
   await runLimited(Array.from(tagUnion), async (tag)=>{
-    const ck = idClause + '|' + tag;
+    const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|' + tag;
     if(poolCache[ck]){ tagPools[tag] = poolCache[ck]; return; }
     try{
       const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' otag:' + tag).trim(), 'edhrec', 60);
@@ -16105,7 +16157,7 @@ async function loadBudgetAlternatives(d){
   Object.entries(tagPools).forEach(([tag, arr])=>arr.forEach(x=>{ (candTags[x.name] = candTags[x.name] || new Set()).add(tag); }));
   let landPool = [];
   if(landPriced.length){
-    const ck = idClause + '|land';
+    const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|land';
     if(poolCache[ck]) landPool = poolCache[ck];
     else try{
       const r = await searchAndVerifyLegal((idClause + ' t:land eur<=' + BUDGET_FLOOR).trim(), 'edhrec', 120);
@@ -16130,7 +16182,9 @@ async function loadBudgetAlternatives(d){
     const prEl = trio.querySelector('.bs-pr');
     if(prEl && roleLabel) prEl.textContent = `${fmtEur(v)} · ${roleLabel}`;
     const ptype = primaryTypeOf(c);
-    const ceiling = Math.max(1.5, Math.min(5, v * 0.35));
+    // The chosen budget line is the HARD ceiling for every suggestion —
+    // no private per-card heuristic may overrule what the slider says.
+    const ceiling = BUDGET_FLOOR;
     const scored = [];
     // TEXT-feature pools — the same first-priority signal Similar cards
     // trusts (the exact rules language the card uses), under the budget
@@ -16141,7 +16195,7 @@ async function loadBudgetAlternatives(d){
     const featQs = land ? [] : srcFeatsB.filter(f=>f.q).sort((a,b)=>b.w-a.w).slice(0, 2);
     if(featQs.length){
       await runLimited(featQs, async (f)=>{
-        const ck = idClause + '|txt:' + f.k;
+        const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|txt:' + f.k;
         if(!poolCache[ck]){
           try{
             const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' ' + f.q).trim(), 'edhrec', 40);
@@ -16160,7 +16214,7 @@ async function loadBudgetAlternatives(d){
         const x = landPool[i];
         if(inDeck.has(x.name)) continue;
         const pv = priceOf(x);
-        if(pv!==null && pv > Math.max(ceiling, 2)) continue;
+        if(pv!==null && pv > ceiling) continue;
         let sc = 0;
         (x.produced_mana||[]).forEach(m=>{ if(myProd.has(m)) sc += 1; });
         sc -= i * 0.01;                                           // earlier = more played
