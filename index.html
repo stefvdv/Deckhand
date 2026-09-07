@@ -118,6 +118,11 @@ html[data-mode="commander"] body{ background:transparent; }
 /* The colour-to-black depth fade lives on a FIXED layer glued to the
    viewport: scrolling moves the content over it, never the fade itself,
    so the gradient can't visibly restart anywhere on any page. */
+/* The whole palette read a touch too bright on device — a fixed 7% black
+   veil above everything dims every colour uniformly (theme, art, gold)
+   without touching a single token. Its own fixed layer, so no filter-on-
+   body containing-block trap for the fixed bars. */
+body::after{content:'';position:fixed;inset:0;z-index:9998;pointer-events:none;background:rgba(0,0,0,0.07);}
 body::before{
   content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
@@ -223,13 +228,13 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > .searchbar,
 .app > main > div:has(> #deckFilter){
   order:100;position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:36;
-  background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);
   margin:8px -16px 0 !important;padding:10px 16px;
 }
 .app > main > .adv-toggle,
 .app > main > div:has(> #colAdvToggle){
   order:99;position:sticky;bottom:calc(var(--nav-h) + 64px + env(safe-area-inset-bottom));z-index:36;
-  background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);
   margin:0 -16px !important;padding:8px 16px;
 }
 /* The Advanced-filters bar is the BUTTON itself — it keeps its field face
@@ -328,7 +333,7 @@ main.card-detail > div:nth-child(2){order:10;}
 .app > main > .builder-tabs{
   position:fixed;left:0;right:0;top:auto;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
   z-index:41;margin:0;padding:5px 14px;height:44px;box-sizing:border-box;
-  background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);
 }
 /* Bottom-up: content packs at the FOOT even when a deck search leaves the
    list nearly empty — the min-height keeps the bridge (and any open tool
@@ -833,7 +838,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .ib svg{width:20px;height:20px;color:currentColor;opacity:0.92;}
 .dl-adm-empty{aspect-ratio:63/88;border:2px dashed var(--line);border-radius:4.75% / 3.5%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--sub-text-2);font-size:12px;cursor:pointer;}
 /* Bottom dock: fixed status bar with cycling info sets */
-.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
+.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
 .dk-arr{background:none;border:2px solid var(--line);border-radius:8px;color:var(--sub-text);width:30px;height:34px;cursor:pointer;flex:none;font-size:13px;}
 /* display:contents lifts the set's items to be the dock's own flex
    children, so the bar's space-between spreads EVERYTHING evenly —
@@ -1407,7 +1412,7 @@ main.has-dock{padding-bottom:84px;}
 .overlay main .edh-sec > .section-label{top:auto;bottom:0;}
 #recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;border-bottom:2px solid var(--line);}
 #recoOverlay main{padding-bottom:0;}
-#recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:color-mix(in srgb, var(--ink) 55%, transparent);backdrop-filter:blur(8px);border-top:2px solid var(--line);margin:0;padding:8px 0;}
+#recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);margin:0;padding:8px 0;}
 #recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;transition:bottom 0.2s;}
 /* While the selection + fab is visible, the burger steps up to make room —
    and steps back down the moment the last selection is dropped. */
@@ -4152,13 +4157,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.492';
+const APP_VERSION = '2.51.493';
 const CHANGELOG_NOTES = {
   en: [
-    'Budget Alternatives now obeys the slider as a hard limit: moving the budget line rebuilds the pools and every suggestion must cost at or under it \u2014 the old caches and a hidden \u20ac5 ceiling were serving the same two cards at every setting. Price history got honest too: every price load now leaves its daily breadcrumb, and collection prices thaw once a day from Cardmarket instead of staying frozen at their import-day value, so the total-value and per-card graphs finally move with the market.'
+    'The deck dock, tab strip and search bars are solid again in the top bar\u2019s dress, the whole palette is dimmed a touch, price-history dates read day-month-year, and Castability is now spelled Cast-ability.'
   ],
   nl: [
-    'Budget-alternatieven gehoorzaamt de schuif nu als harde grens: het verplaatsen van de budgetlijn herbouwt de pools en elke suggestie moet op of onder de lijn kosten \u2014 oude caches en een verborgen \u20ac5-plafond toonden bij elke stand dezelfde twee kaarten. De prijshistorie werd ook eerlijk: elke prijslading laat nu zijn dagelijkse kruimel achter, en collectieprijzen ontdooien \u00e9\u00e9n keer per dag vanaf Cardmarket in plaats van bevroren te blijven op hun importwaarde, zodat de waardegrafieken eindelijk met de markt meebewegen.'
+    'De deck-dock, tabstrook en zoekbalken zijn weer dekkend in de kleding van de bovenbalk, het hele palet is een tikje gedimd, prijshistorie-datums lezen als dag-maand-jaar, en Castability heet nu Cast-ability.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -9171,7 +9176,7 @@ function statsTabHtml(d){
       <div class="curve-panel">${curve.map((n,i)=>`<div class="curve-col" data-cmc="${i}" style="cursor:${n?'pointer':'default'};"><div class="curve-bar" style="height:${n?(14+(n/maxB)*54):2}px"></div><div class="curve-n">${n||''}</div><div class="curve-lbl">${i===6?'6+':i}</div></div>`).join('')}</div>
       <div id="curveDetail"></div>
     </div>
-    ${isCmdrMode() && d.cards.length ? `<div class="panel-card"><div class="panel-h">Castability</div>
+    ${isCmdrMode() && d.cards.length ? `<div class="panel-card"><div class="panel-h">Cast-ability</div>
       <div id="castResult" class="hint" style="margin:0 0 8px;">Pick a card from this deck to see its odds.</div>
       <div class="otag-wrap"><input id="castPick" class="col-filter-input" placeholder="Card in this deck…" autocomplete="off"><div id="castPop" class="otag-pop" hidden></div></div>
     </div>` : ''}
@@ -13283,6 +13288,8 @@ function openPriceHistory(card, key){
   const _key = key || _title;
   card = { name: _title, _k: _key };
 
+  // Dates on this page read day-month-year (26-8-2026), matching the app.
+  const dmy = (iso)=>{ const p = String(iso).split('-'); return p.length === 3 ? (+p[2]) + '-' + (+p[1]) + '-' + p[0] : iso; };
   const ex = document.getElementById('phOverlay');
   if(ex) ex.remove();
   const el = document.createElement('div');
@@ -13290,7 +13297,7 @@ function openPriceHistory(card, key){
   const pts = priceHistOf(card._k);
   let body;
   if(pts.length < 2){
-    body = `<div class="empty-note" style="padding:24px 12px;text-align:center;">${pts.length ? 'One price point so far (' + pts[0][0] + ' · €' + Number(pts[0][1]).toFixed(2) + ').' : 'No history yet.'}<br>Recording runs daily as prices load — the line grows from here.</div>`;
+    body = `<div class="empty-note" style="padding:24px 12px;text-align:center;">${pts.length ? 'One price point so far (' + dmy(pts[0][0]) + ' · €' + Number(pts[0][1]).toFixed(2) + ').' : 'No history yet.'}<br>Recording runs daily as prices load — the line grows from here.</div>`;
   } else {
     const vs = pts.map(p=>p[1]);
     const lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
@@ -13303,8 +13310,8 @@ function openPriceHistory(card, key){
     body = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:520px;display:block;margin:0 auto;">
       <polyline points="${line}" fill="none" stroke="var(--brass)" stroke-width="2"/>
       ${pts.map((p, i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="2.6" fill="var(--brass)"/>`).join('')}
-      <text x="${Lp}" y="${H - 6}" fill="var(--sub-text)" font-size="9">${pts[0][0]}</text>
-      <text x="${W - Rp}" y="${H - 6}" fill="var(--sub-text)" font-size="9" text-anchor="end">${pts[pts.length - 1][0]}</text>
+      <text x="${Lp}" y="${H - 6}" fill="var(--sub-text)" font-size="9">${dmy(pts[0][0])}</text>
+      <text x="${W - Rp}" y="${H - 6}" fill="var(--sub-text)" font-size="9" text-anchor="end">${dmy(pts[pts.length - 1][0])}</text>
       <text x="${Lp}" y="${Tp + 4}" fill="var(--sub-text)" font-size="9">€${hi.toFixed(2)}</text>
       <text x="${Lp}" y="${H - Bp}" fill="var(--sub-text)" font-size="9">€${lo.toFixed(2)}</text>
     </svg>
