@@ -5,11 +5,11 @@
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v2.51.493';
+const VERSION = 'admiral-v2.51.494';
 // Card images and fonts survive app updates: this cache is deliberately
 // NOT version-named, so activating a new version never wipes it.
 const ASSETS = 'admiral-assets-v1';
-const SHELL = ['./', './index.html', './manifest.json', './format.txt', './icon-192.png', './icon-512.png', './hand.webp', './card_build.webp', './card_collect.webp', './card_play.webp'];
+const SHELL = ['./', './index.html', './manifest.json', './format.txt', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
