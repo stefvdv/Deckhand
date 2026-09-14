@@ -1,11 +1,11 @@
-/* Admiral Deck Log — service worker
+/* Deckhand — service worker
    Strategy:
    - App shell (this page, icons, manifest): network-first with cache fallback,
      so hosted updates arrive immediately but the app still opens offline.
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v2.51.494';
+const VERSION = 'admiral-v2.51.495';
 // Card images and fonts survive app updates: this cache is deliberately
 // NOT version-named, so activating a new version never wipes it.
 const ASSETS = 'admiral-assets-v1';
