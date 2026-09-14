@@ -597,13 +597,13 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
   z-index:1;display:flex;align-items:center;justify-content:center;gap:9px;
   background:var(--brass);color:var(--on-acc);border:none;border-radius:30px;
   padding:12px 30px;font-size:15px;font-weight:700;cursor:pointer;
-  box-shadow:0 10px 30px color-mix(in srgb, var(--brass) 34%, transparent), inset 0 1px 0 rgba(255,255,255,0.35);
+  box-shadow:0 10px 30px color-mix(in srgb, var(--brass) 34%, transparent), inset 0 1px 0 rgba(0,0,0,0.35);
   transition:transform 0.12s, box-shadow 0.12s;
 }
 .home-search-btn svg{width:21px;height:21px;stroke:var(--on-acc);}
 .hsb-anchor{font-size:18px;line-height:1;}
 .home-sub{z-index:1;font-size:11.5px;color:var(--sub-text-2);margin:7px 0 0;letter-spacing:0.3px;}
-.home-search-btn:active{transform:translateY(1px);box-shadow:0 5px 16px color-mix(in srgb, var(--brass) 30%, transparent), inset 0 1px 0 rgba(255,255,255,0.35);}
+.home-search-btn:active{transform:translateY(1px);box-shadow:0 5px 16px color-mix(in srgb, var(--brass) 30%, transparent), inset 0 1px 0 rgba(0,0,0,0.35);}
 
 
 .home-hero-banner{
@@ -1575,7 +1575,7 @@ main.has-dock{padding-bottom:84px;}
    own fixed-positioned pill, placed by placeLifeRadial() from the cog's
    real position. */
 #lifeOverlay #lifeMenuPop{position:fixed;inset:0;right:auto;background:none;border:none;box-shadow:none;border-radius:0;overflow:visible;min-width:0;z-index:260;pointer-events:none;}
-#lifeMenuPop .lm-opt{position:fixed;left:var(--x);top:var(--y);transform:translate(-50%,-50%) rotate(var(--a,0deg));pointer-events:auto;background:var(--ink-deep);border:2px solid var(--brass);color:var(--brass);border-radius:999px;padding:10px 18px;font-family:'Cinzel',serif;font-weight:700;font-size:13.5px;letter-spacing:.4px;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.55);cursor:pointer;}
+#lifeMenuPop .lm-opt{position:fixed;left:var(--x);top:var(--y);transform:translate(-50%,-50%) rotate(var(--a,0deg));pointer-events:auto;width:auto;max-width:72vw;display:inline-block;background:var(--ink-deep);border:2px solid var(--brass);color:var(--brass);border-radius:999px;padding:10px 18px;font-family:'Cinzel',serif;font-weight:700;font-size:13.5px;letter-spacing:.4px;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.55);cursor:pointer;}
 #lifeMenuPop hr{display:none;}
 #lifeMenuShield{position:fixed;inset:0;z-index:255;background:rgba(0,0,0,0.55);}
 .life-trim{position:absolute;height:2px;background:var(--line);pointer-events:none;z-index:4;border-radius:1px;}
@@ -1708,12 +1708,12 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
   background-image:linear-gradient(var(--panel),var(--panel)), linear-gradient(var(--brass),var(--brass));
   background-origin:padding-box,border-box;
   background-clip:padding-box,border-box;
-  box-shadow:inset 0 1px 0 rgba(255,246,215,0.32), inset 0 -1px 0 rgba(96,58,10,0.5);
+  box-shadow:inset 0 1px 0 rgba(0,0,0,0.38), inset 0 -1px 0 rgba(0,0,0,0.5);
 }
-/* Metal rims on the gold-bordered surfaces: a lit top edge and a shaded
-   lower edge make the flat gold border read as turned metal. */
+/* Dark inner edges on the bordered surfaces: a shaded top and bottom
+   seat the flat border into its surface — no light line anywhere. */
 .settings-section, .panel-card, .deck-tile, .folder-tile, .adv-panel, .dl-cover{
-  box-shadow:inset 0 1.5px 0 rgba(255,244,210,0.2), inset 0 -1.5px 0 rgba(90,55,10,0.4);
+  box-shadow:inset 0 1.5px 0 rgba(0,0,0,0.32), inset 0 -1.5px 0 rgba(0,0,0,0.4);
 }
 .banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:var(--panel-2);background-image:linear-gradient(var(--panel-2),var(--panel-2)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
 /* Button ICONS read in plain gold everywhere (the accents stay the dark
@@ -1741,6 +1741,9 @@ html{--main-field:var(--ink-2);--main-field-line:var(--line);--main-hl:var(--glo
   background-image:linear-gradient(var(--main-field),var(--main-field)), linear-gradient(var(--brass),var(--brass));
 }
 :is(.panel-card, .settings-section, .adv-panel, #colAdvBox, .dl-cover, .pd-panel, .cselect-panel, .sc-primer, .sc-list, .life-panel, .life-card-v2, .deck-tile, .folder-tile, .pr-rail, .home-fact, .oracle-face, .tag-editor, .appoint-sheet) .rt-chip:not(.on){background:var(--main-field);border-color:var(--main-field-line);color:var(--main-text);}
+/* The table's centre cog wears flat gold with an engraved dark gear. */
+#lifeCogBtn{background-color:var(--gold);background-image:linear-gradient(var(--gold),var(--gold)), linear-gradient(var(--gold-deep),var(--gold-deep));background-origin:padding-box,border-box;background-clip:padding-box,border-box;color:#241A04;}
+#lifeCogBtn svg, #lifeCogBtn svg *{color:#241A04;}
 </style>
 </head>
 <body>
@@ -3771,6 +3774,10 @@ function dfcFlipHtml(c){
     // (both halves joined into one card), fetched once per name on first
     // tap and cached for the session; never just a rotated half.
     if(c && c.layout === 'meld'){
+      // Prefetch the moment the button exists: resolve the meld result AND
+      // warm the browser's image cache, so the tap flips as instantly as a
+      // normal double-faced card instead of waiting on the fetch queue.
+      queueMicrotask(()=>{ try{ meldResultImage(c.name).then(u=>{ if(u){ const im = new Image(); im.src = u; } }).catch(()=>{}); }catch(_){} });
       return `<span class="dfc-flip-box"><button class="dfc-flip" title="Show the full meld result" data-meld="${escapeHtml(c.name)}" data-front="${escapeHtml(cardImageLarge(c))}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6l5 4V7c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 13c0-4.42-3.58-8-8-8zm-5.3 2.74L5.24 6.28A7.93 7.93 0 0 0 4 13c0 4.42 3.58 8 8 8v3l5-4-5-4v3c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8z"/></svg></button></span>`;
     }
     return '';
@@ -4189,13 +4196,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.500';
+const APP_VERSION = '2.51.502';
 const CHANGELOG_NOTES = {
   en: [
-    'Meld cards (like Bruna, the Fading Light) now carry the flip button too \u2014 and flipping shows the COMPLETE meld result as one whole card, never a rotated half. Fetched once per card and remembered for the session.'
+    'Buttons lost their last light top line \u2014 the inner edges are dark now \u2014 and the life counter\u2019s centre menu is fixed: compact pills fanned around a flat-gold cog, instead of full-width bars sprawled across the table.'
   ],
   nl: [
-    'Meld-kaarten (zoals Bruna, the Fading Light) dragen nu ook de flip-knop \u2014 en flippen toont het VOLLEDIGE meld-resultaat als \u00e9\u00e9n hele kaart, nooit een gedraaide helft. E\u00e9n keer per kaart opgehaald en onthouden voor de sessie.'
+    'Knoppen verloren hun laatste lichte toplijntje \u2014 de binnenranden zijn nu donker \u2014 en het middenmenu van de levensteller is gefixt: compacte pillen rondom een vlak-gouden tandwiel, in plaats van balken over de volle breedte van de tafel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
