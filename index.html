@@ -1693,7 +1693,7 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
 .rpill, .modal-sheet{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--ink-3),var(--ink-3)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
 .edh-jump{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--field),var(--field)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
 .reco-fab .fab-n, .glog-sheet{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--ink),var(--ink)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
-#lifeMenuPop .lm-opt{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--ink-deep),var(--ink-deep)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
+#lifeMenuPop .lm-opt{border-color:transparent;background-image:linear-gradient(var(--ink-deep),var(--ink-deep)), linear-gradient(color-mix(in srgb, var(--ink-deep) 45%, #000), color-mix(in srgb, var(--ink-deep) 45%, #000));background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
 /* Solid accent buttons: one flat, uniform colour — the sheen retired. */
 .new-deck-btn, .empty-home button, .need-deck button, .ghost-btn.active, .primary-btn, .deck-fab, .pair-add, .searchbar button, .seg button.active, .reco-create, .chip.active, .modal-actions .confirm, .player-count button.active, .reco-fab, .cotd .cotd-add, .rt-chip.on{
   background-image:linear-gradient(var(--brass),var(--brass));
@@ -1705,17 +1705,12 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
 .banner-tab, .icon-btn, .dk-tool, .dk-arr, .dk-count, #lifeCogBtn, .compass, .edh-jump, .brand-banner #capBack, .brand-banner .ov-back, .in-chev, .home-search-btn{
   border-color:transparent;
   background-color:var(--panel);
-  background-image:linear-gradient(var(--panel),var(--panel)), linear-gradient(var(--brass),var(--brass));
+  background-image:linear-gradient(var(--panel),var(--panel)), linear-gradient(color-mix(in srgb, var(--panel) 50%, #000), color-mix(in srgb, var(--panel) 50%, #000));
   background-origin:padding-box,border-box;
   background-clip:padding-box,border-box;
-  box-shadow:inset 0 1px 0 rgba(0,0,0,0.38), inset 0 -1px 0 rgba(0,0,0,0.5);
 }
-/* Dark inner edges on the bordered surfaces: a shaded top and bottom
-   seat the flat border into its surface — no light line anywhere. */
-.settings-section, .panel-card, .deck-tile, .folder-tile, .adv-panel, .dl-cover{
-  box-shadow:inset 0 1.5px 0 rgba(0,0,0,0.32), inset 0 -1.5px 0 rgba(0,0,0,0.4);
-}
-.banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:var(--panel-2);background-image:linear-gradient(var(--panel-2),var(--panel-2)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
+
+.banner-tab.active, .icon-btn.active, .dk-tool.active{background-color:var(--panel-2);background-image:linear-gradient(var(--panel-2),var(--panel-2)), linear-gradient(color-mix(in srgb, var(--panel-2) 50%, #000), color-mix(in srgb, var(--panel-2) 50%, #000));background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
 /* Button ICONS read in plain gold everywhere (the accents stay the dark
    side tint for rims and fills); the round + fab and the burger jump wear
    a flat gold face with engraved dark marks. */
@@ -1744,6 +1739,11 @@ html{--main-field:var(--ink-2);--main-field-line:var(--line);--main-hl:var(--glo
 /* The table's centre cog wears flat gold with an engraved dark gear. */
 #lifeCogBtn{background-color:var(--gold);background-image:linear-gradient(var(--gold),var(--gold)), linear-gradient(var(--gold-deep),var(--gold-deep));background-origin:padding-box,border-box;background-clip:padding-box,border-box;color:#241A04;}
 #lifeCogBtn svg, #lifeCogBtn svg *{color:#241A04;}
+#diceShield{position:fixed;inset:0;z-index:259;background:rgba(0,0,0,0.35);}
+#dicePop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:261;background:var(--ink-deep);border:2px solid color-mix(in srgb, var(--ink-deep) 45%, #000);border-radius:16px;padding:16px;box-shadow:0 10px 34px rgba(0,0,0,0.6);}
+.dice-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;}
+.dice-opt{background:var(--ink-2);border:2px solid color-mix(in srgb, var(--ink-2) 45%, #000);border-radius:12px;color:var(--gold);font-family:'Cinzel',serif;font-weight:700;font-size:15px;padding:14px 10px;cursor:pointer;white-space:nowrap;}
+.dice-opt:active{transform:translateY(1px);}
 </style>
 </head>
 <body>
@@ -4196,13 +4196,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.502';
+const APP_VERSION = '2.51.503';
 const CHANGELOG_NOTES = {
   en: [
-    'Buttons lost their last light top line \u2014 the inner edges are dark now \u2014 and the life counter\u2019s centre menu is fixed: compact pills fanned around a flat-gold cog, instead of full-width bars sprawled across the table.'
+    'Buttons are truly one layer now \u2014 background, icon and a rim that is simply a darker tint of the button itself. The life counter\u2019s menu tightened around the cog with five pills: Restart, High Roll, Dice (opening a picker with every die and the coin), History and Settings \u2014 and hardware back now closes History, Settings or the dice picker first instead of the whole counter.'
   ],
   nl: [
-    'Knoppen verloren hun laatste lichte toplijntje \u2014 de binnenranden zijn nu donker \u2014 en het middenmenu van de levensteller is gefixt: compacte pillen rondom een vlak-gouden tandwiel, in plaats van balken over de volle breedte van de tafel.'
+    'Knoppen zijn nu \u00e9cht \u00e9\u00e9n laag \u2014 achtergrond, icoon en een rand die simpelweg een donkerdere tint van de knop zelf is. Het menu van de levensteller sloot zich rond het tandwiel met vijf pillen: Restart, High Roll, Dice (opent een kiezer met elke dobbelsteen en de munt), History en Settings \u2014 en de terugknop sluit nu eerst History, Settings of de dobbelsteenkiezer in plaats van de hele teller.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -17720,13 +17720,18 @@ function openLifeOverlay(){
 function closeLifeOverlayUI(){ closeTopOverlay(); }
 function lifeMenuPopHtml(){
   return `<div class="menu-pop" id="lifeMenuPop">
-    <button class="lm-opt" id="mNewGame">↺ New Game</button>
-    <button class="lm-opt" id="mHighRoll">🎡 Spin for First Player</button>
-    <button class="lm-opt" id="mRollD6">🎲 Roll d6</button>
-    <button class="lm-opt" id="mRollD20">🎲 Roll d20</button>
-    <button class="lm-opt" id="mFlipCoin">🪙 Flip a Coin</button>
+    <button class="lm-opt" id="mNewGame">↺ Restart</button>
+    <button class="lm-opt" id="mHighRoll">High Roll</button>
+    <button class="lm-opt" id="mDice">🎲 Dice</button>
     <button class="lm-opt" id="mHistory">History</button>
     <button class="lm-opt" id="mLifeSettings">Settings</button>
+  </div>`;
+}
+/* The dice picker: one popup for every die and the coin. */
+function dicePopHtml(){
+  const d = (n)=>`<button class="dice-opt" data-die="${n}">D${n}</button>`;
+  return `<div id="diceShield"></div><div id="dicePop">
+    <div class="dice-grid">${d(4)}${d(6)}${d(8)}${d(10)}${d(12)}${d(20)}<button class="dice-opt" data-die="coin">🪙 Coin</button></div>
   </div>`;
 }
 /* The spokes: diagonals rotated ±45° along their direction, verticals level.
@@ -17738,14 +17743,13 @@ function placeLifeRadial(){
   const r = cog ? cog.getBoundingClientRect() : null;
   const cx = r ? r.left + r.width/2 : window.innerWidth/2;
   const cy = r ? r.top + r.height/2 : window.innerHeight/2;
+  // Tight around the cog, lotus-style: two above, two below, one beneath.
   const spots = {
-    mNewGame:      [-118, -122, -45],
-    mHighRoll:     [ 118, -122,  45],
-    mRollD6:       [-118,  122,  45],
-    mRollD20:      [ 118,  122, -45],
-    mFlipCoin:     [   0, -196,   0],
-    mHistory:      [   0,  178,   0],
-    mLifeSettings: [   0,  242,   0]
+    mNewGame:      [ -92,  -80, -38],
+    mHighRoll:     [  92,  -80,  38],
+    mDice:         [ -98,   66,  34],
+    mLifeSettings: [  98,   66, -34],
+    mHistory:      [   0,  146,   0]
   };
   Object.entries(spots).forEach(([id, [dx, dy, a]])=>{
     const b = document.getElementById(id);
@@ -17778,6 +17782,7 @@ function renderLifeOverlay(){
     <div class="topbar" style="position:relative;justify-content:center;">
       <div class="brand-txt" style="font-size:15px;">Life Totals</div>
       ${state.life.menuOpen ? `<div id="lifeMenuShield"></div>${lifeMenuPopHtml()}` : ''}
+      ${state.life.diceOpen ? dicePopHtml() : ''}
     </div>
     <main>
       <div id="lifeHistoryPanel"></div>
@@ -17803,17 +17808,27 @@ function renderLifeOverlay(){
   if(state.life.menuOpen){
     document.getElementById('mNewGame').addEventListener('click', ()=>{ state.life.menuOpen=false; restartLife(); });
     document.getElementById('mHighRoll').addEventListener('click', ()=>{ state.life.menuOpen=false; renderLifeOverlay(); animatedHighRoll(); });
-    document.getElementById('mRollD6').addEventListener('click', ()=>{ state.life.menuOpen=false; renderLifeOverlay(); rollDie(6); });
-    document.getElementById('mRollD20').addEventListener('click', ()=>{ state.life.menuOpen=false; renderLifeOverlay(); rollDie(20); });
-    document.getElementById('mFlipCoin').addEventListener('click', ()=>{ state.life.menuOpen=false; renderLifeOverlay(); flipCoin(); });
-    document.getElementById('mHistory').addEventListener('click', ()=>{
-      state.life.menuOpen=false; state.life.historyOpen=!state.life.historyOpen; state.life.settingsOpen=false;
+    document.getElementById('mDice').addEventListener('click', ()=>{
+      state.life.menuOpen=false; state.life.diceOpen=true;
       renderLifeOverlay();
+      pushOverlay('lifeDice', ()=>{ state.life.diceOpen=false; renderLifeOverlay(); });
     });
-    document.getElementById('mLifeSettings').addEventListener('click', ()=>{
-      state.life.menuOpen=false; state.life.settingsOpen=!state.life.settingsOpen; state.life.historyOpen=false;
+    // History and Settings ride the back-press ladder: hardware back (or
+    // the pill again) closes the PANEL first, never the whole counter.
+    const _lifeSub = (id, key, otherKey)=>{
+      state.life.menuOpen=false;
+      const top = state.overlayStack[state.overlayStack.length-1];
+      if(state.life[key]){
+        if(top && top.id === id) closeTopOverlay();
+        else { state.life[key]=false; renderLifeOverlay(); }
+        return;
+      }
+      state.life[key]=true; state.life[otherKey]=false;
       renderLifeOverlay();
-    });
+      pushOverlay(id, ()=>{ state.life[key]=false; renderLifeOverlay(); });
+    };
+    document.getElementById('mHistory').addEventListener('click', ()=>_lifeSub('lifeHist','historyOpen','settingsOpen'));
+    document.getElementById('mLifeSettings').addEventListener('click', ()=>_lifeSub('lifeSet','settingsOpen','historyOpen'));
     document.addEventListener('click', closeLifeMenuOnce, {once:true});
     // The shield sits over the whole table, under the menu: any tap outside
     // the menu lands here first, closes the menu, and goes NO further — the
@@ -17832,6 +17847,16 @@ function renderLifeOverlay(){
   renderSettingsPanel();
   renderLifeGrid();
   if(state.life.menuOpen) placeLifeRadial();
+  // Dice picker wiring: any die rolls and closes; the shield or back closes.
+  if(state.life.diceOpen){
+    const closeDice = ()=>{ const top = state.overlayStack[state.overlayStack.length-1]; if(top && top.id === 'lifeDice') closeTopOverlay(); else { state.life.diceOpen=false; renderLifeOverlay(); } };
+    document.getElementById('diceShield')?.addEventListener('click', closeDice);
+    document.querySelectorAll('#dicePop .dice-opt').forEach(b=>b.addEventListener('click', ()=>{
+      const v = b.dataset.die;
+      closeDice();
+      if(v === 'coin') flipCoin(); else rollDie(parseInt(v, 10));
+    }));
+  }
 }
 function closeLifeMenuOnce(){ if(state.life.menuOpen){ state.life.menuOpen=false; renderLifeOverlay(); } }
 function renderHistoryPanel(){
