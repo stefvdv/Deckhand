@@ -1714,7 +1714,9 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
 /* Button ICONS read in plain gold everywhere (the accents stay the dark
    side tint for rims and fills); the round + fab and the burger jump wear
    a flat gold face with engraved dark marks. */
-.banner-tab svg, .icon-btn svg, .dk-tool svg, .compass svg{color:var(--gold);}
+/* Button icons wear the MAIN colour of the chosen pairing — main ink on
+   side-coloured plates, the same contrast logic as everywhere else. */
+.banner-tab svg, .icon-btn svg, .dk-tool svg, .compass svg{color:var(--main-field);}
 .deck-fab, .reco-fab{background-image:linear-gradient(var(--gold),var(--gold));color:#241A04;}
 .reco-fab .fab-n{background-image:none;background:none;-webkit-text-fill-color:#241A04;color:#241A04;}
 
@@ -4196,13 +4198,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.503';
+const APP_VERSION = '2.51.504';
 const CHANGELOG_NOTES = {
   en: [
-    'Buttons are truly one layer now \u2014 background, icon and a rim that is simply a darker tint of the button itself. The life counter\u2019s menu tightened around the cog with five pills: Restart, High Roll, Dice (opening a picker with every die and the coin), History and Settings \u2014 and hardware back now closes History, Settings or the dice picker first instead of the whole counter.'
+    'Button icons now wear the MAIN colour of your chosen pairing instead of gold, and the life counter\u2019s menu slimmed to four pills hugging the centre diamond \u2014 Restart above, Dice left, Settings right, History below. High Roll left the menu (the first-player spin still lives in the New Game setup).'
   ],
   nl: [
-    'Knoppen zijn nu \u00e9cht \u00e9\u00e9n laag \u2014 achtergrond, icoon en een rand die simpelweg een donkerdere tint van de knop zelf is. Het menu van de levensteller sloot zich rond het tandwiel met vijf pillen: Restart, High Roll, Dice (opent een kiezer met elke dobbelsteen en de munt), History en Settings \u2014 en de terugknop sluit nu eerst History, Settings of de dobbelsteenkiezer in plaats van de hele teller.'
+    'Knop-iconen dragen nu de HOOFDKLEUR van je gekozen combinatie in plaats van goud, en het menu van de levensteller slankte af tot vier pillen tegen de middenruit \u2014 Restart boven, Dice links, Settings rechts, History onder. High Roll verliet het menu (de eerste-speler-spin zit nog in de New Game-setup).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -17721,7 +17723,6 @@ function closeLifeOverlayUI(){ closeTopOverlay(); }
 function lifeMenuPopHtml(){
   return `<div class="menu-pop" id="lifeMenuPop">
     <button class="lm-opt" id="mNewGame">↺ Restart</button>
-    <button class="lm-opt" id="mHighRoll">High Roll</button>
     <button class="lm-opt" id="mDice">🎲 Dice</button>
     <button class="lm-opt" id="mHistory">History</button>
     <button class="lm-opt" id="mLifeSettings">Settings</button>
@@ -17743,13 +17744,13 @@ function placeLifeRadial(){
   const r = cog ? cog.getBoundingClientRect() : null;
   const cx = r ? r.left + r.width/2 : window.innerWidth/2;
   const cy = r ? r.top + r.height/2 : window.innerHeight/2;
-  // Tight around the cog, lotus-style: two above, two below, one beneath.
+  // Four pills hugging the centre diamond's edges: Restart above, Dice
+  // left, Settings right, History below — tilted along their edge.
   const spots = {
-    mNewGame:      [ -92,  -80, -38],
-    mHighRoll:     [  92,  -80,  38],
-    mDice:         [ -98,   66,  34],
-    mLifeSettings: [  98,   66, -34],
-    mHistory:      [   0,  146,   0]
+    mNewGame:      [   0, -110, -16],
+    mDice:         [ -96,    8,  62],
+    mLifeSettings: [  96,   -6,  62],
+    mHistory:      [   8,  108, -16]
   };
   Object.entries(spots).forEach(([id, [dx, dy, a]])=>{
     const b = document.getElementById(id);
@@ -17807,7 +17808,6 @@ function renderLifeOverlay(){
   el.querySelectorAll('[data-lifenav]').forEach(b=>b.addEventListener('click', ()=>lifeNavGo(b.dataset.lifenav)));
   if(state.life.menuOpen){
     document.getElementById('mNewGame').addEventListener('click', ()=>{ state.life.menuOpen=false; restartLife(); });
-    document.getElementById('mHighRoll').addEventListener('click', ()=>{ state.life.menuOpen=false; renderLifeOverlay(); animatedHighRoll(); });
     document.getElementById('mDice').addEventListener('click', ()=>{
       state.life.menuOpen=false; state.life.diceOpen=true;
       renderLifeOverlay();
