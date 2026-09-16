@@ -1384,6 +1384,8 @@ main.has-dock{padding-bottom:84px;}
 .art-tile .at-label{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--ink);color:var(--ink-text);border-top:2px solid var(--line);min-height:36px;padding:5px 6px;}
 .art-tile .at-label .at-txt{font-size:11.5px;font-weight:600;line-height:1.2;text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .art-tile .at-label .co-icons{flex:0 0 auto;}
+.art-tile .at-img.at-gen{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;align-content:center;gap:4px;font-size:42px;opacity:0.92;padding:8px;}
+.mana-pentagon{position:relative;display:block;flex:0 0 auto;}
 .cs-artgrid .cselect-opt.art-tile.sel{outline:2.5px solid var(--brass);outline-offset:-2px;background:var(--ink-deep);color:var(--ink-text);}
 .glog-cimg{display:block;width:100%;position:relative;}
 .glog-cimg img{display:block;width:100%;height:auto;border-radius:8px;background:#101418;}
@@ -1760,6 +1762,10 @@ html{--main-field:var(--ink-2);--main-field-line:var(--line);--main-hl:var(--glo
 #lifeCogBtn svg, #lifeCogBtn svg *{color:#241A04;}
 #diceShield, #lifePanelShield{position:fixed;inset:0;z-index:250;background:transparent;}
 #dicePop{z-index:261;}
+#diceResultPop{width:min(80vw,320px);text-align:center;z-index:262;cursor:pointer;}
+.dice-result{font-family:'Cinzel',serif;font-weight:700;font-size:58px;color:#fff;line-height:1.15;text-shadow:0 2px 8px rgba(0,0,0,0.5);}
+.dice-result.small{font-size:26px;}
+.dice-result-sub{font-size:13px;color:var(--sub-text);margin-top:4px;}
 .dice-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;}
 .dice-opt{background:var(--ink-2);border:2px solid color-mix(in srgb, var(--ink-2) 45%, #000);border-radius:12px;color:var(--gold);font-family:'Cinzel',serif;font-weight:700;font-size:15px;padding:14px 10px;cursor:pointer;white-space:nowrap;}
 .dice-opt:active{transform:translateY(1px);}
@@ -2097,7 +2103,13 @@ function cselectHtml(id, options, value, placeholder, o){
     </button>
     ${open ? `<div class="cselect-panel${o.tall?' tall':''}${o.inline?' inline':''}${o.tiles?' cs-artgrid':''}">${o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:''}${options.map(x=>{
       const selCls = String(x.v)===String(value ?? '')?'sel':'';
-      if(o.tiles) return `<button class="cselect-opt art-tile ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}" data-art="${escapeHtml(String(x.art||''))}"><span class="at-img"></span><span class="at-label">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}<span class="at-txt">${x.l}</span></span></button>`;
+      if(o.tiles){
+        const rd = (!x.gen && x.art && typeof _tileArtReady !== 'undefined') ? _tileArtReady[x.art] : null;
+        const img = x.gen
+          ? `<span class="at-img at-gen">${x.gen === true ? '' : x.gen}</span>`
+          : `<span class="at-img"${rd ? ` style="background-image:url('${escapeHtml(rd.a)}')"` : ''}></span>`;
+        return `<button class="cselect-opt art-tile ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}"${(!x.gen && x.art)?` data-art="${escapeHtml(String(x.art))}"`:''}>${img}<span class="at-label">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}<span class="at-txt">${x.l}</span></span></button>`;
+      }
       return `<button class="cselect-opt ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`;
     }).join('')}${o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:''}</div>` : ''}
   </div>`;
@@ -2343,6 +2355,19 @@ function manaIconSvg(c, px){
 }
 function manaRowSvg(letters, px){
   return (letters||'').split('').map(l=>manaIconSvg(l, px)).join('');
+}
+/* The five colors arranged as on a Magic card back: White on top, then
+   clockwise Blue, Black, Red, Green around a pentagon. */
+function manaPentagonSvg(px){
+  const d = Math.round(px * 3.1);
+  const R = d/2 - px/2;
+  return `<span class="mana-pentagon" style="width:${d}px;height:${d}px;">` +
+    ['W','U','B','R','G'].map((l,i)=>{
+      const a = (-90 + i*72) * Math.PI/180;
+      const x = Math.round(d/2 + R*Math.cos(a) - px/2);
+      const y = Math.round(d/2 + R*Math.sin(a) - px/2);
+      return `<span style="position:absolute;left:${x}px;top:${y}px;line-height:0;">${manaIconSvg(l, px)}</span>`;
+    }).join('') + `</span>`;
 }
 /* ---- Price range slider (Collection filter + Search filters) ----
    Stops are hand-picked card-price milestones rather than a linear scale, so
@@ -4233,13 +4258,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.514';
+const APP_VERSION = '2.51.519';
 const CHANGELOG_NOTES = {
   en: [
-    'Life counter menu, trimmed: the pills now fit their text \u2014 same big letters, no empty stretch left and right \u2014 and the pinwheel sits snug around the cog again.'
+    'Inspiration tiles now truly show the MOST PLAYED leader: EDHREC\u2019s Top Commanders list leads (New Commanders came first on the page and sneaked onto the tiles), and on the Scryfall side brand-new unranked cards no longer outrank real play data. Stored tile art re-resolves once to correct itself. The five mana colors on the neutral color tiles now stand in a pentagon, just like the card back.'
   ],
   nl: [
-    'Levensteller-menu, bijgesneden: de pillen passen nu om hun tekst \u2014 zelfde grote letters, geen lege ruimte links en rechts meer \u2014 en het molentje zit weer strak om het tandwiel.'
+    'Inspiratie-tegels tonen nu \u00e9cht de MEEST GESPEELDE leider: EDHREC\u2019s Top Commanders-lijst gaat voor (New Commanders stond bovenaan de pagina en glipte op de tegels), en aan de Scryfall-kant winnen gloednieuwe kaarten zonder rank het niet meer van echte speeldata. Opgeslagen tegel-art lost zichzelf eenmalig opnieuw op. De vijf manakleuren op de neutrale kleurtegels staan nu in een pentagon, net als op de kaartachterkant.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -14882,7 +14907,11 @@ function browseKindredOptions(){
 }
 function edhrecCommanderNamesFrom(data){
   const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
-  const cmd = lists.filter(L=>/commander/i.test(L.header||''));
+  // Most played FIRST: EDHREC prints 'New Commanders' above 'Top
+  // Commanders', so raw page order handed out the newest card. Top lists
+  // lead, other commander lists follow, New lists come last.
+  const _listRank = (L)=> /top/i.test(L.header||'') ? 0 : /new/i.test(L.header||'') ? 2 : 1;
+  const cmd = lists.filter(L=>/commander/i.test(L.header||'')).slice().sort((a,b)=>_listRank(a)-_listRank(b));
   const use = cmd.length ? cmd : lists;
   // Normalize on the way in: curly quotes straightened, non-breaking and
   // doubled spaces collapsed, edges trimmed — Scryfall matches plain ASCII
@@ -15192,37 +15221,101 @@ async function loadEdhrecTypalBrowse(box, key, slug){ return loadEdhrecSectioned
    in the query DB; the in-memory promise map stops double-fetches and
    retry storms within a session. */
 const _tileArtMem = {};
-const TILEART_TTL = 7*24*3600*1000;
+const _tileArtReady = {};       // key -> {n,a}: sync map so renders paint cached art instantly
+const _tileArtRevalidating = new Set();
+const _tileImgWarm = new Set();
+/* Refresh moment for tile art: cached art stays valid until ONE MONTH after
+   the newest major set's release -- exactly when EDHREC's play stats have
+   settled. Until then everything serves from disk, instantly, no churn
+   during spoiler season. Stale entries still serve instantly and refresh
+   quietly in the background. */
+function tileArtEpoch(){
+  try{
+    const now = Date.now();
+    const MAJOR = new Set(['expansion','core','commander','masters','draft_innovation']);
+    let epoch = 0;
+    (state.allSetsRaw||[]).forEach(x=>{
+      if(!x || x.digital || !x.released_at || !MAJOR.has(x.set_type)) return;
+      const t = Date.parse(x.released_at) + 30*24*3600*1000;
+      if(t && t <= now && t > epoch) epoch = t;
+    });
+    return epoch;
+  }catch(e){ return 0; }
+}
+function _tileArtWarmImg(url){
+  if(!url || _tileImgWarm.has(url)) return;
+  _tileImgWarm.add(url);
+  try{ const im = new Image(); im.src = url; }catch(e){}
+}
+async function _tileArtFetchFresh(key){
+  const parts = key.split('|');
+  let out = null;
+  if(parts[0] === 'sf'){
+    const fmt = parts[1] || 'any';
+    const clause = parts.slice(2).join('|').trim();
+    if(clause){
+      const { results } = await searchAndVerifyLegal(clause, 'edhrec', 20, { format: fmt, bg: true });
+      const pool = (results||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
+      // Unranked (brand-new) cards can lead the sorted page -- the tile wants
+      // the lowest REAL rank, i.e. the most played card that has data.
+      const ranked = pool.filter(x=>typeof x.edhrec_rank === 'number');
+      const c = ranked.length ? ranked.reduce((a,b)=>(a.edhrec_rank <= b.edhrec_rank ? a : b)) : pool[0];
+      if(c) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
+    }
+  } else if(parts[0] === 'ed'){
+    const names = await edhrecTagCommanderNames(parts[1], parts[2] || '');
+    if(names && names.length){
+      const cards = await namesToLegalCards(names.slice(0, 3));
+      const c = (cards||[]).find(x=>!isBanned(x));
+      if(c) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
+    }
+  }
+  return out;
+}
 function tileArtResolve(key){
   if(_tileArtMem[key]) return _tileArtMem[key];
   _tileArtMem[key] = (async ()=>{
-    const ck = 'tileart|' + key;
+    const ck = 'tileart2|' + key;   // v2 namespace: v1 stored the newest card, not the most played
     try{
       const disk = await qdbGet(ck);
-      if(disk && (Date.now() - (disk.t||0)) < TILEART_TTL && disk.v && disk.v.a) return disk.v;
-      const parts = key.split('|');
-      let out = null;
-      if(parts[0] === 'sf'){
-        const fmt = parts[1] || 'any';
-        const clause = parts.slice(2).join('|').trim();
-        if(clause){
-          const { results } = await searchAndVerifyLegal(clause, 'edhrec', 5, { format: fmt, bg: true });
-          const c = (results||[]).find(x=>isNonlandFront(x) && !isBanned(x));
-          if(c) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
+      if(disk && disk.v && disk.v.a){
+        _tileArtReady[key] = disk.v;
+        _tileArtWarmImg(disk.v.a);
+        // A month past the newest set's release? Refresh in the background;
+        // the stored art keeps serving without a flicker in the meantime.
+        if((disk.t||0) < tileArtEpoch() && !_tileArtRevalidating.has(key)){
+          _tileArtRevalidating.add(key);
+          _tileArtFetchFresh(key).then(fresh=>{
+            if(fresh && fresh.a){ qdbSet(ck, fresh); _tileArtReady[key] = fresh; _tileArtMem[key] = Promise.resolve(fresh); _tileArtWarmImg(fresh.a); }
+          }).catch(()=>{}).finally(()=>_tileArtRevalidating.delete(key));
         }
-      } else if(parts[0] === 'ed'){
-        const names = await edhrecTagCommanderNames(parts[1], parts[2] || '');
-        if(names && names.length){
-          const cards = await namesToLegalCards(names.slice(0, 3));
-          const c = (cards||[]).find(x=>!isBanned(x));
-          if(c) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
-        }
+        return disk.v;
       }
-      if(out && out.a){ qdbSet(ck, out); return out; }
+      const out = await _tileArtFetchFresh(key);
+      if(out && out.a){ qdbSet(ck, out); _tileArtReady[key] = out; _tileArtWarmImg(out.a); return out; }
       return null;
     }catch(e){ return null; }
   })();
   return _tileArtMem[key];
+}
+/* Warm every drop-up tile on entering the page: cached keys land in the
+   ready-map (and the browser's image cache) before any panel opens, so the
+   grids appear fully dressed with zero loading. Fresh keys trickle in over
+   the low-priority lanes; the per-key promise map makes re-runs free. */
+function preloadBrowseTileArt(){
+  try{
+    const keys = new Set();
+    FMT_ORDER.forEach(f=>keys.add('sf|'+artFmtParam(f)+'|'+leaderArtClause(f)));
+    COLOR_COUNTS.filter(c=>c.key).forEach(c=>keys.add(bsArtSf(c.clause)));
+    Object.values(COLOR_COMBOS).forEach(list=>list.forEach(c=>keys.add(bsArtSf(c.key==='c'?'id=c':'id='+c.key))));
+    (browseThemeOptions()||[]).forEach(o=>{ const k = bsThemeArt(o.v); if(k) keys.add(k); });
+    (browseKindredOptions()||[]).forEach(t=>keys.add(bsArtEd(t.slug)));
+    (async ()=>{
+      for(const k of keys){
+        try{ await tileArtResolve(k); }catch(e){}
+      }
+    })();
+  }catch(e){}
 }
 /* Lazy loader: only tiles actually scrolled into the open panel fetch their
    art -- a hundred themes never fire a hundred requests at once. */
@@ -15293,13 +15386,13 @@ function browsePageHtml(){
     <div class="browse-selects">
       <div class="bs-row">${cselectHtml('bsFmt', FMT_ORDER.map(f=>({v:f, l:fmtFolderGlyph(f, 14)+' '+fmtLabelOf(f), art:'sf|'+artFmtParam(f)+'|'+leaderArtClause(f)})), state.browseFormat||'commander', 'Format', {tiles:true})}</div>
       <div class="bs-row">${cselectHtml('bsCount',
-        [{v:'', l:modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors', art:bsArtSf('')}].concat(COLOR_COUNTS.filter(c=>c.key).map(c=>({v:c.key, l:c.label, art:bsArtSf(c.clause)}))),
+        [{v:'', l:modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors', gen:manaPentagonSvg(20)}].concat(COLOR_COUNTS.filter(c=>c.key).map(c=>({v:c.key, l:c.label, art:bsArtSf(c.clause)}))),
         sel.count, modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors', {tiles:true})}</div>
       <div class="bs-row">${cselectHtml('bsCombo',
-        combos ? [{v:'', l:'Any combination', art:bsArtSf((COLOR_COUNTS.find(c=>c.key===sel.count)||{}).clause||'')}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18), art:bsArtSf(c.key==='c'?'id=c':'id='+c.key)}))) : [],
+        combos ? [{v:'', l:'Any combination', gen:manaPentagonSvg(20)}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18), art:bsArtSf(c.key==='c'?'id=c':'id='+c.key)}))) : [],
         sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos, tiles:true})}</div>
-      <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none', art:bsThemeArt('')}].concat(browseThemeOptions().map(o=>Object.assign({}, o, {art:bsThemeArt(o.v)}))), sel.theme, 'Theme — none', {search:true, tiles:true})}</div>
-      <div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none', art:bsArtSf(browseColorClause())}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label, art:bsArtEd(t.slug)}))), sel.tribe||'', 'Kindred — none', {search:true, tiles:true})}</div>
+      <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none', gen:'📜'}].concat(browseThemeOptions().map(o=>Object.assign({}, o, {art:bsThemeArt(o.v)}))), sel.theme, 'Theme — none', {search:true, tiles:true})}</div>
+      <div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none', gen:'🐾'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label, art:bsArtEd(t.slug)}))), sel.tribe||'', 'Kindred — none', {search:true, tiles:true})}</div>
     </div>
     <div id="bsNameResults"></div>
     <div id="browseResults"></div>
@@ -15315,6 +15408,7 @@ function maybePairThenReco(c){
 }
 function wireBrowsePage(){
   ensureEdhrecTags();
+  preloadBrowseTileArt();
   state._crossLanded = false;   // landing classes were baked into this render
   let _bsSeq = 0;
   const runLeaderSearch = async ()=>{
@@ -17709,7 +17803,8 @@ function adjustLifeField(idx, field, d, from){
   checkDefeat(p);
   renderLifeGrid();
 }
-async function animatedHighRoll(){
+async function animatedHighRoll(mode){
+  mode = mode || 'first';
   const players = ensureLifePlayers();
   const n = players.length;
   if(state.life.spinning) return;
@@ -17726,12 +17821,17 @@ async function animatedHighRoll(){
     else delay = Math.min(140, delay*1.06);
   }
   setSpinHighlight(null);
-  players.forEach((p,i)=>{ p.medal = (i===winner); });
-  state.life.turnIdx = winner;
-  state.life.startIdx = winner;
-  state.life.turnNum = 1;
-  lifeLog(`🎡 Spin the wheel — ${players[winner].name} goes first!`);
-  toast(`${players[winner].name} goes first!`);
+  if(mode === 'high'){
+    lifeLog(`🎲 High roll — ${players[winner].name} rolls highest!`);
+    showDiceResult('🎲 High Roll', escapeHtml(players[winner].name), 'rolls highest!', true);
+  } else {
+    players.forEach((p,i)=>{ p.medal = (i===winner); });
+    state.life.turnIdx = winner;
+    state.life.startIdx = winner;
+    state.life.turnNum = 1;
+    lifeLog(`🎡 Spin the wheel — ${players[winner].name} goes first!`);
+    toast(`${players[winner].name} goes first!`);
+  }
   state.life.spinning = false;
   renderLifeGrid();
 }
@@ -17776,16 +17876,28 @@ function setSpinHighlight(idx){
     card.classList.toggle('spin-active', idx!==null && +card.dataset.idx === idx);
   });
 }
+/* Result popup: same panel dress as History/Settings, dead centre, closes
+   itself after a beat -- or on a tap. */
+function showDiceResult(title, big, sub, small){
+  document.getElementById('diceResultPop')?.remove();
+  const el = document.createElement('div');
+  el.id = 'diceResultPop'; el.className = 'life-panel';
+  el.innerHTML = `<h4>${title}</h4><div class="dice-result${small?' small':''}">${big}</div>${sub?`<div class="dice-result-sub">${sub}</div>`:''}`;
+  document.body.appendChild(el);
+  const kill = ()=>{ clearTimeout(t); el.remove(); };
+  const t = setTimeout(kill, 2200);
+  el.addEventListener('click', kill);
+}
 function rollDie(sides){
   const r = 1+Math.floor(Math.random()*sides);
   lifeLog(`🎲 Rolled a d${sides}: ${r}`);
-  toast(`d${sides}: ${r}`);
+  showDiceResult(`🎲 D${sides}`, r);
 }
 function flipCoin(){
   const heads = Math.random() < 0.5;
   const face = heads ? 'Heads' : 'Tails';
   lifeLog(`🪙 Coin flip: ${face}`);
-  toast(`🪙 ${face}`);
+  showDiceResult(`🪙 Coin`, face, '', true);
 }
 function restartLife(){
   openInAppConfirm(trS('Reset all life totals, poison, Admiral damage, and medals?'), (ok)=>{
@@ -17859,7 +17971,7 @@ function dicePopHtml(){
   const d = (n)=>`<button class="dice-opt" data-die="${n}">D${n}</button>`;
   return `<div id="diceShield"></div><div id="dicePop" class="life-panel">
     <h4>Dice</h4>
-    <div class="dice-grid">${d(4)}${d(6)}${d(8)}${d(10)}${d(12)}${d(20)}<button class="dice-opt" data-die="coin">🪙 Coin</button></div>
+    <div class="dice-grid">${d(4)}${d(6)}${d(8)}${d(10)}${d(12)}${d(20)}<button class="dice-opt" data-die="coin">🪙 Coin</button><button class="dice-opt" data-die="high">🎲 High Roll</button></div>
   </div>`;
 }
 /* The spokes: diagonals rotated ±45° along their direction, verticals level.
@@ -17986,10 +18098,13 @@ function renderLifeOverlay(){
       if(top && (top.id === 'lifeHist' || top.id === 'lifeSet')) closeTopOverlay();
       else { state.life.historyOpen=false; state.life.settingsOpen=false; renderLifeOverlay(); }
     };
-    ['pointerdown','touchstart','mousedown'].forEach(ev=>{
-      pShield.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+    let pClosed = false;   // pointerdown+touchstart both fire on touch -- close once
+    ['pointerdown','touchstart','mousedown','click'].forEach(ev=>{
+      pShield.addEventListener(ev, (e)=>{
+        e.preventDefault(); e.stopPropagation();
+        if(!pClosed){ pClosed = true; closePanel(); }
+      }, {passive:false});
     });
-    pShield.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closePanel(); });
   }
   if(state.life.menuOpen) placeLifeRadial();
   // Dice picker wiring: any die rolls and closes; the shield or back closes.
@@ -17997,15 +18112,20 @@ function renderLifeOverlay(){
     const closeDice = ()=>{ const top = state.overlayStack[state.overlayStack.length-1]; if(top && top.id === 'lifeDice') closeTopOverlay(); else { state.life.diceOpen=false; renderLifeOverlay(); } };
     const dShield = document.getElementById('diceShield');
     if(dShield){
-      ['pointerdown','touchstart','mousedown'].forEach(ev=>{
-        dShield.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+      let dClosed = false;   // pointerdown+touchstart both fire on touch -- close once
+      ['pointerdown','touchstart','mousedown','click'].forEach(ev=>{
+        dShield.addEventListener(ev, (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          if(!dClosed){ dClosed = true; closeDice(); }
+        }, {passive:false});
       });
-      dShield.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeDice(); });
     }
     document.querySelectorAll('#dicePop .dice-opt').forEach(b=>b.addEventListener('click', ()=>{
       const v = b.dataset.die;
       closeDice();
-      if(v === 'coin') flipCoin(); else rollDie(parseInt(v, 10));
+      if(v === 'coin') flipCoin();
+      else if(v === 'high') animatedHighRoll('high');
+      else rollDie(parseInt(v, 10));
     }));
   }
 }
@@ -18056,6 +18176,8 @@ function lifeCardHtml(p, idx, count){
         <div class="lval2 ghosted">${p.life}</div>
       </div>
       <div class="dmg-overlay ${taken>=lethalDmg()?'lethal':''}" data-dmgfrom="${idx}">
+        <div class="tap-zone left" data-dmgside="minus"><span class="tap-glyph">−</span></div>
+        <div class="tap-zone right" data-dmgside="plus"><span class="tap-glyph">+</span></div>
         <div class="dmg-ov-val">${taken}</div>
       </div>
     </div></div>`;
@@ -18318,11 +18440,16 @@ function wireLifeGrid(){
     const from = +ov.dataset.dmgfrom;
     const focus = state.life.expandedIdx;
     if(focus===null) return;
-    wireTapHold(ov,
-      ()=>adjustLifeField(focus, 'dmg', 1, from),
-      ()=>adjustLifeField(focus, 'dmg', -10, from),
-      550, 700
-    );
+    // Same grammar as the life total: minus zone left, plus zone right,
+    // tap steps by 1, a held finger walks by 10.
+    ov.querySelectorAll('.tap-zone').forEach(zone=>{
+      const sign = zone.dataset.dmgside === 'minus' ? -1 : 1;
+      wireTapHold(zone,
+        ()=>adjustLifeField(focus, 'dmg', sign, from),
+        ()=>adjustLifeField(focus, 'dmg', sign*10, from),
+        550, 700
+      );
+    });
   });
   document.querySelectorAll('.life-card-v2').forEach(card=>{
     card.addEventListener('contextmenu', e=>e.preventDefault());
