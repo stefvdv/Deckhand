@@ -1281,11 +1281,7 @@ main.has-dock{padding-bottom:84px;}
   -webkit-tap-highlight-color:transparent;
 }
 .turn-badge:active{filter:brightness(0.9);}
-.life-cell{position:relative;overflow:hidden;border-radius:var(--radius);
-  /* drop-shadow follows the clip-path itself — one continuous rim around
-     the full shape, cut corner included; the old rectangular border (whose
-     clipped stub drew the stray line) is gone. */
-  filter:drop-shadow(0 0 1.2px var(--line)) drop-shadow(0 0 1.2px var(--line));}
+.life-cell{position:relative;overflow:hidden;border-radius:var(--radius);}
 /* central turn hub — a square carved out of the middle of the table */
 .life-grid-wrap{position:relative;}
 .lval-row{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:2px;pointer-events:none;}
@@ -1583,7 +1579,7 @@ main.has-dock{padding-bottom:84px;}
    own fixed-positioned pill, placed by placeLifeRadial() from the cog's
    real position. */
 #lifeOverlay #lifeMenuPop{position:fixed;inset:0;right:auto;background:none;border:none;box-shadow:none;border-radius:0;overflow:visible;min-width:0;z-index:260;pointer-events:none;}
-#lifeMenuPop .lm-opt{position:fixed;left:var(--x);top:var(--y);transform:translate(-50%,-50%) rotate(var(--a,0deg));pointer-events:auto;width:auto;max-width:72vw;display:inline-block;background:var(--ink-deep);border:2px solid var(--brass);color:var(--brass);border-radius:999px;padding:10px 18px;font-family:'Cinzel',serif;font-weight:700;font-size:13.5px;letter-spacing:.4px;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.55);cursor:pointer;}
+#lifeMenuPop .lm-opt{position:fixed;left:var(--x);top:var(--y);transform:translate(-50%,-50%) rotate(var(--a,0deg));pointer-events:auto;width:122px;max-width:122px;text-align:center;font-size:15px;display:inline-block;background:var(--ink-deep);border:2px solid var(--brass);color:var(--brass);border-radius:999px;padding:10px 18px;font-family:'Cinzel',serif;font-weight:700;font-size:13.5px;letter-spacing:.4px;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.55);cursor:pointer;}
 #lifeMenuPop hr{display:none;}
 #lifeMenuShield{position:fixed;inset:0;z-index:255;background:rgba(0,0,0,0.55);}
 .life-trim{position:absolute;height:2px;background:var(--line);pointer-events:none;z-index:4;border-radius:1px;}
@@ -4215,13 +4211,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.508';
+const APP_VERSION = '2.51.509';
 const CHANGELOG_NOTES = {
   en: [
-    'Life counter polish: panel borders now run around the WHOLE shape, cut corner included (the stray clipped line is gone), the table clears the nav bar, the four pills hug the diamond tilted along its corners, and History, Settings and the dice picker float as centred popups \u2014 long histories scroll. Unlisted prices show a compact \u20ac\u2715 badge everywhere (tap it for the explanation), and the card detail page tightened so the next section peeks above the fold.'
+    'The life table lost its dark diagonal strokes \u2014 panels now sit clean in their gaps, Lotus-style \u2014 and the four menu pills became a perfect pinwheel: identical width, bigger text, each one the previous rotated a quarter turn about the cog.'
   ],
   nl: [
-    'Levensteller-polijst: paneelranden lopen nu rond de HELE vorm, afgesneden hoekje incluis (de losse cliplijn is weg), de tafel blijft boven de navbalk, de vier pillen omarmen de ruit gekanteld langs de hoeken, en History, Settings en de dobbelsteenkiezer zweven als gecentreerde popups \u2014 lange histories scrollen. Onbekende prijzen tonen overal een compacte \u20ac\u2715-badge (tik voor de uitleg), en de kaartdetailpagina is compacter zodat de volgende sectie boven de vouw uitpiept.'
+    'De levenstafel verloor zijn donkere diagonale strepen \u2014 panelen liggen nu schoon in hun tussenruimtes, Lotus-stijl \u2014 en de vier menupillen werden een perfect molentje: identieke breedte, grotere tekst, elk een kwartslag om het tandwiel gedraaid ten opzichte van de vorige.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -17774,13 +17770,13 @@ function placeLifeRadial(){
   const cy = r ? r.top + r.height/2 : window.innerHeight/2;
   // Four pills hugging the centre diamond's edges: Restart above, Dice
   // left, Settings right, History below — tilted along their edge.
-  // Hugging the diamond, each pill tilted ALONG its cut corner:
-  // Restart and History ride the "/" corners, Dice and Settings the "\".
+  // A perfect four-fold pinwheel, Lotus-style: each pill is the previous
+  // one rotated 90° about the cog, all the same width — pure symmetry.
   const spots = {
-    mNewGame:      [  22,  -74, -42],
-    mLifeSettings: [  74,   -8,  46],
-    mDice:         [ -74,    8,  46],
-    mHistory:      [ -22,   74, -42]
+    mNewGame:      [  20,  -73, -45],
+    mLifeSettings: [  73,   20,  45],
+    mHistory:      [ -20,   73, -45],
+    mDice:         [ -73,  -20,  45]
   };
   Object.entries(spots).forEach(([id, [dx, dy, a]])=>{
     const b = document.getElementById(id);
