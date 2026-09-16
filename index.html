@@ -394,7 +394,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .salt-tile img{width:100%;display:block;border-radius:10px;}
 .salt-noimg{border:1.5px solid var(--pop-line);border-radius:10px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;font-size:12.5px;color:var(--ink-text);}
 .salt-meta{text-align:center;color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:12.5px;margin-top:4px;}
-.insp-jump{position:fixed;right:14px;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
+.edh-jump-row.insp-jump{position:fixed;right:14px;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
 /* The base .edh-jump-row is sticky — without !important the burger rode
    the content and scrolled away. Fixed for real, and lifted above the deck
    bar + tabs stack. */
@@ -1377,16 +1377,19 @@ main.has-dock{padding-bottom:84px;}
    app's main color along the foot. ---- */
 .cselect-panel.cs-artgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;max-height:min(420px,55vh);}
 .cs-artgrid .cselect-search,.cs-artgrid .cs-noresults{grid-column:1 / -1;}
-.cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;aspect-ratio:1;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
+.cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;aspect-ratio:1;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
 .cs-artgrid .cselect-opt.art-tile:last-child{border-bottom:2px solid var(--line);}
 .cs-artgrid .cselect-opt.art-tile:hover{background:var(--ink-deep);}
 .art-tile .at-img{flex:1 1 auto;min-height:0;width:100%;background-size:cover;background-position:center 25%;background-repeat:no-repeat;background-color:color-mix(in srgb, var(--ink) 55%, #000);}
-.art-tile .at-label{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--ink);color:var(--ink-text);border-top:2px solid var(--line);min-height:36px;padding:5px 6px;}
-.art-tile .at-label .at-txt{font-size:11.5px;font-weight:600;line-height:1.2;text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.art-tile .at-label{flex:0 0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--ink);color:var(--main-text);border-top:2px solid var(--line);min-height:42px;padding:6px 8px;text-shadow:none;}
+.art-tile .at-label .at-txt{font-size:14px;font-weight:600;line-height:1.2;text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .art-tile .at-label .co-icons{flex:0 0 auto;}
 .art-tile .at-img.at-gen{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;align-content:center;gap:4px;font-size:42px;opacity:0.92;padding:8px;}
 .mana-pentagon{position:relative;display:block;flex:0 0 auto;}
-.cs-artgrid .cselect-opt.art-tile.sel{outline:2.5px solid var(--brass);outline-offset:-2px;background:var(--ink-deep);color:var(--ink-text);}
+.cs-artgrid .cselect-opt.art-tile.sel{outline:2.5px solid var(--brass);outline-offset:-2px;background:var(--ink-deep);color:var(--main-text);}
+/* The engraved brass text-shadow (meant for brass-on-glow rows) doubled the
+   letters on selected tiles -- flat text on the tiles, every scheme. */
+.cs-artgrid .cselect-opt.art-tile, .cs-artgrid .cselect-opt.art-tile.sel{text-shadow:none;}
 .glog-cimg{display:block;width:100%;position:relative;}
 .glog-cimg img{display:block;width:100%;height:auto;border-radius:8px;background:#101418;}
 .glog-cimg .glog-cname{display:block;padding:10px 6px;font-size:12px;text-align:center;}
@@ -3972,6 +3975,27 @@ function qdbSet(key, value){
     try{ db.transaction('q','readwrite').objectStore('q').put({t: Date.now(), v: value}, key); }catch(e){}
   }).catch(()=>{});
 }
+/* One cursor pass over a key prefix: everything under it in a single
+   IndexedDB transaction, for bulk cache hydration. */
+async function qdbGetPrefix(prefix){
+  try{
+    const db = await qdbOpen(); if(!db) return {};
+    return await new Promise((res)=>{
+      const out = {};
+      try{
+        const st = db.transaction('q').objectStore('q');
+        const cur = st.openCursor(IDBKeyRange.bound(prefix, prefix + '\uffff'));
+        cur.onsuccess = ()=>{
+          const c = cur.result;
+          if(!c){ res(out); return; }
+          out[String(c.key)] = c.value || null;
+          c.continue();
+        };
+        cur.onerror = ()=>res(out);
+      }catch(e){ res(out); }
+    });
+  }catch(e){ return {}; }
+}
 /* prune stale entries once per startup, in the background */
 function qdbPrune(){
   qdbOpen().then(db=>{
@@ -4258,13 +4282,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.519';
+const APP_VERSION = '2.51.522';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration tiles now truly show the MOST PLAYED leader: EDHREC\u2019s Top Commanders list leads (New Commanders came first on the page and sneaked onto the tiles), and on the Scryfall side brand-new unranked cards no longer outrank real play data. Stored tile art re-resolves once to correct itself. The five mana colors on the neutral color tiles now stand in a pentagon, just like the card back.'
+    'Tile text now reads like text everywhere else in the app: the name bar pairs the app\u2019s main color with the app-level text token, immune to the panel palette \u2014 dark guild or light guild, every color scheme stays readable \u2014 and the engraved shadow that doubled the letters on a selected tile is gone.'
   ],
   nl: [
-    'Inspiratie-tegels tonen nu \u00e9cht de MEEST GESPEELDE leider: EDHREC\u2019s Top Commanders-lijst gaat voor (New Commanders stond bovenaan de pagina en glipte op de tegels), en aan de Scryfall-kant winnen gloednieuwe kaarten zonder rank het niet meer van echte speeldata. Opgeslagen tegel-art lost zichzelf eenmalig opnieuw op. De vijf manakleuren op de neutrale kleurtegels staan nu in een pentagon, net als op de kaartachterkant.'
+    'Tegeltekst leest nu zoals tekst overal elders in de app: de naambalk koppelt de hoofdkleur van de app aan het app-niveau teksttoken, immuun voor het paneelpalet \u2014 donker gilde of licht gilde, elk kleurenschema blijft leesbaar \u2014 en de gegraveerde schaduw die de letters op een geselecteerde tegel verdubbelde is weg.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -14186,10 +14210,15 @@ function renderInspireFromCache(cacheKey, d, keepScroll){
     if(!byType.has(t)) byType.set(t, []);
     byType.get(t).push(c);
   });
-  const groups = Array.from(byType.entries())
+  let groups = Array.from(byType.entries())
     .sort((a, b)=>b[1].length - a[1].length)
     .map(([t, cards])=>({ title: PLUR[t] || (t + 's'), cards }));
+  // Bottom-up: the biggest type ends at the page FOOT where reading starts;
+  // Lands pin to the very TOP -- they are never the headline.
+  const landsG = groups.filter(g=>g.title === 'Lands');
+  groups = groups.filter(g=>g.title !== 'Lands');
   groups.reverse();
+  groups = landsG.concat(groups);
   box.innerHTML = groups.map((g, i)=>`<div class="edh-sec" data-isec="${i}"><div class="section-label" style="margin-top:14px;border-bottom:2px solid var(--line);">${escapeHtml(g.title)}</div><div class="sr-grid">${g.cards.map(c=>searchRowHtml(c, d)).join('')}</div></div>`).join('')
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="inspJump" title="${trS('Jump to section')}">☰</button></div>`;
   document.getElementById('inspJump')?.addEventListener('click', (e)=>{
@@ -15110,10 +15139,19 @@ function renderEdhrecSections(box, key, S, keepScroll){
   const relHtml = (S.rel && S.rel.length) ? `<div class="edh-rel">${S.rel.map((r,i)=>`<button class="edh-rel-chip" data-ri="${i}" title="${escapeHtml(r.label)}">${(r.colors&&r.colors.length)?manaRowSvg(r.colors.join(''),18):manaIconSvg('C',18)}<b>${r.count.toLocaleString()}</b></button>`).join('')}</div>` : '';
   const leaders = newCmd.concat(topCmd);
   const leaderWire = { onCardTap:(c)=>openAdmiralReco(c) };
-  box.innerHTML = `<div class="edh-jump-row"><button class="icon-btn edh-jump" id="edhJump" title="${trS('Jump to section')}">☰</button></div>` + relHtml +
-    section(trS('New') + ' ' + noun, newCmd, {showAdmiralBtn:true}, leaderSub, leaderWire) +
-    section(trS('Top') + ' ' + noun, topCmd, {showAdmiralBtn:true}, leaderSub, leaderWire) +
-    ((bfmt !== 'commander' && !leaders.length && ((S.newCmd||[]).length || (S.topCmd||[]).length)) ? `<div class="empty-note">None of these commanders is legal in ${fmtLabelOf(bfmt)}.</div>` : '');
+  // Bottom-up assembly: sections are built in reading priority (New, Top,
+  // then EDHREC's card lists ending in Lands) and the DOM order is the
+  // REVERSE -- so the page FOOT, where reading starts, opens with New and
+  // Top, and Lands ends up at the very top. The color strip rides the foot.
+  const secs = S.cardSecs || [];
+  const chunks = [
+    section(trS('New') + ' ' + noun, newCmd, {showAdmiralBtn:true}, leaderSub, leaderWire),
+    section(trS('Top') + ' ' + noun, topCmd, {showAdmiralBtn:true}, leaderSub, leaderWire)
+  ].concat(secs.map(cs=> section(trS(cs.header), fOkCard(cs.list), {}, synSub, {})));
+  box.innerHTML = `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="edhJump" title="${trS('Jump to section')}">☰</button></div>`
+    + chunks.filter(Boolean).reverse().join('')
+    + relHtml
+    + ((bfmt !== 'commander' && !leaders.length && ((S.newCmd||[]).length || (S.topCmd||[]).length)) ? `<div class="empty-note">None of these commanders is legal in ${fmtLabelOf(bfmt)}.</div>` : '');
   box.querySelectorAll('.edh-rel-chip').forEach(ch=>ch.addEventListener('click', ()=>{
     const r = S.rel[+ch.dataset.ri];
     if(!r) return;
@@ -15128,9 +15166,7 @@ function renderEdhrecSections(box, key, S, keepScroll){
   }));
   wireResultButtons(leaders, pinned, ()=>renderEdhrecSections(box, key, S, true), leaderWire);
   loadTilePrices(leaders.slice(0, CAP * 2));
-  const secs = S.cardSecs || [];
   if(secs.length){
-    box.insertAdjacentHTML('beforeend', secs.map(cs=> section(trS(cs.header), fOkCard(cs.list), {}, synSub, {})).join(''));
     const cardsPool = [].concat(...secs.map(cs=>cs.list));
     wireResultButtons(cardsPool, pinned, ()=>renderEdhrecSections(box, key, S, true), {});
     loadTilePrices([].concat(...secs.map(cs=>cs.list.slice(0, CAP))));
@@ -15146,7 +15182,7 @@ function renderEdhrecSections(box, key, S, keepScroll){
       openTileMenu(jb, pools.map((p, i)=>({ label: p.title, fn: ()=>{
         const el = box.querySelector(`.edh-sec[data-si="${i}"]`);
         if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
-      }})));
+      }})).reverse());
     });
   }
   // Show-all: swap the capped grid for the full one, wire and price the rest.
@@ -15269,6 +15305,15 @@ async function _tileArtFetchFresh(key){
       const c = (cards||[]).find(x=>!isBanned(x));
       if(c) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
     }
+  } else if(parts[0] === 'nm'){
+    // A fixed, named card (the format tiles): the exact-name endpoint,
+    // no legality gate -- an icon is an icon.
+    const nm = parts.slice(1).join('|');
+    const res = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(nm), 0, true);
+    if(res && res.ok){
+      const c = await res.json();
+      if(c && c.name) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
+    }
   }
   return out;
 }
@@ -15302,10 +15347,28 @@ function tileArtResolve(key){
    ready-map (and the browser's image cache) before any panel opens, so the
    grids appear fully dressed with zero loading. Fresh keys trickle in over
    the low-priority lanes; the per-key promise map makes re-runs free. */
+let _tileArtHydrated = false;
+/* Bulk hydrate: every stored tile art lands in the sync ready-map (and the
+   browser image cache) in one IndexedDB pass -- milliseconds, before any
+   panel can open. Entries past their set-release epoch still serve
+   instantly; only the full resolver path refreshes them in the background. */
+async function hydrateTileArtReady(){
+  if(_tileArtHydrated) return; _tileArtHydrated = true;
+  try{
+    const all = await qdbGetPrefix('tileart2|');
+    const epoch = tileArtEpoch();
+    Object.entries(all).forEach(([k, rec])=>{
+      if(!rec || !rec.v || !rec.v.a) return;
+      const key = k.slice('tileart2|'.length);
+      if(!_tileArtReady[key]){ _tileArtReady[key] = rec.v; _tileArtWarmImg(rec.v.a); }
+      if(!_tileArtMem[key] && (rec.t||0) >= epoch) _tileArtMem[key] = Promise.resolve(rec.v);
+    });
+  }catch(e){}
+}
 function preloadBrowseTileArt(){
   try{
     const keys = new Set();
-    FMT_ORDER.forEach(f=>keys.add('sf|'+artFmtParam(f)+'|'+leaderArtClause(f)));
+    FMT_ORDER.forEach(f=>keys.add(FMT_ICON_CARDS[f] ? 'nm|'+FMT_ICON_CARDS[f] : 'sf|'+artFmtParam(f)+'|'+leaderArtClause(f)));
     COLOR_COUNTS.filter(c=>c.key).forEach(c=>keys.add(bsArtSf(c.clause)));
     Object.values(COLOR_COMBOS).forEach(list=>list.forEach(c=>keys.add(bsArtSf(c.key==='c'?'id=c':'id='+c.key))));
     (browseThemeOptions()||[]).forEach(o=>{ const k = bsThemeArt(o.v); if(k) keys.add(k); });
@@ -15340,6 +15403,19 @@ function wireArtTiles(root){
 /* Leader pool per format, art edition: what is:commander can't cover
    (Admiral's own pool, PDH's uncommon creatures) approximates through the
    open pool -- close enough for a thumbnail. */
+/* The face of each format: its most iconic, format-defining card.
+   Commander: Sol Ring, in every precon since 2011. Admiral: Admiral Beckett
+   Brass, the format's namesake flavor. PDH: Tatyova, the format's poster
+   commander. PreDH: Nicol Bolas, the original Elder Dragon EDH is named
+   after. Duel Commander: Force of Will, called one of the format's most
+   iconic cards by its own committee. */
+const FMT_ICON_CARDS = {
+  commander: 'Sol Ring',
+  admiral: 'Admiral Beckett Brass',
+  paupercommander: 'Tatyova, Benthic Druid',
+  predh: 'Nicol Bolas',
+  duel: 'Force of Will'
+};
 function leaderArtClause(f){
   return f === 'paupercommander' ? 't:creature r:uncommon'
        : f === 'admiral' ? 't:legendary t:creature'
@@ -15384,7 +15460,7 @@ function browsePageHtml(){
       <button id="bsClear" class="icon-btn" style="flex:none;" title="${trS('Clear filters')}">✕</button>
     </div>
     <div class="browse-selects">
-      <div class="bs-row">${cselectHtml('bsFmt', FMT_ORDER.map(f=>({v:f, l:fmtFolderGlyph(f, 14)+' '+fmtLabelOf(f), art:'sf|'+artFmtParam(f)+'|'+leaderArtClause(f)})), state.browseFormat||'commander', 'Format', {tiles:true})}</div>
+      <div class="bs-row">${cselectHtml('bsFmt', FMT_ORDER.map(f=>({v:f, l:fmtFolderGlyph(f, 14)+' '+fmtLabelOf(f), art:(FMT_ICON_CARDS[f] ? 'nm|'+FMT_ICON_CARDS[f] : 'sf|'+artFmtParam(f)+'|'+leaderArtClause(f))})), state.browseFormat||'commander', 'Format', {tiles:true})}</div>
       <div class="bs-row">${cselectHtml('bsCount',
         [{v:'', l:modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors', gen:manaPentagonSvg(20)}].concat(COLOR_COUNTS.filter(c=>c.key).map(c=>({v:c.key, l:c.label, art:bsArtSf(c.clause)}))),
         sel.count, modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors', {tiles:true})}</div>
@@ -15408,6 +15484,7 @@ function maybePairThenReco(c){
 }
 function wireBrowsePage(){
   ensureEdhrecTags();
+  hydrateTileArtReady().then(()=>{ try{ if(state.screen === 'browse' && state.openCSelect) csRerender(); }catch(e){} });
   preloadBrowseTileArt();
   state._crossLanded = false;   // landing classes were baked into this render
   let _bsSeq = 0;
@@ -17983,24 +18060,34 @@ function placeLifeRadial(){
   const r = cog ? cog.getBoundingClientRect() : null;
   const cx = r ? r.left + r.width/2 : window.innerWidth/2;
   const cy = r ? r.top + r.height/2 : window.innerHeight/2;
-  // Four pills hugging the centre diamond's edges: Restart above, Dice
-  // left, Settings right, History below — tilted along their edge.
-  // A perfect four-fold pinwheel, Lotus-style: each pill is the previous
-  // one rotated 90° about the cog, all the same width — pure symmetry.
-  const spots = {
-    mNewGame:      [  20,  -73, -45],
-    mLifeSettings: [  73,   20,  45],
-    mHistory:      [ -20,   73, -45],
-    mDice:         [ -73,  -20,  45]
+  // A true pinwheel around the cog, computed from each pill's real size:
+  // every blade's long axis runs at R_PERP from the cog centre (small =
+  // the blades hug each other), and its trailing end starts T0 along the
+  // axis past the perpendicular foot -- clear of the cog, never behind it.
+  // rot is the CSS rotation that keeps the text readable; axis is the
+  // geometric sweep direction (History and Dice run the same lines flipped
+  // 180° so their text stays upright).
+  const blades = {
+    mNewGame:      { rot:-45, axis:-45 },
+    mLifeSettings: { rot: 45, axis: 45 },
+    mHistory:      { rot:-45, axis:135 },
+    mDice:         { rot: 45, axis:225 }
   };
-  Object.entries(spots).forEach(([id, [dx, dy, a]])=>{
+  const R_PERP = 34, T0 = 32;
+  Object.entries(blades).forEach(([id, {rot, axis}])=>{
     const b = document.getElementById(id);
     if(!b) return;
-    const x = Math.max(14, Math.min(window.innerWidth - 14, cx + dx));
-    const y = Math.max(60, Math.min(window.innerHeight - 40, cy + dy));
+    const w = b.offsetWidth || 120;
+    const rad = axis * Math.PI/180;
+    const u = [Math.cos(rad), Math.sin(rad)];                    // along the blade
+    const mrad = (axis - 90) * Math.PI/180;
+    const m = [Math.cos(mrad), Math.sin(mrad)];                  // toward the blade's side of the cog
+    const sAx = T0 + w/2;                                        // centre sits half a pill past the trailing end
+    const x = Math.max(14, Math.min(window.innerWidth - 14, cx + R_PERP*m[0] + sAx*u[0]));
+    const y = Math.max(60, Math.min(window.innerHeight - 40, cy + R_PERP*m[1] + sAx*u[1]));
     b.style.setProperty('--x', x + 'px');
     b.style.setProperty('--y', y + 'px');
-    b.style.setProperty('--a', a + 'deg');
+    b.style.setProperty('--a', rot + 'deg');
   });
 }
 function renderLifeOverlay(){
