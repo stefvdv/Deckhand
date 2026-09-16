@@ -1270,8 +1270,8 @@ main.has-dock{padding-bottom:84px;}
 .life-toolbar button{flex:0 0 auto;background:var(--ink-2);border:2px solid var(--line);color:var(--sub-text);padding:8px 14px;border-radius:20px;font-size:12px;cursor:pointer;white-space:nowrap;}
 .life-toolbar button:hover,.life-toolbar button.active{border-color:var(--brass);color:var(--brass);}
 
-.life-grid-v2{position:relative;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:12px;margin-top:4px;height:calc(100dvh - 118px);min-height:70vh;}
-.life-grid-v2.single-col{grid-template-columns:1fr;min-height:70vh;}
+.life-grid-v2{position:relative;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:12px;margin-top:4px;height:calc(100dvh - 118px - var(--nav-h) - env(safe-area-inset-bottom));min-height:0;}
+.life-grid-v2.single-col{grid-template-columns:1fr;min-height:0;}
 .life-card-v2.spin-active{box-shadow:0 0 0 3px #fff, 0 0 34px 8px rgba(255,255,255,0.55);filter:brightness(1.35);z-index:5;}
 .life-card-v2.active-turn{box-shadow:0 0 0 2px var(--brass), 0 0 20px 3px color-mix(in srgb, var(--brass) 45%, transparent);}
 .turn-badge{
@@ -1582,7 +1582,7 @@ main.has-dock{padding-bottom:84px;}
 #lifeMenuPop .lm-opt{position:fixed;left:var(--x);top:var(--y);transform:translate(-50%,-50%) rotate(var(--a,0deg));pointer-events:auto;width:122px;max-width:122px;text-align:center;font-size:17px;display:inline-block;background:var(--ink-deep);border:2px solid var(--brass);color:var(--brass);border-radius:999px;padding:10px 18px;font-family:'Cinzel',serif;font-weight:700;font-size:13.5px;letter-spacing:.4px;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.55);cursor:pointer;}
 #lifeMenuPop hr{display:none;}
 #lifeMenuShield{position:fixed;inset:0;z-index:255;background:rgba(0,0,0,0.55);}
-.life-trim{position:absolute;height:2px;background:var(--line);pointer-events:none;z-index:4;border-radius:1px;}
+
 .life-grid-v2{position:relative;}
 #lifeCogBtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;width:56px;height:56px;border-radius:50%;background:var(--ink-deep);border:2px solid var(--brass);color:var(--brass);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.55);}
 #lifeCogBtn svg{width:34px;height:34px;}
@@ -4211,13 +4211,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.510';
+const APP_VERSION = '2.51.511';
 const CHANGELOG_NOTES = {
   en: [
-    'The last black diagonal strokes on the life table are gone \u2014 the player cards left the rim-painted family, whose dark border only ever showed along the cut corners \u2014 and the menu pill text grew to 17px inside the same-sized pills.'
+    'Found them at last: the black diagonal strokes were JS-drawn trim bars laid along every cut edge when the corner cuts were built \u2014 fully retired now. And the life table sizes itself to the screen: its height subtracts the nav bar, so nothing scrolls and nothing hides behind the bar.'
   ],
   nl: [
-    'De laatste zwarte diagonale strepen op de levenstafel zijn weg \u2014 de spelerskaarten verlieten de rand-geverfde familie, wiens donkere rand alleen langs de afgesneden hoeken zichtbaar was \u2014 en de menupil-tekst groeide naar 17px binnen dezelfde pilmaat.'
+    'Eindelijk gevonden: de zwarte diagonale strepen waren JS-getekende sierbalkjes langs elke snijrand, aangelegd toen de hoek-afsnijding werd gebouwd \u2014 nu volledig verwijderd. En de levenstafel past zichzelf aan het scherm aan: de hoogte trekt de navbalk af, dus niets scrollt en niets verdwijnt achter de balk.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -18080,36 +18080,9 @@ function layoutLifeCards(){
         card._cutKind = 'corner'; card._cutIdx = k;
       }
       card.style.clipPath = clip;
-      // Gold trim along the cut: one bar per cut edge, nudged 2px inward so
-      // the clip doesn't shave it. Endpoints in card-local pixels.
+      // (The old trim bars along the cuts drew the dark diagonal strokes —
+      //  retired: the cuts stay clean, no line of any kind.)
       card.querySelectorAll('.life-trim').forEach(t=>t.remove());
-      const cw = parseFloat(card.style.width), chh = parseFloat(card.style.height);
-      const segs = [];
-      const cutC = C, cutD = D;
-      const segFor = {
-        corner: {
-          0: [[cutC, 0, 0, cutC]],
-          1: [[cw - cutC, 0, cw, cutC]],
-          2: [[cw, chh - cutC, cw - cutC, chh]],
-          3: [[cutC, chh, 0, chh - cutC]]
-        },
-        edge: {
-          0: [[cw/2 - cutC, 0, cw/2, cutD], [cw/2, cutD, cw/2 + cutC, 0]],
-          1: [[cw, chh/2 - cutC, cw - cutD, chh/2], [cw - cutD, chh/2, cw, chh/2 + cutC]],
-          2: [[cw/2 - cutC, chh, cw/2, chh - cutD], [cw/2, chh - cutD, cw/2 + cutC, chh]],
-          3: [[0, chh/2 - cutC, cutD, chh/2], [cutD, chh/2, 0, chh/2 + cutC]]
-        }
-      };
-      const which = card._cutKind, idx2 = card._cutIdx;
-      (which && segFor[which][idx2] || []).forEach(([x1,y1,x2,y2])=>{
-        const mx = (x1+x2)/2, my = (y1+y2)/2;
-        const len = Math.hypot(x2-x1, y2-y1) + 9;
-        const ang = Math.atan2(y2-y1, x2-x1) * 180/Math.PI;
-        // inward nudge: toward the card centre
-        const nx = cw/2 - mx, ny = chh/2 - my, nl = Math.hypot(nx, ny) || 1;
-        segs.push(`<i class="life-trim" style="left:${(mx + nx/nl - len/2).toFixed(1)}px;top:${(my + ny/nl - 1).toFixed(1)}px;width:${len.toFixed(1)}px;transform:rotate(${ang.toFixed(1)}deg);"></i>`);
-      });
-      if(segs.length) card.insertAdjacentHTML('beforeend', segs.join(''));
     }
   });
 }
