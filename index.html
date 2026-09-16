@@ -1619,7 +1619,7 @@ main.has-dock{padding-bottom:84px;}
    sonar rings pulsing out from behind it until the fade into the app. */
 #appSplash{position:fixed;inset:0;z-index:99999;background:#000;overflow:hidden;transition:opacity .45s ease;}
 #appSplash.out{opacity:0;pointer-events:none;}
-.splash-title{position:absolute;top:calc(7vh + env(safe-area-inset-top));left:0;right:0;z-index:2;text-align:center;font-family:'Cinzel Decorative','Cinzel',serif;font-weight:700;font-size:38px;color:#fff;letter-spacing:3px;text-shadow:0 2px 14px rgba(255,255,255,0.25);}
+.splash-title{position:absolute;top:calc(2.5vh + env(safe-area-inset-top));left:0;right:0;z-index:2;text-align:center;font-family:'Cinzel Decorative','Cinzel',serif;font-weight:700;font-size:38px;color:#fff;letter-spacing:3px;text-shadow:0 2px 14px rgba(255,255,255,0.25);}
 /* The launch image: the ink artwork, sized so the ARM ROOTS AT THE SCREEN'S
    BOTTOM EDGE with its base just clipped (103vh tall, bottom -3vh). The
    hand appears at once, the deck fades in above — two seconds in total.
@@ -4284,13 +4284,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.523';
+const APP_VERSION = '2.51.525';
 const CHANGELOG_NOTES = {
   en: [
-    'Hotfix: opening a drop-up on the Inspiration page froze the app \u2014 a repaint hook re-armed itself on every render and looped forever. It now fires exactly once, after the first art hydration. And the launch screen wears the app\u2019s name: Deckhand, in white, at the top.'
+    'Second helping of baked tile leaders: another 35+ themes ship with their most-played commander built in \u2014 Life Exchange, Attack Triggers, Attractions, Banding, Modified Creatures, Food, Clues, Curses, Morph, Gates and more \u2014 so the generic-leader fallback becomes a rare exception instead of the rule.'
   ],
   nl: [
-    'Hotfix: een uitklapmenu openen op de Inspiratie-pagina bevroor de app \u2014 een repaint-haakje wapende zichzelf bij elke render opnieuw en bleef eeuwig lussen. Het vuurt nu precies \u00e9\u00e9n keer, na de eerste art-hydratatie. En het startscherm draagt de naam van de app: Deckhand, in wit, bovenaan.'
+    'Tweede portie gebakken tegel-leiders: nog 35+ thema\u2019s geleverd met hun meest gespeelde commander ingebouwd \u2014 Life Exchange, Attack Triggers, Attractions, Banding, Modified Creatures, Food, Clues, Curses, Morph, Gates en meer \u2014 zodat de generieke-leider-terugval een zeldzame uitzondering wordt in plaats van de regel.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -15251,6 +15251,81 @@ async function loadEdhrecSectionedBrowse(box, key, slug, what){
 }
 async function loadEdhrecThemeBrowse(box, key, slug){ return loadEdhrecSectionedBrowse(box, key, slug, 'theme'); }
 async function loadEdhrecTypalBrowse(box, key, slug){ return loadEdhrecSectionedBrowse(box, key, slug, 'creature type'); }
+/* ---- Baked tile leaders: the most-played commander per theme/Kindred,
+   SHIPPED WITH THE APP. Tiles resolve from this instantly (one cached
+   exact-name art lookup); the live EDHREC recheck runs only after a set
+   release settles (the tile-art epoch). Keys are normalized slugs. */
+const BAKED_TILE_LEADERS = {
+  // Kindred
+  dragons:'The Ur-Dragon', elves:'Lathril, Blade of the Elves', zombies:'Wilhelt, the Rotcleaver',
+  vampires:'Edgar Markov', humans:'Winota, Joiner of Forces', goblins:'Krenko, Mob Boss',
+  angels:'Giada, Font of Hope', slivers:'Sliver Overlord', knights:'Syr Gwyn, Hero of Ashvale',
+  assassins:'Etrata, the Silencer', phyrexians:'Elesh Norn, Mother of Machines', rats:'Karumonix, the Rat King',
+  birds:'Kangee, Aerie Keeper', wizards:'Inalla, Archmage Ritualist', spirits:'Millicent, Restless Revenant',
+  dinosaurs:"Gishath, Sun's Avatar", cats:'Arahbo, Roar of the World', merfolk:'Kumena, Tyrant of Orazca',
+  pirates:'Admiral Beckett Brass', wolves:'Tovolar, Dire Overlord', werewolves:'Tovolar, Dire Overlord',
+  demons:"Be'lakor, the Dark Master", hydras:'Zaxara, the Exemplary', elementals:'Omnath, Locus of Creation',
+  beasts:'Goreclaw, Terror of Qal Sisma', faeries:'Alela, Artful Provocateur', snakes:'Xyris, the Writhing Storm',
+  squirrels:'Chatterfang, Squirrel General', dogs:'Rin and Seri, Inseparable', warriors:'Najeela, the Blade-Blossom',
+  soldiers:'Myrel, Shield of Argive', artificers:'Urza, Lord High Artificer', clerics:'Orah, Skyclave Hierophant',
+  rogues:'Anowon, the Ruin Thief', ninjas:"Yuriko, the Tiger's Shadow", samurai:'Isshin, Two Heavens as One',
+  treefolk:'Doran, the Siege Tower', insects:'Grist, the Hunger Tide', spiders:'Shelob, Child of Ungoliant',
+  krakens:'Arixmethes, Slumbering Isle', eldrazi:'Kozilek, the Great Distortion', fungus:'Slimefoot, the Stowaway',
+  frogs:'The Gitrog Monster', foxes:"Light-Paws, Emperor's Voice", bears:'Ayula, Queen Among Bears',
+  oozes:'The Mimeoplasm', sphinxes:'Unesh, Criosphinx Sovereign', giants:'Aegar, the Freezing Flame',
+  minotaurs:'Sethron, Hurloon General', monks:'Narset, Enlightened Master', horrors:'Umbris, Fear Manifest',
+  unicorns:'Emiel the Blessed', dwarves:'Magda, Brazen Outlaw', mice:'Mabel, Heir to Cragflame',
+  // Themes
+  lifegain:'Oloro, Ageless Ascetic', lifedrain:'Vito, Thorn of the Dusk Rose', lifeloss:'Vito, Thorn of the Dusk Rose',
+  looting:'Anje Falkenrath', madness:'Anje Falkenrath', mill:'Bruvac the Grandiloquent',
+  midrange:'Korvold, Fae-Cursed King', menace:'Marisi, Breaker of the Coil',
+  manarocks:'Jhoira, Weatherlight Captain', manadorks:'Marwyn, the Nurturer',
+  lurruscompanion:'Lurrus of the Dream-Den', ltbeffects:'Norin the Wary', lure:'Grothama, All-Devouring',
+  counters:'Ezuri, Claw of Progress', plus1plus1counters:'Ezuri, Claw of Progress', p1p1counters:'Ezuri, Claw of Progress',
+  onecounters:'Ezuri, Claw of Progress', '11counters':'Ezuri, Claw of Progress',
+  minus1minus1counters:'Hapatra, Vizier of Poisons', m1m1counters:'Hapatra, Vizier of Poisons',
+  activatedabilities:'Zirda, the Dawnwaker', adnauseam:"K'rrik, Son of Yawgmoth", adventures:'Chulane, Teller of Tales',
+  affinity:'Urza, Lord High Artificer', aggro:'Winota, Joiner of Forces',
+  lands:'Lord Windgrace', landfall:'Omnath, Locus of Rage', tokens:'Rhys the Redeemed',
+  treasure:'Prosper, Tome-Bound', treasures:'Prosper, Tome-Bound', aristocrats:'Teysa Karlov',
+  sacrifice:'Korvold, Fae-Cursed King', graveyard:'Muldrotha, the Gravetide', reanimator:'Meren of Clan Nel Toth',
+  reanimate:'Meren of Clan Nel Toth', spellslinger:'Veyran, Voice of Duality', storm:'Yidris, Maelstrom Wielder',
+  blink:'Brago, King Eternal', flicker:'Brago, King Eternal', clones:'Sakashima of a Thousand Faces',
+  artifacts:'Urza, Lord High Artificer', enchantments:"Sythis, Harvest's Hand", enchantress:"Sythis, Harvest's Hand",
+  auras:'Sram, Senior Edificer', equipment:'Wyleth, Soul of Steel', voltron:'Rafiq of the Many',
+  superfriends:"Atraxa, Praetors' Voice", planeswalkers:"Atraxa, Praetors' Voice", proliferate:"Atraxa, Praetors' Voice",
+  infect:'Ixhel, Scion of Atraxa', poison:'Ixhel, Scion of Atraxa', counterspells:'Talrand, Sky Summoner',
+  control:'Grand Arbiter Augustin IV', stax:'Grand Arbiter Augustin IV', burn:'Torbran, Thane of Red Fell',
+  carddraw:'The Locust God', draw:'The Locust God', wheels:'Nekusar, the Mindrazer', wheel:'Nekusar, the Mindrazer',
+  discard:'Tinybones, Trinket Thief', grouphug:'Phelddagrif', groupslug:'Mogis, God of Slaughter',
+  politics:'Kynaios and Tiro of Meletis', monarch:'Queen Marchesa', theft:'Xanathar, Guild Kingpin',
+  ramp:'Azusa, Lost but Seeking', bigmana:'Zacama, Primal Calamity', xspells:'Rosheen Meanderer',
+  cascade:'Yidris, Maelstrom Wielder', energy:'Satya, Aetherflux Genius', vehicles:'Greasefang, Okiba Boss',
+  sagas:'Satsuki, the Living Lore', flying:'Isperia, Supreme Judge', deathtouch:'Fynn, the Fangbearer',
+  devotion:'Karametra, God of Harvests', combo:'Kenrith, the Returned King', legends:'Jodah, the Unifier',
+  legendsmatter:'Jodah, the Unifier', toughness:'Arcades, the Strategist', defenders:'Arcades, the Strategist',
+  walls:'Arcades, the Strategist', snow:'Jorn, God of Winter', topdeck:'Aminatou, the Fateshifter',
+  miracles:'Aminatou, the Fateshifter', mutate:'Otrimi, the Ever-Playful', cycling:'Gavi, Nest Warden',
+  goad:'Karazikar, the Eye Tyrant', dungeons:'Sefris of the Hidden Ways', initiative:'Sefris of the Hidden Ways',
+  party:'Tazri, Beacon of Unity', extraturns:'Medomai the Ageless', extracombats:'Aurelia, the Warleader',
+  // Batch 2: catalog tags the first bake missed
+  lifeexchange:'Selenia, Dark Angel', mayhem:'Rakdos, the Showstopper', chaos:'Okaun, Eye of Chaos',
+  coinflip:'Zndrsplt, Eye of Wisdom', coinflips:'Zndrsplt, Eye of Wisdom',
+  attacktriggers:'Aurelia, the Warleader', attractions:'Myra the Magnificent', banding:'Soraya the Falconer',
+  modifiedcreatures:'Kosei, Penitent Warlord', modified:'Kosei, Penitent Warlord',
+  hatebears:'Thalia, Guardian of Thraben', keywords:'Kathril, Aspect Warper', keywordsoup:'Kathril, Aspect Warper',
+  fight:'Neyith of the Dire Hunt', food:'Gyome, Master Chef', clues:'Lonis, Cryptozoologist',
+  blood:'Strefan, Maurer Progenitor', curses:'Lynde, Cheerful Tormentor', morph:'Kadena, Slinking Sorcerer',
+  devour:'Thromok the Insatiable', partner:'Thrasios, Triton Hero', backgrounds:'Wilson, Refined Grizzly',
+  gowide:'Jetmir, Nexus of Revels', overrun:'Jetmir, Nexus of Revels', etb:'Yarok, the Desecrated',
+  enterthebattlefield:'Yarok, the Desecrated', entersthebattlefield:'Yarok, the Desecrated',
+  deserts:'Hazezon, Shaper of Sand', gates:'Nine-Fingers Keene', historic:'Jhoira, Weatherlight Captain',
+  myr:'Urtet, Remnant of Memnarch', thopters:'Breya, Etherium Shaper', pillowfort:'Queen Marchesa',
+  exilematters:'Prosper, Tome-Bound', castfromexile:'Prosper, Tome-Bound', impulse:'Prosper, Tome-Bound'
+};
+function bakedLeaderFor(slug){
+  return BAKED_TILE_LEADERS[String(slug||'').toLowerCase().replace(/[^a-z0-9]/g,'')] || null;
+}
 /* ---- Most-played leader art for the Inspiration drop-up tiles ----
    sf|<format>|<clause> resolves through the cached Scryfall search with
    order:edhrec (= most played first) and takes the first eligible card.
@@ -15285,39 +15360,59 @@ function _tileArtWarmImg(url){
   _tileImgWarm.add(url);
   try{ const im = new Image(); im.src = url; }catch(e){}
 }
-async function _tileArtFetchFresh(key){
-  const parts = key.split('|');
-  let out = null;
-  if(parts[0] === 'sf'){
-    const fmt = parts[1] || 'any';
-    const clause = parts.slice(2).join('|').trim();
-    if(clause){
-      const { results } = await searchAndVerifyLegal(clause, 'edhrec', 20, { format: fmt, bg: true });
-      const pool = (results||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
-      // Unranked (brand-new) cards can lead the sorted page -- the tile wants
-      // the lowest REAL rank, i.e. the most played card that has data.
-      const ranked = pool.filter(x=>typeof x.edhrec_rank === 'number');
-      const c = ranked.length ? ranked.reduce((a,b)=>(a.edhrec_rank <= b.edhrec_rank ? a : b)) : pool[0];
-      if(c) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
-    }
-  } else if(parts[0] === 'ed'){
-    const names = await edhrecTagCommanderNames(parts[1], parts[2] || '');
-    if(names && names.length){
-      const cards = await namesToLegalCards(names.slice(0, 3));
-      const c = (cards||[]).find(x=>!isBanned(x));
-      if(c) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
-    }
-  } else if(parts[0] === 'nm'){
-    // A fixed, named card (the format tiles): the exact-name endpoint,
-    // no legality gate -- an icon is an icon.
-    const nm = parts.slice(1).join('|');
-    const res = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(nm), 0, true);
-    if(res && res.ok){
-      const c = await res.json();
-      if(c && c.name) out = { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
-    }
+async function _tileArtSfPick(fmt, clause){
+  if(!clause) return null;
+  const { results } = await searchAndVerifyLegal(clause, 'edhrec', 20, { format: fmt || 'any', bg: true });
+  const pool = (results||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
+  // Unranked (brand-new) cards can lead the sorted page -- the tile wants
+  // the lowest REAL rank, i.e. the most played card that has data.
+  const ranked = pool.filter(x=>typeof x.edhrec_rank === 'number');
+  const c = ranked.length ? ranked.reduce((a,b)=>(a.edhrec_rank <= b.edhrec_rank ? a : b)) : pool[0];
+  return c ? { n: c.name, a: artCropFrom(cardImageMedRaw(c)) } : null;
+}
+async function _tileArtNamePick(nm){
+  // The exact-name endpoint, no legality gate -- an icon is an icon.
+  const res = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(nm), 0, true);
+  if(res && res.ok){
+    const c = await res.json();
+    if(c && c.name) return { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
   }
-  return out;
+  return null;
+}
+async function _tileArtEdPick(slug, combo){
+  const names = await edhrecTagCommanderNames(slug, combo || '');
+  if(names && names.length){
+    const cards = await namesToLegalCards(names.slice(0, 3));
+    const c = (cards||[]).find(x=>!isBanned(x));
+    if(c) return { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
+  }
+  return null;
+}
+async function _tileArtFetchFresh(key, live){
+  const parts = key.split('|');
+  if(parts[0] === 'sf') return _tileArtSfPick(parts[1] || 'any', parts.slice(2).join('|').trim());
+  if(parts[0] === 'nm') return _tileArtNamePick(parts.slice(1).join('|'));
+  if(parts[0] === 'ed'){
+    const slug = parts[1], combo = parts[2] || '';
+    const baked = bakedLeaderFor(slug);
+    let out = null;
+    if(live){
+      // Set-release recheck: the live EDHREC ranking leads; the baked name
+      // is its net. Total failure keeps the stored art (callers only
+      // overwrite on success).
+      out = await _tileArtEdPick(slug, combo).catch(()=>null);
+      if(!out && baked) out = await _tileArtNamePick(baked).catch(()=>null);
+      return out;
+    }
+    // First resolve: the BAKED, shipped leader -- instant and dependable.
+    if(baked) out = await _tileArtNamePick(baked).catch(()=>null);
+    if(!out) out = await _tileArtEdPick(slug, combo).catch(()=>null);
+    // Last net: the most-played leader for the chosen colors -- a tile is
+    // never left black.
+    if(!out) out = await _tileArtSfPick('any', ('is:commander ' + (combo ? (combo==='c' ? 'id=c' : 'id='+combo) : '')).trim()).catch(()=>null);
+    return out;
+  }
+  return null;
 }
 function tileArtResolve(key){
   if(_tileArtMem[key]) return _tileArtMem[key];
@@ -15332,7 +15427,7 @@ function tileArtResolve(key){
         // the stored art keeps serving without a flicker in the meantime.
         if((disk.t||0) < tileArtEpoch() && !_tileArtRevalidating.has(key)){
           _tileArtRevalidating.add(key);
-          _tileArtFetchFresh(key).then(fresh=>{
+          _tileArtFetchFresh(key, true).then(fresh=>{
             if(fresh && fresh.a){ qdbSet(ck, fresh); _tileArtReady[key] = fresh; _tileArtMem[key] = Promise.resolve(fresh); _tileArtWarmImg(fresh.a); }
           }).catch(()=>{}).finally(()=>_tileArtRevalidating.delete(key));
         }
