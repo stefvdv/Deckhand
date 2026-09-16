@@ -1375,7 +1375,8 @@ main.has-dock{padding-bottom:84px;}
 /* ---- Art-tile drop-ups (Inspiration page): every option is a square, two
    per row -- the most-played leader's art on top, the name in a bar of the
    app's main color along the foot. ---- */
-.cselect-panel.cs-artgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;max-height:min(420px,55vh);}
+.cselect-panel.cs-artgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;max-height:min(360px,48vh);}
+.cs-artgrid .cselect-search{position:sticky;bottom:0;top:auto;border-top:1.5px solid var(--pop-line);border-bottom:none;}
 .cs-artgrid .cselect-search,.cs-artgrid .cs-noresults{grid-column:1 / -1;}
 .cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;aspect-ratio:1;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
 .cs-artgrid .cselect-opt.art-tile:last-child{border-bottom:2px solid var(--line);}
@@ -2106,17 +2107,25 @@ function cselectHtml(id, options, value, placeholder, o){
       <span class="cs-label">${label}</span>
       <span class="cs-car">▾</span>
     </button>
-    ${open ? `<div class="cselect-panel${o.tall?' tall':''}${o.inline?' inline':''}${o.tiles?' cs-artgrid':''}">${o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:''}${options.map(x=>{
-      const selCls = String(x.v)===String(value ?? '')?'sel':'';
-      if(o.tiles){
-        const rd = (!x.gen && x.art && typeof _tileArtReady !== 'undefined') ? _tileArtReady[x.art] : null;
-        const img = x.gen
-          ? `<span class="at-img at-gen">${x.gen === true ? '' : x.gen}</span>`
-          : `<span class="at-img"${rd ? ` style="background-image:url('${escapeHtml(rd.a)}')"` : ''}></span>`;
-        return `<button class="cselect-opt art-tile ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}"${(!x.gen && x.art)?` data-art="${escapeHtml(String(x.art))}"`:''}>${img}<span class="at-label">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}<span class="at-txt">${x.l}</span></span></button>`;
-      }
-      return `<button class="cselect-opt ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`;
-    }).join('')}${o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:''}</div>` : ''}
+    ${open ? (()=>{
+      const searchRow = o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:'';
+      const noRes = o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:'';
+      const opts = (o.tiles ? options.slice().reverse() : options).map(x=>{
+        const selCls = String(x.v)===String(value ?? '')?'sel':'';
+        if(o.tiles){
+          const rd = (!x.gen && x.art && typeof _tileArtReady !== 'undefined') ? _tileArtReady[x.art] : null;
+          const img = x.gen
+            ? `<span class="at-img at-gen">${x.gen === true ? '' : x.gen}</span>`
+            : `<span class="at-img"${rd ? ` style="background-image:url('${escapeHtml(rd.a)}')"` : ''}></span>`;
+          return `<button class="cselect-opt art-tile ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}"${(!x.gen && x.art)?` data-art="${escapeHtml(String(x.art))}"`:''}>${img}<span class="at-label">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}<span class="at-txt">${x.l}</span></span></button>`;
+        }
+        return `<button class="cselect-opt ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`;
+      }).join('');
+      // BOTTOM-UP tile panels: the grid renders reversed so the most popular
+      // tiles sit at the FOOT, with the search row riding the panel's foot
+      // right below them. Row panels keep their classic top-down order.
+      return `<div class="cselect-panel${o.tall?' tall':''}${o.inline?' inline':''}${o.tiles?' cs-artgrid':''}">${o.tiles ? (opts + noRes + searchRow) : (searchRow + opts + noRes)}</div>`;
+    })() : ''}
   </div>`;
 }
 function csRerender(){
@@ -2170,11 +2179,14 @@ function wireCsSearchRows(root){
       });
       const nr = panel.querySelector('.cs-noresults');
       if(nr) nr.style.display = visibleOpts().length ? 'none' : '';
+      if(panel.classList.contains('cs-artgrid')) panel.scrollTop = panel.scrollHeight;
     });
     inp.addEventListener('keydown', e=>{
       if(e.key !== 'Enter') return;
       e.preventDefault();
-      const first = visibleOpts().find(b=>!b.classList.contains('opt-disabled'));
+      const vis = visibleOpts().filter(b=>!b.classList.contains('opt-disabled'));
+      // Bottom-up tile panels put the most popular option at the FOOT.
+      const first = panel.classList.contains('cs-artgrid') ? vis[vis.length-1] : vis[0];
       if(first) first.click();
     });
   });
@@ -4284,13 +4296,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.525';
+const APP_VERSION = '2.51.528';
 const CHANGELOG_NOTES = {
   en: [
-    'Second helping of baked tile leaders: another 35+ themes ship with their most-played commander built in \u2014 Life Exchange, Attack Triggers, Attractions, Banding, Modified Creatures, Food, Clues, Curses, Morph, Gates and more \u2014 so the generic-leader fallback becomes a rare exception instead of the rule.'
+    'Hardening from the field diagnostics: blocked or error pages from the EDHREC proxy are rejected at the door instead of being believed (and cached) \u2014 no more \u201cAccess Denied\u201d masquerading as a card name in searches \u2014 and the background art warm-up now stops after a few consecutive failures when the network is unreachable, retrying on the next run instead of grinding retries.'
   ],
   nl: [
-    'Tweede portie gebakken tegel-leiders: nog 35+ thema\u2019s geleverd met hun meest gespeelde commander ingebouwd \u2014 Life Exchange, Attack Triggers, Attractions, Banding, Modified Creatures, Food, Clues, Curses, Morph, Gates en meer \u2014 zodat de generieke-leider-terugval een zeldzame uitzondering wordt in plaats van de regel.'
+    'Verharding uit de velddiagnostiek: geblokkeerde of foutpagina\u2019s van de EDHREC-proxy worden aan de deur geweigerd in plaats van geloofd (en gecachet) \u2014 geen \u201cAccess Denied\u201d meer dat zich als kaartnaam in zoekopdrachten voordoet \u2014 en de achtergrond-artopwarming stopt nu na een paar opeenvolgende mislukkingen wanneer het netwerk onbereikbaar is, en probeert het bij de volgende run opnieuw in plaats van retries te malen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -14936,6 +14948,11 @@ function browseKindredOptions(){
       ? (((rm[b.slug]||0) - (rm[a.slug]||0)) || ((b.count||0) - (a.count||0)))
       : ((b.count||0) - (a.count||0)));   // most-played tribes for THIS colour first
 }
+/* Error-page strings masquerading as card names ("Access Denied" made it
+   into a Scryfall search once) are dropped at the source. */
+function _edhNameOk(nm){
+  return !!nm && nm.length <= 60 && !/access denied|forbidden|not found|blocked|captcha|error/i.test(nm);
+}
 function edhrecCommanderNamesFrom(data){
   const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
   // Most played FIRST: EDHREC prints 'New Commanders' above 'Top
@@ -14951,7 +14968,7 @@ function edhrecCommanderNamesFrom(data){
   const seen = new Set(), out = [];
   for(const L of use){
     for(const cv of (L.cardviews||[])){
-      if(cv && cv.name){ const nm = cleanName(cv.name); if(nm && !seen.has(nm)){ seen.add(nm); out.push(nm); } }
+      if(cv && cv.name){ const nm = cleanName(cv.name); if(_edhNameOk(nm) && !seen.has(nm)){ seen.add(nm); out.push(nm); } }
     }
   }
   if(out.length) return out;
@@ -15370,14 +15387,25 @@ async function _tileArtSfPick(fmt, clause){
   const c = ranked.length ? ranked.reduce((a,b)=>(a.edhrec_rank <= b.edhrec_rank ? a : b)) : pool[0];
   return c ? { n: c.name, a: artCropFrom(cardImageMedRaw(c)) } : null;
 }
-async function _tileArtNamePick(nm){
+async function _tileArtNamePick(nm, front){
   // The exact-name endpoint, no legality gate -- an icon is an icon.
-  const res = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(nm), 0, true);
-  if(res && res.ok){
-    const c = await res.json();
-    if(c && c.name) return { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
-  }
-  return null;
+  // name@set pins a specific printing (the classic art); a miss on the
+  // pinned set falls back to the default printing.
+  const cut = nm.indexOf('@');
+  const name = cut > 0 ? nm.slice(0, cut) : nm;
+  const set = cut > 0 ? nm.slice(cut + 1) : '';
+  const ask = async (withSet)=>{
+    const res = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(name) + (withSet ? '&set=' + encodeURIComponent(set) : ''), 0, true, false, !!front);
+    if(res && res.ok){
+      const c = await res.json();
+      if(c && c.name) return { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
+    }
+    return null;
+  };
+  let out = null;
+  if(set) out = await ask(true).catch(()=>null);
+  if(!out) out = await ask(false).catch(()=>null);
+  return out;
 }
 async function _tileArtEdPick(slug, combo){
   const names = await edhrecTagCommanderNames(slug, combo || '');
@@ -15388,10 +15416,10 @@ async function _tileArtEdPick(slug, combo){
   }
   return null;
 }
-async function _tileArtFetchFresh(key, live){
+async function _tileArtFetchFresh(key, live, front){
   const parts = key.split('|');
   if(parts[0] === 'sf') return _tileArtSfPick(parts[1] || 'any', parts.slice(2).join('|').trim());
-  if(parts[0] === 'nm') return _tileArtNamePick(parts.slice(1).join('|'));
+  if(parts[0] === 'nm') return _tileArtNamePick(parts.slice(1).join('|'), front);
   if(parts[0] === 'ed'){
     const slug = parts[1], combo = parts[2] || '';
     const baked = bakedLeaderFor(slug);
@@ -15405,7 +15433,7 @@ async function _tileArtFetchFresh(key, live){
       return out;
     }
     // First resolve: the BAKED, shipped leader -- instant and dependable.
-    if(baked) out = await _tileArtNamePick(baked).catch(()=>null);
+    if(baked) out = await _tileArtNamePick(baked, front).catch(()=>null);
     if(!out) out = await _tileArtEdPick(slug, combo).catch(()=>null);
     // Last net: the most-played leader for the chosen colors -- a tile is
     // never left black.
@@ -15414,7 +15442,7 @@ async function _tileArtFetchFresh(key, live){
   }
   return null;
 }
-function tileArtResolve(key){
+function tileArtResolve(key, front){
   if(_tileArtMem[key]) return _tileArtMem[key];
   _tileArtMem[key] = (async ()=>{
     const ck = 'tileart2|' + key;   // v2 namespace: v1 stored the newest card, not the most played
@@ -15433,11 +15461,15 @@ function tileArtResolve(key){
         }
         return disk.v;
       }
-      const out = await _tileArtFetchFresh(key);
+      const out = await _tileArtFetchFresh(key, false, front);
       if(out && out.a){ qdbSet(ck, out); _tileArtReady[key] = out; _tileArtWarmImg(out.a); return out; }
       return null;
     }catch(e){ return null; }
   })();
+  // A failed resolve must NOT poison the session: clear the slot so the
+  // next look retries (the queue's 90s expiry made misses common under
+  // load, and a cached null meant a forever-black tile).
+  _tileArtMem[key].then(v=>{ if(!v || !v.a) delete _tileArtMem[key]; }).catch(()=>{ delete _tileArtMem[key]; });
   return _tileArtMem[key];
 }
 /* Warm every drop-up tile on entering the page: cached keys land in the
@@ -15473,8 +15505,20 @@ function preloadBrowseTileArt(){
     (browseThemeOptions()||[]).forEach(o=>{ const k = bsThemeArt(o.v); if(k) keys.add(k); });
     (browseKindredOptions()||[]).forEach(t=>keys.add(bsArtEd(t.slug)));
     (async ()=>{
+      const sleep = (ms)=>new Promise(r=>setTimeout(r, ms));
+      let misses = 0;
       for(const k of keys){
-        try{ await tileArtResolve(k); }catch(e){}
+        // Step aside the moment the person does anything: live searches and
+        // the priority lane always go first.
+        while(_searchBusy > 0 || _sfQ.hi.length){ await sleep(600); }
+        let v = null;
+        try{ v = await tileArtResolve(k); }catch(e){}
+        // Circuit breaker: consecutive total failures mean the network is
+        // unreachable -- grinding every key through retries only burns
+        // battery. Stop; the next warm run retries (failures are not cached).
+        misses = v ? 0 : misses + 1;
+        if(misses >= 4){ try{ sfJournal('tile warm-up paused: network unreachable'); }catch(e){} break; }
+        await sleep(150);
       }
     })();
   }catch(e){}
@@ -15483,13 +15527,14 @@ function preloadBrowseTileArt(){
    art -- a hundred themes never fire a hundred requests at once. */
 function wireArtTiles(root){
   (root||document).querySelectorAll('.cselect-panel.cs-artgrid').forEach(panel=>{
+    panel.scrollTop = panel.scrollHeight;   // bottom-up: open at the foot
     const io = new IntersectionObserver((entries)=>{
       entries.forEach(en=>{
         if(!en.isIntersecting) return;
         io.unobserve(en.target);
         const key = en.target.dataset.art;
         if(!key) return;
-        tileArtResolve(key).then(v=>{
+        tileArtResolve(key, true).then(v=>{
           if(!v || !v.a || !en.target.isConnected) return;
           const img = en.target.querySelector('.at-img');
           if(img){ img.style.backgroundImage = `url("${v.a}")`; en.target.title = v.n; }
@@ -15509,7 +15554,7 @@ function wireArtTiles(root){
    after. Duel Commander: Force of Will, called one of the format's most
    iconic cards by its own committee. */
 const FMT_ICON_CARDS = {
-  commander: 'Sol Ring',
+  commander: 'Sol Ring@lea',   // @lea pins the original printing's classic art
   admiral: 'Admiral Beckett Brass',
   paupercommander: 'Tatyova, Benthic Druid',
   predh: 'Nicol Bolas',
@@ -16900,7 +16945,13 @@ async function edhrecFetchNetwork(path){
     const timer = setTimeout(()=>ctrl.abort(), 20000);
     try{
       const res = await fetch(u, { signal: ctrl.signal });
-      if(res.ok){ const data = await res.json(); if(data) return data; }
+      if(res.ok){
+        const data = await res.json();
+        // Only a real EDHREC page passes: blocked/error responses (Access
+        // Denied pages and friends) parse as JSON too, and one cached for a
+        // week once fed garbage "card names" into Scryfall searches.
+        if(data && data.container && data.container.json_dict) return data;
+      }
     }catch(e){}
     finally{ clearTimeout(timer); }
   }
@@ -16930,7 +16981,7 @@ function edhrecSectionsFrom(data){
   // session cache carries them for free.
   const lists = (((data||{}).container||{}).json_dict||{}).cardlists || [];
   return lists
-    .map(L=>({ header: String(L.header||'').trim(), names: (L.cardviews||[]).map(cv=>cv && cv.name).filter(Boolean) }))
+    .map(L=>({ header: String(L.header||'').trim(), names: (L.cardviews||[]).map(cv=>cv && cv.name).filter(nm=>_edhNameOk(nm)) }))
     .filter(s=>s.header && s.names.length);
 }
 function edhrecNamesFrom(data){
@@ -16938,7 +16989,7 @@ function edhrecNamesFrom(data){
   const seen = new Set(), out = [];
   for(const L of lists){
     for(const cv of (L.cardviews||[])){
-      if(cv && cv.name && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); }
+      if(cv && cv.name && _edhNameOk(cv.name) && !seen.has(cv.name)){ seen.add(cv.name); out.push(cv.name); }
     }
   }
   return out;
@@ -19689,6 +19740,11 @@ setTimeout(()=>{ try{
 }catch(e){} }, 2500);
 
 qdbPrune();
+// Tile-art warm-up joins the app's background start-up work: hydrate the
+// stored set immediately, then walk the full key list while the request
+// queue is idle -- by the time Inspiration opens, the grids are dressed.
+setTimeout(()=>{ try{ hydrateTileArtReady(); }catch(e){} }, 1500);
+setTimeout(()=>{ try{ preloadBrowseTileArt(); }catch(e){} }, 6000);
 loadFormatFile().then(()=>resolveLegalSets()).then(()=>checkForNewSets()).then(()=>{ maybeShowFormatChanges(); classifyUBBans(); });
 loadDecksIndex().then(async ()=>{
   if(state.screen==='decks') render();
