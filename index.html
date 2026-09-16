@@ -1375,8 +1375,9 @@ main.has-dock{padding-bottom:84px;}
 /* ---- Art-tile drop-ups (Inspiration page): every option is a square, two
    per row -- the most-played leader's art on top, the name in a bar of the
    app's main color along the foot. ---- */
-.cselect-panel.cs-artgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;max-height:min(360px,48vh);}
-.cs-artgrid .cselect-search{position:sticky;bottom:0;top:auto;border-top:1.5px solid var(--pop-line);border-bottom:none;grid-column:1 / -1;order:999;z-index:3;margin:0 -8px -8px;padding:10px 12px;box-shadow:0 -8px 14px rgba(0,0,0,0.45);}
+.cselect-panel.cs-artgrid{display:flex;flex-direction:column;padding:0;max-height:min(360px,48vh);overflow:hidden;}
+.cs-artscroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;}
+.cs-artgrid .cselect-search{position:relative;flex:0 0 auto;top:auto;border-top:1.5px solid var(--pop-line);border-bottom:none;margin:0;padding:10px 12px;box-shadow:0 -8px 14px rgba(0,0,0,0.45);z-index:1;}
 .cs-artgrid .cselect-search,.cs-artgrid .cs-noresults{grid-column:1 / -1;}
 .cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;aspect-ratio:1;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
 .cs-artgrid .cselect-opt.art-tile:last-child{border-bottom:2px solid var(--line);}
@@ -1442,12 +1443,12 @@ main.has-dock{padding-bottom:84px;}
    section's label pushes it out — classic sticky headers, scoped per
    section. Solid backing so it stays readable over the tiles. */
 .edh-sec{display:flex;flex-direction:column;}
-.edh-sec > .section-label{order:10;position:sticky;top:auto;bottom:calc(72px + var(--nav-h) + env(safe-area-inset-bottom));z-index:5;background:var(--ink);padding:6px 2px;border-bottom:2px solid var(--line);}
+.edh-sec > .section-label{order:10;position:static;background:var(--ink);padding:8px 6px;border-bottom:2px solid var(--line);border-top:1px solid var(--line);font-size:13px;}
 /* Overlays scroll inside <main>, whose top edge already sits under the
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
-.overlay main .edh-sec > .section-label{top:auto;bottom:0;}
-#recoOverlay .edh-sec > .section-label{top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;border-bottom:2px solid var(--line);}
+.overlay main .edh-sec > .section-label{position:sticky;top:auto;bottom:0;z-index:5;}
+#recoOverlay .edh-sec > .section-label{position:sticky;top:auto !important;bottom:0;z-index:6;background:var(--ink);margin-bottom:0;padding:7px 6px;border-bottom:2px solid var(--line);}
 #recoOverlay main{padding-bottom:0;}
 #recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);margin:0;padding:8px 0;}
 #recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;transition:bottom 0.2s;}
@@ -2121,10 +2122,11 @@ function cselectHtml(id, options, value, placeholder, o){
         }
         return `<button class="cselect-opt ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`;
       }).join('');
-      // BOTTOM-UP tile panels: the grid renders reversed so the most popular
-      // tiles sit at the FOOT, with the search row riding the panel's foot
-      // right below them. Row panels keep their classic top-down order.
-      return `<div class="cselect-panel${o.tall?' tall':''}${o.inline?' inline':''}${o.tiles?' cs-artgrid':''}">${o.tiles ? (opts + noRes + searchRow) : (searchRow + opts + noRes)}</div>`;
+      // BOTTOM-UP tile panels: the tiles live in their own inner scroller
+      // (reversed, most popular at the foot) and the search bar is a plain
+      // flex child at the panel's foot -- the list scrolls away behind it
+      // by construction, no sticky involved.
+      return `<div class="cselect-panel${o.tall?' tall':''}${o.inline?' inline':''}${o.tiles?' cs-artgrid':''}">${o.tiles ? (`<div class="cs-artscroll">${opts}</div>` + noRes + searchRow) : (searchRow + opts + noRes)}</div>`;
     })() : ''}
   </div>`;
 }
@@ -2179,7 +2181,7 @@ function wireCsSearchRows(root){
       });
       const nr = panel.querySelector('.cs-noresults');
       if(nr) nr.style.display = visibleOpts().length ? 'none' : '';
-      if(panel.classList.contains('cs-artgrid')) panel.scrollTop = panel.scrollHeight;
+      if(panel.classList.contains('cs-artgrid')){ const sc = panel.querySelector('.cs-artscroll') || panel; sc.scrollTop = sc.scrollHeight; }
     });
     inp.addEventListener('keydown', e=>{
       if(e.key !== 'Enter') return;
@@ -4296,13 +4298,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.529';
+const APP_VERSION = '2.51.530';
 const CHANGELOG_NOTES = {
   en: [
-    'Two visibility fixes on Inspiration: the tile-panel search bar is now a full-width solid foot the list visibly scrolls away behind (it was sitting between the tiles as a loose grid item), and the category labels on recommendation pages are back \u2014 they were sticking exactly behind the pinned search bar and now ride just above it.'
+    'Page-swipe navigation is removed \u2014 the nav bar is the way between pages, and no gesture can hijack scrolling or drop-ups anymore (card-sheet swiping stays). The Inspiration tile panels were rebuilt structurally: tiles scroll in their own inner pane and the search bar is a fixed foot of the panel, so the list truly disappears behind it. Category labels on recommendation pages are plain solid bars at each section\u2019s foot now \u2014 always visible.'
   ],
   nl: [
-    'Twee zichtbaarheidsfixes op Inspiratie: de zoekbalk van de tegelpanelen is nu een solide afsluiter over de volle breedte waar de lijst zichtbaar achter wegscrollt (hij lag als los grid-item tussen de tegels), en de categorielabels op aanbevelingspagina\u2019s zijn terug \u2014 ze plakten exact achter de vastgepinde zoekbalk en rijden er nu net boven.'
+    'Pagina-swipenavigatie is verwijderd \u2014 de navigatiebalk is de weg tussen pagina\u2019s, en geen gebaar kan scrollen of uitklapmenu\u2019s meer kapen (kaartblad-swipen blijft). De Inspiratie-tegelpanelen zijn structureel herbouwd: tegels scrollen in hun eigen binnenvenster en de zoekbalk is een vaste voet van het panel, dus de lijst verdwijnt er echt achter. Categorielabels op aanbevelingspagina\u2019s zijn nu gewone solide balken aan de voet van elke sectie \u2014 altijd zichtbaar.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4899,6 +4901,9 @@ const PAGE_STRIP = ['home','decks','collection','search','browse','settings'];
 // My Stuff rather than the collection.
 const stripScreen = (s)=> s === 'trade' ? 'collection' : s;
 (function(){
+  return;   // v2.51.530: page-swipe navigation removed per request -- the
+            // nav bar is the way between pages; no gesture ever hijacks a
+            // scroll or a drop-up again. Card-sheet swiping is untouched.
   /* Launcher-style page strip: once a horizontal drag is unmistakable, the
      current page follows the finger and the destination page rides in beside
      it as a live, unwired preview. Release past a third of the screen (in
@@ -15527,7 +15532,8 @@ function preloadBrowseTileArt(){
    art -- a hundred themes never fire a hundred requests at once. */
 function wireArtTiles(root){
   (root||document).querySelectorAll('.cselect-panel.cs-artgrid').forEach(panel=>{
-    panel.scrollTop = panel.scrollHeight;   // bottom-up: open at the foot
+    const sc = panel.querySelector('.cs-artscroll') || panel;
+    sc.scrollTop = sc.scrollHeight;   // bottom-up: open at the foot
     const io = new IntersectionObserver((entries)=>{
       entries.forEach(en=>{
         if(!en.isIntersecting) return;
@@ -15540,7 +15546,7 @@ function wireArtTiles(root){
           if(img){ img.style.backgroundImage = `url("${v.a}")`; en.target.title = v.n; }
         });
       });
-    }, { root: panel, rootMargin: '140px' });
+    }, { root: sc, rootMargin: '140px' });   // the inner scroller is the scrollport now
     panel.querySelectorAll('.art-tile[data-art]').forEach(t=>io.observe(t));
   });
 }
