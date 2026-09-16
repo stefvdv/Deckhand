@@ -1376,7 +1376,7 @@ main.has-dock{padding-bottom:84px;}
    per row -- the most-played leader's art on top, the name in a bar of the
    app's main color along the foot. ---- */
 .cselect-panel.cs-artgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;max-height:min(360px,48vh);}
-.cs-artgrid .cselect-search{position:sticky;bottom:0;top:auto;border-top:1.5px solid var(--pop-line);border-bottom:none;}
+.cs-artgrid .cselect-search{position:sticky;bottom:0;top:auto;border-top:1.5px solid var(--pop-line);border-bottom:none;grid-column:1 / -1;order:999;z-index:3;margin:0 -8px -8px;padding:10px 12px;box-shadow:0 -8px 14px rgba(0,0,0,0.45);}
 .cs-artgrid .cselect-search,.cs-artgrid .cs-noresults{grid-column:1 / -1;}
 .cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;aspect-ratio:1;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
 .cs-artgrid .cselect-opt.art-tile:last-child{border-bottom:2px solid var(--line);}
@@ -1442,7 +1442,7 @@ main.has-dock{padding-bottom:84px;}
    section's label pushes it out — classic sticky headers, scoped per
    section. Solid backing so it stays readable over the tiles. */
 .edh-sec{display:flex;flex-direction:column;}
-.edh-sec > .section-label{order:10;position:sticky;top:auto;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:5;background:var(--ink);padding:6px 2px;}
+.edh-sec > .section-label{order:10;position:sticky;top:auto;bottom:calc(72px + var(--nav-h) + env(safe-area-inset-bottom));z-index:5;background:var(--ink);padding:6px 2px;border-bottom:2px solid var(--line);}
 /* Overlays scroll inside <main>, whose top edge already sits under the
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
@@ -4296,13 +4296,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.528';
+const APP_VERSION = '2.51.529';
 const CHANGELOG_NOTES = {
   en: [
-    'Hardening from the field diagnostics: blocked or error pages from the EDHREC proxy are rejected at the door instead of being believed (and cached) \u2014 no more \u201cAccess Denied\u201d masquerading as a card name in searches \u2014 and the background art warm-up now stops after a few consecutive failures when the network is unreachable, retrying on the next run instead of grinding retries.'
+    'Two visibility fixes on Inspiration: the tile-panel search bar is now a full-width solid foot the list visibly scrolls away behind (it was sitting between the tiles as a loose grid item), and the category labels on recommendation pages are back \u2014 they were sticking exactly behind the pinned search bar and now ride just above it.'
   ],
   nl: [
-    'Verharding uit de velddiagnostiek: geblokkeerde of foutpagina\u2019s van de EDHREC-proxy worden aan de deur geweigerd in plaats van geloofd (en gecachet) \u2014 geen \u201cAccess Denied\u201d meer dat zich als kaartnaam in zoekopdrachten voordoet \u2014 en de achtergrond-artopwarming stopt nu na een paar opeenvolgende mislukkingen wanneer het netwerk onbereikbaar is, en probeert het bij de volgende run opnieuw in plaats van retries te malen.'
+    'Twee zichtbaarheidsfixes op Inspiratie: de zoekbalk van de tegelpanelen is nu een solide afsluiter over de volle breedte waar de lijst zichtbaar achter wegscrollt (hij lag als los grid-item tussen de tegels), en de categorielabels op aanbevelingspagina\u2019s zijn terug \u2014 ze plakten exact achter de vastgepinde zoekbalk en rijden er nu net boven.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
