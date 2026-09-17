@@ -1376,10 +1376,10 @@ main.has-dock{padding-bottom:84px;}
    per row -- the most-played leader's art on top, the name in a bar of the
    app's main color along the foot. ---- */
 .cselect-panel.cs-artgrid{display:flex;flex-direction:column;padding:0;max-height:min(360px,48vh);overflow:hidden;}
-.cs-artscroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;}
+.cs-artscroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:158px;align-content:start;gap:8px;padding:8px;}
 .cs-artgrid .cselect-search{position:relative;flex:0 0 auto;top:auto;border-top:1.5px solid var(--pop-line);border-bottom:none;margin:0;padding:10px 12px;box-shadow:0 -8px 14px rgba(0,0,0,0.45);z-index:1;}
 .cs-artgrid .cselect-search,.cs-artgrid .cs-noresults{grid-column:1 / -1;}
-.cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;aspect-ratio:1;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
+.cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;height:158px;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
 .cs-artgrid .cselect-opt.art-tile:last-child{border-bottom:2px solid var(--line);}
 .cs-artgrid .cselect-opt.art-tile:hover{background:var(--ink-deep);}
 .art-tile .at-img{flex:1 1 auto;min-height:0;width:100%;background-size:cover;background-position:center 25%;background-repeat:no-repeat;background-color:color-mix(in srgb, var(--ink) 55%, #000);}
@@ -4298,13 +4298,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.530';
+const APP_VERSION = '2.51.531';
 const CHANGELOG_NOTES = {
   en: [
-    'Page-swipe navigation is removed \u2014 the nav bar is the way between pages, and no gesture can hijack scrolling or drop-ups anymore (card-sheet swiping stays). The Inspiration tile panels were rebuilt structurally: tiles scroll in their own inner pane and the search bar is a fixed foot of the panel, so the list truly disappears behind it. Category labels on recommendation pages are plain solid bars at each section\u2019s foot now \u2014 always visible.'
+    'The shingle-stacked tiles are fixed: tiles now carry an explicit height instead of an aspect ratio, so grid rows and tiles are identical by definition and can never overlap again \u2014 scrolling stays as smooth as the last release made it.'
   ],
   nl: [
-    'Pagina-swipenavigatie is verwijderd \u2014 de navigatiebalk is de weg tussen pagina\u2019s, en geen gebaar kan scrollen of uitklapmenu\u2019s meer kapen (kaartblad-swipen blijft). De Inspiratie-tegelpanelen zijn structureel herbouwd: tegels scrollen in hun eigen binnenvenster en de zoekbalk is een vaste voet van het panel, dus de lijst verdwijnt er echt achter. Categorielabels op aanbevelingspagina\u2019s zijn nu gewone solide balken aan de voet van elke sectie \u2014 altijd zichtbaar.'
+    'De dakpansgewijs gestapelde tegels zijn gefixt: tegels hebben nu een expliciete hoogte in plaats van een beeldverhouding, waardoor rasterrijen en tegels per definitie gelijk zijn en nooit meer kunnen overlappen \u2014 het scrollen blijft zo soepel als de vorige release het maakte.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
