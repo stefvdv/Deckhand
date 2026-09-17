@@ -131,7 +131,7 @@ button,input,select,textarea,.sr-tile,.vg-card,.tap-zone,.dmg-overlay,.chip{touc
 /* overscroll-behavior-y on BOTH: Chrome grants pull-to-refresh based on the
    root scroller (html) — the old body-only guard never applied, so a swipe
    down from the top reloaded the whole app. `none` also kills the glow. */
-html,body{margin:0;padding:0;height:100%;background:var(--ink);overflow-x:clip;max-width:100%;overscroll-behavior-y:none;}   /* clip, not hidden: hidden silently kills position:sticky */
+html,body{margin:0;padding:0;height:100%;background:var(--ink);overflow-x:clip;max-width:100%;overscroll-behavior-y:none;overflow-anchor:none;}   /* clip, not hidden: hidden silently kills position:sticky. overflow-anchor off: the app runs its OWN scroll anchoring for streamed grids -- the browser's native one corrected the same inserts a second time, which was the scroll jolt. */
 body{
   font-family:'Inter',sans-serif; color:var(--ink-text);
   background:transparent;
@@ -2357,6 +2357,11 @@ document.addEventListener('click', async (e)=>{
     else toast(`No card found for “${nm}”.`);
   }catch(err){ toast('Couldn\u2019t reach Scryfall.'); }
 }, true);
+// The last moment the person touched or wheeled the page: delayed
+// re-anchors (fresh search results settling) must never yank the view
+// after the person has started scrolling themselves.
+window.addEventListener('touchstart', ()=>{ state._userScrollAt = Date.now(); }, {passive:true, capture:true});
+window.addEventListener('wheel', ()=>{ state._userScrollAt = Date.now(); }, {passive:true, capture:true});
 document.addEventListener('click', (e)=>{
   // A tap anywhere outside the deck's ⋯ menu folds it away.
   if(state.menuOpen && !(e.target.closest && (e.target.closest('#menuPop') || e.target.closest('#menuBtn')))){
@@ -4328,13 +4333,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.539';
+const APP_VERSION = '2.51.541';
 const CHANGELOG_NOTES = {
   en: [
-    'The Spoilers page grew the collection\u2019s advanced filter: a bar at the foot of the page opens a drop-up sheet with Name, Set, Type, Colors (with match mode) and Rarity \u2014 no price row, preview cards have no market yet \u2014 and it filters the spoiler feed and set views live. Filters reset on entering the page.'
+    'The last relics of the old two-pool era are gone: the \u201cthat set isn\u2019t in your card pool\u201d gate now exists ONLY when the Search format filter is set to Admiral (the one format with a curated pool) \u2014 Commander and every other format search any set, with Scryfall\u2019s own legality as the engine \u2014 and the format-change popup no longer announces Universes Beyond set switches in Commander mode, where those are simply ordinary sets.'
   ],
   nl: [
-    'De Spoilers-pagina kreeg het geavanceerde filter van de collectie: een balk aan de voet van de pagina opent een uitklapblad met Naam, Set, Type, Kleuren (met matchmodus) en Zeldzaamheid \u2014 geen prijsregel, previewkaarten hebben nog geen markt \u2014 en het filtert de spoilerfeed en setweergaven live. Filters resetten bij het openen van de pagina.'
+    'De laatste relieken van het oude twee-polen-tijdperk zijn weg: de \u201cdie set zit niet in je kaartenpool\u201d-poort bestaat nu ALLEEN nog als het zoekformaat-filter op Admiral staat (het enige format met een samengestelde pool) \u2014 Commander en elk ander format doorzoeken elke set, met Scryfalls eigen legaliteit als motor \u2014 en de format-wijzigingspopup kondigt in Commander-modus geen Universes Beyond-schakelingen meer aan; daar zijn dat gewoon normale sets.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -4415,7 +4420,9 @@ function maybeShowFormatChanges(){
     const prev = JSON.parse(prevRaw);
     const diff = (a,b)=>a.filter(x=>!b.includes(x));
     const banned = diff(now.b, prev.b||[]), unbanned = diff(prev.b||[], now.b);
-    const ubAdded = diff(now.u, prev.u||[]), ubRemoved = diff(prev.u||[], now.u);
+    // UB set switches are an Admiral concept; in Commander mode those sets
+    // are ordinary sets, so the popup never announces them there.
+    const ubAdded = isCmdrMode() ? [] : diff(now.u, prev.u||[]), ubRemoved = isCmdrMode() ? [] : diff(prev.u||[], now.u);
     const newSets = diff(now.s, prev.s||[]).map(c=>autoSets.names[c]||c.toUpperCase());
     // Spoilers announce on CARD counts, not on a set merely appearing in the
     // pool: a set is listed only when it has MORE spoiled cards than the
@@ -11733,10 +11740,15 @@ async function runAdvancedSearch(){
   const clause = buildAdvancedClause();
   state.searchRan = true; state.searchError = false;
   if(!clause && !state.searchSetCode && !state.searchFormat){ document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">Enter a name or set at least one filter.</div>`; return; }
-  const _rsIsPreview = state.searchSetCode && (()=>{ try{ return (currentPreviewSets()||[]).some(x=>x.code===state.searchSetCode); }catch(e){ return false; } })();
-  if(state.searchSetCode && !activeLegalSetCodes().includes(state.searchSetCode) && !(isCmdrMode() && _rsIsPreview)){
+  // The curated card pool belongs to the ADMIRAL format alone. Every other
+  // format ('any' included) searches ANY set: Scryfall's own legal: flag is
+  // the legality engine there, so no set is ever "not in your pool". The
+  // old two-pool pre-check fired the Admiral-era switch-it-on message in
+  // Commander mode as well -- that era is over.
+  if((state.searchFormat || 'any') === 'admiral'
+     && state.searchSetCode && !activeLegalSetCodes().includes(state.searchSetCode)){
     const nm = (state.legalSetsMeta||{})[state.searchSetCode] || 'That set';
-    document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">${escapeHtml(nm)} isn't in your card pool right now — switch it on under Extras → Universes Beyond sets, then search again.</div>`;
+    document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">${escapeHtml(nm)} isn't in the Admiral card pool — switch it on under Extras → Universes Beyond sets, or set the Format filter to another format to search it.</div>`;
     return;
   }
   state.searching = true; renderSearchResultsBox();
@@ -11828,10 +11840,13 @@ function renderSearchResultsBox(){
   else {
     // A fresh result set lands at the foot — but images and prices inflate
     // the page AFTER the first paint, dragging the foot away from under the
-    // first anchor. Re-anchor as the layout settles.
+    // first anchor. Re-anchor as the layout settles — UNLESS the person has
+    // started scrolling, whose hand always wins over the settle.
+    const _t0 = Date.now();
     scrollToPageFoot();
-    setTimeout(scrollToPageFoot, 250);
-    setTimeout(scrollToPageFoot, 800);
+    const _reanchor = ()=>{ if((state._userScrollAt||0) > _t0) return; scrollToPageFoot(); };
+    setTimeout(_reanchor, 250);
+    setTimeout(_reanchor, 800);
   }
 }
 /* Sort for recommendation lists: color first (WUBRG, then multicolor, then
