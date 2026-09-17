@@ -277,8 +277,14 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
   box-shadow:0 -12px 30px rgba(0,0,0,0.5);
   padding:12px 16px;margin:0 !important;border-radius:14px 14px 0 0;
 }
+.adv-panel .cselect,
+#colAdvBox .cselect{display:flex;flex-direction:column-reverse;}
 .adv-panel .cselect-panel,
-#colAdvBox .cselect-panel{position:static;margin-top:4px;max-height:240px;}
+#colAdvBox .cselect-panel{position:static;margin:0 0 4px;max-height:240px;display:flex;flex-direction:column-reverse;}
+.adv-panel .cselect-panel .cselect-opt,
+#colAdvBox .cselect-panel .cselect-opt{flex:0 0 auto;}
+.adv-panel .cselect-panel .cselect-search,
+#colAdvBox .cselect-panel .cselect-search{top:auto;bottom:0;border-bottom:none;border-top:1.5px solid var(--pop-line);}
 /* Spoilers: same drop-up filter, but this page has no bottom search bar --
    the toggle hugs the nav and the sheet rides just above the toggle. */
 .app > main > #spAdvToggle{bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));}
@@ -2175,6 +2181,15 @@ function wireCSelects(){
     e.stopPropagation();
     state.openCSelect = state.openCSelect === b.dataset.cs ? null : b.dataset.cs;
     csRerender();
+    // Inside a scrolling filter sheet the panel opens UPWARD -- nudge the
+    // sheet so the freshly opened panel is actually in view. Only sheet
+    // panels match this selector, so nothing else ever moves.
+    if(state.openCSelect === b.dataset.cs){
+      try{
+        const p = document.querySelector('.adv-panel .cselect-panel, #colAdvBox .cselect-panel');
+        if(p) p.scrollIntoView({block:'nearest'});
+      }catch(e){}
+    }
   }));
   document.querySelectorAll('[data-csopt]').forEach(opt=>opt.addEventListener('click', e=>{
     e.stopPropagation();
@@ -4333,13 +4348,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.541';
+const APP_VERSION = '2.51.542';
 const CHANGELOG_NOTES = {
   en: [
-    'The last relics of the old two-pool era are gone: the \u201cthat set isn\u2019t in your card pool\u201d gate now exists ONLY when the Search format filter is set to Admiral (the one format with a curated pool) \u2014 Commander and every other format search any set, with Scryfall\u2019s own legality as the engine \u2014 and the format-change popup no longer announces Universes Beyond set switches in Commander mode, where those are simply ordinary sets.'
+    'Every select inside the filter sheets (Search advanced filters, Collection filter, Spoilers filter) is a true drop-up now: tap the button and the menu opens ABOVE it, with the first option at the bottom beside the button and the list reading upward in its existing order \u2014 long menus open anchored at their foot, the type-to-filter row rides the foot too, and opening one nudges the sheet so the menu is in view.'
   ],
   nl: [
-    'De laatste relieken van het oude twee-polen-tijdperk zijn weg: de \u201cdie set zit niet in je kaartenpool\u201d-poort bestaat nu ALLEEN nog als het zoekformaat-filter op Admiral staat (het enige format met een samengestelde pool) \u2014 Commander en elk ander format doorzoeken elke set, met Scryfalls eigen legaliteit als motor \u2014 en de format-wijzigingspopup kondigt in Commander-modus geen Universes Beyond-schakelingen meer aan; daar zijn dat gewoon normale sets.'
+    'Elke keuzelijst in de filterbladen (Zoeken geavanceerd, Collectie-filter, Spoilers-filter) is nu een echte drop-up: tik op de knop en het menu opent er BOVEN, met de eerste optie onderaan naast de knop en de lijst omhoog lezend in zijn bestaande volgorde \u2014 lange menu\u2019s openen verankerd aan hun voet, de typ-om-te-filteren-balk rijdt ook aan de voet, en bij openen schuift het blad zo dat het menu in beeld staat.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
