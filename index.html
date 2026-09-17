@@ -204,7 +204,7 @@ button{font-family:'Inter';}
 @media (prefers-reduced-motion:reduce){ .compass svg{animation:none;} }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 .brand-txt{pointer-events:none;font-family:'Cinzel Decorative','Cinzel',serif;font-size:14px;letter-spacing:0.6px;color:var(--brass);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto;cursor:default;}
-.page-cap{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--ink);border-bottom:2px solid var(--line);padding:calc(env(safe-area-inset-top) + 6px) 46px 6px;box-sizing:border-box;min-height:44px;}
+.page-cap{position:fixed;top:0;left:0;right:0;z-index:80;display:flex;align-items:center;justify-content:center;background:var(--ink);border-bottom:2px solid var(--line);padding:calc(env(safe-area-inset-top) + 6px) 46px 6px;box-sizing:border-box;min-height:44px;}
 .page-cap .brand-txt{text-align:center;flex:0 1 auto;font-size:18px;}
 /* Back lives on the nav bar now, between Home and the tabs. On very narrow
    screens the extra button squeezes the row — tighten the gaps so all five
@@ -514,7 +514,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .cmb-card{padding:0;border:none;background:none;cursor:pointer;}
 .cmb-card img{width:100%;display:block;border-radius:7px;}
 .cmb-card-txt{border:1.5px solid var(--pop-line);border-radius:7px;min-height:56px;color:inherit;font-size:11.5px;padding:4px;}
-.cs-combos-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 10px);right:12px;z-index:70;width:auto;padding:7px 11px;}
+.cs-combos-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 10px);right:12px;z-index:81;width:auto;padding:7px 11px;}   /* rides ON the page cap: stays above it (cap is 80 now) */
 #deckCombosPanel .panel-h svg{width:12px;height:12px;vertical-align:-2px;margin-right:3px;}
 .overlay[id^="cardSheetOverlay_bg"] .cs-combos-btn{display:none!important;}
 .tag-drop-h{padding:3px 10px 7px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-bottom:1.5px solid var(--pop-line);}
@@ -4298,13 +4298,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.532';
+const APP_VERSION = '2.51.533';
 const CHANGELOG_NOTES = {
   en: [
-    'Tile leaders now converge to the REAL EDHREC data: every resolved tile remembers its source, and the background warm-up quietly upgrades any tile still showing a shipped or generic leader to EDHREC\u2019s actual most-played commander the moment its tag page answers \u2014 once per tile, then it sticks until the set-release recheck. Two shipped names were also corrected outright: +1/+1 Counters wears Atraxa, Praetors\u2019 Voice and Mill wears Phenax, God of Deception.'
+    'Two Inspiration refinements: the Colors select now leaves the page entirely and only appears once a color-combination group is chosen (no greyed placeholder anymore), and the page-name bar rides above the drop-up panels \u2014 a tall Kindred list now slides behind it instead of over it.'
   ],
   nl: [
-    'Tegel-leiders convergeren nu naar de \u00c9CHTE EDHREC-data: elke opgeloste tegel onthoudt zijn bron, en de achtergrondopwarming vervangt stilletjes elke tegel die nog een meegeleverde of generieke leider toont door EDHREC\u2019s werkelijke meest gespeelde commander zodra de tagpagina antwoordt \u2014 \u00e9\u00e9n keer per tegel, daarna blijft hij staan tot de setrelease-hercheck. Twee meegeleverde namen zijn ook direct gecorrigeerd: +1/+1 Counters draagt Atraxa, Praetors\u2019 Voice en Mill draagt Phenax, God of Deception.'
+    'Twee Inspiratie-verfijningen: het Colors-menu verlaat de pagina nu volledig en verschijnt pas zodra een kleurencombinatiegroep gekozen is (geen uitgegrijsde plaatshouder meer), en de paginanaambalk rijdt boven de uitklappanelen \u2014 een lange Kindred-lijst schuift er nu achter in plaats van eroverheen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -15631,9 +15631,9 @@ function browsePageHtml(){
       <div class="bs-row">${cselectHtml('bsCount',
         [{v:'', l:modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors', gen:manaPentagonSvg(20)}].concat(COLOR_COUNTS.filter(c=>c.key).map(c=>({v:c.key, l:c.label, art:bsArtSf(c.clause)}))),
         sel.count, modeGlyph()+' '+(isCmdrMode()?'Commanders':'Admirals')+' — any colors', {tiles:true})}</div>
-      <div class="bs-row">${cselectHtml('bsCombo',
-        combos ? [{v:'', l:'Any combination', gen:manaPentagonSvg(20)}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18), art:bsArtSf(c.key==='c'?'id=c':'id='+c.key)}))) : [],
-        sel.combo, combos?'Colors — any combination':'Colors', {disabled:!combos, tiles:true})}</div>
+      ${combos ? `<div class="bs-row">${cselectHtml('bsCombo',
+        [{v:'', l:'Any combination', gen:manaPentagonSvg(20)}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18), art:bsArtSf(c.key==='c'?'id=c':'id='+c.key)}))),
+        sel.combo, 'Colors — any combination', {tiles:true})}</div>` : ''}
       <div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none', gen:'📜'}].concat(browseThemeOptions().map(o=>Object.assign({}, o, {art:bsThemeArt(o.v)}))), sel.theme, 'Theme — none', {search:true, tiles:true})}</div>
       <div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none', gen:'🐾'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label, art:bsArtEd(t.slug)}))), sel.tribe||'', 'Kindred — none', {search:true, tiles:true})}</div>
     </div>
