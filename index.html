@@ -4298,13 +4298,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.531';
+const APP_VERSION = '2.51.532';
 const CHANGELOG_NOTES = {
   en: [
-    'The shingle-stacked tiles are fixed: tiles now carry an explicit height instead of an aspect ratio, so grid rows and tiles are identical by definition and can never overlap again \u2014 scrolling stays as smooth as the last release made it.'
+    'Tile leaders now converge to the REAL EDHREC data: every resolved tile remembers its source, and the background warm-up quietly upgrades any tile still showing a shipped or generic leader to EDHREC\u2019s actual most-played commander the moment its tag page answers \u2014 once per tile, then it sticks until the set-release recheck. Two shipped names were also corrected outright: +1/+1 Counters wears Atraxa, Praetors\u2019 Voice and Mill wears Phenax, God of Deception.'
   ],
   nl: [
-    'De dakpansgewijs gestapelde tegels zijn gefixt: tegels hebben nu een expliciete hoogte in plaats van een beeldverhouding, waardoor rasterrijen en tegels per definitie gelijk zijn en nooit meer kunnen overlappen \u2014 het scrollen blijft zo soepel als de vorige release het maakte.'
+    'Tegel-leiders convergeren nu naar de \u00c9CHTE EDHREC-data: elke opgeloste tegel onthoudt zijn bron, en de achtergrondopwarming vervangt stilletjes elke tegel die nog een meegeleverde of generieke leider toont door EDHREC\u2019s werkelijke meest gespeelde commander zodra de tagpagina antwoordt \u2014 \u00e9\u00e9n keer per tegel, daarna blijft hij staan tot de setrelease-hercheck. Twee meegeleverde namen zijn ook direct gecorrigeerd: +1/+1 Counters draagt Atraxa, Praetors\u2019 Voice en Mill draagt Phenax, God of Deception.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -15299,12 +15299,12 @@ const BAKED_TILE_LEADERS = {
   unicorns:'Emiel the Blessed', dwarves:'Magda, Brazen Outlaw', mice:'Mabel, Heir to Cragflame',
   // Themes
   lifegain:'Oloro, Ageless Ascetic', lifedrain:'Vito, Thorn of the Dusk Rose', lifeloss:'Vito, Thorn of the Dusk Rose',
-  looting:'Anje Falkenrath', madness:'Anje Falkenrath', mill:'Bruvac the Grandiloquent',
+  looting:'Anje Falkenrath', madness:'Anje Falkenrath', mill:'Phenax, God of Deception',
   midrange:'Korvold, Fae-Cursed King', menace:'Marisi, Breaker of the Coil',
   manarocks:'Jhoira, Weatherlight Captain', manadorks:'Marwyn, the Nurturer',
   lurruscompanion:'Lurrus of the Dream-Den', ltbeffects:'Norin the Wary', lure:'Grothama, All-Devouring',
-  counters:'Ezuri, Claw of Progress', plus1plus1counters:'Ezuri, Claw of Progress', p1p1counters:'Ezuri, Claw of Progress',
-  onecounters:'Ezuri, Claw of Progress', '11counters':'Ezuri, Claw of Progress',
+  counters:"Atraxa, Praetors' Voice", plus1plus1counters:"Atraxa, Praetors' Voice", p1p1counters:"Atraxa, Praetors' Voice",
+  onecounters:"Atraxa, Praetors' Voice", '11counters':"Atraxa, Praetors' Voice",
   minus1minus1counters:'Hapatra, Vizier of Poisons', m1m1counters:'Hapatra, Vizier of Poisons',
   activatedabilities:'Zirda, the Dawnwaker', adnauseam:"K'rrik, Son of Yawgmoth", adventures:'Chulane, Teller of Tales',
   affinity:'Urza, Lord High Artificer', aggro:'Winota, Joiner of Forces',
@@ -15358,6 +15358,7 @@ function bakedLeaderFor(slug){
 const _tileArtMem = {};
 const _tileArtReady = {};       // key -> {n,a}: sync map so renders paint cached art instantly
 const _tileArtRevalidating = new Set();
+const _tileArtUpgraded = new Set();   // one live-upgrade attempt per key per session
 const _tileImgWarm = new Set();
 /* Refresh moment for tile art: cached art stays valid until ONE MONTH after
    the newest major set's release -- exactly when EDHREC's play stats have
@@ -15421,10 +15422,11 @@ async function _tileArtEdPick(slug, combo){
   }
   return null;
 }
+function _tagSrc(o, src){ return o ? Object.assign({}, o, { src }) : null; }
 async function _tileArtFetchFresh(key, live, front){
   const parts = key.split('|');
-  if(parts[0] === 'sf') return _tileArtSfPick(parts[1] || 'any', parts.slice(2).join('|').trim());
-  if(parts[0] === 'nm') return _tileArtNamePick(parts.slice(1).join('|'), front);
+  if(parts[0] === 'sf') return _tagSrc(await _tileArtSfPick(parts[1] || 'any', parts.slice(2).join('|').trim()), 'live');
+  if(parts[0] === 'nm') return _tagSrc(await _tileArtNamePick(parts.slice(1).join('|'), front), 'fixed');
   if(parts[0] === 'ed'){
     const slug = parts[1], combo = parts[2] || '';
     const baked = bakedLeaderFor(slug);
@@ -15433,16 +15435,16 @@ async function _tileArtFetchFresh(key, live, front){
       // Set-release recheck: the live EDHREC ranking leads; the baked name
       // is its net. Total failure keeps the stored art (callers only
       // overwrite on success).
-      out = await _tileArtEdPick(slug, combo).catch(()=>null);
-      if(!out && baked) out = await _tileArtNamePick(baked).catch(()=>null);
+      out = _tagSrc(await _tileArtEdPick(slug, combo).catch(()=>null), 'live');
+      if(!out && baked) out = _tagSrc(await _tileArtNamePick(baked).catch(()=>null), 'baked');
       return out;
     }
     // First resolve: the BAKED, shipped leader -- instant and dependable.
-    if(baked) out = await _tileArtNamePick(baked, front).catch(()=>null);
-    if(!out) out = await _tileArtEdPick(slug, combo).catch(()=>null);
+    if(baked) out = _tagSrc(await _tileArtNamePick(baked, front).catch(()=>null), 'baked');
+    if(!out) out = _tagSrc(await _tileArtEdPick(slug, combo).catch(()=>null), 'live');
     // Last net: the most-played leader for the chosen colors -- a tile is
     // never left black.
-    if(!out) out = await _tileArtSfPick('any', ('is:commander ' + (combo ? (combo==='c' ? 'id=c' : 'id='+combo) : '')).trim()).catch(()=>null);
+    if(!out) out = _tagSrc(await _tileArtSfPick('any', ('is:commander ' + (combo ? (combo==='c' ? 'id=c' : 'id='+combo) : '')).trim()).catch(()=>null), 'generic');
     return out;
   }
   return null;
@@ -15523,6 +15525,21 @@ function preloadBrowseTileArt(){
         // battery. Stop; the next warm run retries (failures are not cached).
         misses = v ? 0 : misses + 1;
         if(misses >= 4){ try{ sfJournal('tile warm-up paused: network unreachable'); }catch(e){} break; }
+        // Live upgrade, once per key: a tile still on baked/generic art is
+        // quietly replaced by EDHREC's real most-played leader as soon as
+        // the tag page answers. A miss here just means "try next warm run".
+        if(v && k.indexOf('ed|') === 0 && v.src !== 'live' && !_tileArtUpgraded.has(k)){
+          _tileArtUpgraded.add(k);
+          while(_searchBusy > 0 || _sfQ.hi.length){ await sleep(600); }
+          const p = k.split('|');
+          const fresh = _tagSrc(await _tileArtEdPick(p[1], p[2] || '').catch(()=>null), 'live');
+          if(fresh && fresh.a){
+            qdbSet('tileart2|' + k, fresh);
+            _tileArtReady[k] = fresh;
+            _tileArtMem[k] = Promise.resolve(fresh);
+            _tileArtWarmImg(fresh.a);
+          }
+        }
         await sleep(150);
       }
     })();
