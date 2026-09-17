@@ -528,6 +528,9 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 /* On deckless card pages the picker is the app's one allowed drop-DOWN:
    the editor sits under the buttons and the list opens below the input. */
 #ciTagBox .tag-drop{bottom:auto;top:calc(100% + 6px);}
+/* The tag picker rides the screen foot as a POPUP over the bottom
+   buttons and nav -- not clipped inside its box. */
+.tag-add-row .tag-drop, #ciTagBox .tag-drop{position:fixed;left:10px;right:10px;top:auto;bottom:calc(env(safe-area-inset-bottom) + 10px);max-height:55vh;z-index:130;box-shadow:0 -12px 32px rgba(0,0,0,0.55);}
 .tag-drop button{background:none;border:none;color:var(--ink-text);text-align:left;padding:8px 10px;font-size:13px;border-radius:6px;cursor:pointer;}
 .tag-drop button:active{background:var(--brass-glow);color:var(--brass);}
 .tag-suggest{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
@@ -4308,13 +4311,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.537';
+const APP_VERSION = '2.51.538';
 const CHANGELOG_NOTES = {
   en: [
-    'Gold text app-wide now wears the OTHER theme color than its surroundings: the side color\u2019s tint on the main ink, the main color\u2019s dark on side-colored panels \u2014 icons included. Page names are the exception: gold everywhere and now bold. And the life-counter pills made their quarter turn: each pivots around its inner end on the cross beside the cog and swings clockwise from that fixed point.'
+    'The tag picker is a real popup now: it rides the foot of the screen OVER the bottom toolbars and nav bar, bottom-up with the best matches nearest your thumb \u2014 instead of a little drop clipped inside the tags box.'
   ],
   nl: [
-    'Goudtekst draagt app-breed nu de ANDERE themakleur dan zijn omgeving: de tint van de zijkleur op de hoofdinkt, het donker van de hoofdkleur op zijkleurige panelen \u2014 iconen inbegrepen. Paginanamen zijn de uitzondering: overal goud en nu vetgedrukt. En de levensteller-pillen maakten hun kwartslag: elk draait om zijn binnenuiteinde op het kruis naast de cog en zwenkt vanaf dat vaste punt met de klok mee.'
+    'De tag-kiezer is nu een echte popup: hij rijdt aan de voet van het scherm OVER de onderste knoppenbalken en navigatie heen, bottom-up met de beste treffers het dichtst bij je duim \u2014 in plaats van een klein lijstje dat in het tagvak geknipt werd.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
