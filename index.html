@@ -428,6 +428,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1.5px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .otag-pop{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;overflow-y:auto;max-height:min(48vh,380px);z-index:40;}
 .df-compact, .df-compact .adv-row, #dlPanelBox{overflow:visible;}
+.df-compact .cselect-panel{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;}
 .modal-sheet{overflow:visible;}
 #newDeckFmtPop{position:fixed;left:24px;right:24px;top:16vh;bottom:auto;max-height:56vh;z-index:400;}
 .modal-backdrop{overflow:visible;}
@@ -595,11 +596,6 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .logo-gleam.sweep{opacity:1;background:conic-gradient(from -90deg, rgba(255,236,180,0.95) 0deg, rgba(255,236,180,0.35) 14deg, transparent 30deg 360deg);-webkit-mask:radial-gradient(circle, transparent 0 calc(50% - 5px), #000 calc(50% - 4px) calc(50% - 1px), transparent 50%);mask:radial-gradient(circle, transparent 0 calc(50% - 5px), #000 calc(50% - 4px) calc(50% - 1px), transparent 50%);animation:gleamSweep 1s ease-in-out .15s 1 both;}
 @keyframes gleamSweep{0%{transform:rotate(0);opacity:0;}15%{opacity:1;}85%{opacity:1;}100%{transform:rotate(180deg);opacity:0;}}
 @media (prefers-reduced-motion:reduce){.home-logo,.logo-land-drop,.logo-land-swing{animation:none !important;}.logo-gleam.sweep{animation:none;opacity:0;}}
-.home-play-btn{z-index:1;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:370px;margin:10px auto 8px;padding:13px 16px;border-radius:12px;border:2px solid transparent;font-family:'Cinzel',serif;font-weight:700;font-size:15px;letter-spacing:0.7px;color:var(--on-acc);cursor:pointer;text-shadow:0 1px 0 rgba(255,244,205,0.55);
-  background-image:linear-gradient(var(--brass),var(--brass)), linear-gradient(var(--brass),var(--brass));
-  background-origin:padding-box,border-box;background-clip:padding-box,border-box;
-  box-shadow:0 4px 14px rgba(0,0,0,0.35);}
-.home-play-btn:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(0,0,0,0.35);}
 .home-formats{z-index:1;width:min(370px,100%);margin:2px auto 8px;display:flex;flex-direction:column;gap:6px;}
 .hfm-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;}
 .hfm-k{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--brass);margin-right:2px;}
@@ -966,6 +962,13 @@ main.has-dock{padding-bottom:84px;}
 .cap-sel > *{flex:none;}
 .cap-sel b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto;}
 .cap-sel .cs-dot{opacity:0.7;}
+.home-news{z-index:1;width:100%;max-width:420px;margin:12px auto 6px;height:min(340px,38vh);overflow-y:auto;display:flex;flex-direction:column-reverse;border:2px solid var(--line);border-radius:12px;background:var(--ink-2);padding:2px 12px;text-align:left;}
+.home-news > .l2{margin:auto;text-align:center;padding:12px;}
+.home-news .news-item:first-child{border-bottom:none;}
+.news-item{display:block;padding:9px 2px;border-bottom:1px solid var(--line);text-decoration:none;}
+.news-item:last-child{border-bottom:none;}
+.news-item .nw-t{display:block;font-size:13px;font-weight:600;color:var(--ink-text);line-height:1.35;}
+.news-item .nw-m{display:block;font-size:11px;color:var(--sub-text);margin-top:2px;}
 .ar-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ar-type{font-size:11px;color:var(--sub-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
 .ar-set{font-size:11px;color:var(--brass);font-weight:700;flex:none;white-space:nowrap;}
@@ -1394,7 +1397,8 @@ main.has-dock{padding-bottom:84px;}
 #logGameOverlay .cselect-panel{top:auto;bottom:calc(100% + 4px);}
 #logGameOverlay .cselect:not(.cs-cardgrid) .cselect-panel{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
 #logGameOverlay .cs-cardgrid .cselect-panel .cselect-search{order:999;grid-column:1 / -1;}
-.cselect-panel.inline{position:static;max-height:44vh;overflow-y:auto;margin-top:6px;box-shadow:none;}
+.cselect:has(> .cselect-panel.inline){display:flex;flex-direction:column-reverse;}
+.cselect-panel.inline{position:static;max-height:44vh;overflow-y:auto;margin:0 0 6px;box-shadow:none;display:flex;flex-direction:column-reverse;}
 .glog-csbox{flex:1;min-width:0;}
 .glog-csbox .cselect{width:100%;}
 .glog-copt{display:flex;align-items:center;gap:9px;min-width:0;text-align:left;}
@@ -1546,6 +1550,13 @@ main.has-dock{padding-bottom:84px;}
 
 /* ---------- browse (Inspiration) page ---------- */
 .browse-hero{text-align:center;margin:4px 0 22px;}
+#inspFeed{text-align:left;}
+.if-winrow{order:5;display:flex;gap:8px;margin:8px 0 6px;}
+.if-winrow .if-win{flex:1;padding:8px 0;font-size:12.5px;}
+.if-winrow .if-win.active{border-color:var(--brass);color:var(--brass);font-weight:700;}
+#inspFeed .if-sec{margin-top:14px;}
+#inspFeed .sr-grid{margin-top:0;margin-bottom:8px;}
+.if-tile{padding:0;cursor:pointer;}
 .bh-logo{width:92px;height:92px;cursor:pointer;margin:0 auto 8px;animation:logoIdle 3.4s ease-in-out infinite;filter:drop-shadow(0 10px 24px rgba(0,0,0,0.5));}
 .browse-hero h2{font-family:'Cinzel',serif;font-size:17px;color:var(--ink-text);margin:0;}
 .browse-hero p{font-size:11.5px;color:var(--sub-text);margin:4px auto 0;max-width:340px;line-height:1.5;}
@@ -4516,17 +4527,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.552';
+const APP_VERSION = '2.51.556';
 const CHANGELOG_NOTES = {
   en: [
-    'The black strip under tile art is gone for good: art now fills the whole tile, with the name bar laid over it.',
-    'Inspiration drop-ups now grow to just under the page name, each from its own button.',
-    'The \u2630 menu button sits just above the search bar.'
+    'Inspiration feed: Week / Month / Year buttons show the most-played leaders per period.',
+    'Formats without period data fall back to All time \u2014 the label says which you see.',
+    'Bottom-up sweep: deck-page theme/kindred menus, color pickers and the mana-value menu now open foot-first.'
   ],
   nl: [
-    'De zwarte strook onder tegel-art is definitief weg: art vult nu de hele tegel, met de naambalk eroverheen.',
-    'Inspiratie-drop-ups groeien nu tot net onder de paginanaam, elk vanaf zijn eigen knop.',
-    'De \u2630-menuknop staat nu net boven de zoekbalk.'
+    'Inspiratie-feed: knoppen Week / Maand / Jaar tonen de meest gespeelde leiders per periode.',
+    'Formats zonder periodedata vallen terug op All time \u2014 het label zegt wat je ziet.',
+    'Bottom-up-veeg: thema/kindred-menu\u2019s op de deckpagina, kleurkiezers en het mana value-menu openen nu vanaf de voet.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5655,20 +5666,37 @@ function homePageHtml(){
     <div class="home-sea"></div>
     <div class="home-hero-wrap">
       <div class="home-glow"></div>
-      <img class="home-logo" id="homeModeLogo" src="${DECKHAND_BADGE}" alt="Deckhand" style="cursor:default;border-radius:50%;">
+      <img class="home-logo" id="homeModeLogo" src="${DECKHAND_BADGE}" alt="Deckhand" title="About this app" style="cursor:pointer;border-radius:50%;">
       <div class="logo-gleam"></div>
     </div>
     <div class="home-rule"><span class="home-rule-line"></span><span class="home-rule-star">⚔</span><span class="home-rule-line"></span></div>
-    <p class="home-kicker">Your deck builder for Commander &amp; beyond</p>
-    <ul class="home-points">
-      <li>Build decks with live legality, ban lists and colour identity checked per format</li>
-      <li>Track your collection, wants and binders with Cardmarket prices and history</li>
-      <li>Find commanders, staples, combos and budget swaps from play data</li>
-      <li>Test opening hands, castability and power bracket before you sit down</li>
-      <li>Count life, log games and share decks — everything offline-ready</li>
-    </ul>
-    <button class="home-play-btn" id="homePlayBtn" type="button">⚔ Start a Game</button>
+    <div class="home-news" id="homeNews"><span class="l2">Loading news…</span></div>
   </main>`;
+}
+/* About popup: the old home explainer, now behind a tap on the logo. */
+function openHomeAbout(){
+  if(document.getElementById('homeAboutPop')) return;
+  const bd = document.createElement('div');
+  bd.className = 'modal-backdrop';
+  bd.id = 'homeAboutPop';
+  bd.innerHTML = `<div class="modal-sheet" style="text-align:center;">
+      <h3>Deckhand</h3>
+      <p class="home-kicker" style="margin:0 0 4px;">Your deck builder for Commander &amp; beyond</p>
+      <ul class="home-points" style="margin:8px auto 4px;">
+        <li>Build decks with live legality, ban lists and colour identity checked per format</li>
+        <li>Track your collection, wants and binders with Cardmarket prices and history</li>
+        <li>Find commanders, staples, combos and budget swaps from play data</li>
+        <li>Test opening hands, castability and power bracket before you sit down</li>
+        <li>Count life, log games and share decks — everything offline-ready</li>
+      </ul>
+      <button class="ghost-btn" id="homeAboutClose" style="width:100%;margin-top:12px;">Close</button>
+    </div>`;
+  const close = ()=>{ const el = document.getElementById('homeAboutPop'); if(el) el.remove(); };
+  const closeAndPop = ()=>{ close(); const st = state.overlayStack; if(st.length && st[st.length-1].id === 'homeAbout') st.pop(); };
+  bd.addEventListener('click', (e)=>{ if(e.target === bd) closeAndPop(); });
+  bd.querySelector('#homeAboutClose').addEventListener('click', closeAndPop);
+  document.body.appendChild(bd);
+  pushOverlay('homeAbout', close);
 }
 function setAppMode(){ return false; }   // retired: there is one app now
 /* ---------------- COMPREHENSIVE RULES ORACLE ----------------
@@ -5842,8 +5870,9 @@ function wireHomePage(){
     state.settingsFullRulesOpen = true;
     switchPage('settings');
   });
-  // Start a Game: straight from the home foot to the life counter table.
-  document.getElementById('homePlayBtn')?.addEventListener('click', ()=>{ openLifeOverlay(); });
+  document.getElementById('homeModeLogo')?.addEventListener('click', openHomeAbout);
+  const nb = document.getElementById('homeNews');
+  if(nb) loadMtgNews(nb);
 }
 
 /* ---------------- HOME / MY DECKS ---------------- */
@@ -13946,6 +13975,39 @@ function banInfoHtml(fmt){
   };
   return `<div class="rules-text" style="margin-bottom:10px;padding:12px;background:var(--ink-2);border-radius:8px;border:2px solid var(--line);">${M[fmt] || `<p style="margin-top:0;">No background notes for this list.</p>`}</div>`;
 }
+/* Magic news: served by this site's own Netlify Function (see
+   netlify/functions/news.js in the repo), which aggregates EDHREC's
+   WordPress JSON and MTGGoldfish's RSS server-side — same origin, no CORS.
+   Served from a 3h qdb cache first; the function itself also caches. */
+async function loadMtgNews(box){
+  box.innerHTML = '<span class="l2">Loading…</span>';
+  try{
+    const ck = 'mtgnews1';
+    let data = null;
+    try{
+      const disk = await qdbGet(ck);
+      if(disk && Array.isArray(disk.v) && disk.v.length && (Date.now() - (disk.t||0)) < 3*3600e3) data = disk.v;
+    }catch(e){}
+    if(!data){
+      const ctl = new AbortController();
+      const tm = setTimeout(()=>ctl.abort(), 9000);
+      const r = await fetch('/.netlify/functions/news', { signal: ctl.signal });
+      clearTimeout(tm);
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      data = Array.isArray(j.items) ? j.items : [];
+      if(data.length) qdbSet(ck, data);
+    }
+    if(!data || !data.length){ box.innerHTML = '<span class="l2">No articles right now.</span>'; return; }
+    box.innerHTML = data.slice(0, 20).map(a=>{
+      const d = a.d ? new Date(a.d) : null;
+      const ds = (d && !isNaN(d)) ? d.toLocaleDateString(appLang() === 'nl' ? 'nl-NL' : 'en-GB', { day:'numeric', month:'short' }) : '';
+      return `<a class="news-item" href="${escapeHtml(a.u)}" target="_blank" rel="noopener noreferrer"><span class="nw-t">${escapeHtml(a.t)}</span><span class="nw-m">${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</span></a>`;
+    }).join('');
+  }catch(e){
+    box.innerHTML = '<span class="l2">Couldn’t load articles right now — check your connection, or the news function isn’t deployed yet.</span>';
+  }
+}
 async function fillBanList(fmt, box){
   box.innerHTML = '<span class="l2">Loading…</span>';
   try{
@@ -14511,8 +14573,8 @@ function inspirationPageHtml(){
   <main>
     <p class="hint">The most-played cards in ${escapeHtml(d.admiral.name)}'s colors, filtered to what's legal in ${isCmdrMode()?'Commander':'Admiral'}.</p>
     <div class="browse-selects">
-      <div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none')}].concat(deckKindredOptions(d)), sel.kindred||'', trS('Kindred — none'), {search:true})}</div>
-      <div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none')}].concat(rankedBrowseThemeOptions(deckComboKey(d), d)), sel.theme, trS('Theme — none'), {search:true})}</div>
+      <div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none')}].concat(deckKindredOptions(d)), sel.kindred||'', trS('Kindred — none'), {search:true, cls:'cs-foot'})}</div>
+      <div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none')}].concat(rankedBrowseThemeOptions(deckComboKey(d), d)), sel.theme, trS('Theme — none'), {search:true, cls:'cs-foot'})}</div>
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -16016,20 +16078,7 @@ function browsePageHtml(){
   return `
   <main>
     ${swd ? `<div class="panel-card" style="margin-bottom:10px;border-color:var(--brass);"><div class="panel-h">${modeGlyph()} Switching ${fmtName(swd)}</div><p class="hint" style="margin:4px 0 0;">Tap any leader below to make it the new ${fmtName(swd)} of <strong style="color:var(--brass);">${escapeHtml(swd.name)}</strong> — the current one ${isCmdrMode()?'returns to the deck':'joins the crew'}${swd.partner?', and a still-compatible second seat stays':''}.</p></div>` : ''}
-    <div class="browse-hero">
-      ${isCmdrMode() ? `
-      <span class="bh-logo crest-stack" id="browseModeLogo" role="img" aria-label="Commander crest">
-        <img class="cl-base" src="data:image/png;base64,${COMMANDER_RING_B64}" alt="">
-        <img class="cl-part cl-sword-l" src="data:image/png;base64,${COMMANDER_SWORD_L_B64}" alt="">
-        <img class="cl-part cl-sword-r" src="data:image/png;base64,${COMMANDER_SWORD_R_B64}" alt="">
-      </span>` : `
-      <span class="bh-logo crest-stack${state._crossLanded ? ' logo-land-drop' : ''}" id="browseModeLogo" title="Switch to the Commander version" role="img" aria-label="Switch to Commander">
-        <img class="cl-base" src="data:image/png;base64,${ADMIRAL_RING_B64}" alt="">
-        <img class="cl-part cl-anchor" src="data:image/png;base64,${ADMIRAL_ANCHOR_B64}" alt="">
-      </span>`}
-      <h2>${isCmdrMode() ? 'Find Your Commander' : 'Chart Your Course'}</h2>
-      <p>${isCmdrMode() ? `Pick colors and a theme to find Commanders for that style. Tap a Commander's` : `Pick colors and a theme to find Admirals for that style. Tap an Admiral's`} <strong>card art</strong> to see its recommended cards and build a deck around it.</p>
-    </div>
+    <div class="browse-hero" id="inspFeed"></div>
     <div class="searchbar" style="margin:0 0 10px;">
       <input id="bsName" enterkeyhint="search" placeholder="${trS('Search by card name')}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${escapeHtml(state.browseNameQ||'')}">
       <button id="bsNameGo">${trS('Search')}</button>
@@ -16053,6 +16102,125 @@ function browsePageHtml(){
 /* Art tap from the leader name search: pairable leaders first get the
    second-seat sheet — pick a legal pairing, or Continue without one to sail
    standalone — then land on the recommendations page (solo or as a pair). */
+/* The Inspiration feed: the page's welcome is the content itself — the
+   most-played leaders of the chosen format, for the chosen period. Periods
+   come from EDHREC's week/month/year pages (SWR-cached like all EDHREC);
+   names resolve through /cards/collection and are kept only when legal in
+   the chosen format. Admiral intersects the period list with its own
+   pool-verified leader universe — when too few survive, it falls back to
+   the all-time verified list and the label says All time. */
+const _inspFeed = { data:{} };
+let _inspFeedWin = 'week';
+const INSP_FEED_LABELS = { commander:'Top Commanders', admiral:'Top Admirals', paupercommander:'Top Pauper Commanders', predh:'Top PreDH Commanders', duel:'Top Duel Commanders' };
+const INSP_WIN_LABELS = { week:'This week', month:'This month', year:'This year', all:'All time' };
+async function _inspFeedWinNames(win){
+  try{
+    const page = await edhrecFetchJson(`/pages/commanders/${win}.json`);
+    const secs = edhrecSectionsFrom(page);
+    const names = (secs[0] && secs[0].names || []).slice(0, 60);
+    return names.length ? names : null;
+  }catch(e){ return null; }
+}
+async function _inspFeedFetch(f, win, bg){
+  const q = f === 'paupercommander' ? 't:creature r:uncommon' : f === 'admiral' ? 't:legendary t:creature' : 'is:commander';
+  const opts = { format: f === 'paupercommander' ? 'any' : f, bg: !!bg };
+  const winNames = await _inspFeedWinNames(win);
+  const alias = (map, c)=>{ if(!map.has(c.name)) map.set(c.name, c); const cut = c.name.indexOf(' // '); if(cut > 0 && !map.has(c.name.slice(0, cut))) map.set(c.name.slice(0, cut), c); };
+  const pickByWindow = (byName)=>{
+    const seen = new Set(); const picked = [];
+    for(const nm of winNames){
+      let c = byName.get(nm);
+      if(!c && nm.indexOf(' // ') > 0) c = byName.get(nm.split(' // ')[0].trim());
+      if(c && !seen.has(c.name)){ seen.add(c.name); picked.push(c); }
+    }
+    return picked;
+  };
+  if(f === 'admiral'){
+    // Mode isolation: only the app's own pool-verified universe may serve
+    // Admiral tiles — the period list merely orders it.
+    const { results } = await searchAndVerifyLegal(q, 'edhrec', 200, opts);
+    const pool = (results || []).filter(c=>hasPowerToughness(c) && isNonlandFront(c));
+    if(!pool.length) return null;
+    if(winNames){
+      const byName = new Map(); pool.forEach(c=>alias(byName, c));
+      const picked = pickByWindow(byName);
+      if(picked.length >= 4) return { cards: picked.slice(0, 8), win };
+    }
+    return { cards: pool.slice(0, 8), win: 'all' };
+  }
+  if(winNames){
+    try{
+      const cards = [];
+      for(const chunk of chunkArr(winNames, 70)){
+        const r = await postWithTimeout(`${SF_BASE}/cards/collection`, { identifiers: chunk.map(n=>({ name: n })) }, 6000);
+        if(r.ok){ const d = await r.json(); cards.push(...(d.data || [])); }
+      }
+      const ok = (c)=>{
+        const L = c.legalities || {};
+        if(f === 'paupercommander') return L.paupercommander === 'restricted' || L.paupercommander === 'legal';
+        return L[f] === 'legal';
+      };
+      const byName = new Map(); cards.filter(ok).forEach(c=>alias(byName, c));
+      const picked = pickByWindow(byName);
+      if(picked.length >= 4) return { cards: picked.slice(0, 8), win };
+    }catch(e){}
+  }
+  const { results, error } = await searchAndVerifyLegal(q, 'edhrec', 24, opts);
+  if(error && !(results || []).length) return null;
+  return { cards: (results || []).slice(0, 8), win: 'all' };
+}
+async function loadInspFeed(){
+  const box = document.getElementById('inspFeed');
+  if(!box) return;
+  if(box.offsetParent === null) return;   // hidden: results own the page
+  if(box.dataset.busy) return;
+  box.dataset.busy = '1';
+  const bf = state.browseFormat || 'commander';
+  const win = _inspFeedWin;
+  // One section: the chosen format. Bottom-up inside it — grid up top,
+  // period buttons beneath it, the label at the very foot (order:10).
+  box.innerHTML = `<div class="edh-sec if-sec"><div class="section-label"><span data-iflab>${INSP_FEED_LABELS[bf] || bf}</span></div><div class="if-winrow">${['week','month','year'].map(wn=>`<button type="button" class="ghost-btn if-win ${wn === win ? 'active' : ''}" data-ifwin="${wn}">${wn === 'week' ? 'Week' : wn === 'month' ? 'Month' : 'Year'}</button>`).join('')}</div><div class="sr-grid" data-ifgrid="${bf}"><div class="status"><div class="spinner"></div></div></div></div>`;
+  if(!box.dataset.wired){
+    box.dataset.wired = '1';
+    box.addEventListener('click', (e)=>{
+      const wbtn = e.target.closest('.if-win');
+      if(wbtn){
+        if(wbtn.dataset.ifwin === _inspFeedWin) return;
+        _inspFeedWin = wbtn.dataset.ifwin;
+        delete document.getElementById('inspFeed').dataset.busy;
+        loadInspFeed();
+        return;
+      }
+      const t = e.target.closest('.if-tile');
+      if(!t) return;
+      const c = (_inspFeed.data[t.dataset.ifkey] || { cards: [] }).cards[+t.dataset.ifi];
+      if(!c) return;
+      const f = t.dataset.iffmtc;
+      if((state.browseFormat || 'commander') !== f){ state.browseFormat = f; state.browseCache = {}; }
+      maybePairThenReco(c);
+    });
+  }
+  const tile = (c, f, key, i)=>`<button type="button" class="sr-tile if-tile" data-iffmtc="${f}" data-ifkey="${key}" data-ifi="${i}" title="${escapeHtml(c.name)}"><img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy"></button>`;
+  const key = bf + '|' + win;
+  let out = _inspFeed.data[key];
+  if(!out){
+    try{ out = await _inspFeedFetch(bf, win, false); }catch(e){ out = null; }
+    if(out && out.cards && out.cards.length) _inspFeed.data[key] = out;
+  }
+  delete box.dataset.busy;
+  if(state.screen !== 'browse' || _inspFeedWin !== win || (state.browseFormat || 'commander') !== bf) return;
+  const grid = box.querySelector(`.sr-grid[data-ifgrid="${bf}"]`);
+  if(!grid || !grid.isConnected) return;
+  const _se = document.scrollingElement || document.documentElement;
+  const _anchor = box.lastElementChild;
+  const _y0 = _anchor ? _anchor.getBoundingClientRect().top : null;
+  grid.innerHTML = (out && out.cards && out.cards.length)
+    ? out.cards.map((c,i)=>tile(c, bf, key, i)).join('')
+    : `<div class="empty-note" style="flex:1 1 100%;">Couldn't load these right now.</div>`;
+  const lab = box.querySelector('[data-iflab]');
+  if(lab && out) lab.textContent = `${INSP_FEED_LABELS[bf] || bf} · ${INSP_WIN_LABELS[out.win] || ''}`;
+  if(_anchor && _y0 !== null){ const _dy = _anchor.getBoundingClientRect().top - _y0; if(_dy) _se.scrollTop += _dy; }
+}
 function maybePairThenReco(c){
   if(!pairAbility(c)){ openAdmiralReco(c); return; }
   const standin = { admiral: c, partner: null, format: state.browseFormat || 'commander', name: c.name };
@@ -16062,6 +16230,7 @@ function wireBrowsePage(){
   ensureEdhrecTags();
   hydrateTileArtReady().then((did)=>{ try{ if(did && state.screen === 'browse' && state.openCSelect) csRerender(); }catch(e){} });
   preloadBrowseTileArt();
+  loadInspFeed();
   state._crossLanded = false;   // landing classes were baked into this render
   let _bsSeq = 0;
   const runLeaderSearch = async ()=>{
@@ -18005,6 +18174,7 @@ function settingsPageHtml(){
       <div class="settings-row" id="banListsRow" style="cursor:pointer;"><div><div class="l1">Ban lists</div><div class="l2">Current banned cards per format.</div></div><span class="l2">▾</span></div>
       <div id="banListsBody" hidden style="padding:0 12px 10px;"></div>
     </div>
+
     ${isCmdrMode()?'':`<div class="settings-section">
       <div class="settings-row" id="ubRow" style="cursor:pointer;"><div><div class="l1">Universes Beyond sets</div><div class="l2">Standard-legal crossover sets — choose which your games include <span style="color:var(--brass);">${state.ubListOpen?'Hide ▾':'Choose ▸'}</span></div></div></div>
       ${state.ubListOpen?`<div class="theme-seg">
