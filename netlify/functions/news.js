@@ -1,6 +1,7 @@
-/* Admirals & Commanders — Magic news aggregator.
+/* Deckhand — Magic news aggregator.
    Netlify Function. Lives at:  netlify/functions/news.js  in the repo,
-   served at:  /.netlify/functions/news
+   served at:  <your-site>/.netlify/functions/news  (the app calls it
+   by relative path, so the site's name never matters here).
    Aggregates two sources server-side (so the app never fights CORS):
    - EDHREC articles  — WordPress JSON API
    - MTGGoldfish      — RSS feed (first candidate URL that parses wins)
@@ -9,7 +10,9 @@
 
 const UA = {
   headers: {
-    'user-agent': 'AdmiralsAndCommanders/1.0 (+https://admirals-and-commanders.netlify.app)',
+    // Browser-like UA: some feed hosts sit behind Cloudflare and turn away
+    // obvious bot strings.
+    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36 DeckhandNews/1.0',
     'accept': 'application/json, application/rss+xml, application/xml, text/xml, */*'
   }
 };
@@ -81,10 +84,9 @@ exports.handler = async () => {
 
   // ── MTGGoldfish: RSS — the first candidate URL that yields items wins.
   const candidates = [
+    'https://www.mtggoldfish.com/feed',            // verified live
     'https://www.mtggoldfish.com/articles/feed',
-    'https://www.mtggoldfish.com/feed',
-    'https://www.mtggoldfish.com/articles.rss',
-    'https://www.mtggoldfish.com/rss'
+    'https://www.mtggoldfish.com/articles.rss'
   ];
   for (const u of candidates) {
     try {
