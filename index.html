@@ -566,6 +566,8 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 @media (prefers-reduced-motion:reduce){ .home-glow{animation:none;} }
 .home-logo-txt{font-family:'Cinzel',serif;font-weight:800;font-size:34px;letter-spacing:.3em;text-indent:.3em;color:var(--brass);text-shadow:0 4px 22px color-mix(in srgb, var(--brass) 35%, transparent);}
 .home-logo{position:relative;width:118px;height:118px;object-fit:contain;filter:drop-shadow(0 14px 30px rgba(0,0,0,0.6));}
+.home-logo-clip{position:relative;display:block;width:118px;height:118px;border-radius:50%;overflow:hidden;z-index:1;cursor:pointer;filter:drop-shadow(0 14px 30px rgba(0,0,0,0.6));animation:logoIdle 3.4s ease-in-out infinite;}
+.home-logo-clip .home-logo{width:100%;height:100%;filter:none;animation:none;transform:scale(1.24);transform-origin:50% 50%;cursor:pointer;}
 .crest-stack{display:inline-block;}
 .crest-stack .cl-base{width:100%;height:100%;object-fit:contain;display:block;}
 .crest-stack .cl-part{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
@@ -962,10 +964,15 @@ main.has-dock{padding-bottom:84px;}
 .cap-sel > *{flex:none;}
 .cap-sel b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto;}
 .cap-sel .cs-dot{opacity:0.7;}
-.home-news{z-index:1;width:100%;max-width:420px;margin:12px auto 6px;height:min(340px,38vh);overflow-y:auto;display:flex;flex-direction:column-reverse;border:2px solid var(--line);border-radius:12px;background:var(--ink-2);padding:2px 12px;text-align:left;}
+.home-news{z-index:1;width:100%;max-width:420px;margin:10px auto 0;height:44vh;overflow-y:auto;display:flex;flex-direction:column-reverse;border:2px solid var(--line);border-radius:12px;background:var(--ink-2);padding:2px 12px;text-align:left;}
 .home-news > .l2{margin:auto;text-align:center;padding:12px;}
 .home-news .news-item:first-child{border-bottom:none;}
-.news-item{display:block;padding:9px 2px;border-bottom:1px solid var(--line);text-decoration:none;}
+.news-item{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);text-decoration:none;}
+.news-item .nw-img{width:58px;height:58px;object-fit:cover;border-radius:8px;flex:none;background:#0006;border:1px solid var(--line);}
+.news-item .nw-body{min-width:0;flex:1;}
+.nw-sheet .nw-hero{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1.5px solid var(--line);display:block;}
+.nw-sheet .nw-x{font-size:13px;line-height:1.55;color:var(--ink-text);margin:0 0 12px;}
+.nw-sheet .nw-read{width:100%;height:42px;border-radius:10px;font-size:14px;font-weight:700;}
 .news-item:last-child{border-bottom:none;}
 .news-item .nw-t{display:block;font-size:13px;font-weight:600;color:var(--ink-text);line-height:1.35;}
 .news-item .nw-m{display:block;font-size:11px;color:var(--sub-text);margin-top:2px;}
@@ -4527,17 +4534,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.556';
+const APP_VERSION = '2.51.558';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration feed: Week / Month / Year buttons show the most-played leaders per period.',
-    'Formats without period data fall back to All time \u2014 the label says which you see.',
-    'Bottom-up sweep: deck-page theme/kindred menus, color pickers and the mana-value menu now open foot-first.'
+    'Tap a news item for an in-app preview: image, excerpt, and a Read-on button.',
+    'MTGGoldfish articles now parse (their feed is Atom) and carry summaries too.'
   ],
   nl: [
-    'Inspiratie-feed: knoppen Week / Maand / Jaar tonen de meest gespeelde leiders per periode.',
-    'Formats zonder periodedata vallen terug op All time \u2014 het label zegt wat je ziet.',
-    'Bottom-up-veeg: thema/kindred-menu\u2019s op de deckpagina, kleurkiezers en het mana value-menu openen nu vanaf de voet.'
+    'Tik op een nieuwsitem voor een in-app preview: afbeelding, samenvatting en een lees-verder-knop.',
+    'MTGGoldfish-artikelen parsen nu ook (hun feed is Atom-formaat) en dragen samenvattingen mee.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5666,10 +5671,11 @@ function homePageHtml(){
     <div class="home-sea"></div>
     <div class="home-hero-wrap">
       <div class="home-glow"></div>
-      <img class="home-logo" id="homeModeLogo" src="${DECKHAND_BADGE}" alt="Deckhand" title="About this app" style="cursor:pointer;border-radius:50%;">
+      <span class="home-logo-clip"><img class="home-logo" id="homeModeLogo" src="${DECKHAND_BADGE}" alt="Deckhand" title="About this app"></span>
       <div class="logo-gleam"></div>
     </div>
     <div class="home-rule"><span class="home-rule-line"></span><span class="home-rule-star">⚔</span><span class="home-rule-line"></span></div>
+    <p class="home-kicker">Your deck builder for Commander &amp; beyond</p>
     <div class="home-news" id="homeNews"><span class="l2">Loading news…</span></div>
   </main>`;
 }
@@ -5873,6 +5879,24 @@ function wireHomePage(){
   document.getElementById('homeModeLogo')?.addEventListener('click', openHomeAbout);
   const nb = document.getElementById('homeNews');
   if(nb) loadMtgNews(nb);
+  requestAnimationFrame(fitHomeNews);
+  setTimeout(fitHomeNews, 300);
+  if(!window._homeNewsRs){
+    window._homeNewsRs = true;
+    window.addEventListener('resize', ()=>{ if(state.screen === 'home') fitHomeNews(); });
+  }
+}
+/* The news box takes exactly the room between its own top and the nav bar
+   — no dead strip beneath it on any screen height. */
+function fitHomeNews(){
+  try{
+    const nb = document.getElementById('homeNews');
+    if(!nb) return;
+    const nav = document.querySelector('.brand-banner');
+    const navTop = nav ? nav.getBoundingClientRect().top : window.innerHeight;
+    const h = Math.floor(navTop - nb.getBoundingClientRect().top - 12);
+    if(h > 140) nb.style.height = h + 'px';
+  }catch(e){}
 }
 
 /* ---------------- HOME / MY DECKS ---------------- */
@@ -13979,10 +14003,45 @@ function banInfoHtml(fmt){
    netlify/functions/news.js in the repo), which aggregates EDHREC's
    WordPress JSON and MTGGoldfish's RSS server-side — same origin, no CORS.
    Served from a 3h qdb cache first; the function itself also caches. */
+let _newsItems = [];
+/* Preview sheet: image, title, excerpt — reading happens on the source's
+   own site via the single outbound button (their work, their page). */
+function openNewsPreview(a){
+  if(!a || document.getElementById('newsPrevPop')) return;
+  const bd = document.createElement('div');
+  bd.className = 'modal-backdrop';
+  bd.id = 'newsPrevPop';
+  const d = a.d ? new Date(a.d) : null;
+  const ds = (d && !isNaN(d)) ? d.toLocaleDateString(appLang() === 'nl' ? 'nl-NL' : 'en-GB', { day:'numeric', month:'long', year:'numeric' }) : '';
+  bd.innerHTML = `<div class="modal-sheet nw-sheet">
+      ${a.img && /^https:\/\//.test(a.img) ? `<img class="nw-hero" src="${escapeHtml(a.img)}" alt="" onerror="this.remove()">` : ''}
+      <h3 style="margin:10px 0 2px;">${escapeHtml(a.t)}</h3>
+      <div class="nw-m" style="margin-bottom:8px;">${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</div>
+      ${a.x ? `<p class="nw-x">${escapeHtml(a.x)}</p>` : ''}
+      <button class="add-btn nw-read" id="newsPrevGo">Read on ${escapeHtml(a.src || 'the site')} →</button>
+      <button class="ghost-btn" id="newsPrevClose" style="width:100%;margin-top:8px;">Close</button>
+    </div>`;
+  const close = ()=>{ const el = document.getElementById('newsPrevPop'); if(el) el.remove(); };
+  const closeAndPop = ()=>{ close(); const st = state.overlayStack; if(st.length && st[st.length-1].id === 'newsPrev') st.pop(); };
+  bd.addEventListener('click', (e)=>{ if(e.target === bd) closeAndPop(); });
+  bd.querySelector('#newsPrevClose').addEventListener('click', closeAndPop);
+  bd.querySelector('#newsPrevGo').addEventListener('click', ()=>{ try{ window.open(a.u, '_blank', 'noopener'); }catch(e){} });
+  document.body.appendChild(bd);
+  pushOverlay('newsPrev', close);
+}
 async function loadMtgNews(box){
+  if(!box.dataset.nwWired){
+    box.dataset.nwWired = '1';
+    box.addEventListener('click', (e)=>{
+      const a = e.target.closest('.news-item');
+      if(!a) return;
+      e.preventDefault();
+      openNewsPreview(_newsItems[+a.dataset.ni]);
+    });
+  }
   box.innerHTML = '<span class="l2">Loading…</span>';
   try{
-    const ck = 'mtgnews1';
+    const ck = 'mtgnews3';   // v3: items carry thumbnails + excerpts
     let data = null;
     try{
       const disk = await qdbGet(ck);
@@ -13999,10 +14058,12 @@ async function loadMtgNews(box){
       if(data.length) qdbSet(ck, data);
     }
     if(!data || !data.length){ box.innerHTML = '<span class="l2">No articles right now.</span>'; return; }
-    box.innerHTML = data.slice(0, 20).map(a=>{
+    _newsItems = data.slice(0, 20);
+    box.innerHTML = _newsItems.map((a, ni)=>{
       const d = a.d ? new Date(a.d) : null;
       const ds = (d && !isNaN(d)) ? d.toLocaleDateString(appLang() === 'nl' ? 'nl-NL' : 'en-GB', { day:'numeric', month:'short' }) : '';
-      return `<a class="news-item" href="${escapeHtml(a.u)}" target="_blank" rel="noopener noreferrer"><span class="nw-t">${escapeHtml(a.t)}</span><span class="nw-m">${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</span></a>`;
+      const im = (a.img && /^https:\/\//.test(a.img)) ? `<img class="nw-img" src="${escapeHtml(a.img)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+      return `<a class="news-item" data-ni="${ni}" href="${escapeHtml(a.u)}" target="_blank" rel="noopener noreferrer">${im}<span class="nw-body"><span class="nw-t">${escapeHtml(a.t)}</span><span class="nw-m">${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</span></span></a>`;
     }).join('');
   }catch(e){
     box.innerHTML = '<span class="l2">Couldn’t load articles right now — check your connection, or the news function isn’t deployed yet.</span>';
