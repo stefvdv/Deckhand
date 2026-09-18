@@ -5,8 +5,13 @@
    Aggregates two sources server-side (so the app never fights CORS):
    - EDHREC articles  — WordPress JSON API
    - MTGGoldfish      — RSS feed (first candidate URL that parses wins)
-   Returns { items: [{ t, u, d, src, img, x }], fetched } sorted newest-first
-   (img = thumbnail URL, x = plain-text excerpt, when the source offers them).
+   Division of labour: EDHREC owns Commander (their whole site is Commander;
+   their categories are content types, not formats), MTGGoldfish covers every
+   OTHER format — its Atom feed carries no category metadata, so the format is
+   inferred from the article's URL slug and title, and Commander pieces are
+   dropped there to avoid doubling up.
+   Returns { items: [{ t, u, d, src, img, x, fmt }], fetched } newest-first
+   (img = thumbnail, x = excerpt, fmt = detected format or '').
    No API keys, no dependencies — Node 18+ global fetch only. */
 
 const UA = {
@@ -45,6 +50,36 @@ function stripTags(x) {
     .trim();
 }
 
+/* Format detection for sources without category metadata. Order matters:
+   Commander first (so "Foundations Commander Decklists" is recognised as
+   Commander whatever else it mentions), premodern before modern. */
+const FMT_RULES = [
+  ['commander', /\b(commander|cedh|edh|pdh|precons?)\b/i],
+  ['brawl',     /\bbrawl\b/i],
+  ['premodern', /\bpre-?modern\b/i],
+  ['pauper',    /\bpauper\b/i],
+  ['legacy',    /\blegacy\b/i],
+  ['vintage',   /\bvintage\b/i],
+  ['modern',    /\bmodern\b/i],
+  ['pioneer',   /\bpioneer\b/i],
+  ['standard',  /\bstandard\b/i],
+  ['historic',  /\b(historic|timeless|alchemy|arena)\b/i],
+  ['limited',   /\b(limited|draft|sealed|prerelease)\b/i]
+];
+/* MTGGoldfish column names that pin a format the words alone don't. */
+const SERIES_RULES = [
+  ['legacy',    /this-week-in-legacy/i],
+  ['pauper',    /power-of-pauper/i],
+  ['vintage',   /vintage-101/i],
+  ['standard',  /fish-five-o/i],
+  ['commander', /commander-clash|precon-primer/i]
+];
+function detectFormat(text) {
+  for (const [f, re] of SERIES_RULES) if (re.test(text)) return f;
+  for (const [f, re] of FMT_RULES) if (re.test(text)) return f;
+  return '';
+}
+
 function parseFeed(xml, src, cap) {
   const items = [];
   // RSS uses <item>, Atom uses <entry> — MTGGoldfish serves Atom, most
@@ -75,7 +110,9 @@ function parseFeed(xml, src, cap) {
     if (mm2) img = mm2[1].replace(/&amp;/g, '&');
     if (!/^https:\/\//.test(img)) img = '';
     const x = stripTags(grab('description') || grab('summary') || grab('content')).slice(0, 400);
-    if (t && u && /^https?:\/\//.test(u)) items.push({ t, u, d, src, img, x });
+    // The slug is the most reliable signal, then the title, then the blurb.
+    const fmt = detectFormat(u + ' ' + t.replace(/-/g, ' ') + ' ' + x.slice(0, 160));
+    if (t && u && /^https?:\/\//.test(u)) items.push({ t, u, d, src, img, x, fmt });
   }
   return items;
 }
@@ -114,7 +151,7 @@ exports.handler = async () => {
         let x = stripTags(p.excerpt && p.excerpt.rendered);
         if (!x) x = stripTags(p.content && p.content.rendered).slice(0, 400);
         x = x.replace(/\s*\[\u2026\]$/, '\u2026').slice(0, 400);
-        out.push({ t, u, d, src: 'EDHREC', img, x });
+        out.push({ t, u, d, src: 'EDHREC', img, x, fmt: 'commander' });
       }
     }
   } catch (e) { /* one source down never empties the feed */ }
@@ -127,8 +164,12 @@ exports.handler = async () => {
   ];
   for (const u of candidates) {
     try {
-      const items = parseFeed(await getText(u), 'MTGGoldfish', 12);
-      if (items.length) { out.push(...items); break; }
+      const items = parseFeed(await getText(u), 'MTGGoldfish', 20);
+      if (items.length) {
+        // EDHREC already owns Commander — keep Goldfish for everything else.
+        out.push(...items.filter(it => it.fmt !== 'commander').slice(0, 12));
+        break;
+      }
     } catch (e) { /* try the next candidate */ }
   }
 
