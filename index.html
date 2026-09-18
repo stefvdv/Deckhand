@@ -970,6 +970,7 @@ main.has-dock{padding-bottom:84px;}
 .news-item{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);text-decoration:none;}
 .news-item .nw-img{width:58px;height:58px;object-fit:cover;border-radius:8px;flex:none;background:#0006;border:1px solid var(--line);}
 .news-item .nw-body{min-width:0;flex:1;}
+.nw-fmt{display:inline-block;margin-right:6px;padding:1px 6px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--brass);font-size:10px;font-weight:700;letter-spacing:0.4px;vertical-align:1px;}
 .nw-sheet .nw-hero{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1.5px solid var(--line);display:block;}
 .nw-sheet .nw-x{font-size:13px;line-height:1.55;color:var(--ink-text);margin:0 0 12px;}
 .nw-sheet .nw-read{width:100%;height:42px;border-radius:10px;font-size:14px;font-weight:700;}
@@ -4534,13 +4535,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.559';
+const APP_VERSION = '2.51.560';
 const CHANGELOG_NOTES = {
   en: [
-    'News cache refreshed \u2014 thumbnails and previews appear immediately after the server upgrade.'
+    'News split by source: EDHREC covers Commander, MTGGoldfish the other formats.',
+    'Every article now shows a format chip (Modern, Legacy, Pauper\u2026).'
   ],
   nl: [
-    'Nieuws-cache ververst \u2014 thumbnails en previews verschijnen direct na de server-upgrade.'
+    'Nieuws verdeeld per bron: EDHREC doet Commander, MTGGoldfish de andere formats.',
+    'Elk artikel toont nu een format-label (Modern, Legacy, Pauper\u2026).'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -14002,6 +14005,10 @@ function banInfoHtml(fmt){
    WordPress JSON and MTGGoldfish's RSS server-side — same origin, no CORS.
    Served from a 3h qdb cache first; the function itself also caches. */
 let _newsItems = [];
+/* The format a news item belongs to, in words. EDHREC pieces are Commander
+   by definition; MTGGoldfish pieces carry whatever its slug/title revealed. */
+const NEWS_FMT_LABELS = { commander:'Commander', brawl:'Brawl', premodern:'Premodern', pauper:'Pauper', legacy:'Legacy', vintage:'Vintage', modern:'Modern', pioneer:'Pioneer', standard:'Standard', historic:'Arena', limited:'Limited' };
+function newsFmtLabel(a){ return (a && a.fmt && NEWS_FMT_LABELS[a.fmt]) || ''; }
 /* Preview sheet: image, title, excerpt — reading happens on the source's
    own site via the single outbound button (their work, their page). */
 function openNewsPreview(a){
@@ -14014,7 +14021,7 @@ function openNewsPreview(a){
   bd.innerHTML = `<div class="modal-sheet nw-sheet">
       ${a.img && /^https:\/\//.test(a.img) ? `<img class="nw-hero" src="${escapeHtml(a.img)}" alt="" onerror="this.remove()">` : ''}
       <h3 style="margin:10px 0 2px;">${escapeHtml(a.t)}</h3>
-      <div class="nw-m" style="margin-bottom:8px;">${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</div>
+      <div class="nw-m" style="margin-bottom:8px;">${newsFmtLabel(a) ? `<span class="nw-fmt">${escapeHtml(newsFmtLabel(a))}</span>` : ''}${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</div>
       ${a.x ? `<p class="nw-x">${escapeHtml(a.x)}</p>` : ''}
       <button class="add-btn nw-read" id="newsPrevGo">Read on ${escapeHtml(a.src || 'the site')} →</button>
       <button class="ghost-btn" id="newsPrevClose" style="width:100%;margin-top:8px;">Close</button>
@@ -14039,7 +14046,7 @@ async function loadMtgNews(box){
   }
   box.innerHTML = '<span class="l2">Loading…</span>';
   try{
-    const ck = 'mtgnews4';   // v4: fresh start after the function upgrade
+    const ck = 'mtgnews5';   // v5: items carry a detected format
     let data = null;
     try{
       const disk = await qdbGet(ck);
@@ -14062,7 +14069,8 @@ async function loadMtgNews(box){
       const d = a.d ? new Date(a.d) : null;
       const ds = (d && !isNaN(d)) ? d.toLocaleDateString(appLang() === 'nl' ? 'nl-NL' : 'en-GB', { day:'numeric', month:'short' }) : '';
       const im = (a.img && /^https:\/\//.test(a.img)) ? `<img class="nw-img" src="${escapeHtml(a.img)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
-      return `<a class="news-item" data-ni="${ni}" href="${escapeHtml(a.u)}" target="_blank" rel="noopener noreferrer">${im}<span class="nw-body"><span class="nw-t">${escapeHtml(a.t)}</span><span class="nw-m">${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</span></span></a>`;
+      const fl = newsFmtLabel(a);
+      return `<a class="news-item" data-ni="${ni}" href="${escapeHtml(a.u)}" target="_blank" rel="noopener noreferrer">${im}<span class="nw-body"><span class="nw-t">${escapeHtml(a.t)}</span><span class="nw-m">${fl ? `<span class="nw-fmt">${escapeHtml(fl)}</span>` : ''}${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</span></span></a>`;
     }).join('');
   }catch(e){
     box.innerHTML = '<span class="l2">Couldn’t load articles right now — check your connection, or the news function isn’t deployed yet.</span>';
