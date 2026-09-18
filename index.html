@@ -4534,15 +4534,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.558';
+const APP_VERSION = '2.51.559';
 const CHANGELOG_NOTES = {
   en: [
-    'Tap a news item for an in-app preview: image, excerpt, and a Read-on button.',
-    'MTGGoldfish articles now parse (their feed is Atom) and carry summaries too.'
+    'News cache refreshed \u2014 thumbnails and previews appear immediately after the server upgrade.'
   ],
   nl: [
-    'Tik op een nieuwsitem voor een in-app preview: afbeelding, samenvatting en een lees-verder-knop.',
-    'MTGGoldfish-artikelen parsen nu ook (hun feed is Atom-formaat) en dragen samenvattingen mee.'
+    'Nieuws-cache ververst \u2014 thumbnails en previews verschijnen direct na de server-upgrade.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -14041,11 +14039,12 @@ async function loadMtgNews(box){
   }
   box.innerHTML = '<span class="l2">Loading…</span>';
   try{
-    const ck = 'mtgnews3';   // v3: items carry thumbnails + excerpts
+    const ck = 'mtgnews4';   // v4: fresh start after the function upgrade
     let data = null;
     try{
       const disk = await qdbGet(ck);
-      if(disk && Array.isArray(disk.v) && disk.v.length && (Date.now() - (disk.t||0)) < 3*3600e3) data = disk.v;
+      if(disk && Array.isArray(disk.v) && disk.v.length && (Date.now() - (disk.t||0)) < 3*3600e3
+         && disk.v.some(a=>a && (a.img || a.x))) data = disk.v;   // old-shape cache never squats
     }catch(e){}
     if(!data){
       const ctl = new AbortController();
