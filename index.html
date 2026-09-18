@@ -416,7 +416,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .salt-tile img{width:100%;display:block;border-radius:10px;}
 .salt-noimg{border:1.5px solid var(--pop-line);border-radius:10px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;font-size:12.5px;color:var(--ink-text);}
 .salt-meta{text-align:center;color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:12.5px;margin-top:4px;}
-.edh-jump-row.insp-jump{position:fixed;right:14px;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
+.edh-jump-row.insp-jump{position:fixed;right:14px;bottom:calc(78px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
 /* The base .edh-jump-row is sticky — without !important the burger rode
    the content and scrolled away. Fixed for real, and lifted above the deck
    bar + tabs stack. */
@@ -1410,14 +1410,14 @@ main.has-dock{padding-bottom:84px;}
 .cs-artscroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:158px;align-content:start;gap:8px;padding:8px;}
 .cs-artgrid .cselect-search{position:relative;flex:0 0 auto;top:auto;border-top:1.5px solid var(--pop-line);border-bottom:none;margin:0;padding:10px 12px;box-shadow:0 -8px 14px rgba(0,0,0,0.45);z-index:1;}
 .cs-artgrid .cselect-search,.cs-artgrid .cs-noresults{grid-column:1 / -1;}
-.cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;height:158px;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
+.cs-artgrid .cselect-opt.art-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;height:158px;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-deep);}
 .cs-artgrid .cselect-opt.art-tile:last-child{border-bottom:2px solid var(--line);}
 .cs-artgrid .cselect-opt.art-tile:hover{background:var(--ink-deep);}
-.art-tile .at-img{flex:1 1 auto;min-height:0;width:100%;background-size:cover;background-position:center 25%;background-repeat:no-repeat;background-color:color-mix(in srgb, var(--ink) 55%, #000);}
-.art-tile .at-label{flex:0 0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--ink);color:var(--main-text);border-top:2px solid var(--line);min-height:42px;padding:6px 8px;text-shadow:none;}
+.art-tile .at-img{position:absolute;inset:0;background-size:cover;background-position:center 25%;background-repeat:no-repeat;background-color:color-mix(in srgb, var(--ink) 55%, #000);}
+.art-tile .at-label{position:relative;z-index:1;flex:0 0 auto;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--ink);color:var(--main-text);border-top:2px solid var(--line);min-height:42px;padding:6px 8px;text-shadow:none;}
 .art-tile .at-label .at-txt{font-size:14px;font-weight:600;line-height:1.2;text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .art-tile .at-label .co-icons{flex:0 0 auto;}
-.art-tile .at-img.at-gen{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;align-content:center;gap:4px;font-size:42px;opacity:0.92;padding:8px;}
+.art-tile .at-img.at-gen{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;align-content:center;gap:4px;font-size:56px;opacity:0.92;padding:8px 8px 52px;}
 .mana-pentagon{position:relative;display:block;flex:0 0 auto;}
 .cs-artgrid .cselect-opt.art-tile.sel{outline:2.5px solid var(--brass);outline-offset:-2px;background:var(--ink-deep);color:var(--main-text);}
 /* The engraved brass text-shadow (meant for brass-on-glow rows) doubled the
@@ -2166,6 +2166,26 @@ function cselectHtml(id, options, value, placeholder, o){
     })() : ''}
   </div>`;
 }
+/* Inspiration drop-ups: each panel opens upward from its own button, so the
+   room it has differs per select. Size the open panel to reach just under
+   the page cap, then keep the foot (most popular) in view. */
+function csFitBrowsePanel(){
+  try{
+    const p = document.querySelector('.browse-selects .cselect-panel.cs-artgrid');
+    if(!p) return;
+    const host = p.closest('.cselect');
+    const btn = host && host.querySelector('.cselect-btn');
+    const cap = document.querySelector('.page-cap');
+    if(!btn) return;
+    const capB = cap ? cap.getBoundingClientRect().bottom : 0;
+    const avail = Math.floor(btn.getBoundingClientRect().top - capB - 12);
+    if(avail > 220){
+      p.style.maxHeight = avail + 'px';
+      const sc = p.querySelector('.cs-artscroll');
+      if(sc) sc.scrollTop = sc.scrollHeight;   // bottom-up: stay at the foot
+    }
+  }catch(e){}
+}
 function csRerender(){
   // Opening or closing a dropdown re-renders the whole page — without this,
   // the browser would snap the scroll back to the top every time.
@@ -2183,6 +2203,7 @@ function csRerender(){
   }
   const dpPick = document.querySelector('#deckPickScrim #recoColorPick');
   if(dpPick && dpPick._paint){ try{ dpPick._paint(); }catch(e){} }
+  csFitBrowsePanel();
 }
 function wireCSelects(){
   document.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', e=>{
@@ -4495,19 +4516,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.550';
+const APP_VERSION = '2.51.552';
 const CHANGELOG_NOTES = {
   en: [
-    'The More button now behaves bottom-up: the cards you were reading stay pinned in place while the fresh batch and the button itself climb upward out of view \u2014 scroll up to meet them.',
-    'Partner tiles slimmed down to the height of a single leader tile: the name line is gone (the cards carry their own names) and both prices sit on one row beside the two buttons, decks note below.',
-    'Smoother scrolling on Search and Inspiration: streamed chunks now hand back exactly the shift they caused wherever you are (not only past the grid edge), and result tiles no longer use estimated placeholder heights that snapped to their real size mid-scroll.',
-    'The Inspiration cap now shows your current selection \u2014 the chosen combination\u2019s mana symbols plus the theme and kindred words (Azorius \u2192 white and blue symbols \u00b7 Tempo \u00b7 Advisors) \u2014 instead of the page word, and returns to INSPIRATION when nothing is selected.'
+    'The black strip under tile art is gone for good: art now fills the whole tile, with the name bar laid over it.',
+    'Inspiration drop-ups now grow to just under the page name, each from its own button.',
+    'The \u2630 menu button sits just above the search bar.'
   ],
   nl: [
-    'De Meer-knop gedraagt zich nu bottom-up: de kaarten waar je naar keek blijven vaststaan terwijl de nieuwe lading en de knop zelf omhoog uit beeld klimmen \u2014 scroll omhoog om ze te zien.',
-    'Partner-tegels afgeslankt tot de hoogte van een gewone leider-tegel: de naamregel is weg (de kaarten dragen hun eigen naam) en beide prijzen staan op \u00e9\u00e9n rij naast de twee knoppen, decks-notitie eronder.',
-    'Soepeler scrollen op Zoeken en Inspiratie: gestreamde ladingen geven nu exact de verschuiving terug die ze veroorzaken, waar je ook bent (niet alleen voorbij de rand van het grid), en resultaat-tegels gebruiken geen geschatte plaatshouder-hoogtes meer die midden in het scrollen naar hun echte maat sprongen.',
-    'De Inspiratie-kop toont nu je huidige selectie \u2014 de manasymbolen van de gekozen combinatie plus het thema- en kindred-woord (Azorius \u2192 wit en blauw symbool \u00b7 Tempo \u00b7 Advisors) \u2014 in plaats van het paginawoord, en wordt weer INSPIRATIE zodra niets gekozen is.'
+    'De zwarte strook onder tegel-art is definitief weg: art vult nu de hele tegel, met de naambalk eroverheen.',
+    'Inspiratie-drop-ups groeien nu tot net onder de paginanaam, elk vanaf zijn eigen knop.',
+    'De \u2630-menuknop staat nu net boven de zoekbalk.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
