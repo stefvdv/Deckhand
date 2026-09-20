@@ -2870,6 +2870,7 @@ async function checkForNewSets(force){
     autoSets.ubProbed = autoSets.ubProbed || {};
     try{
       const upcoming = all.filter(x=> x && !x.digital && x.released_at && x.released_at > today
+        && !NO_CARDS_SET_TYPES.has(x.set_type)      // a token sheet is never Universes Beyond
         && !(autoSets.ubCodes||[]).includes(x.code)
         && !(state.legalSetCodesUB||[]).includes(x.code)
         && !seedNameMatch(x)
@@ -3001,6 +3002,10 @@ async function checkForNewSets(force){
 const uid = ()=> 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 
 let _cmdrBanSetCache = null, _cmdrBanSetT = -1;
+/* Set types that hold no playable card of their own -- token sheets, memo-
+   rabilia, minigame inserts. Nothing in them can be searched for, spoiled,
+   or stamped Universes Beyond, so every sweep skips them. */
+const NO_CARDS_SET_TYPES = new Set(['token','memorabilia','minigame']);
 function cmdrBanSet(){
   // The live official Commander banlist as a lookup set, rebuilt only when
   // the fetched list changes. This is the ONLY banlist Commander mode may
@@ -4604,17 +4609,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.570';
+const APP_VERSION = '2.51.571';
 const CHANGELOG_NOTES = {
   en: [
-    'Tap the \u201cOffline search\u201d line to see exactly which sets are newer than your database.',
-    'Announced sets that hold no cards yet are no longer asked about \u2014 they cannot be hiding anything.',
-    'The look-back window is 10 days instead of 21, so fewer already-known sets ride along.'
+    'The card database no longer reports a false alarm on every start \u2014 and a slow start can no longer make the app behave as if it has no database at all.',
+    'The daily Universes Beyond check stopped wasting its budget on token sheets, so real new sets are spotted sooner.'
   ],
   nl: [
-    'Tik op de regel \u201cOffline zoeken\u201d om te zien w\u00e9lke sets nieuwer zijn dan je database.',
-    'Aangekondigde sets zonder kaarten worden niet meer bevraagd \u2014 daar kan niets in verborgen zitten.',
-    'Het terugkijkvenster is 10 dagen in plaats van 21, dus er liften minder al bekende sets mee.'
+    'De kaartendatabase meldt niet meer bij elke start een vals alarm \u2014 en een trage start kan de app niet langer laten doen alsof hij helemaal geen database heeft.',
+    'De dagelijkse Universes Beyond-controle verspilt zijn budget niet meer aan tokenvellen, dus echte nieuwe sets worden eerder opgemerkt.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -8787,7 +8790,7 @@ function currentPreviewSets(){
     const t = rawType || (rawByCode.get(code)||{}).set_type;
     return cmdr || (t && STANDARD_TYPES.has(t));
   };
-  const SKIP_TYPES = new Set(['token','memorabilia','minigame']);
+  const SKIP_TYPES = NO_CARDS_SET_TYPES;
   const map = new Map();
   Object.entries(autoSets.previewMeta||{}).forEach(([c,dte])=>{
     if(SKIP_TYPES.has((rawByCode.get(c)||{}).set_type)) return;   // token sets carry no spoilers of their own
@@ -12285,7 +12288,7 @@ async function localSearch(limit){
    not, and null when the question cannot be answered (no snapshot date, no
    set catalogue yet, or an implausibly long list) -- null means "fall back
    to the full online search", never "assume complete". */
-const _NEW_SET_SKIP = new Set(['funny','memorabilia','token','minigame','alchemy','vanguard']);
+const _NEW_SET_SKIP = new Set([...NO_CARDS_SET_TYPES, 'funny', 'alchemy', 'vanguard']);
 // The window only has to reach back past ONE build interval: a set older
 // than that was already complete in an earlier weekly snapshot. Ten days
 // covers the seven-day cadence with room to spare -- and every day shaved
@@ -20458,18 +20461,38 @@ loadSettings().then(()=>{ render(); try{ ensureCmdrBans(); }catch(e){} });
    • its own database 'admiral-bulkdb', kv store, RAW values with one
      writer — the qcache double-wrap lesson applies. */
 let _bulkSyncing = false;
-let _bulkDbP = null;
+let _bulkDb = null, _bulkDbP = null;
 function bulkDbOpen(){
+  if(_bulkDb) return Promise.resolve(_bulkDb);
   if(_bulkDbP) return _bulkDbP;
   _bulkDbP = new Promise((res)=>{
+    let settled = false, timer = null;
+    const finish = (db, why)=>{
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);                       // a healthy open must not log an alarm
+      if(why){ try{ sfJournal('bulkdb: open ' + why); }catch(e){} }
+      if(db) _bulkDb = db;
+      else   _bulkDbP = null;                    // a failure is never cached: the next caller may retry
+      res(db);
+    };
     try{
       const req = indexedDB.open('admiral-bulkdb', 1);
       req.onupgradeneeded = ()=>{ try{ req.result.createObjectStore('kv'); }catch(e){} };
-      req.onsuccess = ()=>res(req.result);
-      req.onerror = ()=>res(null);
-      req.onblocked = ()=>{ try{ sfJournal('bulkdb: open BLOCKED'); }catch(e){} res(null); };
-      setTimeout(()=>{ try{ sfJournal('bulkdb: open watchdog fired'); }catch(e){} res(null); }, 8000);
-    }catch(e){ res(null); }
+      req.onsuccess = ()=>finish(req.result, '');
+      req.onerror   = ()=>finish(null, 'error');
+      req.onblocked = ()=>finish(null, 'BLOCKED');
+      timer = setTimeout(()=>{
+        // Slow is not dead. Let this caller move on, but keep listening --
+        // when the open lands we adopt it, so the session is not stuck
+        // pretending it has no database.
+        req.onsuccess = ()=>{
+          _bulkDb = req.result; _bulkDbP = null;
+          try{ sfJournal('bulkdb: opened late, adopted'); }catch(e){}
+        };
+        finish(null, 'slow (over 8s) \u2014 still listening');
+      }, 8000);
+    }catch(e){ finish(null, 'threw'); }
   });
   return _bulkDbP;
 }
