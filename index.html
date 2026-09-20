@@ -121,7 +121,7 @@ html[data-main="W"]{--head-ink:var(--m3);}   /* light ink: the side DARK accent 
    single rule of its own changing. The selector list is generated from the
    stylesheet (every rule whose background uses --panel/--panel-2/--field/
    --pop-bg, including gradients). */
-.app > main > .adv-toggle, .app > main > .adv-panel, .app > main > #colAdvBox, .tw-row, .brand-banner #capBack, .brand-banner .ov-back, .oracle-face, .tag-editor, .hfm-chip, .home-fact, .home-hero-banner, .deck-tile, .folder-tile, .ghost-btn, .bulk-textarea, .panel-card, .col-filter-input, .col-select, #bindersPop, #fabMenu, .pd-btn, .pd-panel, .searchbar input, .appoint-sheet, .appoint-row, .pair-btns .add-btn, .sp-jump-btn, .adv-toggle, .cmc-row select, .cmc-row input, .adv-row input[type=text], .adv-row select, .sc-primer, .sc-list, .sr-tile .st-btns .add-btn, .pr-rail, .cselect-btn, .cselect-panel, .cselect-search, .cselect-search input, .bs-row select, .settings-section, .guild-opt, .menu-pop, .toast, .dp-row, .cr-bar input, .tr-qty button, .edh-jump, .edh-rel-chip, .glog-frow .seg button, .glog-sel, .glog-num, .glog-chip, .inspire-cta, .life-card-v2, .life-panel{--ink-text:var(--panel-text);--sub-text:var(--panel-sub);--sub-text-2:var(--panel-sub-2);--brass:var(--panel-brass);--brass-dim:var(--panel-brass-dim);--brass-glow:var(--panel-brass-glow);--parchment:var(--panel-parchment);--parchment-dim:var(--panel-parchment-dim);--line:var(--panel-line);--head-ink:var(--main-dk);--acc-fill:var(--panel-brass);--on-acc:var(--panel-brass-dim);}
+.app > main > .adv-toggle, .app > main > .adv-panel, .app > main > #colAdvBox, .tw-row, .brand-banner #capBack, .brand-banner .ov-back, .oracle-face, .tag-editor, .hfm-chip, .home-fact, .home-hero-banner, .deck-tile, .folder-tile, .ghost-btn, .bulk-textarea, .panel-card, .col-filter-input, .col-select, #bindersPop, #fabMenu, .pd-btn, .pd-panel, .searchbar input, .appoint-sheet, .appoint-row, .pair-btns .add-btn, .sp-jump-btn, .adv-toggle, .cmc-row select, .cmc-row input, .adv-row input[type=text], .adv-row select, .sc-primer, .sc-list, .sr-tile .st-btns .add-btn, .pr-rail, .cselect-btn, .cselect-panel, .cselect-search, .cselect-search input, .bs-row select, .settings-section, .guild-opt, .menu-pop, .toast, .dp-row, .cr-bar input, .tr-qty button, .edh-jump, .edh-rel-chip, .glog-frow .seg button, .glog-sel, .glog-num, .glog-chip, .inspire-cta, .life-card-v2, .life-panel{--ink-text:var(--panel-text);--sub-text:var(--panel-sub);--sub-text-2:var(--panel-sub-2);--brass:var(--panel-brass);--brass-dim:var(--panel-brass-dim);--brass-glow:var(--panel-brass-glow);--parchment:var(--panel-parchment);--parchment-dim:var(--panel-parchment-dim);--line:var(--panel-line);--head-ink:var(--plate-ink);--acc-fill:var(--panel-brass);--on-acc:var(--panel-brass-dim);}
 .app > main > .adv-toggle, .app > main > .adv-panel, .app > main > #colAdvBox, .tw-row, .brand-banner #capBack, .brand-banner .ov-back, .oracle-face, .tag-editor, .home-fact, .home-hero-banner, .deck-tile, .folder-tile, .panel-card, #bindersPop, #fabMenu, .pd-panel, .appoint-sheet, .sp-jump-btn, .sc-primer, .sc-list, .pr-rail, .cselect-panel, .cselect-search, .settings-section, .menu-pop, .life-card-v2, .life-panel{color:var(--ink-text);}
 /* Gold, thicker: every Cinzel heading and gold label gets a hairline stroke
    of its own colour (the loaded weights top out at 700), and gold rims are
@@ -1411,6 +1411,7 @@ main.has-dock{padding-bottom:84px;}
 .dp-row:hover{border-color:var(--brass);}
 .dp-row .dp-meta{font-size:11.5px;color:var(--sub-text);font-weight:400;margin-top:1px;}
 .dp-row .dp-txt{flex:1;min-width:0;}
+.dp-row .dp-pips{flex:none;margin-left:auto;}
 .dp-cancel{margin-top:10px;background:none;border:2px solid var(--line);color:var(--sub-text);border-radius:8px;padding:10px;font-size:14px;cursor:pointer;}
 
 /* ---------- pinned-deck pill (search page) ---------- */
@@ -4678,15 +4679,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.580';
+const APP_VERSION = '2.51.583';
 const CHANGELOG_NOTES = {
   en: [
-    'The search filters are the same sheet as the collection filters \u2014 same fill, same behaviour. They sat one wrapper deeper, so the sheet rules never reached them.',
-    'Opening a drop-down inside a filter sheet pushes the top upward instead of shoving the bottom off the screen.'
+    'The \u201cAdd to\u2026\u201d deck picker now shows each deck\u2019s color identity as mana symbols beside its name \u2014 the same pips the deck tiles wear, drawn from its commander or admiral. Decks without a leader show none.',
+    'The \u201cAdd N cards to\u2026\u201d picker after a recommendation session carries the same pips.'
   ],
   nl: [
-    'De zoekfilters zijn hetzelfde vel als de collectiefilters \u2014 zelfde vulling, zelfde gedrag. Ze zaten \u00e9\u00e9n omhulsel dieper, waardoor de velregels ze nooit bereikten.',
-    'Een drop-up openen in een filtervel duwt de bovenkant omhoog in plaats van de onderkant van het scherm af.'
+    'De \u201cAdd to\u2026\u201d-dekkiezer toont nu per deck de kleuridentiteit als manasymbolen naast de naam \u2014 dezelfde pips als op de dektegels, afgeleid van de commander of admiral. Decks zonder leider tonen er geen.',
+    'De \u201cAdd N cards to\u2026\u201d-kiezer na een aanbevelingssessie draagt dezelfde pips.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -5627,7 +5628,7 @@ function navHtml(){
     {k:'browse', l:'Inspiration', i:ICONS.inspire},
     {k:'settings', l:'Extras', i:ICONS.settings}
   ];
-  const titles = { home: 'DECKHAND', decks:'MY DECKS', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', trade:'TRADE', collection:'MY COLLECTION' };
+  const titles = { home: 'NEWS', decks:'MY DECKS', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', trade:'TRADE', collection:'MY COLLECTION' };
   let title = titles[state.screen] || 'ADMIRAL';
   if(state.screen === 'decks' && state.folderNav){
     const _p = state.folderNav === '__otherfmt__' ? [{name: isCmdrMode() ? 'Admiral decks' : 'Commander decks'}]
@@ -12364,12 +12365,16 @@ async function localSearch(limit){
     if(rars.length && !rars.includes(low(c.r))) continue;
     if(st.searchEurMin > 0 && !(c.eur != null && +c.eur >= st.searchEurMin)) continue;
     if(st.searchEurMax != null && !(c.eur != null && +c.eur <= st.searchEurMax)) continue;
-    // Mode isolation: Commander is judged by the OFFICIAL flag plus the
-    // official ban list, and nothing else. Admiral's pool is a set list and
-    // never reaches this engine -- see localSearchable().
+    // Mode isolation: Commander is judged the way commanderVerdict() judges
+    // it -- by NAME against the official ban list, with the per-card flag
+    // only when that list is empty. 'not_legal' is deliberately NOT a bar:
+    // the corpus keeps one printing per card, and a collector reprint (30th
+    // Anniversary, for one) carries not_legal for a card that is entirely
+    // legal. Admiral's pool is a set list and never reaches this engine.
     if(fmt === 'commander'){
-      if(c.lg !== 'legal') continue;
-      if(cmdrBans && cmdrBans.size && cmdrBans.has(norm(String(c.n).split(' // ')[0]))) continue;
+      if(cmdrBans && cmdrBans.size){
+        if(cmdrBans.has(norm(String(c.n).split(' // ')[0]))) continue;
+      } else if(c.lg === 'banned') continue;
     }
     out.push(c);
     if(out.length > 4000) break;               // a runaway query cannot hog the frame
@@ -12758,9 +12763,15 @@ function promoteToAdmiral(d, c){
 /* ---- "Add to…" deck picker popup (used whenever no deck is pinned) ---- */
 /* Decks of the fleet you're sailing come first; the other side's decks wait
    below under their own header — one list, clearly separated. */
+function dpPipsHtml(d){
+  return d && d.admiral ? `<span class="pips-mini dp-pips">${pipsHtml(deckColorIdentity(d),'sm')}</span>` : '';
+}
 function deckPickRowsHtml(){
+  // Each row carries the mana symbols of its leader's color identity, the
+  // same pips the deck tiles wear; a deck without a leader shows none.
   const row = d=>`<button class="dp-row" data-deck="${d.id}">
         <div class="dp-txt">${escapeHtml(d.name)}<div class="dp-meta">${d.admiral ? escapeHtml(d.admiral.name) : 'No '+fmtName(d)+' yet'} · ${d.cards.length + deckLeaders(d).length} cards</div></div>
+        ${dpPipsHtml(d)}
       </button>`;
   // Most recently edited first, freshly sorted at open time — the load-time
   // index order goes stale as soon as a deck is touched mid-session.
@@ -18728,7 +18739,8 @@ function openRecoDeckChooser(){
     <div class="deckpick-list">
       <button class="dp-row" data-newdeck="1"><div class="dp-txt">${modeGlyph()==='⚔'?'⚔':''}${modeGlyph()==='⚓'?anchorSvg(13):''} New deck led by ${escapeHtml(R.admiral.name)}${R.partner?` & ${escapeHtml(R.partner.name.split(',')[0])}`:''}<div class="dp-meta">Creates the deck with your ${n} picks aboard</div></div></button>
       ${state.decksIndex.map(d=>`<button class="dp-row" data-deck="${d.id}">
-        <div class="dp-txt">${escapeHtml(d.name)}<div class="dp-meta">${d.cards.length} cards${d.admiral?` · ${escapeHtml(d.admiral.name)}`:' · no Admiral yet'}</div></div>
+        <div class="dp-txt">${escapeHtml(d.name)}<div class="dp-meta">${d.cards.length} cards${d.admiral?` · ${escapeHtml(d.admiral.name)}`:` · no ${fmtName(d)} yet`}</div></div>
+        ${dpPipsHtml(d)}
       </button>`).join('')}
     </div>
     <button class="dp-cancel" id="dpCancel">Cancel</button>
@@ -20163,12 +20175,76 @@ function showPreview(src, wb){
   pushOverlay('preview', ()=>{ state.preview=null; renderPreview(); });
   renderPreview();
 }
+/* Pinch, pan and double-tap on the opened card only. Pointer events are
+   used so touch and mouse behave alike; the backdrop takes touch-action:none
+   so the browser never claims the gesture. A tap that did not move and did
+   not zoom closes the preview, as it always has. */
+function _wirePreviewZoom(bd){
+  const img = bd.querySelector('img');
+  if(!img) return;
+  const pts = new Map();
+  let scale = 1, tx = 0, ty = 0;
+  let start = null, moved = false, lastTap = 0;
+  const apply = ()=>{ img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`; };
+  const clampPan = ()=>{
+    // never let a zoomed card drift entirely off the screen
+    const r = img.getBoundingClientRect();
+    const maxX = Math.max(0, (r.width  - bd.clientWidth)  / 2);
+    const maxY = Math.max(0, (r.height - bd.clientHeight) / 2);
+    tx = Math.max(-maxX, Math.min(maxX, tx));
+    ty = Math.max(-maxY, Math.min(maxY, ty));
+  };
+  const dist = ()=>{ const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  const mid  = ()=>{ const [a, b] = [...pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+  bd.addEventListener('pointerdown', (e)=>{
+    bd.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved = false;
+    if(pts.size === 2){ start = { d: dist(), s: scale, m: mid(), tx, ty }; }
+    else if(pts.size === 1){ start = { x: e.clientX, y: e.clientY, tx, ty }; }
+  });
+  bd.addEventListener('pointermove', (e)=>{
+    if(!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if(pts.size === 2 && start && start.d){
+      const m = mid();
+      scale = Math.max(1, Math.min(4, start.s * (dist() / start.d)));
+      // keep the point between the fingers where it was
+      tx = start.tx + (m.x - start.m.x);
+      ty = start.ty + (m.y - start.m.y);
+      moved = true; clampPan(); apply();
+    } else if(pts.size === 1 && start && scale > 1){
+      tx = start.tx + (e.clientX - start.x);
+      ty = start.ty + (e.clientY - start.y);
+      if(Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) > 4) moved = true;
+      clampPan(); apply();
+    }
+  });
+  const up = (e)=>{
+    if(!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if(pts.size === 1){ const [p] = [...pts.values()]; start = { x: p.x, y: p.y, tx, ty }; return; }
+    if(pts.size) return;
+    if(moved){ start = null; return; }
+    const now = Date.now();
+    if(now - lastTap < 320){                 // double tap: toggle 1x / 2.5x
+      lastTap = 0;
+      if(scale > 1){ scale = 1; tx = 0; ty = 0; } else { scale = 2.5; }
+      apply(); return;
+    }
+    lastTap = now;
+    // a plain tap closes -- but only once we know it is not half a double tap
+    setTimeout(()=>{ if(lastTap === now && scale === 1){ try{ closeTopOverlay(); }catch(err){} } }, 330);
+  };
+  bd.addEventListener('pointerup', up);
+  bd.addEventListener('pointercancel', up);
+}
 function renderPreview(){
   let el = document.getElementById('previewRoot');
   if(!state.preview){ if(el) el.remove(); return; }
   if(!el){ el=document.createElement('div'); el.id='previewRoot'; document.body.appendChild(el); }
-  el.innerHTML = `<div class="card-preview-backdrop" id="pbd"><img class="${state.preview.wb?'wb-card':''}" src="${state.preview.src}"></div>`;
-  document.getElementById('pbd').addEventListener('click', closeTopOverlay);
+  el.innerHTML = `<div class="card-preview-backdrop" id="pbd" style="touch-action:none;"><img class="${state.preview.wb?'wb-card':''}" src="${state.preview.src}" style="transform-origin:center center;will-change:transform;"></div>`;
+  _wirePreviewZoom(document.getElementById('pbd'));
   // A dead image URL must not strand the person behind a dim scrim with a
   // broken icon — note it and take the preview down.
   el.querySelector('img').addEventListener('error', ()=>{
