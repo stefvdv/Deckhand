@@ -203,7 +203,7 @@ button{font-family:'Inter';}
 .rt-chip.on{background:var(--brass);border-color:var(--brass);color:#1a1208;font-weight:700;}
 .tb-titles .t2{font-size:11.5px;color:var(--sub-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .icon-btn{
-  background:none;border:2px solid var(--line);color:var(--ink-text);
+  background:none;border:2px solid var(--line);color:var(--plate-ink, var(--main-lt));
   width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
 }
 .icon-btn svg{width:21px;height:21px;}
@@ -908,7 +908,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dl-adm-empty{aspect-ratio:63/88;border:2px dashed var(--line);border-radius:4.75% / 3.5%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--sub-text-2);font-size:13px;cursor:pointer;}
 /* Bottom dock: fixed status bar with cycling info sets */
 .deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
-.dk-arr{background:none;border:2px solid var(--line);border-radius:8px;color:var(--ink-text);width:30px;height:34px;cursor:pointer;flex:none;font-size:14px;}
+.dk-arr{background:none;border:2px solid var(--line);border-radius:8px;color:var(--plate-ink, var(--main-lt));width:30px;height:34px;cursor:pointer;flex:none;font-size:14px;}
 /* display:contents lifts the set's items to be the dock's own flex
    children, so the bar's space-between spreads EVERYTHING evenly —
    including the » and ⋯ at the end, per Stef's spec. Font and color
@@ -917,7 +917,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-count{background:none;border:none;color:var(--ink-text);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13.5px;cursor:pointer;padding:0;}
 .dk-count.bad{color:var(--danger);}
 .dk-type{display:inline-flex;align-items:center;gap:3px;background:none;border:none;color:var(--ink-text);font-size:13px;font-family:'JetBrains Mono',monospace;padding:2px 2px;cursor:pointer;}
-.dk-tool{display:flex;align-items:center;justify-content:center;background:none;border:2px solid var(--line);color:var(--ink-text);width:33px;height:33px;border-radius:9px;flex:0 0 auto;cursor:pointer;padding:0;}
+.dk-tool{display:flex;align-items:center;justify-content:center;background:none;border:2px solid var(--line);color:var(--plate-ink, var(--main-lt));width:33px;height:33px;border-radius:9px;flex:0 0 auto;cursor:pointer;padding:0;}
 .dk-tool svg{width:20px;height:20px;}
 .dk-tool.active{color:var(--brass);border-color:var(--brass);background:var(--brass-glow);}
 .dk-mid:has(.dk-tool){gap:5px;}
@@ -4651,15 +4651,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.575';
+const APP_VERSION = '2.51.576';
 const CHANGELOG_NOTES = {
   en: [
-    'The anchor and the crossed swords on the format folders now share one colour, in every scheme.',
-    'Buttons standing side by side no longer draw their icon colour from three different places \u2014 the \u00bb arrow and the small + buttons match the rest of the row.'
+    'The toolbar buttons, the \u00bb arrow and the small + buttons now all take the ink of the plate they sit on \u2014 5:1 to 16:1 across every scheme, where some were as low as 1.2:1.',
+    'They no longer depend on where they sit in the page structure to get the right colour.'
   ],
   nl: [
-    'Het anker en de gekruiste zwaarden op de formatmappen hebben nu \u00e9\u00e9n kleur, in elk schema.',
-    'Knoppen die naast elkaar staan halen hun icoonkleur niet meer uit drie verschillende bronnen \u2014 de \u00bb-pijl en de kleine +-knoppen passen bij de rest van de rij.'
+    'De knoppen in de balk, de \u00bb-pijl en de kleine +-knoppen nemen nu allemaal de inkt van de plaat waarop ze staan \u2014 5:1 tot 16:1 in elk schema, waar sommige op 1,2:1 zaten.',
+    'Ze hangen niet langer af van waar ze in de paginastructuur staan om de juiste kleur te krijgen.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
