@@ -895,7 +895,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .dk-count{background:none;border:none;color:var(--ink-text);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13.5px;cursor:pointer;padding:0;}
 .dk-count.bad{color:var(--danger);}
 .dk-type{display:inline-flex;align-items:center;gap:3px;background:none;border:none;color:var(--ink-text);font-size:13px;font-family:'JetBrains Mono',monospace;padding:2px 2px;cursor:pointer;}
-.dk-tool{display:flex;align-items:center;justify-content:center;background:none;border:2px solid var(--line);color:var(--sub-text);width:33px;height:33px;border-radius:9px;flex:0 0 auto;cursor:pointer;padding:0;}
+.dk-tool{display:flex;align-items:center;justify-content:center;background:none;border:2px solid var(--line);color:var(--icon-pl, var(--main-lt));width:33px;height:33px;border-radius:9px;flex:0 0 auto;cursor:pointer;padding:0;}
 .dk-tool svg{width:20px;height:20px;}
 .dk-tool.active{color:var(--brass);border-color:var(--brass);background:var(--brass-glow);}
 .dk-mid:has(.dk-tool){gap:5px;}
@@ -1205,7 +1205,7 @@ main.has-dock{padding-bottom:84px;}
 .tag.ok{background:rgba(92,139,110,0.2);color:var(--success);border:1px solid rgba(92,139,110,0.4);}
 .tag.banned{background:rgba(181,72,77,0.2);color:var(--danger);border:1px solid rgba(181,72,77,0.4);}
 .tag.dupe{background:var(--brass-glow);color:var(--brass);border:2px solid var(--line);}
-.add-btn{width:28px;height:28px;border-radius:50%;border:2px solid var(--brass-dim);background:transparent;color:var(--brass);font-size:17px;cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;line-height:1;}
+.add-btn{width:28px;height:28px;border-radius:50%;border:2px solid var(--brass-dim);background:transparent;color:var(--icon-pl, var(--main-lt));font-size:17px;cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;line-height:1;}
 .add-btn:disabled{opacity:0.25;}
 
 /* ---------- inspiration page ---------- */
@@ -3817,6 +3817,42 @@ window.addEventListener('unhandledrejection', (e)=>{
    doomed retries, and recovery is watched three ways -- any successful
    response, the browser's own online event, and a light 12s probe. */
 let _netFailN = 0, _netDown = false, _netProbeT = null;
+let _netFailKeys = new Set(), _netConfirming = false;
+/* What a failed fetch actually tells us. A request WE aborted for taking too
+   long proves nothing about the connection — the network may simply be busy,
+   which is the normal state of a phone on mobile data. Only an outright
+   failure ("Failed to fetch") is evidence of a dead line. */
+function _netClassify(err){
+  if(!err) return 'ok';
+  const nm = String(err.name || ''), msg = String(err.message || '');
+  if(nm === 'AbortError' || /hard timeout/i.test(msg)) return 'slow';
+  return 'dead';
+}
+/* Distinct endpoints only: one URL failing over and over is one problem, not
+   four, and must never take the whole app offline by itself. */
+function _netNoteFail(url){
+  const key = String(url).split('?')[0];
+  if(_netFailKeys.has(key)) return;
+  _netFailKeys.add(key);
+  _netFailN++;
+  if(_netFailN >= 3 && !_netDown && !_netConfirming) _netConfirmDown();
+}
+/* Never take the app offline on inference alone — go and check. */
+async function _netConfirmDown(){
+  if(_netConfirming || _netDown) return;
+  _netConfirming = true;
+  try{
+    if(navigator.onLine === false){ _netSetDown(true); return; }
+    const ctl = new AbortController();
+    const t = setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 6000);
+    try{
+      const r = await fetch(SF_BASE + '/catalog/keyword-abilities', { cache:'no-store', signal: ctl.signal });
+      clearTimeout(t);
+      if(r){ _netNote(true); return; }         // the line is fine after all
+    }catch(e){ clearTimeout(t); }
+    _netSetDown(true);
+  } finally { _netConfirming = false; }
+}
 /* The offline notice lives in the page-name bar: one short chip on the left,
    rebuilt by every render and kept in sync the moment the network flips. */
 function netChipHtml(){
@@ -3838,18 +3874,23 @@ function _netSetDown(down){
   try{ sfJournal(down ? 'NETWORK DOWN — queue holding, banner up' : 'network back — queue resumed'); }catch(e){}
   if(down && !_netProbeT){
     _netProbeT = setInterval(async ()=>{
-      try{ const r = await fetch(SF_BASE + '/catalog/keyword-abilities', {cache:'no-store'}); if(r) _netNote(true); }catch(e){}
+      try{
+        const pc = new AbortController();
+        const pt = setTimeout(()=>{ try{ pc.abort(); }catch(e){} }, 6000);
+        const r = await fetch(SF_BASE + '/catalog/keyword-abilities', {cache:'no-store', signal: pc.signal});
+        clearTimeout(pt);
+        if(r) _netNote(true);
+      }catch(e){}
     }, 12000);
   }
   if(!down && _netProbeT){ clearInterval(_netProbeT); _netProbeT = null; }
 }
 function _netNote(ok){
-  if(ok){ _netFailN = 0; if(_netDown) _netSetDown(false); }
-  else { _netFailN++; if(_netFailN >= 4) _netSetDown(true); }
+  if(ok){ _netFailN = 0; _netFailKeys.clear(); if(_netDown) _netSetDown(false); }
 }
 try{
   window.addEventListener('offline', ()=>_netSetDown(true));
-  window.addEventListener('online', ()=>{ _netFailN = 0; _netSetDown(false); });
+  window.addEventListener('online', ()=>{ _netFailN = 0; _netFailKeys.clear(); _netSetDown(false); });
 }catch(e){}
 /* ---- Offline name lookups ----
    The weekly local database (33k+ cards) answers /cards/named lookups when
@@ -3912,9 +3953,11 @@ async function _sfPump(){
       _sfBeat = Date.now();
       // Network down? HOLD the lane instead of grinding doomed retries --
       // the probe or the browser's online event releases it.
-      while(_netDown){
+      let _held = 0;
+      while(_netDown && _held < 6){        // ~7s at most, never an endless hold
         _sfBeat = Date.now();
         await new Promise(r=>setTimeout(r, 1200));
+        _held++;
         if(myGen !== _sfGen) return;
       }
       const job = _sfQ.hi.length ? _sfQ.hi.shift() : _sfQ.lo.shift();
@@ -3926,19 +3969,23 @@ async function _sfPump(){
       const t0 = Date.now();
       let res = null, err = null;
       const ctl = new AbortController();
-      const killer = setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 12000);
+      const killer = setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 20000);
       let hardT = null;
       try{
         // Hard race: even a fetch that ignores its abort signal frees the lane.
         res = await Promise.race([
           fetch(job.url, { signal: ctl.signal, cache: job.fresh ? 'no-store' : 'default' }),
-          new Promise((_, rej)=>{ hardT = setTimeout(()=>rej(new Error('hard timeout')), 15000); })
+          new Promise((_, rej)=>{ hardT = setTimeout(()=>rej(new Error('hard timeout')), 24000); })
         ]);
       }catch(e){ err = e; }
       clearTimeout(killer);
       clearTimeout(hardT);
       sfJournal((res ? res.status : (err && err.name === 'AbortError' ? 'TIMEOUT' : 'ERR ' + String(err && err.message || err).slice(0, 60))) + ' ' + (Date.now() - t0) + 'ms ' + String(job.url).replace(/^https?:\/\/[^/]*/, '').slice(0, 70));
-      _netNote(!err);   // any RESPONSE (even a 404) proves the network is up
+      // Any RESPONSE (even a 404) proves the line is up. A timeout proves
+      // nothing either way, so it is deliberately not counted.
+      const _verdict = res ? 'ok' : _netClassify(err);
+      if(_verdict === 'ok') _netNote(true);
+      else if(_verdict === 'dead') _netNoteFail(job.url);
       const retryable = err || (res && (res.status === 429 || res.status >= 500));
       if(res && res.status === 429){ await new Promise(r=>setTimeout(r, 1600)); }   // let the limit breathe
       if(retryable && job.attempt < 6){
@@ -3967,7 +4014,7 @@ async function _sfPump(){
    that loop (generation bump) and start a fresh one — the whole app's data
    access rides on this one lane, so it must never stall permanently. */
 setInterval(()=>{
-  if(_sfWorking && (_sfQ.hi.length || _sfQ.lo.length) && Date.now() - _sfBeat > 20000){
+  if(_sfWorking && (_sfQ.hi.length || _sfQ.lo.length) && Date.now() - _sfBeat > 30000){
     console.warn('Scryfall queue watchdog: pump wedged for 20s — restarting it. Queue:', _sfQ.hi.length, 'hi /', _sfQ.lo.length, 'lo');
     _sfGen++;
     _sfWorking = false;
@@ -4557,21 +4604,19 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.565';
+const APP_VERSION = '2.51.568';
 const CHANGELOG_NOTES = {
   en: [
-    'All text is one step larger across the app.',
-    'The current page is clearly marked in the nav bar again.',
-    'The offline notice is now a small chip beside the page name.',
-    'Home is titled Deckhand; the empty gap under Top Commanders is gone.',
-    'Better contrast on links, folder names and icons, and on filled buttons.'
+    'Search answers from the card database on your phone first \u2014 instantly, and without waiting in the Scryfall queue.',
+    'Scryfall\u2019s function tags (removal, ramp, tutor\u2026) are searchable offline too.',
+    'Online, the app now only asks about SETS that are newer than its weekly database \u2014 and when there are none, it makes no request at all.',
+    'Set searches and the Admiral pool still go online in full: those are questions about printings.'
   ],
   nl: [
-    'Alle tekst is app-breed een maat groter.',
-    'De huidige pagina is weer duidelijk gemarkeerd in de navigatiebalk.',
-    'De offline-melding staat nu als klein label naast de paginanaam.',
-    'Home heet Deckhand; het lege gat onder Top Commanders is weg.',
-    'Beter contrast op links, mapnamen en iconen, en op gevulde knoppen.'
+    'Zoeken antwoordt eerst vanuit de kaartendatabase op je telefoon \u2014 direct, en zonder wachtrij bij Scryfall.',
+    'De functietags van Scryfall (removal, ramp, tutor\u2026) zijn nu ook offline doorzoekbaar.',
+    'Online vraagt de app nu alleen nog naar SETS die nieuwer zijn dan zijn weekdatabase \u2014 en zijn die er niet, dan doet hij helemaal geen aanvraag.',
+    'Set-zoekopdrachten en de Admiral-pool gaan nog wel volledig online: dat zijn vragen over drukken.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
@@ -12071,6 +12116,246 @@ function buildAdvancedClause(){
   if(((clause.match(/"/g)||[]).length) % 2) clause = clause.replace(/"/g,'');
   return clause;
 }
+
+/* ── LOCAL SEARCH ────────────────────────────────────────────────────────
+   The weekly database already holds every card's name, type, oracle text,
+   colours, cost, rarity, price, EDHREC rank and Scryfall function tags.
+   Answering from it turns a search from "a trip down the one serial lane to
+   Scryfall" into a few milliseconds of filtering — and, just as valuable,
+   keeps that lane free for the things that genuinely must be live.
+   Anything the corpus cannot express falls through to the network. */
+function _lsOp(a, op, b){
+  if(a == null || isNaN(a)) return false;
+  a = +a; b = +b;
+  if(op === '>=') return a >= b;
+  if(op === '<=') return a <= b;
+  if(op === '>')  return a > b;
+  if(op === '<')  return a < b;
+  return a === b;
+}
+function _lsColors(have, want, mode){
+  const H = new Set(String(have || '').toUpperCase().split('').filter(Boolean));
+  const W = new Set(want);
+  if(mode === 'exact')     return H.size === W.size && [...W].every(x=>H.has(x));
+  if(mode === 'including') return [...W].every(x=>H.has(x));      // id>= / c>=
+  if(mode === 'all')       return [...W].every(x=>H.has(x));      // "must have all selected"
+  return [...H].every(x=>W.has(x));                               // at most
+}
+/* Mana-cost symbols as a multiset; generic is summed so {2} matches a cost
+   with two or more generic pips, the way Scryfall's m: behaves. */
+function _lsCostBag(str){
+  const up = String(str || '').toUpperCase();
+  const bag = {}; let generic = 0;
+  const syms = up.match(/\{[^}]+\}/g);
+  if(syms){
+    syms.forEach(sym=>{
+      const in_ = sym.slice(1, -1);
+      if(/^\d+$/.test(in_)) generic += +in_;
+      else bag[in_] = (bag[in_] || 0) + 1;
+    });
+  } else {
+    (up.match(/\d+|[WUBRGCXSP]/g) || []).forEach(t=>{
+      if(/^\d+$/.test(t)) generic += +t; else bag[t] = (bag[t] || 0) + 1;
+    });
+  }
+  bag.__generic = generic;
+  return bag;
+}
+/* One sort order, two card shapes: raw database rows on the way out of the
+   local engine, dressed Scryfall-ish objects when a local list and a live
+   list are merged. Same comparator either way, so a merged page is ordered
+   exactly like a purely local one. */
+function _lsCmp(sortKey, sortDir, acc){
+  const dir = sortDir === 'desc' ? -1 : 1;
+  const nm = acc.nm, cmc = acc.cmc, rk = acc.rk;
+  return (a, b)=>{
+    if(sortKey === 'cmc') return ((cmc(a) || 0) - (cmc(b) || 0)) * dir || String(nm(a)).localeCompare(String(nm(b)));
+    if(sortKey === 'edhrec'){
+      const ra = rk(a) == null ? Infinity : rk(a), rb = rk(b) == null ? Infinity : rk(b);
+      return (ra - rb) * dir || String(nm(a)).localeCompare(String(nm(b)));
+    }
+    return String(nm(a)).localeCompare(String(nm(b))) * dir;
+  };
+}
+const _LS_BULK = { nm: c=>c.n,    cmc: c=>c.mv,  rk: c=>c.rk };
+const _LS_CARD = { nm: c=>c.name, cmc: c=>c.cmc, rk: c=>c.edhrec_rank };
+function _lsCostFits(cardCost, wanted){
+  const A = _lsCostBag(cardCost), B = _lsCostBag(wanted);
+  for(const k in B){
+    if(k === '__generic') continue;
+    if((A[k] || 0) < B[k]) return false;
+  }
+  return (A.__generic || 0) >= (B.__generic || 0);
+}
+/* Which searches the device can answer on its own. Flavour text, artist and
+   loyalty are not in the corpus. Neither is a card's full printing history:
+   the weekly build keeps ONE printing per card, so any question phrased in
+   SETS -- the Set filter, and the Admiral pool, which IS a set list -- would
+   under-answer. Those go to Scryfall, exactly as before. What is left is the
+   everyday search: name, type, text, colours, cost, stats, rarity, keyword,
+   function tag, price, with Commander legality judged against the local ban
+   list. Mode isolation is untouched: Admiral never takes this lane. */
+function localSearchable(){
+  const st = state;
+  if((st.searchFlavorText || '').trim()) return false;
+  if((st.searchArtist || '').trim()) return false;
+  if(st.searchLoyOp && st.searchLoyVal !== '') return false;
+  if((st.searchSetCode || '').trim()) return false;
+  const f = st.searchFormat || 'any';
+  if(f !== 'any' && f !== 'commander') return false;
+  return true;
+}
+async function localSearch(limit){
+  let ix = null;
+  try{ ix = await bulkIndexReady(); }catch(e){ return null; }
+  if(!ix || !ix.cards || !ix.cards.length) return null;
+  const st = state;
+  const low = (x)=>String(x || '').toLowerCase();
+
+  const nameWords = (st.searchName || '').trim().replace(/"/g,'').split(/\s+/).filter(Boolean).map(low);
+  const typeWords = (st.searchTypeText || '').trim().replace(/"/g,'').split(/[\s,]+/).filter(Boolean).map(low);
+  let oracleToks = [];
+  if((st.searchOracleText || '').trim()){
+    let o = st.searchOracleText.trim();
+    if(((o.match(/"/g) || []).length) % 2) o = o.replace(/"/g,'');
+    oracleToks = (o.match(/"[^"]*"|\S+/g) || [])
+      .map(t=>/^".*"$/.test(t) ? t.slice(1,-1) : t.replace(/"/g,''))
+      .map(low).filter(Boolean);
+  }
+  const kw = low((st.searchKeyword || '').trim());
+  const otag = normTagKey(String(st.searchOtag || '').trim().replace(/"/g,''));
+  const idWant = Object.keys(st.searchColors || {}).filter(c=>c !== 'C' && st.searchColors[c]);
+  const idColorless = !!(st.searchColors && st.searchColors.C) && !idWant.length;
+  const ccWant = Object.keys(st.searchCardColors || {}).filter(c=>c !== 'C' && st.searchCardColors[c]);
+  const ccColorless = !!(st.searchCardColors && st.searchCardColors.C) && !ccWant.length;
+  const rars = Object.keys(st.searchRarity || {}).filter(r=>st.searchRarity[r]);
+  const fmt = st.searchFormat || 'any';
+  const cmdrBans = fmt === 'commander' ? cmdrBanSet() : null;
+
+  const out = [];
+  for(const c of ix.cards){
+    if(!c || !c.n) continue;
+    const nm = low(c.n);
+    if(nameWords.length && !nameWords.every(w=>nm.includes(w))) continue;
+    if(typeWords.length){
+      const tl = low(c.tl) + ' ' + (c.f || []).map(f=>low(f.tl)).join(' ');
+      if(!typeWords.every(w=>tl.includes(w))) continue;
+    }
+    if(oracleToks.length){
+      const ot = low(c.ot) + ' ' + (c.f || []).map(f=>low(f.ot)).join(' ');
+      if(!oracleToks.every(t=>ot.includes(t))) continue;
+    }
+    if(idColorless){ if((c.ci || '') !== '') continue; }
+    else if(idWant.length && !_lsColors(c.ci, idWant, st.searchColorMode)) continue;
+    if(ccColorless){ if((c.c || '') !== '') continue; }
+    else if(ccWant.length && !_lsColors(c.c, ccWant, st.searchCardColorMode)) continue;
+    if(st.searchCmcOp && st.searchCmcVal !== '' && !_lsOp(c.mv, st.searchCmcOp, st.searchCmcVal)) continue;
+    if((st.searchManaCost || '').trim() && !_lsCostFits(c.mc, st.searchManaCost.trim())) continue;
+    if(st.searchPowOp && st.searchPowVal !== '' && !_lsOp(c.pw, st.searchPowOp, st.searchPowVal)) continue;
+    if(st.searchTouOp && st.searchTouVal !== '' && !_lsOp(c.tg, st.searchTouOp, st.searchTouVal)) continue;
+    if(kw && !(c.kw || []).some(k=>low(k) === kw)) continue;
+    if(otag){
+      const tags = (ix.tagByOid && c.o) ? (ix.tagByOid.get(c.o) || []) : [];
+      if(!tags.some(t=>normTagKey(t) === otag)) continue;
+    }
+    if(rars.length && !rars.includes(low(c.r))) continue;
+    if(st.searchEurMin > 0 && !(c.eur != null && +c.eur >= st.searchEurMin)) continue;
+    if(st.searchEurMax != null && !(c.eur != null && +c.eur <= st.searchEurMax)) continue;
+    // Mode isolation: Commander is judged by the OFFICIAL flag plus the
+    // official ban list, and nothing else. Admiral's pool is a set list and
+    // never reaches this engine -- see localSearchable().
+    if(fmt === 'commander'){
+      if(c.lg !== 'legal') continue;
+      if(cmdrBans && cmdrBans.size && cmdrBans.has(norm(String(c.n).split(' // ')[0]))) continue;
+    }
+    out.push(c);
+    if(out.length > 4000) break;               // a runaway query cannot hog the frame
+  }
+  out.sort(_lsCmp(st.searchSort, st.searchSortDir, _LS_BULK));
+  return out.slice(0, limit || 300).map(bulkToCardish).filter(Boolean);
+}
+
+/* ── WHAT THE WEEKLY BUILD CANNOT KNOW ───────────────────────────────────
+   The local database is a snapshot with a date on it. A card can be missing
+   from it for exactly one reason: it was printed in a set that Scryfall
+   published after that date. So instead of asking Scryfall the whole
+   question again and comparing card by card, the app asks a far smaller
+   one: WHICH SETS are newer than my snapshot? -- and then searches only
+   inside those. Most weeks the answer is "none", and then the network is
+   not touched at all.
+   Returns [] when the snapshot is complete, a list of set codes when it is
+   not, and null when the question cannot be answered (no snapshot date, no
+   set catalogue yet, or an implausibly long list) -- null means "fall back
+   to the full online search", never "assume complete". */
+const _NEW_SET_SKIP = new Set(['funny','memorabilia','token','minigame','alchemy','vanguard']);
+const _NEW_SET_GRACE_DAYS = 21;   // a set may still gain cards for weeks after release day
+const _NEW_SET_MAX = 45;          // Scryfall caps a query around 1000 chars
+async function newerThanBuildSets(){
+  let ix = null;
+  try{ ix = await bulkIndexReady(); }catch(e){ return null; }
+  if(!ix || !ix.built) return null;
+  const builtMs = Date.parse(ix.built);
+  if(!builtMs) return null;
+  const cutoff = new Date(builtMs - _NEW_SET_GRACE_DAYS * 86400000).toISOString().slice(0, 10);
+  try{ await resolveLegalSets(); }catch(e){}
+  const all = state.allSetsRaw || [];
+  if(!all.length) return null;                       // catalogue unknown -- do not guess
+  const codes = [];
+  for(const x of all){
+    if(x.digital) continue;
+    if(_NEW_SET_SKIP.has(x.set_type)) continue;
+    // No release date at all = an announced set still being spoiled: newer
+    // than any snapshot by definition.
+    if(x.released_at && x.released_at < cutoff) continue;
+    codes.push(x.code);
+  }
+  return codes.length > _NEW_SET_MAX ? null : codes;
+}
+/* The top-up query: the same clause, but fenced inside the newer sets.
+   Legality is judged AFTER the fact rather than in the query, because a set
+   still in preview is marked not_legal until release day -- demanding
+   legal:commander there would hide the very cards this lane exists for. */
+async function searchNewSets(baseClause, codes, limit){
+  const fmt = state.searchFormat || 'any';
+  const base = (baseClause || '').replace(/\s*-t:land/g, '');
+  const setClause = '(' + codes.map(c=>'set:' + c).join(' OR ') + ')';
+  const q = (base + ' ' + setClause + ' game:paper -is:digital').trim();
+  const orderParam = state.searchSort === 'cmc' ? 'cmc' : state.searchSort === 'edhrec' ? 'edhrec' : 'name';
+  const dir = state.searchSortDir === 'desc' ? 'desc' : 'auto';
+  const url = `${SF_BASE}/cards/search?unique=cards&order=${orderParam}&dir=${dir}&q=${encodeURIComponent(q)}`;
+  const res = await sfFetch(url, 0, false);
+  if(!res.ok){ if(res.status === 404) return []; throw res.status; }
+  const dd = await res.json();
+  let data = (dd.data || []).slice(0, limit || 300);
+  if(fmt === 'commander'){
+    // Mode isolation holds here too: the OFFICIAL flag plus the OFFICIAL
+    // list, never the Admiral pillars. 'not_legal' is kept -- that is what
+    // an unreleased card looks like, not a ruling against it.
+    let bans = null;
+    try{ bans = cmdrBanSet(); }catch(e){}
+    data = data.filter(c=>{
+      if(((c.legalities || {}).commander) === 'banned') return false;
+      if(bans && bans.size && bans.has(norm(String(c.name).split(' // ')[0]))) return false;
+      return true;
+    });
+  }
+  return data;
+}
+/* Local list first, live extras folded in, duplicates (a reprint in a new
+   set) resolved in favour of the copy we already have. */
+function _lsMerge(localList, extras){
+  const seen = new Set((localList || []).map(c=>String(c.name).toLowerCase()));
+  const out = (localList || []).slice();
+  (extras || []).forEach(c=>{
+    const k = String(c.name || '').toLowerCase();
+    if(!k || seen.has(k)) return;
+    seen.add(k); out.push(c);
+  });
+  out.sort(_lsCmp(state.searchSort, state.searchSortDir, _LS_CARD));
+  return out.slice(0, 300);
+}
+
+let _searchSeq = 0;
 async function runAdvancedSearch(){
   const clause = buildAdvancedClause();
   state.searchRan = true; state.searchError = false;
@@ -12087,24 +12372,66 @@ async function runAdvancedSearch(){
     return;
   }
   state.searching = true; renderSearchResultsBox();
-  const { results, error } = await searchAndVerifyLegal(clause, state.searchSort, 300, { restrictSet: state.searchSetCode, dir: state.searchSortDir, format: state.searchFormat || 'any' });
-  let shownRes = results.filter(c=>landOk(c));
-  if(state.searchEurMin > 0 || state.searchEurMax != null){
-    // HARD price bounds: Scryfall's queried eur can disagree with the euro
-    // the tile displays (remembered printing / cheap cache), so the bounds
-    // re-apply here on the DISPLAYED price; unknown prices fail the filter.
-    shownRes = shownRes.filter(c=>{
+  const mySeq = ++_searchSeq;
+  const priceOk = (list)=>{
+    if(!(state.searchEurMin > 0 || state.searchEurMax != null)) return list;
+    return list.filter(c=>{
       const p = shownEurOf(c);
       if(p == null) return false;
       if(state.searchEurMin > 0 && p < state.searchEurMin) return false;
       if(state.searchEurMax != null && p > state.searchEurMax) return false;
       return true;
     });
+  };
+  const paint = (list, err)=>{
+    state.searchResults = list; state.searchError = !!err; state.searching = false;
+    renderSearchResultsBox();
+  };
+  // 1. The device answers first — instantly, and without touching the queue.
+  //    An EMPTY array is a real answer ("nothing matches"); only null means
+  //    the device could not answer at all.
+  let localShown = null, painted = false;
+  if(localSearchable()){
+    try{
+      const loc = await localSearch(300);
+      if(mySeq !== _searchSeq) return;
+      if(loc){
+        localShown = priceOk(loc.filter(c=>landOk(c)));
+        if(localShown.length){ paint(localShown, false); painted = true; }   // show it now; an empty list waits for the top-up
+      }
+    }catch(e){}
   }
-  state.searchResults = shownRes;
-  state.searchError = error;
-  state.searching = false;
-  renderSearchResultsBox();
+  // Nothing on screen may be redrawn to say the same thing: a repaint costs
+  // the scroll position and shows as a flicker.
+  const sameAsShown = (list)=> painted && list.length === localShown.length
+                               && list.every((c, i)=>c.name === localShown[i].name);
+  // 2. Only what the snapshot CANNOT know is asked of Scryfall.
+  if(localShown){
+    const newCodes = await newerThanBuildSets();
+    if(mySeq !== _searchSeq) return;
+    if(newCodes){
+      if(!newCodes.length){ if(!painted) paint(localShown, false); return; }   // snapshot complete — no request at all
+      let extras = null;
+      try{ extras = await searchNewSets(clause, newCodes, 300); }
+      catch(e){ extras = null; }                                  // the bulk of the answer is already right
+      if(mySeq !== _searchSeq) return;
+      const next = (extras && extras.length)
+        ? _lsMerge(localShown, priceOk(extras.filter(c=>landOk(c))))
+        : localShown;
+      if(sameAsShown(next)) return;
+      paint(next, false);
+      return;
+    }
+    // newCodes === null: the snapshot's reach is unknown, so ask in full.
+  }
+  // 3. The full online search — for everything the device never answered,
+  //    and as the fallback when the set catalogue is not known yet.
+  const { results, error } = await searchAndVerifyLegal(clause, state.searchSort, 300, { restrictSet: state.searchSetCode, dir: state.searchSortDir, format: state.searchFormat || 'any' });
+  if(mySeq !== _searchSeq) return;
+  if(localShown && localShown.length && (error || !results.length)) return;   // keep what the device found
+  const shownRes = priceOk(results.filter(c=>landOk(c)));
+  if(sameAsShown(shownRes)) return;
+  paint(shownRes, localShown ? false : error);
 }
 /* Surgical badge refresh: replace only the affected tile in place. A full
    grid rebuild for one IN DECK badge is what made the page lurch, however
@@ -16345,7 +16672,9 @@ async function loadInspFeed(){
   const grid = box.querySelector(`.sr-grid[data-ifgrid="${bf}"]`);
   if(!grid || !grid.isConnected) return;
   const _se = document.scrollingElement || document.documentElement;
-  const _anchor = box.lastElementChild;
+  // The selects sit BELOW the feed: pin them and the page foot cannot move,
+  // so new tiles stack upward out of view instead of shoving the page up.
+  const _anchor = document.querySelector('.browse-selects') || box.lastElementChild;
   const _y0 = _anchor ? _anchor.getBoundingClientRect().top : null;
   grid.innerHTML = (out && out.cards && out.cards.length)
     ? out.cards.map((c,i)=>tile(c, bf, key, i)).join('')
@@ -16897,7 +17226,7 @@ function startPairDeck(a, b){
    window or be aborted, so the fallback paths get their turn immediately. */
 async function postWithTimeout(url, body, ms){
   const ctl = new AbortController();
-  const timer = setTimeout(()=>ctl.abort(), ms || 6000);
+  const timer = setTimeout(()=>ctl.abort(), ms || 10000);
   try{
     return await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal: ctl.signal });
   } finally {
