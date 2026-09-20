@@ -298,6 +298,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    stack, growing upward with their own scroll. Dropdowns INSIDE a sheet
    expand in flow (a scrolling ancestor would clip absolute panels). */
 .app > main > .adv-panel,
+.app > main > #advSlot > .adv-panel,
 .app > main > #colAdvBox{
   order:98;position:fixed;left:0;right:0;
   bottom:calc(var(--nav-h) + 120px + env(safe-area-inset-bottom));
@@ -2255,12 +2256,21 @@ function csFitBrowsePanel(){
     }
   }catch(e){}
 }
+const CS_SHEETS = '.adv-panel, #colAdvBox';
 function csRerender(){
   // Opening or closing a dropdown re-renders the whole page — without this,
   // the browser would snap the scroll back to the top every time.
   const y = window.scrollY;
+  // A filter sheet is bottom-anchored: whatever a dropdown adds must push
+  // the TOP up, never the foot down. Distance to the bottom of the content
+  // is the quantity that has to survive the re-render.
+  const feet = Array.from(document.querySelectorAll(CS_SHEETS)).map(el=>el.scrollHeight - el.scrollTop);
   render();
   window.scrollTo(0, y);
+  Array.from(document.querySelectorAll(CS_SHEETS)).forEach((el, i)=>{
+    if(feet[i] == null) return;
+    el.scrollTop = Math.max(0, el.scrollHeight - feet[i]);
+  });
   // Dropdowns now live inside the reco overlay too; the page render above
   // never touches overlays, so refresh the reco body when it's up (outside
   // taps and hardware back both land here via the gatekeeper).
@@ -4668,17 +4678,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.579';
+const APP_VERSION = '2.51.580';
 const CHANGELOG_NOTES = {
   en: [
-    'The white glow around folder glyphs and cover art is gone from the whole app.',
-    'Filter lists and drop-downs are the same family as the sheet holding them \u2014 they used to borrow a colour from the other fleet.',
-    'The Deckhand title on the launch screen is plain white again, whatever scheme is set.'
+    'The search filters are the same sheet as the collection filters \u2014 same fill, same behaviour. They sat one wrapper deeper, so the sheet rules never reached them.',
+    'Opening a drop-down inside a filter sheet pushes the top upward instead of shoving the bottom off the screen.'
   ],
   nl: [
-    'De witte gloed om mapglyphs en omslagkunst is uit de hele app verdwenen.',
-    'Filterlijsten en keuzemenu\u2019s horen nu bij het vel waarin ze staan \u2014 ze leenden een kleur van de andere vloot.',
-    'De titel Deckhand op het startscherm is weer gewoon wit, welk schema er ook aanstaat.'
+    'De zoekfilters zijn hetzelfde vel als de collectiefilters \u2014 zelfde vulling, zelfde gedrag. Ze zaten \u00e9\u00e9n omhulsel dieper, waardoor de velregels ze nooit bereikten.',
+    'Een drop-up openen in een filtervel duwt de bovenkant omhoog in plaats van de onderkant van het scherm af.'
   ]
 };
 /* ---------- First-visit welcome (new players usually arrive via a shared
