@@ -36,7 +36,7 @@ import { pipeline } from 'node:stream/promises';
 import readline from 'node:readline';
 import { StringDecoder } from 'node:string_decoder';
 
-const UA = { headers: { 'User-Agent': 'AdmiralsAndCommanders-bulk/1.0 (admirals-and-commanders.netlify.app)', 'Accept': '*/*' } };
+const UA = { headers: { 'User-Agent': 'Deckhand-bulk/1.1 (+https://deckhandcompanion.netlify.app)', 'Accept': '*/*' } };
 const OUT_DIR = process.env.OUT_DIR || '.';
 
 /* ---- the official index tells us today's download URLs ---- */
