@@ -4700,15 +4700,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.594';
+const APP_VERSION = '2.51.595';
 const CHANGELOG_NOTES = {
   en: [
-    'Notifications now work inside the Android app too: it checks once a day by itself for new sets and Deckhand updates, with no Google services involved.',
-    'The notification row states where it stands the moment Extras opens, instead of going blank after a reload.'
+    'The Inspiration feed no longer spins forever when the network drops: it gives up waiting, says so, and retries by itself \u2014 tap the note to retry at once. Before, only switching between Week/Month/Year broke the spell.'
   ],
   nl: [
-    'Meldingen werken nu ook binnen de Android-app: die kijkt \u00e9\u00e9n keer per dag zelf naar nieuwe sets en Deckhand-updates, zonder Google-diensten.',
-    'De meldingenrij vertelt meteen bij het openen van Extra\u2019s hoe hij ervoor staat, in plaats van leeg te zijn na een herlaadbeurt.'
+    'De Inspiratie-feed blijft niet meer eindeloos draaien als het netwerk wegvalt: hij stopt met wachten, zegt het, en probeert het vanzelf opnieuw \u2014 tik op de melding om meteen te proberen. Eerder hielp alleen wisselen tussen Week/Maand/Jaar.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -17045,6 +17043,28 @@ async function _inspFeedFetch(f, win, bg){
   // 'popular' is NOT a period: it is Scryfall's rank of the card itself.
   return { cards: (results || []).slice(0, 8), win: 'popular', fallback: true };
 }
+/* A network hiccup must not leave this page on a dead end. When the feed comes
+   back empty the note says so and the page tries again by itself, with room
+   between attempts; tapping it retries at once. Guarded on format and period,
+   so a pending retry for a view the person already left is dropped. */
+let _inspRetryT = null, _inspRetryN = 0;
+function _inspCancelRetry(){ if(_inspRetryT){ clearTimeout(_inspRetryT); _inspRetryT = null; } }
+function _inspRetryLater(bf, win){
+  _inspCancelRetry();
+  if(_inspRetryN >= 3) return false;
+  const wait = [4000, 9000, 20000][_inspRetryN] || 20000;
+  _inspRetryN++;
+  _inspRetryT = setTimeout(()=>{
+    _inspRetryT = null;
+    if(state.screen !== 'browse' || _inspFeedWin !== win || (state.browseFormat || 'commander') !== bf) return;
+    const b = document.getElementById('inspFeed');
+    if(!b) return;
+    sfDropQueuedFor('browse');   // clear the doomed backlog before asking again
+    delete b.dataset.busy;
+    loadInspFeed();
+  }, wait);
+  return true;
+}
 async function loadInspFeed(){
   const box = document.getElementById('inspFeed');
   if(!box) return;
@@ -17059,9 +17079,16 @@ async function loadInspFeed(){
   if(!box.dataset.wired){
     box.dataset.wired = '1';
     box.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-ifretry]')){
+        _inspCancelRetry(); _inspRetryN = 0;
+        delete document.getElementById('inspFeed').dataset.busy;
+        loadInspFeed();
+        return;
+      }
       const wbtn = e.target.closest('.if-win');
       if(wbtn){
         if(wbtn.dataset.ifwin === _inspFeedWin) return;
+        _inspCancelRetry(); _inspRetryN = 0;
         sfDropQueuedFor('browse');
         _inspFeedWin = wbtn.dataset.ifwin;
         delete document.getElementById('inspFeed').dataset.busy;
@@ -17081,7 +17108,18 @@ async function loadInspFeed(){
   const key = bf + '|' + win;
   let out = _inspFeed.data[key];
   if(!out){
-    try{ out = await _inspFeedFetch(bf, win, false); }catch(e){ out = null; }
+    // Hard ceiling on the wait. The serial queue retries a dead endpoint six
+    // times with backoff, and the feed asks for several things in a row, so a
+    // flat line could keep this spinner turning indefinitely -- the page stayed
+    // busy and only switching period broke the spell. Past this point the note
+    // goes up and the retry lane takes over; whatever is still in flight is
+    // dropped when the next attempt starts.
+    try{
+      out = await Promise.race([
+        _inspFeedFetch(bf, win, false),
+        new Promise(r=>setTimeout(()=>r(null), 12000))
+      ]);
+    }catch(e){ out = null; }
     // Only a REAL period answer is worth keeping; a fallback is retried on
     // the next visit rather than frozen in for the session.
     if(out && out.cards && out.cards.length && !out.fallback) _inspFeed.data[key] = out;
@@ -17095,9 +17133,18 @@ async function loadInspFeed(){
   // so new tiles stack upward out of view instead of shoving the page up.
   const _anchor = document.querySelector('.browse-selects') || box.lastElementChild;
   const _y0 = _anchor ? _anchor.getBoundingClientRect().top : null;
-  grid.innerHTML = (out && out.cards && out.cards.length)
+  const _got = !!(out && out.cards && out.cards.length);
+  let _retrying = false;
+  if(_got){ _inspCancelRetry(); _inspRetryN = 0; }
+  else { _retrying = _inspRetryLater(bf, win); }
+  const _NL = appLang() === 'nl';
+  grid.innerHTML = _got
     ? out.cards.map((c,i)=>tile(c, bf, key, i)).join('')
-    : `<div class="empty-note" style="flex:1 1 100%;">Couldn't load these right now.</div>`;
+    : `<div class="empty-note" data-ifretry="1" style="flex:1 1 100%;cursor:pointer;">${_retrying
+        ? (_NL ? 'Even geen antwoord van Scryfall \u2014 ik probeer het zo opnieuw. Tik om meteen te proberen.'
+               : 'No answer from Scryfall just now \u2014 trying again shortly. Tap to retry now.')
+        : (_NL ? 'Het lukt niet om deze op te halen. Tik om opnieuw te proberen.'
+               : 'Could not load these. Tap to retry.')}</div>`;
   const lab = box.querySelector('[data-iflab]');
   if(lab && out) lab.textContent = `${INSP_FEED_LABELS[bf] || bf} · ${INSP_WIN_LABELS[out.win] || ''}`;
   if(_anchor && _y0 !== null){ const _dy = _anchor.getBoundingClientRect().top - _y0; if(_dy) _se.scrollTop += _dy; }
