@@ -4700,17 +4700,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.589';
+const APP_VERSION = '2.51.591';
 const CHANGELOG_NOTES = {
   en: [
-    'Share sheet: send a decklist, card name or Scryfall/EDHREC/Moxfield link to Deckhand from any app \u2014 it opens the right import.',
-    'Push notifications for new spoilers: switch in Extras, works with the app closed (installed app).',
-    'The install button now hides inside the installed app and gives honest per-browser advice (Samsung Internet/Firefox \u2192 install via Chrome).'
+    'Update notifications: with spoiler pushes on, you now also get a push when Deckhand itself updates, with the changelog in short bullets.',
+    'Push sign-up fixed (the "subscribe 502" error): the server functions were rebuilt on Netlify\u2019s modern runtime.',
+    'The install helper now also warns Ecosia/Brave/Edge users that only Chrome can install the real app.'
   ],
   nl: [
-    'Deelmenu: stuur een decklijst, kaartnaam of Scryfall/EDHREC/Moxfield-link vanuit elke app naar Deckhand \u2014 de juiste import opent vanzelf.',
-    'Pushmeldingen bij nieuwe spoilers: schakelaar in Extra\u2019s, werkt ook met de app dicht (ge\u00efnstalleerde app).',
-    'De installatieknop verbergt zich nu binnen de ge\u00efnstalleerde app en geeft eerlijk advies per browser (Samsung Internet/Firefox \u2192 installeer via Chrome).'
+    'Update-meldingen: staan spoiler-pushes aan, dan krijg je nu ook een push wanneer Deckhand zelf een update krijgt, met de changelog in korte bullets.',
+    'Push-aanmelding gerepareerd (de \u201csubscribe 502\u201d-fout): de serverfuncties zijn herbouwd op Netlify\u2019s moderne runtime.',
+    'De installatiehulp waarschuwt nu ook Ecosia/Brave/Edge-gebruikers dat alleen Chrome de echte app kan installeren.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -4728,12 +4728,12 @@ function tourSteps(){
     { k:'home', go:()=>switchPage('home'),
       t: NL ? '⚓ Welkom aan boord' : '⚓ Welcome aboard',
       b: NL
-        ? `<p style="margin:6px 0;">Deckhand is je deckbuilder voor <strong>Commander, Admiral, Pauper Commander, PreDH en Duel Commander</strong> — elk deck wordt op zijn eigen format gecontroleerd, alles werkt offline.</p>
-           <p style="margin:6px 0;">Dit is <strong>Home</strong>: onderaan vind je het laatste Magic-<strong>nieuws</strong> (EDHREC &amp; MTGGoldfish), vers bij elke start.</p>
-           <p style="margin:6px 0;font-size:13px;color:var(--sub-text);">📲 Tip: installeer Deckhand als app — Chrome ⋮ → <em>App installeren</em> (niet “Toevoegen aan startscherm”). We lopen nu samen alle pagina\u2019s langs.</p>`
-        : `<p style="margin:6px 0;">Deckhand is your deck builder for <strong>Commander, Admiral, Pauper Commander, PreDH and Duel Commander</strong> — every deck is checked against its own format, and everything works offline.</p>
-           <p style="margin:6px 0;">This is <strong>Home</strong>: the latest Magic <strong>news</strong> (EDHREC &amp; MTGGoldfish) lives at the foot, fresh on every launch.</p>
-           <p style="margin:6px 0;font-size:13px;color:var(--sub-text);">📲 Tip: install Deckhand as an app — Chrome ⋮ → <em>Install app</em> (not “Add to Home screen”). Let\u2019s walk every page together.</p>` },
+        ? `<p style="margin:4px 0;">Deckhand is <strong>voor je telefoon</strong> gemaakt: alles is <strong>van onder naar boven</strong> gebouwd — knoppen, menu\u2019s en de beste content zitten onderin, binnen <strong>duimbereik</strong>.</p>
+           <p style="margin:4px 0;">Bouw decks in <strong>Commander, Admiral, Pauper Commander, PreDH en Duel Commander</strong>; alles werkt offline. Dit is <strong>Home</strong>, met onderin het laatste Magic-<strong>nieuws</strong>.</p>
+           <p style="margin:4px 0;color:var(--sub-text);">📲 Tip: installeer Deckhand als app — Chrome ⋮ → <em>App installeren</em>. We lopen nu alle pagina\u2019s langs.</p>`
+        : `<p style="margin:4px 0;">Deckhand is built <strong>for your phone</strong>: everything runs <strong>bottom-up</strong> — buttons, menus and the best content sit at the foot, within <strong>thumb reach</strong>.</p>
+           <p style="margin:4px 0;">Build decks in <strong>Commander, Admiral, Pauper Commander, PreDH and Duel Commander</strong>; everything works offline. This is <strong>Home</strong>, with the latest Magic <strong>news</strong> at the foot.</p>
+           <p style="margin:4px 0;color:var(--sub-text);">📲 Tip: install Deckhand as an app — Chrome ⋮ → <em>Install app</em>. Let\u2019s walk every page together.</p>` },
     { k:'decks', go:()=>switchPage('decks'),
       t: NL ? '⚔ My Stuff — je decks' : '⚔ My Stuff — your decks',
       b: NL
@@ -4799,19 +4799,21 @@ function showTourLangChoice(){
   document.getElementById('tourScrim')?.remove();
   const el = document.createElement('div');
   el.className = 'deckpick-scrim'; el.id = 'tourScrim';
-  el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin-bottom:auto;margin-top:auto;max-width:420px;">
-    <h4>🌐 Taal · Language</h4>
-    <div style="font-size:14px;line-height:1.6;color:var(--ink-text);">
-      <p style="margin:6px 0;">In welke taal wil je de rondleiding en de app?</p>
-      <p style="margin:6px 0;">Which language would you like for the tour and the app?</p>
+  el.innerHTML = `<div class="deckpick" style="border-radius:14px;margin:0 12px;max-width:330px;padding:10px 12px 12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+    <h4 style="font-size:12.5px;margin:0 0 2px;">🌐 Taal · Language</h4>
+    <div style="font-size:12px;line-height:1.45;color:var(--ink-text);">
+      <p style="margin:4px 0;">In welke taal wil je de rondleiding en de app?</p>
+      <p style="margin:4px 0;">Which language would you like for the tour and the app?</p>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
-      <button class="primary-btn" data-tourlang="nl" style="width:100%;">Nederlands</button>
-      <button class="primary-btn" data-tourlang="en" style="width:100%;">English</button>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+      <button class="primary-btn" data-tourlang="nl" style="width:100%;padding:9px 10px;font-size:13.5px;">Nederlands</button>
+      <button class="primary-btn" data-tourlang="en" style="width:100%;padding:9px 10px;font-size:13.5px;">English</button>
     </div>
   </div>`;
   document.body.appendChild(el);
-  el.style.alignItems = 'center';
+  el.style.background = 'transparent';
+  el.style.alignItems = 'flex-start';
+  el.style.paddingTop = 'calc(64px + env(safe-area-inset-top))';
   el.querySelectorAll('[data-tourlang]').forEach(b=>b.addEventListener('click', ()=>{
     const code = b.dataset.tourlang;
     try{
@@ -4848,17 +4850,22 @@ function showTourStep(){
     const el = document.createElement('div');
     el.className = 'deckpick-scrim'; el.id = 'tourScrim';
     const last = i === steps.length - 1;
-    el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin-bottom:auto;margin-top:auto;max-width:420px;">
-      <h4>${s.t}</h4>
-      <div style="overflow-y:auto;font-size:14px;line-height:1.6;color:var(--ink-text);">${s.b}</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
-        <span style="font-size:12.5px;color:var(--sub-text);flex:0 0 auto;font-family:'JetBrains Mono',monospace;">${i+1}/${steps.length}</span>
-        <button class="ghost-btn" id="tourSkip" style="flex:0 0 auto;padding:9px 12px;font-size:13px;">${NL ? 'Overslaan' : 'Skip'}</button>
-        <button class="primary-btn" id="tourNext" style="flex:1;">${last ? '⚓ ' + (NL ? 'Klaar' : 'Done') : (NL ? 'Volgende' : 'Next') + ' ›'}</button>
+    el.innerHTML = `<div class="deckpick" style="border-radius:14px;margin:0 12px;max-width:330px;padding:10px 12px 12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+      <h4 style="font-size:12.5px;margin:0 0 2px;">${s.t}</h4>
+      <div style="overflow-y:auto;font-size:12px;line-height:1.45;color:var(--ink-text);">${s.b}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <span style="font-size:11px;color:var(--sub-text);flex:0 0 auto;font-family:'JetBrains Mono',monospace;">${i+1}/${steps.length}</span>
+        <button class="ghost-btn" id="tourSkip" style="flex:0 0 auto;padding:7px 10px;font-size:12px;">${NL ? 'Overslaan' : 'Skip'}</button>
+        <button class="primary-btn" id="tourNext" style="flex:1;padding:9px 10px;font-size:13.5px;">${last ? '⚓ ' + (NL ? 'Klaar' : 'Done') : (NL ? 'Volgende' : 'Next') + ' ›'}</button>
       </div>
     </div>`;
     document.body.appendChild(el);
-    el.style.alignItems = 'center';
+    // See-through guide: no darkening, the page stays fully visible while
+    // the scrim still swallows stray taps. The card hangs near the TOP —
+    // the app's content lives at the FOOT, so nothing it explains is hidden.
+    el.style.background = 'transparent';
+    el.style.alignItems = 'flex-start';
+    el.style.paddingTop = 'calc(64px + env(safe-area-inset-top))';
     document.getElementById('tourNext').addEventListener('click', ()=>{ state._tourI = i + 1; showTourStep(); });
     document.getElementById('tourSkip').addEventListener('click', ()=>endAppTour(false));
   }, 380);
@@ -19462,6 +19469,8 @@ function wireSettingsPage(){
           ? 'Samsung Internet only makes a bare shortcut that can vanish. Open this link ONCE in Chrome and install there: ⋮ → Install app.'
           : /Firefox/i.test(ua)
           ? 'Firefox on Android cannot install the real app. Open this link in Chrome and pick ⋮ → Install app.'
+          : /Ecosia|Brave|DuckDuckGo|EdgA|OPR|Vivaldi/i.test(ua)
+          ? 'This browser only makes a bare shortcut — on Android only CHROME can install the real app. Open this link once in Chrome and install there.'
           : 'All checks pass ✓ — Chrome ⋮ → Install app (NOT "Add to Home screen"). A real install shows in Android Settings → Apps and survives a reboot. If Chrome only offers a shortcut: remove the old icon, reload twice, retry.';
       }
     }
