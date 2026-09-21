@@ -4700,17 +4700,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.591';
+const APP_VERSION = '2.51.592';
 const CHANGELOG_NOTES = {
   en: [
-    'Update notifications: with spoiler pushes on, you now also get a push when Deckhand itself updates, with the changelog in short bullets.',
-    'Push sign-up fixed (the "subscribe 502" error): the server functions were rebuilt on Netlify\u2019s modern runtime.',
-    'The install helper now also warns Ecosia/Brave/Edge users that only Chrome can install the real app.'
+    'Extras reshuffled: notifications and the app tour now sit at the top of the page, with Backup & Restore right below them.',
+    'New download button in Extras for the real Android app (APK) \u2014 outside the Play Store, and it works on Google-free phones.',
+    'The install and download rows hide themselves once you are inside the Android app.'
   ],
   nl: [
-    'Update-meldingen: staan spoiler-pushes aan, dan krijg je nu ook een push wanneer Deckhand zelf een update krijgt, met de changelog in korte bullets.',
-    'Push-aanmelding gerepareerd (de \u201csubscribe 502\u201d-fout): de serverfuncties zijn herbouwd op Netlify\u2019s moderne runtime.',
-    'De installatiehulp waarschuwt nu ook Ecosia/Brave/Edge-gebruikers dat alleen Chrome de echte app kan installeren.'
+    'Extra\u2019s opnieuw geordend: meldingen en de rondleiding staan nu bovenaan de pagina, met back-up & herstel er direct onder.',
+    'Nieuwe downloadknop in Extra\u2019s voor de echte Android-app (APK) \u2014 buiten de Play Store om, werkt ook op telefoons zonder Google.',
+    'De installeer- en downloadrij verbergen zichzelf zodra je in de Android-app zit.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -19069,12 +19069,17 @@ function createDeckFromReco(){
 
 /* ---------------- SETTINGS PAGE ---------------- */
 
+/* Inside the standalone Android build (Deckhand.apk) the Java side exposes this
+   bridge. It is the one honest signal that we are running in the app rather
+   than a browser tab, so the install and download rows hide themselves there. */
+function inAndroidApp(){
+  try{ return typeof window.DeckhandExport !== 'undefined'; }catch(e){ return false; }
+}
+
 function settingsPageHtml(){
   return `
   <main class="settings-main">
     <div class="settings-section"><div class="settings-row" id="lifeRow"><div class="l1">Life Counter</div><div class="l2">Open the multiplayer life tracker</div></div></div>
-    <div class="settings-section"><div class="settings-row"><div><div class="l1">🔔 ${appLang()==='nl' ? 'Spoiler-meldingen' : 'Spoiler notifications'}</div><div class="l2">${appLang()==='nl' ? 'Een pushmelding zodra er een nieuwe set opduikt \u2014 ook als de app dicht is.' : 'A push the moment a new set shows up \u2014 even with the app closed.'}</div><div class="l2" id="pushStatus" style="margin-top:4px;"></div></div><label class="toggle-switch"><input type="checkbox" id="pushToggle" ${localStorage.getItem(LS_PREFIX+'pushOn')==='1'?'checked':''}><span class="track"></span><span class="knob"></span></label></div></div>
-    <div class="settings-section"><div class="settings-row" id="tourRow"><div class="l1">🧭 ${appLang()==='nl' ? 'Rondleiding' : 'App tour'}</div><div class="l2">${appLang()==='nl' ? 'Loop alle pagina\u2019s nog eens langs met korte uitleg' : 'Walk every page again with a short guide'}</div></div></div>
             <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">Comprehensive Rules</div><div class="l2">The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back</div></div></div>
     <div class="settings-section">
       <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Eleven formats this app knows — tap to unfold.</div></div><span class="l2">▾</span></div>
@@ -19105,6 +19110,21 @@ function settingsPageHtml(){
     </div>
     <div class="settings-section">
       <div class="settings-row" id="dataSourcesRow"><div style="width:100%;"><div class="l1">Data Sources</div><div class="l2" id="dataSourcesBody">${dataSourcesHtml()}</div></div></div>
+    </div>
+    ${(window.matchMedia('(display-mode: standalone)').matches || inAndroidApp()) ? '' : `<div class="settings-section">
+      ${/Android/i.test(navigator.userAgent) ? `<div class="settings-row" id="apkRow"><div style="flex:1;min-width:0;"><div class="l1">\u2693 ${appLang()==='nl' ? 'Download de Android-app' : 'Download the Android app'}</div><div class="l2">${appLang()==='nl' ? 'Een echte app, buiten de Play Store om \u2014 werkt ook op telefoons zonder Google. Updates komen vanzelf binnen, je hoeft nooit opnieuw te downloaden.' : 'A real app, no Play Store \u2014 it works on Google-free phones too. Updates arrive on their own; you never download it again.'}</div><div class="l2" id="apkNote" style="margin-top:4px;"></div></div><button type="button" class="ghost-btn" id="apkBtn" style="flex:0 0 auto;margin-left:auto;padding:7px 12px;font-size:13px;">\u2b07 APK</button></div>` : ''}
+      <div class="settings-row" id="installAppRow"><div><div class="l1">📲 Install as an app</div><div class="l2">Home-screen icon, full screen, works offline</div></div></div>
+    </div>`}
+    <div class="settings-section">
+      <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} Share this app with a friend</div><div class="l2">Sends the app link with a short intro</div></div></div>
+    </div>
+    ${state._inspoDiag ? `<div class="settings-card" style="margin-top:14px;">
+      <h4 style="margin:0 0 6px;">🩺 Diagnostics</h4>
+      <p class="hint" style="margin:0 0 8px;">The last theme list that couldn't place every card. Copy this and send it to the developer.</p>
+      <pre id="diagText" style="white-space:pre-wrap;word-break:break-all;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;padding:8px;font-size:12px;line-height:1.5;max-height:220px;overflow:auto;">${escapeHtml(JSON.stringify(state._inspoDiag, null, 1))}</pre>
+      <button class="ghost-btn" id="diagCopy" style="width:100%;">📋 ${trS('Copy diagnostics')}</button>
+    </div>` : ''}
+    <div class="settings-section">
       <div class="settings-row"><div><div class="l1">Backup &amp; Restore</div><div class="l2">Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.</div><div class="l2" style="margin-top:5px;">${state._persisted === true
         ? (appLang()==='nl' ? '🛡 Opslag beschermd — Android ruimt je decks en collectie niet op bij ruimtegebrek.' : '🛡 Storage protected — Android won\u2019t clear your decks and collection under storage pressure.')
         : state._persisted === false
@@ -19117,18 +19137,8 @@ function settingsPageHtml(){
         <input type="file" id="restoreFile" accept="application/json,.json" style="display:none;">
       </div>
     </div>
-    ${window.matchMedia('(display-mode: standalone)').matches ? '' : `<div class="settings-section">
-      <div class="settings-row" id="installAppRow"><div><div class="l1">📲 Install as an app</div><div class="l2">Home-screen icon, full screen, works offline</div></div></div>
-    </div>`}
-    <div class="settings-section">
-      <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} Share this app with a friend</div><div class="l2">Sends the app link with a short intro</div></div></div>
-    </div>
-    ${state._inspoDiag ? `<div class="settings-card" style="margin-top:14px;">
-      <h4 style="margin:0 0 6px;">🩺 Diagnostics</h4>
-      <p class="hint" style="margin:0 0 8px;">The last theme list that couldn't place every card. Copy this and send it to the developer.</p>
-      <pre id="diagText" style="white-space:pre-wrap;word-break:break-all;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;padding:8px;font-size:12px;line-height:1.5;max-height:220px;overflow:auto;">${escapeHtml(JSON.stringify(state._inspoDiag, null, 1))}</pre>
-      <button class="ghost-btn" id="diagCopy" style="width:100%;">📋 ${trS('Copy diagnostics')}</button>
-    </div>` : ''}
+    <div class="settings-section"><div class="settings-row" id="tourRow"><div class="l1">🧭 ${appLang()==='nl' ? 'Rondleiding' : 'App tour'}</div><div class="l2">${appLang()==='nl' ? 'Loop alle pagina\u2019s nog eens langs met korte uitleg' : 'Walk every page again with a short guide'}</div></div></div>
+    <div class="settings-section"><div class="settings-row"><div><div class="l1">🔔 ${appLang()==='nl' ? 'Spoiler-meldingen' : 'Spoiler notifications'}</div><div class="l2">${appLang()==='nl' ? 'Een pushmelding zodra er een nieuwe set opduikt \u2014 ook als de app dicht is.' : 'A push the moment a new set shows up \u2014 even with the app closed.'}</div><div class="l2" id="pushStatus" style="margin-top:4px;"></div></div><label class="toggle-switch"><input type="checkbox" id="pushToggle" ${localStorage.getItem(LS_PREFIX+'pushOn')==='1'?'checked':''}><span class="track"></span><span class="knob"></span></label></div></div>
     <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Deckhand v${APP_VERSION} · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
   </main>`;
 }
@@ -19436,6 +19446,28 @@ function wireSettingsPage(){
   document.getElementById('ubRow')?.addEventListener('click', ()=>{
     state.ubListOpen = !state.ubListOpen;
     render();
+  });
+  document.getElementById('apkBtn')?.addEventListener('click', async ()=>{
+    const note = document.getElementById('apkNote');
+    const nl = appLang() === 'nl';
+    if(note) note.textContent = nl ? 'Even kijken of het bestand er staat\u2026' : 'Checking the file is there\u2026';
+    let ok = false, ct = '';
+    try{
+      const r = await fetch('./Deckhand.apk', { method:'HEAD', cache:'no-store' });
+      ok = r.ok; ct = r.headers.get('content-type') || '';
+    }catch(e){}
+    if(!ok || /text\/html/i.test(ct)){
+      if(note) note.textContent = nl
+        ? '\u26a0 De APK staat nog niet op de site \u2014 zet Deckhand.apk in de hoofdmap van de repo.'
+        : '\u26a0 The APK is not on the site yet \u2014 put Deckhand.apk in the repo root.';
+      return;
+    }
+    if(note) note.textContent = nl
+      ? 'Download gestart \u2014 open het bestand en sta \u201conbekende apps\u201d \u00e9\u00e9n keer toe.'
+      : 'Download started \u2014 open the file and allow \u201cunknown apps\u201d once.';
+    const a = document.createElement('a');
+    a.href = './Deckhand.apk'; a.download = 'Deckhand.apk';
+    document.body.appendChild(a); a.click(); a.remove();
   });
   document.getElementById('installAppRow')?.addEventListener('click', async ()=>{
     if(window.matchMedia('(display-mode: standalone)').matches){ toast('Already installed — you\'re in the app right now.'); return; }
