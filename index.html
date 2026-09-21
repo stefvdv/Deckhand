@@ -4700,17 +4700,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.592';
+const APP_VERSION = '2.51.594';
 const CHANGELOG_NOTES = {
   en: [
-    'Extras reshuffled: notifications and the app tour now sit at the top of the page, with Backup & Restore right below them.',
-    'New download button in Extras for the real Android app (APK) \u2014 outside the Play Store, and it works on Google-free phones.',
-    'The install and download rows hide themselves once you are inside the Android app.'
+    'Notifications now work inside the Android app too: it checks once a day by itself for new sets and Deckhand updates, with no Google services involved.',
+    'The notification row states where it stands the moment Extras opens, instead of going blank after a reload.'
   ],
   nl: [
-    'Extra\u2019s opnieuw geordend: meldingen en de rondleiding staan nu bovenaan de pagina, met back-up & herstel er direct onder.',
-    'Nieuwe downloadknop in Extra\u2019s voor de echte Android-app (APK) \u2014 buiten de Play Store om, werkt ook op telefoons zonder Google.',
-    'De installeer- en downloadrij verbergen zichzelf zodra je in de Android-app zit.'
+    'Meldingen werken nu ook binnen de Android-app: die kijkt \u00e9\u00e9n keer per dag zelf naar nieuwe sets en Deckhand-updates, zonder Google-diensten.',
+    'De meldingenrij vertelt meteen bij het openen van Extra\u2019s hoe hij ervoor staat, in plaats van leeg te zijn na een herlaadbeurt.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -19125,14 +19123,14 @@ function settingsPageHtml(){
       <button class="ghost-btn" id="diagCopy" style="width:100%;">📋 ${trS('Copy diagnostics')}</button>
     </div>` : ''}
     <div class="settings-section">
-      <div class="settings-row"><div><div class="l1">Backup &amp; Restore</div><div class="l2">Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.</div><div class="l2" style="margin-top:5px;">${state._persisted === true
+      <div class="settings-row" style="flex-wrap:wrap;"><div style="flex:1 1 100%;min-width:0;"><div class="l1">Backup &amp; Restore</div><div class="l2">Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.</div><div class="l2" style="margin-top:5px;">${state._persisted === true
         ? (appLang()==='nl' ? '🛡 Opslag beschermd — Android ruimt je decks en collectie niet op bij ruimtegebrek.' : '🛡 Storage protected — Android won\u2019t clear your decks and collection under storage pressure.')
         : state._persisted === false
         ? (appLang()==='nl' ? '⚠ Opslag nog niet beschermd — installeer Deckhand als app en maak regelmatig een back-up.' : '⚠ Storage not protected yet — install Deckhand as an app and back up regularly.')
         : (appLang()==='nl' ? 'Opslagbescherming wordt gecontroleerd\u2026' : 'Checking storage protection\u2026')}</div></div>
-        <div style="display:flex;gap:8px;flex:0 0 auto;margin-left:auto;">
-          <button class="ghost-btn" id="backupBtn" style="padding:7px 12px;font-size:13px;">⬇ Back Up</button>
-          <button class="ghost-btn" id="restoreBtn" style="padding:7px 12px;font-size:13px;">⬆ Restore</button>
+        <div style="display:flex;gap:8px;flex:1 1 100%;margin-top:10px;">
+          <button class="ghost-btn" id="backupBtn" style="padding:9px 12px;font-size:13px;">⬇ Back Up</button>
+          <button class="ghost-btn" id="restoreBtn" style="padding:9px 12px;font-size:13px;">⬆ Restore</button>
         </div>
         <input type="file" id="restoreFile" accept="application/json,.json" style="display:none;">
       </div>
@@ -19411,7 +19409,11 @@ function wireSettingsPage(){
   });
   document.getElementById('lifeRow').addEventListener('click', openLifeOverlay);
   document.getElementById('tourRow')?.addEventListener('click', startAppTour);
-  document.getElementById('pushToggle')?.addEventListener('change', (e)=>{ e.target.checked ? enableSpoilerPush() : disableSpoilerPush(); });
+  document.getElementById('pushToggle')?.addEventListener('change', (e)=>{
+    if(nativeNotify()){ e.target.checked ? enableNativeNotify() : disableNativeNotify(); return; }
+    e.target.checked ? enableSpoilerPush() : disableSpoilerPush();
+  });
+  paintPushAvailability();
   document.getElementById('crRow')?.addEventListener('click', openCROverlay);
   document.getElementById('fullRulesToggle')?.addEventListener('click', ()=>{
     state.settingsFullRulesOpen = !state.settingsFullRulesOpen;
@@ -20677,10 +20679,98 @@ function _b64uToBytes(s){
   return out;
 }
 function _pushStatus(msg){ const el = document.getElementById('pushStatus'); if(el) el.textContent = msg || ''; }
+/* Why push is off. Android's WebView -- what the Deckhand APK runs on -- has no
+   Push API at all, so the honest answer there is not "your phone can't do this"
+   but "this wrapper can't, the browser version can". */
+function _pushUnavailableMsg(){
+  const NL = appLang() === 'nl';
+  if(nativeNotify()){
+    return NL ? '' : '';
+  }
+  if(inAndroidApp()){
+    return NL
+      ? 'Niet beschikbaar in de Android-app \u2014 pushmeldingen werken alleen in de browserversie. Updates zie je hier gewoon in de changelog.'
+      : 'Not available inside the Android app \u2014 push only works in the browser version. Updates still show up here in the changelog.';
+  }
+  return NL ? 'Dit toestel ondersteunt geen pushmeldingen.' : 'This device does not support push.';
+}
+/* Inside the Android app there is no Push API, but the app itself can look
+   once a day and raise a real Android notification. That lane is exposed by
+   the wrapper as DeckhandNotify; when it is there, the toggle drives it
+   instead of a web push subscription. */
+function nativeNotify(){
+  try{
+    const n = window.DeckhandNotify;
+    return (n && typeof n.setEnabled === 'function') ? n : null;
+  }catch(e){ return null; }
+}
+function _nativeOnMsg(){
+  return appLang() === 'nl'
+    ? '\u2713 Aan \u2014 de app kijkt \u00e9\u00e9n keer per dag zelf naar nieuwe sets en updates.'
+    : '\u2713 On \u2014 the app checks once a day for new sets and updates.';
+}
+async function enableNativeNotify(){
+  const NL = appLang() === 'nl';
+  const n = nativeNotify();
+  if(!n) return;
+  try{
+    n.setLang(appLang());
+    n.setEnabled(true);
+    try{ localStorage.setItem(LS_PREFIX+'pushOn', '1'); }catch(e){}
+    _pushStatus(_nativeOnMsg());
+    // Android 13+ shows its own permission sheet; report the outcome honestly.
+    setTimeout(()=>{
+      try{
+        if(n.permissionGranted && !n.permissionGranted()){
+          _pushStatus(NL
+            ? '\u26a0 Meldingen staan nog uit voor Deckhand \u2014 zet ze aan bij Instellingen \u2192 Apps \u2192 Deckhand \u2192 Meldingen.'
+            : '\u26a0 Notifications are still off for Deckhand \u2014 turn them on in Settings \u2192 Apps \u2192 Deckhand \u2192 Notifications.');
+        }
+      }catch(e){}
+    }, 2500);
+  }catch(e){
+    _pushStatus((NL ? 'Aanzetten mislukt: ' : 'Could not enable: ') + (e && e.message || e));
+  }
+}
+function disableNativeNotify(){
+  const n = nativeNotify();
+  try{ if(n) n.setEnabled(false); }catch(e){}
+  try{ localStorage.setItem(LS_PREFIX+'pushOn', '0'); }catch(e){}
+  _pushStatus(appLang() === 'nl' ? 'Uit.' : 'Off.');
+}
+/* The verdict belongs on screen the moment Extras opens, not only after a tap.
+   Three cases: the app's own lane, a browser that can push, and neither. */
+function paintPushAvailability(){
+  const t = document.getElementById('pushToggle');
+  if(!t) return;
+  const nat = nativeNotify();
+  if(nat){
+    let on = false;
+    try{ on = !!nat.isEnabled(); }catch(e){}
+    try{ nat.setLang(appLang()); }catch(e){}
+    t.disabled = false; t.checked = on;
+    _pushStatus(on ? _nativeOnMsg() : '');
+    return;
+  }
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    t.checked = false; t.disabled = true;
+    t.closest('.settings-row')?.style.setProperty('opacity', '0.75');
+    _pushStatus(_pushUnavailableMsg());
+    return;
+  }
+  // A browser that already carries a subscription should say so on arrival,
+  // not stay blank until the next tap.
+  let saved = null;
+  try{ saved = localStorage.getItem(LS_PREFIX+'pushOn'); }catch(e){}
+  if(saved === '1'){
+    t.checked = true;
+    _pushStatus(appLang() === 'nl' ? '\u2713 Aan \u2014 dagelijkse controle op nieuwe sets.' : '\u2713 On \u2014 daily check for new sets.');
+  }
+}
 async function enableSpoilerPush(){
   const NL = appLang() === 'nl';
   try{
-    if(!('serviceWorker' in navigator) || !('PushManager' in window)){ _pushStatus(NL ? 'Dit toestel ondersteunt geen pushmeldingen.' : 'This device does not support push.'); const t = document.getElementById('pushToggle'); if(t) t.checked = false; return; }
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)){ _pushStatus(_pushUnavailableMsg()); const t = document.getElementById('pushToggle'); if(t){ t.checked = false; t.disabled = true; } return; }
     const perm = await Notification.requestPermission();
     if(perm !== 'granted'){ _pushStatus(NL ? 'Toestemming geweigerd \u2014 zet meldingen aan in Android-instellingen.' : 'Permission denied \u2014 allow notifications in Android settings.'); const t = document.getElementById('pushToggle'); if(t) t.checked = false; return; }
     const reg = await navigator.serviceWorker.ready;
