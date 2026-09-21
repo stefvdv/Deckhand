@@ -5,7 +5,7 @@
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v2.51.595';
+const VERSION = 'admiral-v2.51.596';
 // Card images and fonts survive app updates: this cache is deliberately
 // NOT version-named, so activating a new version never wipes it.
 const ASSETS = 'admiral-assets-v1';
@@ -55,6 +55,10 @@ self.addEventListener('fetch', (e) => {
   if (url.hostname === 'api.scryfall.com') return;
   // Netlify Functions (news feed): live too — never fall back to index.html
   if (url.pathname.startsWith('/.netlify/')) return;
+  // The weekly card database is streamed straight into IndexedDB, and that is
+  // where the app reads it when offline. Caching it here only kept a second
+  // copy of roughly 11 MB that nothing ever read back.
+  if (/\.jsonl\.gz$/.test(url.pathname)) return;
 
   // Static, immutable assets: cache-first
   const isFont = url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com');

@@ -1,100 +1,186 @@
 =====================================================================
-ADMIRAL v2.37 — UPDATE STEPS AND FORMAT UPDATE GUIDE
+DECKHAND — HOE JE DINGEN AANPAST
+Bijgewerkt bij v2.51.596 · 22 september 2026
 =====================================================================
 
-PART 1 — DEPLOYING AN UPDATE
----------------------------------------------------------------------
-Netlify drag-and-drop REPLACES the whole site, so ALWAYS deploy this
-COMPLETE folder (9 files):
+Dit bestand is je naslagwerk. Alles wat je zelf kunt veranderen zonder
+programmeren staat hier. Lees PART 1 als je een update wilt uitrollen,
+PART 2 als je het Admiral-format wilt aanpassen.
 
-  index.html, sw.js, manifest.json, format.txt,
-  icon-192.png, icon-512.png, icon-maskable-512.png,
-  apple-touch-icon.png  (+ this guide)
-
-Steps:
-  1. Netlify -> your site -> Deploys
-  2. Drag this whole folder onto the page
-  3. Open the site on your phone; Extras should show the new version
-
-Players' installed apps update themselves on their next open —
-nothing for them to do.
+De vorige versie van dit bestand beschreef nog de oude situatie
+(drag-and-drop op Netlify, negen bestanden). Dat klopt niet meer — de
+app gaat nu via GitHub.
 
 
-PART 2 — UPDATING THE FORMAT WITH format.txt
----------------------------------------------------------------------
-format.txt is your control panel. Editing it changes the format for
-every player, with zero code changes. Any text editor works, even on
-a phone.
+=====================================================================
+PART 1 — EEN UPDATE UITROLLEN
+=====================================================================
 
-The file has four sections:
+De keten is: jij uploadt naar GitHub -> Netlify ziet dat en zet het
+live -> telefoons halen het bij de eerstvolgende keer openen op.
 
-  [banned]       The COMPLETE banlist. One card name per line.
-                 End a line with (UB) to mark a Universes Beyond
-                 ban: always in force, but only shown in the app
-                 once "Include all Standard-legal sets" is on.
-  [ub-sets]      Universes Beyond SEED sets for that switch (one
-                 official name per line). Future UB Standard sets
-                 join automatically on release — this list only
-                 needs special cases (e.g. Adventures in the
-                 Forgotten Realms).
-  [quick-rules]  The short rules summary players see first under
-                 Extras -> Format Rules. One bullet per line.
-  [full-rules]   The complete rules behind "Read the full rules".
-                 One paragraph per line.
+--- De normale route ---
 
---- To BAN a card ---
+  1. Ga naar github.com/stefvdv/Deckhand
+  2. "Add file" -> "Upload files"
+  3. Sleep de bestanden die veranderd zijn erin
+  4. Onderaan op "Commit changes"
+  5. Wacht een minuut. Kijk in Netlify onder Deploys of er een groene
+     regel bij staat.
+  6. Open de app op je telefoon. Extra's toont onderin de versie.
+
+--- Welke bestanden horen bij een release ---
+
+  index.html      de hele app
+  sw.js           de service worker
+  version.json    wat de update-melding straks voorleest
+
+Deze DRIE horen altijd samen. Het versienummer staat in alle drie en
+moet gelijk zijn, anders klopt de update-melding niet.
+
+--- Wat je NIET elke keer hoeft te uploaden ---
+
+  manifest.json          alleen bij naam-, icoon- of screenshotwijziging
+  format.txt             alleen bij een formatwijziging (zie PART 2)
+  Deckhand.apk           alleen als het Android-jasje zelf verandert
+  de vijf bulkbestanden   die zet de wekelijkse robot er zelf neer
+  netlify/functions/*     alleen als de serverfuncties veranderen
+  scripts/build-bulk.mjs  alleen als de wekelijkse bouw verandert
+
+--- Belangrijk: tijdens de wekelijkse bouw ---
+
+Elke maandag om 03:20 UTC draait de robot een half uur om de
+kaartendatabase te verversen. Uploadt jij in dat half uur iets, dan
+botsen jullie. Sinds september 2026 lost de robot dat zelf op: hij
+haalt jouw upload binnen en probeert het opnieuw, tot vijf keer.
+Je hoeft dus nergens op te wachten.
+
+--- Als de robot faalt ---
+
+Je krijgt een mail "Run failed". Ga naar github.com -> je repo ->
+tabblad Actions -> de rode regel -> klik de rode stap open.
+
+LET OP: de knop RE-RUN herhaalt de OUDE versie van de workflow, ook
+als je hem net gerepareerd hebt. Wil je opnieuw beginnen met een
+aangepaste workflow, gebruik dan Actions -> "Weekly Scryfall bulk
+data" -> de knop "Run workflow". Die zit alleen op de website, niet
+in de GitHub-app.
+
+
+=====================================================================
+PART 2 — HET ADMIRAL-FORMAT AANPASSEN MET format.txt
+=====================================================================
+
+format.txt is je bedieningspaneel. Je verandert het format voor
+iedereen, zonder ook maar één regel code. Elke teksteditor werkt,
+ook op je telefoon.
+
+Het bestand heeft vier secties:
+
+  [banned]       De VOLLEDIGE banlijst. Eén kaartnaam per regel.
+                 Eindigt een regel op (UB), dan is het een Universes
+                 Beyond-ban: altijd van kracht, maar pas zichtbaar in
+                 de app als "Include all Standard-legal sets" aanstaat.
+  [ub-sets]      De Universes Beyond-startsets voor die schakelaar,
+                 één officiële naam per regel. Nieuwe UB-Standardsets
+                 voegen zich vanzelf toe; deze lijst is alleen voor de
+                 uitzonderingen.
+  [quick-rules]  De korte samenvatting onder Extra's -> Format Rules.
+                 Eén bullet per regel.
+  [full-rules]   De volledige regels achter "Read the full rules".
+                 Eén alinea per regel.
+
+--- Een kaart VERBIEDEN ---
   1. Open format.txt
-  2. Under [banned], add one line with the card's exact English
-     name, e.g.:
-         Nexus of Fate
-  3. Save, then deploy the WHOLE folder (Part 1)
+  2. Zet onder [banned] een regel met de exacte Engelse kaartnaam:
+        Nexus of Fate
+  3. Opslaan, format.txt uploaden (PART 1)
 
---- To UNBAN a card ---
-  1. Find its line under [banned] and delete the entire line
-  2. Save and deploy the whole folder
+--- Een kaart WEER TOESTAAN ---
+  1. Verwijder de hele regel onder [banned]
+  2. Opslaan en uploaden
 
---- To ADD or REMOVE a Universes Beyond set ---
-  1. Under [ub-sets], add or delete a line with the set's official
-     name, e.g.:
-         Final Fantasy
-  2. Save and deploy the whole folder
+--- Een Universes Beyond-set toevoegen of weghalen ---
+  1. Onder [ub-sets] een regel met de officiële setnaam toevoegen of
+     verwijderen, bijvoorbeeld:
+        Final Fantasy
+  2. Opslaan en uploaden
 
---- To EDIT the format rules ---
-  Both rules sections are plain text with three simple markers:
+--- De regels bewerken ---
+  Beide regelsecties zijn platte tekst met drie opmaaktekens:
 
-     == Title       starts a new section header
-     > text         renders as a smaller, muted example line
-     **words**      makes those words bold
-     anything else  is a normal paragraph (one per line)
+     == Titel       begint een nieuwe kop
+     > tekst        wordt een kleinere, gedempte voorbeeldregel
+     **woorden**    maakt die woorden vet
+     al het andere  is een gewone alinea (één per regel)
 
-  1. Edit a line in place, or add a new line where you want a new
-     bullet, paragraph, header (==) or example (>)
-  2. Keep each paragraph on ONE line (let your editor wrap it
-     visually; do not press Enter mid-paragraph)
-  3. Save and deploy the whole folder
-  4. Every player gets a popup: "The format rules were updated"
+  1. Pas een regel aan, of zet er een nieuwe tussen
+  2. Houd elke alinea op ÉÉN regel (laat je editor visueel afbreken;
+     druk niet op Enter midden in een alinea)
+  3. Opslaan en uploaden
+  4. Elke speler krijgt een popup: "De formatregels zijn gewijzigd"
 
-  Tip: mana costs like {2} can be typed as-is.
+  Tip: manakosten als {2} typ je gewoon zo.
 
---- Getting card names right ---
-  Spelling must match the card exactly, including commas and
-  titles: "Azusa, Lost but Seeking", not "azusa".
-  Easiest method: search the card in the app (or scryfall.com)
-  and copy the name as shown.
+--- Kaartnamen goed krijgen ---
+  De spelling moet exact kloppen, inclusief komma's en titels:
+  "Azusa, Lost but Seeking", niet "azusa".
+  Makkelijkste manier: zoek de kaart in de app (of op scryfall.com)
+  en neem de naam over zoals die er staat.
 
---- Verifying your change ---
-  After deploying, open the app:
-  * You'll get a "The format has changed" popup listing exactly
-    what you added or removed (players get the same popup).
-  * Open Extras -> Banned List and TAP your new entry — if the
-    card's image appears, the spelling is correct and the ban is
-    airtight.
+--- Je wijziging controleren ---
+  Open de app na het uploaden:
+  * Je krijgt een popup "Het format is gewijzigd" met precies wat je
+    hebt toegevoegd of weggehaald. Spelers krijgen dezelfde popup.
+  * Ga naar Extra's -> Banned List en TIK op je nieuwe regel. Komt de
+    kaartafbeelding tevoorschijn, dan klopt de spelling en is de ban
+    waterdicht.
 
---- Safety net ---
-  If format.txt is missing or broken, the app silently falls back
-  to its built-in version. A typo can never break the app.
+--- Vangnet ---
+  Ontbreekt format.txt of zit er een fout in, dan valt de app stil
+  terug op zijn ingebouwde versie. Een typefout kan de app nooit
+  slopen.
 
---- What needs NO action at all ---
-  New Standard sets legalize themselves within a day of release
-  (players get a popup announcing them). Universes Beyond sets
-  never auto-join — only your [ub-sets] list applies.
+--- Waar je niets voor hoeft te doen ---
+  Nieuwe Standardsets worden binnen een dag na release vanzelf legaal
+  (spelers krijgen een melding). Universes Beyond-sets voegen zich
+  nooit vanzelf toe aan Admiral — alleen jouw [ub-sets] telt.
+
+
+=====================================================================
+PART 3 — DE ANDROID-APP (Deckhand.apk)
+=====================================================================
+
+De APK is een dun jasje om de website heen. De inhoud komt live van
+deckhandcompanion.netlify.app, dus elke release die je uitrolt zit er
+meteen in. Niemand hoeft ooit een nieuwe APK te downloaden.
+
+Je hoeft alleen een nieuwe APK te maken als het jasje zelf verandert:
+een andere naam, een ander icoon, of een nieuwe functie in de schil
+(zoals de meldingen die er in versie 1.1 bij kwamen).
+
+BEWAAR DE SLEUTEL. deckhand-release.keystore met wachtwoord
+"deckhand-vloot-anker-2026" hoort NIET in de repo. Elke toekomstige
+APK moet met diezelfde sleutel ondertekend zijn, anders kan niemand
+over zijn oude versie heen installeren en is hun data weg.
+
+Meldingen werken anders in de APK dan in de browser: Android's WebView
+kent geen webpush, dus de app kijkt één keer per dag zelf of er een
+nieuwe versie of een nieuwe set is. In Chrome loopt het wel via
+webpush en de dagelijkse serverfunctie.
+
+
+=====================================================================
+PART 4 — WAT ER VERDER AUTOMATISCH GEBEURT
+=====================================================================
+
+  elke maandag 03:20 UTC   de kaartendatabase wordt herbouwd en
+                           gepubliceerd (een half uur werk)
+  elke dag 08:30 UTC       de serverfunctie kijkt of er een nieuwe set
+                           of een nieuwe Deckhand-versie is en stuurt
+                           zo nodig een pushmelding
+  elke 20 uur              elke telefoon haalt de setcatalogus op
+  elke 24 uur              de Commander-banlijst wordt ververst
+
+Een uitgebreidere beschrijving staat in de projectdocumentatie onder
+claude/data-pipeline.md.
