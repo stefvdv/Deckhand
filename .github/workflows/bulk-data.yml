@@ -1,17 +1,26 @@
-# Weekly Scryfall bulk-data refresh for Admirals & Commanders MTG.
+# Weekly Scryfall bulk-data refresh for Deckhand.
 #
 # Every Monday at 03:20 UTC (and on demand via the Actions tab's
 # "Run workflow" button) this downloads Scryfall's Oracle Cards and
 # Rulings bulk files, trims them to only the fields the app uses,
-# and commits the three small outputs to the repo root — Netlify
-# then deploys them next to index.html:
+# and commits the small outputs to the repo root — Netlify then
+# deploys them next to index.html:
 #
 #   oracle-slim.jsonl.gz    rulings-slim.jsonl.gz    bulk-meta.json
+#   tags-slim.jsonl.gz      tags-index.json          combos-slim.jsonl.gz
 #
 # Scryfall sees ONE download per week, from GitHub's machines.
 # The job refuses to commit when the outputs look broken (the
 # script's sanity checks throw), so a bad Scryfall day can never
 # overwrite last week's good files.
+#
+# The publish step is deliberately forgiving in one direction and strict
+# in the other: a file the build chose not to write is skipped (last
+# week's copy stays), but the three core files must exist or the run
+# fails loudly. And because the build takes half an hour, main may well
+# have moved on by the time we push — an upload through the GitHub web
+# UI, another release. That used to throw away the whole run; now we
+# rebase onto main and try again.
 
 name: Weekly Scryfall bulk data
 
@@ -23,12 +32,22 @@ on:
 permissions:
   contents: write
 
+# Two of these running at once would fight over the same files.
+concurrency:
+  group: bulk-data
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90     # a hung source gives up instead of burning hours
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
+        with:
+          # Full history: rebasing onto a moved main needs a common ancestor,
+          # which a shallow clone does not have.
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -38,17 +57,67 @@ jobs:
       - name: Build the trimmed bulk files
         run: node scripts/build-bulk.mjs
 
+      - name: What the build produced
+        if: always()
+        run: |
+          echo "Files in the repo root after the build:"
+          for f in oracle-slim.jsonl.gz rulings-slim.jsonl.gz bulk-meta.json \
+                   tags-slim.jsonl.gz tags-index.json combos-slim.jsonl.gz; do
+            if [ -f "$f" ]; then
+              echo "  $(ls -lh "$f" | awk '{print $5}')  $f"
+            else
+              echo "  --     $f  (not written this run)"
+            fi
+          done
+
       - name: Commit & push when changed
         run: |
           git config user.name "bulk-data-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add oracle-slim.jsonl.gz rulings-slim.jsonl.gz bulk-meta.json
-          git add tags-slim.jsonl.gz 2>/dev/null || echo "No tags file this week."
-          git add tags-index.json 2>/dev/null || echo "No tag index this week."
-          git add combos-slim.jsonl.gz 2>/dev/null || echo "No combos file this week."
+
+          # The three core files decide whether this run is worth publishing.
+          missing=""
+          for f in oracle-slim.jsonl.gz rulings-slim.jsonl.gz bulk-meta.json; do
+            [ -f "$f" ] || missing="$missing $f"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::The build produced nothing to publish — missing:$missing"
+            exit 1
+          fi
+
+          # Stage whatever this run actually wrote. A missing optional file is
+          # not a failure: last week's copy simply stays in place.
+          for f in oracle-slim.jsonl.gz rulings-slim.jsonl.gz bulk-meta.json \
+                   tags-slim.jsonl.gz tags-index.json combos-slim.jsonl.gz; do
+            if [ -f "$f" ]; then
+              git add -- "$f"
+              echo "staged   $f"
+            else
+              echo "skipped  $f (not produced this run)"
+            fi
+          done
+
           if git diff --cached --quiet; then
             echo "No changes this week."
             exit 0
           fi
+
           git commit -m "Weekly Scryfall bulk data refresh"
-          git push
+
+          # main can have moved while the build ran. Rebase onto it and retry
+          # rather than discarding half an hour of work.
+          branch="${GITHUB_REF_NAME:-main}"
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:$branch"; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push rejected — refreshing $branch and retrying ($attempt/5)."
+            if ! git pull --rebase --autostash origin "$branch"; then
+              echo "::error::Could not rebase onto $branch — resolve by hand."
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "::error::Still could not push after 5 attempts."
+          exit 1
