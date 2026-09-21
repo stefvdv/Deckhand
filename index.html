@@ -4700,13 +4700,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.588';
+const APP_VERSION = '2.51.589';
 const CHANGELOG_NOTES = {
   en: [
-    'Installing from Chrome now shows the rich dialog: three real screenshots (decklist, Inspiration, life counter) and a proper description.'
+    'Share sheet: send a decklist, card name or Scryfall/EDHREC/Moxfield link to Deckhand from any app \u2014 it opens the right import.',
+    'Push notifications for new spoilers: switch in Extras, works with the app closed (installed app).',
+    'The install button now hides inside the installed app and gives honest per-browser advice (Samsung Internet/Firefox \u2192 install via Chrome).'
   ],
   nl: [
-    'Installeren via Chrome toont nu de rijke dialoog: drie echte schermafbeeldingen (decklijst, Inspiration, levensteller) en een nette beschrijving.'
+    'Deelmenu: stuur een decklijst, kaartnaam of Scryfall/EDHREC/Moxfield-link vanuit elke app naar Deckhand \u2014 de juiste import opent vanzelf.',
+    'Pushmeldingen bij nieuwe spoilers: schakelaar in Extra\u2019s, werkt ook met de app dicht (ge\u00efnstalleerde app).',
+    'De installatieknop verbergt zich nu binnen de ge\u00efnstalleerde app en geeft eerlijk advies per browser (Samsung Internet/Firefox \u2192 installeer via Chrome).'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -19062,6 +19066,7 @@ function settingsPageHtml(){
   return `
   <main class="settings-main">
     <div class="settings-section"><div class="settings-row" id="lifeRow"><div class="l1">Life Counter</div><div class="l2">Open the multiplayer life tracker</div></div></div>
+    <div class="settings-section"><div class="settings-row"><div><div class="l1">🔔 ${appLang()==='nl' ? 'Spoiler-meldingen' : 'Spoiler notifications'}</div><div class="l2">${appLang()==='nl' ? 'Een pushmelding zodra er een nieuwe set opduikt \u2014 ook als de app dicht is.' : 'A push the moment a new set shows up \u2014 even with the app closed.'}</div><div class="l2" id="pushStatus" style="margin-top:4px;"></div></div><label class="toggle-switch"><input type="checkbox" id="pushToggle" ${localStorage.getItem(LS_PREFIX+'pushOn')==='1'?'checked':''}><span class="track"></span><span class="knob"></span></label></div></div>
     <div class="settings-section"><div class="settings-row" id="tourRow"><div class="l1">🧭 ${appLang()==='nl' ? 'Rondleiding' : 'App tour'}</div><div class="l2">${appLang()==='nl' ? 'Loop alle pagina\u2019s nog eens langs met korte uitleg' : 'Walk every page again with a short guide'}</div></div></div>
             <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">Comprehensive Rules</div><div class="l2">The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back</div></div></div>
     <div class="settings-section">
@@ -19105,9 +19110,9 @@ function settingsPageHtml(){
         <input type="file" id="restoreFile" accept="application/json,.json" style="display:none;">
       </div>
     </div>
-    <div class="settings-section">
+    ${window.matchMedia('(display-mode: standalone)').matches ? '' : `<div class="settings-section">
       <div class="settings-row" id="installAppRow"><div><div class="l1">📲 Install as an app</div><div class="l2">Home-screen icon, full screen, works offline</div></div></div>
-    </div>
+    </div>`}
     <div class="settings-section">
       <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} Share this app with a friend</div><div class="l2">Sends the app link with a short intro</div></div></div>
     </div>
@@ -19389,6 +19394,7 @@ function wireSettingsPage(){
   });
   document.getElementById('lifeRow').addEventListener('click', openLifeOverlay);
   document.getElementById('tourRow')?.addEventListener('click', startAppTour);
+  document.getElementById('pushToggle')?.addEventListener('change', (e)=>{ e.target.checked ? enableSpoilerPush() : disableSpoilerPush(); });
   document.getElementById('crRow')?.addEventListener('click', openCROverlay);
   document.getElementById('fullRulesToggle')?.addEventListener('click', ()=>{
     state.settingsFullRulesOpen = !state.settingsFullRulesOpen;
@@ -19448,10 +19454,15 @@ function wireSettingsPage(){
       if(probs.length){
         l2.textContent = '⚠ ' + probs.join(' · ') + ' — re-upload the COMPLETE deploy folder (all files), then reload.';
       } else {
-        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-        l2.textContent = isIOS
-          ? 'All checks pass ✓ — in Safari: Share → Add to Home Screen.'
-          : 'All checks pass ✓ — Chrome ⋮ → Add to Home screen → pick INSTALL, not "shortcut". A real install appears in Android Settings → Apps and survives a reboot; a shortcut does not. If only a shortcut is offered: remove the old icon, reload this page twice, then retry.';
+        // Per-browser truth: only Chrome mints a real Android app (WebAPK).
+        const ua = navigator.userAgent;
+        l2.textContent = /iPhone|iPad|iPod/.test(ua)
+          ? 'All checks pass ✓ — in Safari: Share → Add to Home Screen (iPhone has no app-store-free installs beyond this).'
+          : /SamsungBrowser/i.test(ua)
+          ? 'Samsung Internet only makes a bare shortcut that can vanish. Open this link ONCE in Chrome and install there: ⋮ → Install app.'
+          : /Firefox/i.test(ua)
+          ? 'Firefox on Android cannot install the real app. Open this link in Chrome and pick ⋮ → Install app.'
+          : 'All checks pass ✓ — Chrome ⋮ → Install app (NOT "Add to Home screen"). A real install shows in Android Settings → Apps and survives a reboot. If Chrome only offers a shortcut: remove the old icon, reload twice, retry.';
       }
     }
   });
@@ -20609,6 +20620,99 @@ try{
         if(r.ok) openCardInfo(await r.json());
       }catch(e){}
     }, 900);
+  }
+}catch(e){}
+/* ---- Web Push for spoilers (v2.51.589) ----
+   Real push: the service worker shows the notification; subscriptions live
+   in Netlify Blobs via two tiny functions; a daily scheduled function
+   checks Scryfall for new sets and pushes. The public VAPID key is baked
+   in; the private key lives ONLY in Netlify environment variables. */
+const VAPID_PUBLIC_KEY = 'BKgh9benrNW3VO69hlydSNaUMoB0s6KsMOg79jSOXaqtenqsWMEVv_9hKxoVRgzeRAsn1mJ0M_Oqr-s8zIPJc6M';
+function _b64uToBytes(s){
+  const pad = '='.repeat((4 - s.length % 4) % 4);
+  const raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  const out = new Uint8Array(raw.length);
+  for(let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function _pushStatus(msg){ const el = document.getElementById('pushStatus'); if(el) el.textContent = msg || ''; }
+async function enableSpoilerPush(){
+  const NL = appLang() === 'nl';
+  try{
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)){ _pushStatus(NL ? 'Dit toestel ondersteunt geen pushmeldingen.' : 'This device does not support push.'); const t = document.getElementById('pushToggle'); if(t) t.checked = false; return; }
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ _pushStatus(NL ? 'Toestemming geweigerd \u2014 zet meldingen aan in Android-instellingen.' : 'Permission denied \u2014 allow notifications in Android settings.'); const t = document.getElementById('pushToggle'); if(t) t.checked = false; return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64uToBytes(VAPID_PUBLIC_KEY) });
+    const r = await fetch('/.netlify/functions/push-subscribe', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(sub) });
+    if(!r.ok) throw new Error('subscribe ' + r.status);
+    try{ localStorage.setItem(LS_PREFIX+'pushOn', '1'); }catch(e){}
+    _pushStatus(NL ? '\u2713 Aan \u2014 dagelijkse controle op nieuwe sets.' : '\u2713 On \u2014 daily check for new sets.');
+  }catch(e){
+    _pushStatus((NL ? 'Aanzetten mislukt: ' : 'Could not enable: ') + (e && e.message || e));
+    const t = document.getElementById('pushToggle'); if(t) t.checked = false;
+  }
+}
+async function disableSpoilerPush(){
+  const NL = appLang() === 'nl';
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub){
+      try{ await fetch('/.netlify/functions/push-subscribe', { method: 'DELETE', headers: {'content-type':'application/json'}, body: JSON.stringify({ endpoint: sub.endpoint }) }); }catch(e){}
+      await sub.unsubscribe();
+    }
+  }catch(e){}
+  try{ localStorage.setItem(LS_PREFIX+'pushOn', '0'); }catch(e){}
+  _pushStatus(NL ? 'Uit.' : 'Off.');
+}
+/* ---- Android share sheet → Deckhand (share_target, v2.51.589) ----
+   The WebAPK registers as a share target; shared text arrives as
+   ?share_text=…&share_url=…. Classify it and route: a decklist opens the
+   paste-a-list sheet prefilled, a Scryfall link or card name opens that
+   card, a deck-site link opens the paste sheet with the link as source.
+   Mode isolation: every flow below already builds for the CURRENT fleet. */
+function classifyShared(text){
+  const t = String(text || '').trim();
+  if(!t) return { kind: 'none' };
+  const url = (t.match(/https?:\/\/\S+/) || [])[0] || '';
+  if(url){
+    const m = url.match(/scryfall\.com\/card\/([a-z0-9]+)\/([a-z0-9★†]+)/i);
+    if(m) return { kind: 'scryfall', set: m[1].toLowerCase(), num: m[2], url };
+    if(/edhrec\.com|moxfield\.com|archidekt\.com/i.test(url)) return { kind: 'deckSource', url };
+    return { kind: 'url', url };
+  }
+  const lines = t.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  const deckish = lines.filter(l=>/^\d+\s*x?\s+\S/i.test(l)).length;
+  if(lines.length >= 2 && deckish >= Math.max(2, Math.ceil(lines.length * 0.5))) return { kind: 'decklist', text: t };
+  if(lines.length === 1 && t.length <= 60) return { kind: 'cardname', name: t };
+  return { kind: 'decklist', text: t };
+}
+async function handleSharedIncoming(raw){
+  const c = classifyShared(raw);
+  const pasteWith = (text)=>{
+    switchPage('decks');
+    try{ openPasteListSheet({}); }catch(e){ try{ openPasteListSheet(); }catch(e2){ return; } }
+    setTimeout(()=>{ const ta = document.getElementById('pasteDeckText'); if(ta){ ta.value = text; ta.scrollTop = 0; } }, 120);
+  };
+  if(c.kind === 'decklist'){ pasteWith(c.text); return; }
+  if(c.kind === 'deckSource' || c.kind === 'url'){ pasteWith(c.url); toast('Link received — paste-import opened.'); return; }
+  if(c.kind === 'scryfall' || c.kind === 'cardname'){
+    try{
+      const path = c.kind === 'scryfall' ? ('/cards/' + c.set + '/' + encodeURIComponent(c.num)) : ('/cards/named?fuzzy=' + encodeURIComponent(c.name));
+      const r = await sfFetch(SF_BASE + path, 0, false);
+      if(r && r.ok){ const card = await r.json(); if(card && card.name){ openCardInfo(card); return; } }
+    }catch(e){}
+    state.searchName = c.name || raw; switchPage('search');
+  }
+}
+try{
+  const _sp = new URLSearchParams(location.search);
+  if(_sp.has('share_text') || _sp.has('share_url') || _sp.has('share_title')){
+    const _sharedRaw = [_sp.get('share_text'), _sp.get('share_url')].filter(Boolean).join(' ').trim() || (_sp.get('share_title') || '');
+    try{ history.replaceState(history.state, '', location.pathname + location.hash); }catch(e){}
+    if(_sharedRaw) setTimeout(()=>{ try{ handleSharedIncoming(_sharedRaw); }catch(e){} }, 400);
   }
 }catch(e){}
 /* Launcher shortcuts (long-press the app icon) arrive as …/?go=page. Only a
