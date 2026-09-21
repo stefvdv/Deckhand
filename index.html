@@ -1519,6 +1519,10 @@ main.has-dock{padding-bottom:84px;}
 .edh-jump-row{position:sticky;top:6px;z-index:6;display:flex;justify-content:flex-end;height:0;pointer-events:none;}
 .edh-jump{pointer-events:auto;width:42px;height:42px;border-radius:50%;background:var(--field);border:2.5px solid var(--brass);color:var(--brass);font-size:17px;box-shadow:0 3px 10px rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;}
 .edh-sec{scroll-margin-top:74px;}
+/* block:'end' landings from the \u2630 jumps: keep the section label clear of
+   the fixed bottom nav (page-level sections only; overlays scroll inside
+   their own port and need no offset). */
+.app > main .edh-sec{scroll-margin-bottom:calc(var(--nav-h) + 12px + env(safe-area-inset-bottom));}
 /* The current section's name rides just below the top bar; the next
    section's label pushes it out — classic sticky headers, scoped per
    section. Solid backing so it stays readable over the tiles. */
@@ -2218,14 +2222,31 @@ function cselectHtml(id, options, value, placeholder, o){
     ${open ? (()=>{
       const searchRow = o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:'';
       const noRes = o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:'';
+      // Dedupe pass in POPULARITY order (the options array as given, before
+      // the bottom-up reverse): the most-played entry keeps the primary art,
+      // later duplicates slide to their next candidate.
+      const artPick = {};
+      if(o.tiles && typeof _tileArtReady !== 'undefined'){
+        const usedArts = new Set();
+        options.forEach(x=>{
+          if(x.gen || !x.art || artPick[x.art]) return;
+          const rd0 = _tileArtReady[x.art];
+          if(rd0) artPick[x.art] = tileArtPick(rd0, usedArts);
+        });
+      }
       const opts = (o.tiles ? options.slice().reverse() : options).map(x=>{
         const selCls = String(x.v)===String(value ?? '')?'sel':'';
         if(o.tiles){
-          const rd = (!x.gen && x.art && typeof _tileArtReady !== 'undefined') ? _tileArtReady[x.art] : null;
+          // Art keys can carry Scryfall clauses with double quotes
+          // (o:"draw a card") — escapeHtml leaves " alone, so the data-art
+          // attribute used to be CUT OFF there, handing the lazy resolver a
+          // broken clause (BAD_QUERY, art never loads). Escaped explicitly
+          // since v2.51.585.
+          const rd = (!x.gen && x.art) ? artPick[x.art] : null;
           const img = x.gen
             ? `<span class="at-img at-gen">${x.gen === true ? '' : x.gen}</span>`
             : `<span class="at-img"${rd ? ` style="background-image:url('${escapeHtml(rd.a)}')"` : ''}></span>`;
-          return `<button class="cselect-opt art-tile ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}"${(!x.gen && x.art)?` data-art="${escapeHtml(String(x.art))}"`:''}>${img}<span class="at-label">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}<span class="at-txt">${x.l}</span></span></button>`;
+          return `<button class="cselect-opt art-tile ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}"${(!x.gen && x.art)?` data-art="${escapeHtml(String(x.art)).replace(/"/g,'&quot;')}"`:''}>${img}<span class="at-label">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}<span class="at-txt">${x.l}</span></span></button>`;
         }
         return `<button class="cselect-opt ${selCls} ${x.disabled?'opt-disabled':''}" ${x.disabled?'disabled':''} data-csopt="${id}" data-val="${escapeHtml(String(x.v))}">${x.icons?`<span class="co-icons">${x.icons}</span>`:''}${x.l}</button>`;
       }).join('');
@@ -4679,54 +4700,176 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.583';
+const APP_VERSION = '2.51.588';
 const CHANGELOG_NOTES = {
   en: [
-    'The \u201cAdd to\u2026\u201d deck picker now shows each deck\u2019s color identity as mana symbols beside its name \u2014 the same pips the deck tiles wear, drawn from its commander or admiral. Decks without a leader show none.',
-    'The \u201cAdd N cards to\u2026\u201d picker after a recommendation session carries the same pips.'
+    'Installing from Chrome now shows the rich dialog: three real screenshots (decklist, Inspiration, life counter) and a proper description.'
   ],
   nl: [
-    'De \u201cAdd to\u2026\u201d-dekkiezer toont nu per deck de kleuridentiteit als manasymbolen naast de naam \u2014 dezelfde pips als op de dektegels, afgeleid van de commander of admiral. Decks zonder leider tonen er geen.',
-    'De \u201cAdd N cards to\u2026\u201d-kiezer na een aanbevelingssessie draagt dezelfde pips.'
+    'Installeren via Chrome toont nu de rijke dialoog: drie echte schermafbeeldingen (decklijst, Inspiration, levensteller) en een nette beschrijving.'
   ]
 };
+/* ---------- Guided tour (first run + replay from Extras) ----------
+   One popup per page: it says what the page does, the button at its foot
+   walks to the NEXT page and shows that page's popup there. The popup is a
+   centered house modal (deckpick tokens only — kleurenwet: light ink on the
+   dark panel, no new colors) at z-index 120, above card-sheet overlays
+   (z 100). switchPage() dismisses any overlay a step opened, so every
+   transition is clean. Texts are bilingual like the old welcome. */
+function tourSteps(){
+  const NL = appLang() === 'nl';
+  const d0 = ()=> (state.decksIndex && state.decksIndex[0]) || null;
+  const soon = d0() ? '' : (NL ? '<p style="margin:0 0 6px;font-size:12.5px;color:var(--sub-text);">(Nog geen deck — dit zie je zodra je er een hebt.)</p>' : '<p style="margin:0 0 6px;font-size:12.5px;color:var(--sub-text);">(No deck yet — you\u2019ll see this once you have one.)</p>');
+  return [
+    { k:'home', go:()=>switchPage('home'),
+      t: NL ? '⚓ Welkom aan boord' : '⚓ Welcome aboard',
+      b: NL
+        ? `<p style="margin:6px 0;">Deckhand is je deckbuilder voor <strong>Commander, Admiral, Pauper Commander, PreDH en Duel Commander</strong> — elk deck wordt op zijn eigen format gecontroleerd, alles werkt offline.</p>
+           <p style="margin:6px 0;">Dit is <strong>Home</strong>: onderaan vind je het laatste Magic-<strong>nieuws</strong> (EDHREC &amp; MTGGoldfish), vers bij elke start.</p>
+           <p style="margin:6px 0;font-size:13px;color:var(--sub-text);">📲 Tip: installeer Deckhand als app — Chrome ⋮ → <em>App installeren</em> (niet “Toevoegen aan startscherm”). We lopen nu samen alle pagina\u2019s langs.</p>`
+        : `<p style="margin:6px 0;">Deckhand is your deck builder for <strong>Commander, Admiral, Pauper Commander, PreDH and Duel Commander</strong> — every deck is checked against its own format, and everything works offline.</p>
+           <p style="margin:6px 0;">This is <strong>Home</strong>: the latest Magic <strong>news</strong> (EDHREC &amp; MTGGoldfish) lives at the foot, fresh on every launch.</p>
+           <p style="margin:6px 0;font-size:13px;color:var(--sub-text);">📲 Tip: install Deckhand as an app — Chrome ⋮ → <em>Install app</em> (not “Add to Home screen”). Let\u2019s walk every page together.</p>` },
+    { k:'decks', go:()=>switchPage('decks'),
+      t: NL ? '⚔ My Stuff — je decks' : '⚔ My Stuff — your decks',
+      b: NL
+        ? `<p style="margin:6px 0;">Al je decks op één plek. Ze sorteren zichzelf in <strong>automatische format-mappen</strong> — Commander bij Commander, Admiral bij Admiral; de andere vloot wacht in haar eigen map.</p>
+           <p style="margin:6px 0;">Met de <strong>＋</strong>-knop start je een nieuw deck; eigen mappen en ★ favorieten kunnen ook.</p>`
+        : `<p style="margin:6px 0;">All your decks in one place. They sort themselves into <strong>automatic format folders</strong> — Commander with Commander, Admiral with Admiral; the other fleet waits in its own folder.</p>
+           <p style="margin:6px 0;">The <strong>＋</strong> button starts a new deck; your own folders and ★ favorites work too.</p>` },
+    { k:'decklist', go:()=>{ const d = d0(); if(d){ state.activeDeckId = d.id; state.builderTab = 'list'; switchPage('decklist'); } },
+      t: NL ? '📜 De decklijst' : '📜 The decklist',
+      b: soon + (NL
+        ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om er meerdere te selecteren — verplaatsen, verwijderen of naar het maybeboard.</p>
+           <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (manacurve, kleurverdeling, duurste kaarten), <strong>Deck Log</strong> (primer, potjes loggen, hand-tester). Via de werkbalk vind je o.a. <strong>Budget-alternatieven</strong> voor dure kaarten.</p>`
+        : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select several at once — move, remove, or send them to the maybeboard.</p>
+           <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, most expensive cards), <strong>Deck Log</strong> (primer, game log, hand tester). The toolbar holds <strong>Budget alternatives</strong> for pricey cards, and more.</p>`) },
+    { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
+      t: NL ? '🃏 De kaart-detailpagina' : '🃏 The card detail view',
+      b: soon + (NL
+        ? `<p style="margin:6px 0;">Tik op een kaart en je krijgt alles: oracle-tekst, prijs (tik erop voor de <strong>prijsgeschiedenis</strong>) en de 🧂 <strong>salt score</strong>.</p>
+           <p style="margin:6px 0;"><strong>Recommendations</strong> toont wat het meest met deze kaart gespeeld wordt, <strong>Similar cards</strong> kaarten met dezelfde rol, en via <strong>Change printing</strong> kies je een andere versie/art.</p>`
+        : `<p style="margin:6px 0;">Tap any card and everything is here: oracle text, price (tap it for the <strong>price history</strong>) and the 🧂 <strong>salt score</strong>.</p>
+           <p style="margin:6px 0;"><strong>Recommendations</strong> shows what people play alongside it, <strong>Similar cards</strong> finds cards with the same job, and <strong>Change printing</strong> picks another version/art.</p>`) },
+    { k:'collection', go:()=>switchPage('collection'),
+      t: NL ? '📒 Je collectie' : '📒 Your collection',
+      b: NL
+        ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Wants</strong> (verlanglijst). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen (binders) maken kan ook.</p>
+           <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
+        : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong>. Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
+           <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
+    { k:'search', go:()=>switchPage('search'),
+      t: NL ? '🔍 Zoeken' : '🔍 Search',
+      b: NL
+        ? `<p style="margin:6px 0;">Zoek op naam, of open het <strong>Advanced filter</strong>: kleuren, tags (wat een kaart <em>doet</em>), type, oracle-tekst, set, format en meer.</p>
+           <p style="margin:6px 0;">De 🔮-knop opent de <strong>Spoilers</strong>-pagina — de nieuwste kaarten per set, dag voor dag.</p>`
+        : `<p style="margin:6px 0;">Search by name, or open the <strong>Advanced filter</strong>: colors, tags (what a card <em>does</em>), type, oracle text, set, format and more.</p>
+           <p style="margin:6px 0;">The 🔮 button opens the <strong>Spoilers</strong> page — the newest cards per set, day by day.</p>` },
+    { k:'inspiration', go:()=>switchPage('browse'),
+      t: NL ? '✦ Inspiration' : '✦ Inspiration',
+      b: NL
+        ? `<p style="margin:6px 0;">Bovenaan de <strong>Top Commanders</strong> van de week/maand/jaar. De menu\u2019s onderin doen de rest — van onder naar boven:</p>
+           <p style="margin:6px 0;"><strong>Format</strong> (welke leader-pool), <strong>Commanders — kleuren</strong> en de exacte <strong>combinatie</strong>, <strong>Theme</strong> en <strong>Kindred</strong> (stammen) — allemaal tegels met kaartart, meest gespeeld onderaan. Tik op een leader voor zijn aanbevolen kaarten; de zoekbalk vindt een leader op naam.</p>`
+        : `<p style="margin:6px 0;">Up top: the <strong>Top Commanders</strong> of the week/month/year. The drop-ups at the foot do the rest — bottom to top:</p>
+           <p style="margin:6px 0;"><strong>Format</strong> (which leader pool), <strong>Commanders — colors</strong> and the exact <strong>combination</strong>, <strong>Theme</strong> and <strong>Kindred</strong> (tribes) — all card-art tiles, most played at the foot. Tap a leader for its recommended cards; the search bar finds a leader by name.</p>` },
+    { k:'extras', go:()=>switchPage('settings'),
+      t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
+      b: NL
+        ? `<p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel, <strong>Format rules</strong> en <strong>ban-lijsten</strong> van elf formaten, de complete <strong>Comprehensive Rules</strong>, <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong> — kies een gilde en de hele app kleurt mee.</p>
+           <p style="margin:6px 0;">En belangrijk: <strong>Backup &amp; Restore</strong> — alles in één bestand. Deze rondleiding staat hier ook, mocht je hem terug willen zien.</p>`
+        : `<p style="margin:6px 0;">The table-side <strong>Life Counter</strong>, <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. This tour lives here too, whenever you want it back.</p>` }
+  ];
+}
+function startAppTour(){
+  state._tourI = 0;
+  // A brand-new user has never chosen a language — the tour opens with that
+  // question, and the whole app (tour included) follows the answer. Anyone
+  // who already picked one (or replays from Extras) goes straight in.
+  let hasLang = null;
+  try{ hasLang = localStorage.getItem(LS_PREFIX+'lang'); }catch(e){}
+  if(!hasLang){ showTourLangChoice(); return; }
+  showTourStep();
+}
+function showTourLangChoice(){
+  document.getElementById('tourScrim')?.remove();
+  const el = document.createElement('div');
+  el.className = 'deckpick-scrim'; el.id = 'tourScrim';
+  el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin-bottom:auto;margin-top:auto;max-width:420px;">
+    <h4>🌐 Taal · Language</h4>
+    <div style="font-size:14px;line-height:1.6;color:var(--ink-text);">
+      <p style="margin:6px 0;">In welke taal wil je de rondleiding en de app?</p>
+      <p style="margin:6px 0;">Which language would you like for the tour and the app?</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+      <button class="primary-btn" data-tourlang="nl" style="width:100%;">Nederlands</button>
+      <button class="primary-btn" data-tourlang="en" style="width:100%;">English</button>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  el.style.alignItems = 'center';
+  el.querySelectorAll('[data-tourlang]').forEach(b=>b.addEventListener('click', ()=>{
+    const code = b.dataset.tourlang;
+    try{
+      // The exact routine the Extras language toggle runs — one behavior.
+      setAppLang(code);
+      state._langImgCache = {};
+      if(code === 'en'){ disableI18n(); render(); }
+      else { render(); enableI18n(); try{ translateTree(document.body); }catch(err){} }
+    }catch(e){}
+    showTourStep();
+  }));
+}
+function endAppTour(finished){
+  document.getElementById('tourScrim')?.remove();
+  state._tourI = null;
+  try{ localStorage.setItem(LS_PREFIX+'welcomed','1'); }catch(e){}
+  if(finished){
+    switchPage('home');
+    toast(appLang() === 'nl' ? 'Veel plezier aan boord! De rondleiding staat ook onder Extra\u2019s.' : 'Enjoy the voyage! The tour also lives under Extras.');
+  }
+}
+function showTourStep(){
+  const steps = tourSteps();
+  const i = state._tourI | 0;
+  if(i >= steps.length){ endAppTour(true); return; }
+  const s = steps[i];
+  document.getElementById('tourScrim')?.remove();
+  try{ if(s.go) s.go(); }catch(e){}
+  const NL = appLang() === 'nl';
+  // A beat so the page paints beneath before the popup covers it.
+  setTimeout(()=>{
+    if(state._tourI !== i) return;
+    document.getElementById('tourScrim')?.remove();
+    const el = document.createElement('div');
+    el.className = 'deckpick-scrim'; el.id = 'tourScrim';
+    const last = i === steps.length - 1;
+    el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin-bottom:auto;margin-top:auto;max-width:420px;">
+      <h4>${s.t}</h4>
+      <div style="overflow-y:auto;font-size:14px;line-height:1.6;color:var(--ink-text);">${s.b}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+        <span style="font-size:12.5px;color:var(--sub-text);flex:0 0 auto;font-family:'JetBrains Mono',monospace;">${i+1}/${steps.length}</span>
+        <button class="ghost-btn" id="tourSkip" style="flex:0 0 auto;padding:9px 12px;font-size:13px;">${NL ? 'Overslaan' : 'Skip'}</button>
+        <button class="primary-btn" id="tourNext" style="flex:1;">${last ? '⚓ ' + (NL ? 'Klaar' : 'Done') : (NL ? 'Volgende' : 'Next') + ' ›'}</button>
+      </div>
+    </div>`;
+    document.body.appendChild(el);
+    el.style.alignItems = 'center';
+    document.getElementById('tourNext').addEventListener('click', ()=>{ state._tourI = i + 1; showTourStep(); });
+    document.getElementById('tourSkip').addEventListener('click', ()=>endAppTour(false));
+  }, 380);
+}
 /* ---------- First-visit welcome (new players usually arrive via a shared
-   deck link, so this waits until any showcase overlay has been closed) ---------- */
+   deck link, so this waits until any showcase overlay has been closed).
+   Since v2.51.586 the single welcome popup became the guided tour above. ---------- */
 function maybeShowWelcome(){
   try{
     if(localStorage.getItem(LS_PREFIX+'welcomed')) return false;
     // Existing players don't need the newcomer tour — mark them welcomed silently
     if((state.decksIndex||[]).length){ localStorage.setItem(LS_PREFIX+'welcomed','1'); return false; }
     const show = ()=>{
-      if(document.getElementById('welcomeScrim')) return;
-      const el = document.createElement('div');
-      el.className = 'deckpick-scrim'; el.id = 'welcomeScrim';
-      const NL = appLang() === 'nl';
-      el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin-bottom:auto;margin-top:auto;max-width:420px;">
-        <h4>${NL ? 'Welkom aan boord' : 'Welcome aboard'}</h4>
-        <div style="overflow-y:auto;font-size:14px;line-height:1.65;color:var(--ink-text);">
-          <p style="margin:8px 0;">${NL
-            ? 'Bouw decks, beheer je collectie en verlanglijst, volg Cardmarket-prijzen, vind combo\u2019s en budgetalternatieven, log je potjes en deel je decks \u2014 alles offline-klaar op je telefoon.'
-            : 'Build decks, manage your collection and wants, track Cardmarket prices, find combos and budget alternatives, log your games and share your decks \u2014 all offline-ready on your phone.'}</p>
-          <p style="margin:8px 0;">${NL
-            ? 'Bouw in <strong>Commander</strong>, <strong>Admiral</strong>, <strong>Pauper Commander</strong>, <strong>PreDH</strong> en <strong>Duel Commander</strong> \u2014 elk deck kent zijn eigen formaat en wordt daarop gecontroleerd. Regels en banlijsten van elf formaten staan onder Extra\u2019s.'
-            : 'Build in <strong>Commander</strong>, <strong>Admiral</strong>, <strong>Pauper Commander</strong>, <strong>PreDH</strong> and <strong>Duel Commander</strong> \u2014 every deck carries its own format and is checked against it. Rules and ban lists for eleven formats live under Extras.'}</p>
-          <p style="margin:8px 0;">${NL
-            ? `<strong>${anchorSvg(14)} Admiral</strong> is het eigen format van deze app: 60 kaarten singleton, geen landen (mana komt uit een gedeelde <strong>Landing Zone</strong>), alles wat ooit Standard-legaal was.`
-            : `<strong>${anchorSvg(14)} Admiral</strong> is this app\u2019s own format: 60-card singleton, no lands (mana comes from a shared <strong>Landing Zone</strong>), everything that was ever Standard-legal.`}</p>
-          <p style="margin:8px 0;font-size:13px;color:var(--sub-text);"><strong>📲 Tip:</strong> ${NL
-            ? 'installeer dit als app \u2014 Android (Chrome): \u22ee \u2192 <em>App installeren</em>. Kies \u00e9cht \u201cApp installeren\u201d, niet \u201cToevoegen aan startscherm\u201d: alleen de app-installatie overleeft een herstart van je telefoon. iPhone (Safari): Delen \u2192 Zet op beginscherm.'
-            : 'install this as an app \u2014 Android (Chrome): \u22ee \u2192 <em>Install app</em>. Pick the real \u201cInstall app\u201d, not \u201cAdd to Home screen\u201d: only the app install survives a phone restart. iPhone (Safari): Share \u2192 Add to Home Screen.'}</p>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:12px;">
-          <button class="primary-btn" id="welcomeGo" style="flex:1;">⚔ ${NL ? 'Aan de slag' : 'Take command'}</button>
-        </div>
-      </div>`;
-      document.body.appendChild(el);
-      el.style.alignItems = 'center';
-      const done = ()=>{ el.remove(); try{ localStorage.setItem(LS_PREFIX+'welcomed','1'); }catch(e){} };
-      document.getElementById('welcomeGo').addEventListener('click', ()=>{ done(); render(); });
-      el.addEventListener('click', e=>{ if(e.target===el) done(); });
+      if(document.getElementById('tourScrim') || state._tourI != null) return;
+      startAppTour();
     };
     if(pendingShareToken() || document.getElementById('showcaseOverlay')){
       // Let the shared deck page have the spotlight first
@@ -6235,7 +6378,9 @@ function decksNoticeHtml(){
   try{
     if(!localStorage.getItem(LS_PREFIX+'welcomed')){
       return `<div class="pin-pill" id="welcomeNote" style="align-items:flex-start;">
-        <span class="pp-txt" style="white-space:normal;line-height:1.5;">${modeGlyph()} Your decks are saved <strong>in this browser, on this device</strong>. Stick to one browser (Add to Home Screen makes that easy), and back up now and then from Extras.</span>
+        <span class="pp-txt" style="white-space:normal;line-height:1.5;">${modeGlyph()} ${appLang()==='nl'
+          ? 'Je decks staan <strong>in deze browser, op dit toestel</strong>. Blijf bij één browser — het fijnst als geïnstalleerde app (Chrome ⋮ → App installeren) — en maak af en toe een back-up via Extra\u2019s.'
+          : 'Your decks are saved <strong>in this browser, on this device</strong>. Stick to one browser — nicest as the installed app (Chrome ⋮ → Install app) — and back up now and then from Extras.'}</span>
         <button id="welcomeOk" title="Got it">✕</button></div>`;
     }
     const last = parseInt(localStorage.getItem(LS_PREFIX+'lastBackup')||'0',10);
@@ -6547,14 +6692,20 @@ function openTileMenu(anchorEl, items){
   document.body.appendChild(pop);
   const r = anchorEl.getBoundingClientRect();
   pop.style.position='fixed';
-  // No room below the anchor? Open UPWARD above it (drop-up), like the big
-  // ＋ menu — never glued to the bottom edge over the button that opened it.
+  // Drop-up FIRST, like every menu in this bottom-anchored app: open above
+  // the anchor whenever the menu fits there. Short menus used to drop DOWN
+  // over the bottom nav because only overflowing ones flipped up. Below is
+  // the fallback for anchors near the top; the last resort pins high and
+  // scrolls.
   const below = r.bottom + 4;
-  if(below + pop.offsetHeight > window.innerHeight - 10){
-    pop.style.top = Math.max(8, r.top - 6 - pop.offsetHeight) + 'px';
-  } else {
-    pop.style.top = below + 'px';
-  }
+  const above = r.top - 6 - pop.offsetHeight;
+  let up = true;
+  if(above >= 8){ pop.style.top = above + 'px'; }
+  else if(below + pop.offsetHeight <= window.innerHeight - 10){ pop.style.top = below + 'px'; up = false; }
+  else { pop.style.top = Math.max(8, above) + 'px'; }
+  // §10a viewport rule: a drop-up that overflows opens showing its FOOT —
+  // the entries nearest the thumb are where reading starts.
+  if(up) pop.scrollTop = pop.scrollHeight;
   pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth-8-pop.offsetWidth))+'px';
   pop.style.zIndex=200;
   items.forEach((it,i)=>pop.querySelector(`[data-i="${i}"]`).addEventListener('click', ()=>{ pop.remove(); it.fn(); }));
@@ -15155,8 +15306,8 @@ function inspirationPageHtml(){
   <main>
     <p class="hint">The most-played cards in ${escapeHtml(d.admiral.name)}'s colors, filtered to what's legal in ${isCmdrMode()?'Commander':'Admiral'}.</p>
     <div class="browse-selects">
-      <div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none')}].concat(deckKindredOptions(d)), sel.kindred||'', trS('Kindred — none'), {search:true, cls:'cs-foot'})}</div>
-      <div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none')}].concat(rankedBrowseThemeOptions(deckComboKey(d), d)), sel.theme, trS('Theme — none'), {search:true, cls:'cs-foot'})}</div>
+      <div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(deckKindredOptions(d).map(o=>Object.assign({}, o, {art: inspKindredArt(o.v, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>
+      <div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(rankedBrowseThemeOptions(deckComboKey(d), d).map(o=>Object.assign({}, o, {art: inspThemeArt(o.v, d)}))), sel.theme, trS('Theme — none'), {search:true, tiles:true})}</div>
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -15208,6 +15359,10 @@ function wireInspirationPage(){
   if(!d){ wireNeedDeck(); return; }
   document.getElementById('goDecklistBtn')?.addEventListener('click', ()=>{ state.activeDeckId = d.id; switchPage('decklist'); });
   if(!d.admiral) return;
+  // Drop-up tiles: pull every stored art into the sync ready-map before a
+  // panel can open; the FIRST hydration repaints an already-open panel once
+  // (scroll preserved by csRerender). Fresh keys fill in lazily per tile.
+  hydrateTileArtReady().then((did)=>{ try{ if(did && state.screen === 'inspiration' && state.openCSelect) csRerender(); }catch(e){} });
   _csHandlers.inspKindred = v=>{ state.inspireSel.kindred = v; render(); };
   _csHandlers.inspTheme = v=>{ state.inspireSel.theme = v; render(); };
   wireCSelects();
@@ -15243,6 +15398,37 @@ async function loadInspiration(d){
   state.inspireCache[cacheKey] = filtered;
   renderInspireFromCache(cacheKey, d);
 }
+/* Grouping for the deck-Inspiration list, factored out so the Node battery
+   can test it. Display typing happens HERE, not via primaryTypeOf: that
+   helper skips Land entirely (and lowercases for its scoring callers),
+   which filed every land under a lowercase "Others" at the page FOOT and
+   broke the Lands pin. Titles are proper plurals; Lands pin to the very
+   TOP (never the headline), the biggest section ends at the page foot. */
+function inspireGroups(display){
+  const PLUR = { Planeswalker:'Planeswalkers', Creature:'Creatures', Instant:'Instants', Sorcery:'Sorceries', Enchantment:'Enchantments', Artifact:'Artifacts', Battle:'Battles', Land:'Lands', Other:'Others' };
+  const dispType = (c)=>{
+    const tl = (frontFace(c).type_line || '');
+    for(const t of ['Planeswalker','Creature','Instant','Sorcery','Enchantment','Artifact','Battle','Land']){
+      if(tl.includes(t)) return t;
+    }
+    return 'Other';
+  };
+  const byType = new Map();
+  display.forEach(c=>{
+    const t = dispType(c);
+    if(!byType.has(t)) byType.set(t, []);
+    byType.get(t).push(c);
+  });
+  let groups = Array.from(byType.entries())
+    .sort((a, b)=>b[1].length - a[1].length)
+    .map(([t, cards])=>({ title: PLUR[t], cards }));
+  // Bottom-up: the biggest type ends at the page FOOT where reading starts;
+  // Lands pin to the very TOP -- they are never the headline.
+  const landsG = groups.filter(g=>g.title === 'Lands');
+  groups = groups.filter(g=>g.title !== 'Lands');
+  groups.reverse();
+  return landsG.concat(groups);
+}
 function renderInspireFromCache(cacheKey, d, keepScroll){
   const box = document.getElementById('inspireResults');
   const pool = state.inspireCache[cacheKey] || [];
@@ -15260,22 +15446,7 @@ function renderInspireFromCache(cacheKey, d, keepScroll){
   if(!display.length){ box.innerHTML = `<div class="empty-note">Nothing left to recommend here — you've already added the top picks for this category. Try another one.</div>`; if(!keepScroll) scrollToPageFoot(); return; }
   // Categories like Recommendations: grouped by card type, biggest section
   // at the FOOT (bottom-up), golden stripe under each name, ☰ to jump.
-  const PLUR = { Sorcery:'Sorceries' };
-  const byType = new Map();
-  display.forEach(c=>{
-    const t = primaryTypeOf(c) || 'Other';
-    if(!byType.has(t)) byType.set(t, []);
-    byType.get(t).push(c);
-  });
-  let groups = Array.from(byType.entries())
-    .sort((a, b)=>b[1].length - a[1].length)
-    .map(([t, cards])=>({ title: PLUR[t] || (t + 's'), cards }));
-  // Bottom-up: the biggest type ends at the page FOOT where reading starts;
-  // Lands pin to the very TOP -- they are never the headline.
-  const landsG = groups.filter(g=>g.title === 'Lands');
-  groups = groups.filter(g=>g.title !== 'Lands');
-  groups.reverse();
-  groups = landsG.concat(groups);
+  const groups = inspireGroups(display);
   box.innerHTML = groups.map((g, i)=>`<div class="edh-sec" data-isec="${i}"><div class="section-label" style="margin-top:14px;border-bottom:2px solid var(--line);">${escapeHtml(g.title)}</div><div class="sr-grid">${g.cards.map(c=>searchRowHtml(c, d)).join('')}</div></div>`).join('')
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="inspJump" title="${trS('Jump to section')}">☰</button></div>`;
   document.getElementById('inspJump')?.addEventListener('click', (e)=>{
@@ -15601,7 +15772,7 @@ function edhrecTagCatalogFrom(data){
   const out = [], seen = new Set();
   const push = (label, slug, count)=>{
     label = String(label||'').trim(); slug = String(slug||'').trim().toLowerCase();
-    if(!label || !slug || slug==='tags' || seen.has(slug)) return;
+    if(!label || !slug || slug==='tags' || slug==='themes' || slug==='typal' || seen.has(slug)) return;
     seen.add(slug); out.push({ label, slug, count: count||0 });
   };
   const walk = (node, depth)=>{
@@ -15609,7 +15780,7 @@ function edhrecTagCatalogFrom(data){
     if(Array.isArray(node)){ node.forEach(x=>walk(x, depth+1)); return; }
     if(typeof node !== 'object') return;
     const u = typeof node.url === 'string' ? node.url : '';
-    const m = u.match(/^\/tags\/(?:themes\/|typal\/)?([a-z0-9%+-]+)(?:\/[a-z0-9%+-]+)?\/?$/i);
+    const m = u.match(/^\/(?:tags|typal|themes)\/(?:themes\/|typal\/)?([a-z0-9%+-]+)(?:\/[a-z0-9%+-]+)?\/?$/i);
     if(m) push(node.name || node.value || node.label || m[1].replace(/-/g,' '), m[1], node.num_decks || node.count || 0);
     if(typeof node.slug === 'string' && (node.value || node.tag)) push(node.value || node.tag, node.slug, node.count || 0);
     for(const k in node){ if(k !== 'cardviews' || m || true) walk(node[k], depth+1); }
@@ -15643,18 +15814,26 @@ async function ensureEdhrecTags(){
       const j = JSON.parse(raw);
       // A partial harvest (hub sample only — the full census fetch failed)
       // is marked p:1 and only trusted for an hour, so the census keeps
-      // being retried until the complete EDHREC list lands.
-      const maxAge = j && j.p ? 3600*1000 : 14*24*3600*1000;
-      if(j && Array.isArray(j.v) && j.v.length && (Date.now() - (j.t||0)) < maxAge){
+      // being retried until the complete EDHREC list lands. A catalog
+      // WITHOUT A SINGLE KINDRED entry is the same kind of half-harvest
+      // (the typal census failed that day): serve it now, but trust it
+      // only an hour — the Kindred dropdown can never again be frozen
+      // empty for two weeks (v2.51.585).
+      if(j && Array.isArray(j.v) && j.v.length){
         const valid = j.v.filter(t=>t && typeof t.slug === 'string' && t.slug && typeof t.label === 'string' && t.label);
         const deduped = dedupeTagList(valid);
-        state.edhrecTags = deduped;
-        // A shrunken list means near-duplicate variants were merged — persist
-        // the clean catalog so they never come back.
-        if(deduped.length && deduped.length < valid.length){
-          try{ localStorage.setItem('admiral_app:edhrecTags4', JSON.stringify({ t: j.t || Date.now(), v: deduped })); }catch(e){}
+        let hasKin = deduped.some(t=>t.k);
+        if(!hasKin){ try{ const ks = kindredNameSet(); hasKin = deduped.some(t=>ks.has(String(t.label||'').toLowerCase())); }catch(e){} }
+        const maxAge = (j.p || !hasKin) ? 3600*1000 : 14*24*3600*1000;
+        if((Date.now() - (j.t||0)) < maxAge){
+          state.edhrecTags = deduped;
+          // A shrunken list means near-duplicate variants were merged — persist
+          // the clean catalog so they never come back (keeping its partial flag).
+          if(deduped.length && deduped.length < valid.length){
+            try{ localStorage.setItem('admiral_app:edhrecTags4', JSON.stringify(Object.assign({ t: j.t || Date.now(), v: deduped }, j.p ? { p: 1 } : {}))); }catch(e){}
+          }
+          if(state.edhrecTags.length) return;
         }
-        if(state.edhrecTags.length) return;
       }
     }
   }catch(e){}
@@ -15673,8 +15852,12 @@ async function ensureEdhrecTags(){
   // which never knew Tyranids or Time Lords were creature types.
   let typalTags = [];
   try{
-    const td = await edhrecFetchJson('/pages/tags/typal.json');
-    if(td) typalTags = edhrecTagCatalogFrom(td).map(t=>Object.assign(t, { k: 1 }));
+    // EDHREC has served the Kindred census from two spots over time — try
+    // both; the first that yields entries wins. Misses are never cached.
+    for(const tp of ['/pages/tags/typal.json', '/pages/typal.json']){
+      const td = await edhrecFetchJson(tp);
+      if(td){ typalTags = edhrecTagCatalogFrom(td).map(t=>Object.assign(t, { k: 1 })); if(typalTags.length) break; }
+    }
   }catch(e){}
   const themeTags = edhrecTagCatalogFrom(docs);
   // Typal first, so a slug on both pages keeps its kindred flag and census count.
@@ -15689,8 +15872,12 @@ async function ensureEdhrecTags(){
     // the dropdown today but is retried within the hour, not frozen for
     // two weeks. The complete EDHREC list replaces it the moment it loads.
     const themeCount = tags.filter(t=>!t.k).length;
+    // Zero kindred entries = the typal census did not land — store as
+    // partial so it is retried within the hour, exactly like a theme
+    // half-harvest (v2.51.585).
+    const kinCount = tags.filter(t=>t.k).length;
     try{
-      localStorage.setItem('admiral_app:edhrecTags4', JSON.stringify(themeCount < 60 ? { t: Date.now(), v: tags, p: 1 } : { t: Date.now(), v: tags }));
+      localStorage.setItem('admiral_app:edhrecTags4', JSON.stringify((themeCount < 60 || !kinCount) ? { t: Date.now(), v: tags, p: 1 } : { t: Date.now(), v: tags }));
       localStorage.removeItem('admiral_app:edhrecTags3');
       localStorage.removeItem('admiral_app:edhrecTags2');
     }catch(e){}
@@ -16091,7 +16278,9 @@ async function edhrecTagCommanderNames(slug, combo){
   // entries answer as tags, but pure deck themes (Group Hug and friends)
   // live only under /themes — every lookup tries both roots, and the first
   // one that yields names wins. Misses are cheap: failures are never cached.
-  const roots = ['/pages/tags/', '/pages/themes/'];
+  // Kindred pages moved into their own /typal namespace on EDHREC — it
+  // rides along as the third root (v2.51.585).
+  const roots = ['/pages/tags/', '/pages/themes/', '/pages/typal/'];
   let scoped = [];
   if(combo){
     outer:
@@ -16119,7 +16308,7 @@ async function edhrecTagCommanderNames(slug, combo){
    New Cards and High Synergy Cards. Colour-scoped pages are preferred when
    colours are chosen; the global page is the fallback. */
 async function edhrecTagSections(slug, combo){
-  const roots = ['/pages/tags/', '/pages/themes/'];
+  const roots = ['/pages/tags/', '/pages/themes/', '/pages/typal/'];
   const pickPage = async (path)=>{ for(const root of roots){ const d = await edhrecFetchJson(root + path + '.json'); if(d) return d; } return null; };
   let page = null;
   if(combo){
@@ -16291,7 +16480,9 @@ function renderEdhrecSections(box, key, S, keepScroll){
       e.stopPropagation();
       openTileMenu(jb, pools.map((p, i)=>({ label: p.title, fn: ()=>{
         const el = box.querySelector(`.edh-sec[data-si="${i}"]`);
-        if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+        // Bottom-up: a section STARTS at its foot (the label) — land there,
+        // exactly like the deck-Inspiration and reco jumps.
+        if(el) el.scrollIntoView({ behavior:'smooth', block:'end' });
       }})).reverse());
     });
   }
@@ -16486,9 +16677,13 @@ async function _tileArtSfPick(fmt, clause){
   const pool = (results||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
   // Unranked (brand-new) cards can lead the sorted page -- the tile wants
   // the lowest REAL rank, i.e. the most played card that has data.
-  const ranked = pool.filter(x=>typeof x.edhrec_rank === 'number');
-  const c = ranked.length ? ranked.reduce((a,b)=>(a.edhrec_rank <= b.edhrec_rank ? a : b)) : pool[0];
-  return c ? { n: c.name, a: artCropFrom(cardImageMedRaw(c)) } : null;
+  const ranked = pool.filter(x=>typeof x.edhrec_rank === 'number').sort((a,b)=>a.edhrec_rank - b.edhrec_rank);
+  const list = (ranked.length ? ranked : pool).slice(0, 5);
+  const c = list[0];
+  if(!c) return null;
+  // Winner + up to four alternates, popularity order — render-time dedupe
+  // slides a duplicate tile to the next one.
+  return { n: c.name, a: artCropFrom(cardImageMedRaw(c)), alts: list.slice(1).map(x=>({ n: x.name, a: artCropFrom(cardImageMedRaw(x)) })) };
 }
 async function _tileArtNamePick(nm, front){
   // The exact-name endpoint, no legality gate -- an icon is an icon.
@@ -16513,9 +16708,9 @@ async function _tileArtNamePick(nm, front){
 async function _tileArtEdPick(slug, combo){
   const names = await edhrecTagCommanderNames(slug, combo || '');
   if(names && names.length){
-    const cards = await namesToLegalCards(names.slice(0, 3));
-    const c = (cards||[]).find(x=>!isBanned(x));
-    if(c) return { n: c.name, a: artCropFrom(cardImageMedRaw(c)) };
+    const cards = (await namesToLegalCards(names.slice(0, 6)) || []).filter(x=>!isBanned(x));
+    const c = cards[0];
+    if(c) return { n: c.name, a: artCropFrom(cardImageMedRaw(c)), alts: cards.slice(1, 5).map(x=>({ n: x.name, a: artCropFrom(cardImageMedRaw(x)) })) };
   }
   return null;
 }
@@ -16545,6 +16740,19 @@ async function _tileArtFetchFresh(key, live, front){
     return out;
   }
   return null;
+}
+/* One art per list (v2.51.585): the resolver stores up to four alternates
+   beside the winner (alts, popularity order). At paint time each list keeps
+   a used-set; a tile whose art is already on show slides to its next-best
+   candidate. Old tileart2 cache entries (no alts) keep working unchanged —
+   they simply have nothing to slide to (lazy migration: alts appear when an
+   entry naturally refreshes). Pure, so the Node battery can test it. */
+function tileArtPick(rec, used){
+  if(!rec || !rec.a) return rec || null;
+  const cands = [rec].concat(Array.isArray(rec.alts) ? rec.alts : []);
+  const pick = cands.find(c=>c && c.a && !(used && used.has(c.a))) || rec;
+  if(used) used.add(pick.a);
+  return { n: pick.n, a: pick.a };
 }
 function tileArtResolve(key, front){
   if(_tileArtMem[key]) return _tileArtMem[key];
@@ -16657,7 +16865,17 @@ function wireArtTiles(root){
         tileArtResolve(key, true).then(v=>{
           if(!v || !v.a || !en.target.isConnected) return;
           const img = en.target.querySelector('.at-img');
-          if(img){ img.style.backgroundImage = `url("${v.a}")`; en.target.title = v.n; }
+          if(!img) return;
+          // Dedupe against everything this panel already shows; .then
+          // callbacks run serially, so each fill sees the previous paint.
+          const used = new Set();
+          panel.querySelectorAll('.at-img').forEach(el=>{
+            if(el === img) return;
+            const mm = /url\("(.*?)"\)/.exec(el.style.backgroundImage || '');
+            if(mm) used.add(mm[1]);
+          });
+          const pick = tileArtPick(v, used);
+          img.style.backgroundImage = `url("${pick.a}")`; en.target.title = pick.n;
         });
       });
     }, { root: sc, rootMargin: '140px' });   // the inner scroller is the scrollport now
@@ -16691,6 +16909,26 @@ function bsArtSf(extra){
   return 'sf|' + artFmtParam(f) + '|' + (leaderArtClause(f) + ' ' + (extra||'')).trim();
 }
 function bsArtEd(slug){ return 'ed|' + slug + '|' + ((state.browseSel && state.browseSel.combo) || ''); }
+/* Art keys for the DECK-Inspiration drop-ups: scoped to the deck's own
+   colors, not to the browse page's selection. Kindred prefers the real
+   harvested EDHREC slug (right slug-form guaranteed); without one it falls
+   back to a Scryfall most-played pick for that creature type in the deck's
+   identity — a tile is never left text-only. */
+function inspArtFmt(d){ return deckFormat(d) === 'commander' ? 'commander' : 'any'; }
+function inspKindredArt(type, d){
+  const lk = String(type||'').toLowerCase();
+  const plural = String(KINDRED_PLURAL_IRREGULAR[type] || (type + 's')).toLowerCase();
+  const tags = state.edhrecTags || [];
+  const match = (t)=>{ const l = String(t.label||'').toLowerCase(); return l === lk || l === plural; };
+  const tag = tags.find(t=>t.k && match(t)) || tags.find(match);
+  if(tag) return 'ed|' + tag.slug + '|' + (deckComboKey(d) || '');
+  return 'sf|' + inspArtFmt(d) + '|' + ('t:"' + lk + '" ' + idClauseForDeck(d)).trim();
+}
+function inspThemeArt(v, d){
+  const th = BROWSE_THEMES.find(c=>c.key === v);
+  if(!th || !th.clause) return '';
+  return 'sf|' + inspArtFmt(d) + '|' + (th.clause + ' ' + idClauseForDeck(d)).trim();
+}
 function bsThemeArt(v){
   if(!v) return bsArtSf(browseColorClause());
   if(v.indexOf('ed:') === 0) return bsArtEd(v.slice(3));
@@ -16946,6 +17184,22 @@ const TYPAL_TRIBES = ["Angel","Artificer","Assassin","Barbarian","Bat","Bear","B
 /* Typal gets its own two-step view: first a gallery of creature types (each
    shown as its most-played legal Admiral, labeled with the type), then —
    after tapping one — the most-played Admirals of that type. */
+/* One card never fronts two tribes: a popular Human Wizard used to rep both
+   Human and Wizard. Each tribe takes its most-played leader NOT yet used in
+   this gallery; only when every match is taken does it fall back to its
+   true number one. Pure, for the Node battery (v2.51.585). */
+function pickTypalReps(pool, tribes){
+  const items = [], used = new Set();
+  tribes.forEach(tribe=>{
+    const re = new RegExp('\\b' + tribe + '\\b', 'i');
+    const matches = pool.filter(c=>re.test(frontFace(c).type_line || ''));
+    if(!matches.length) return;
+    const rep = matches.find(c=>!used.has(c.id || c.name)) || matches[0];
+    used.add(rep.id || rep.name);
+    items.push({ tribe, card: rep });
+  });
+  return items;
+}
 async function loadTypal(box, key, keepScroll){
   const sel = state.browseSel;
   const colClause = browseColorClause() || '';
@@ -16959,14 +17213,18 @@ async function loadTypal(box, key, keepScroll){
     if(error){ live.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
     const pool = results.filter(c=> leaderTypeOk(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c)).slice(0, 200);
     const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
-    live.innerHTML = `<button class="ghost-btn" id="typalBack" style="margin:8px 0 4px;">‹ All creature types</button>
-      <p class="hint" style="margin:0 0 4px;">${escapeHtml(tribe)} Admirals — most played first.</p>
-      ${pool.length ? '' : `<div class="empty-note">No legal ${escapeHtml(tribe)} Admirals found${colClause?' in these colors':''}.</div>`}`;
-    document.getElementById('typalBack').addEventListener('click', ()=>{ state.browseTypal = null; render(); });
+    // Bottom-up (§10a): the grid reads upward, so the caption and the way
+    // back ride the FOOT, nearest the thumb — not ten screens up at the
+    // head of a 200-tile list. Normal flow column: DOM-last = bottom.
+    live.innerHTML = '';
     if(pool.length){
       pagedGrid(live, pool, (c)=>searchRowHtml(c, pinned, {showAdmiralBtn:true}),
         (chunk)=>{ wireResultButtons(pool, pinned, ()=>loadTypal(box, key, true), {onCardTap:(c)=>openAdmiralReco(c)}); loadTilePrices(chunk); });
     }
+    live.insertAdjacentHTML('beforeend', `${pool.length ? '' : `<div class="empty-note">No legal ${escapeHtml(tribe)} Admirals found${colClause?' in these colors':''}.</div>`}
+      <p class="hint" style="margin:8px 0 4px;">${escapeHtml(tribe)} Admirals — most played first.</p>
+      <button class="ghost-btn" id="typalBack" style="margin:0 0 4px;width:100%;">‹ All creature types</button>`);
+    document.getElementById('typalBack').addEventListener('click', ()=>{ state.browseTypal = null; render(); });
     if(!keepScroll) scrollToPageFoot();
     return;
   }
@@ -16981,24 +17239,18 @@ async function loadTypal(box, key, keepScroll){
     if(!live0) return;
     if(error){ live0.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
     const pool = results.filter(c=> leaderTypeOk(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c));
-    items = [];
-    TYPAL_TRIBES.forEach(tribe=>{
-      const rep = pool.find(c=>{
-        const tl = (frontFace(c).type_line||'');
-        return new RegExp('\\b'+tribe+'\\b','i').test(tl);
-      });
-      if(rep) items.push({tribe, card: rep});
-    });
+    items = pickTypalReps(pool, TYPAL_TRIBES);
     state._typalIndex[idxKey] = items;
   }
   const live = document.getElementById('browseResults');
   if(!live || state.browseSel.theme!=='typal' || state.browseTypal) return;
-  live.innerHTML = `<p class="hint" style="margin:8px 0 0;">Creature types with a typal identity — each shown as its most-played Admiral. Tap one to see all its Admirals.</p>
-    <div class="sr-grid">${items.map(it=>`
+  // Bottom-up (§10a): grid first, caption at the FOOT beneath it.
+  live.innerHTML = `<div class="sr-grid">${items.map(it=>`
       <div class="sr-tile typal-tile" data-tribe="${escapeHtml(it.tribe)}">
         <img loading="lazy" class="${wbClass(it.card)}" src="${cardImageMed(it.card)}" alt="${escapeHtml(it.card.name)}">${cardBadgesHtml(it.card)}
         <div class="typal-label">${escapeHtml(it.tribe)}</div>
-      </div>`).join('')}</div>`;
+      </div>`).join('')}</div>
+    <p class="hint" style="margin:8px 0 0;">Creature types with a typal identity — each shown as its most-played Admiral. Tap one to see all its Admirals.</p>`;
   live.querySelectorAll('.typal-tile').forEach(t=>t.addEventListener('click', ()=>{
     state.browseTypal = t.dataset.tribe;
     render();
@@ -17136,7 +17388,10 @@ function renderBrowseResults(key, keepScroll){
   const note = (admiralMode && state.browseSel.theme)
     ? `<p class="hint" style="margin:8px 0 0;">${isCmdrMode()?'Commanders':'Admirals'} for this theme, most-played first.</p>`
     : '';
-  box.innerHTML = note;
+  // Bottom-up: the caption used to open the box (visual TOP of a list that
+  // can run ten screens tall); it now rides the FOOT, right where reading
+  // starts. #browseResults is a normal flow column, so DOM-last = bottom.
+  box.innerHTML = '';
   // Two-commander pairs are treated like any other eligible commander: they
   // share one ranking with the singles. Order comes from EDHREC's own deck
   // counts for this colour combination whenever that page is available.
@@ -17148,12 +17403,14 @@ function renderBrowseResults(key, keepScroll){
     pagedGrid(box, merged, (it, idx)=> it._pair
       ? pairTileHtml(it._pair, idx, pairPlayDecks(it._pair, edecks))
       : searchRowHtml(it, pinned, {showAdmiralBtn:true, decks: singlePlayDecks(it, edecks)}), after);
+    if(note) box.insertAdjacentHTML('beforeend', note);
     if(!keepScroll) scrollToPageFoot();
     return;
   }
   const after = (chunk)=>{ wireResultButtons(pool, pinned, ()=>renderBrowseResults(key, true), wireOpts); loadTilePrices(chunk); };
   const streaming = !pool._complete;
   pagedGrid(box, pool, (c)=>searchRowHtml(c, pinned, {showAdmiralBtn:true}), after, {stream: streaming});
+  if(note) box.insertAdjacentHTML('beforeend', note);
   pairNote();
   if(!keepScroll) scrollToPageFoot();
 }
@@ -17178,7 +17435,7 @@ async function loadEdhrecDeckCounts(key, combo, tagSlug){
     // the pool's own order (already the tag's play order) is the truth.
     let data = null;
     if(tagSlug){
-      for(const root of ['/pages/tags/', '/pages/themes/']){    // themes live in a second namespace
+      for(const root of ['/pages/tags/', '/pages/themes/', '/pages/typal/']){    // themes and kindred live in their own namespaces
         data = await edhrecFetchJson(root + tagSlug + '/' + cs + '.json');
         if(data) break;
       }
@@ -18805,6 +19062,7 @@ function settingsPageHtml(){
   return `
   <main class="settings-main">
     <div class="settings-section"><div class="settings-row" id="lifeRow"><div class="l1">Life Counter</div><div class="l2">Open the multiplayer life tracker</div></div></div>
+    <div class="settings-section"><div class="settings-row" id="tourRow"><div class="l1">🧭 ${appLang()==='nl' ? 'Rondleiding' : 'App tour'}</div><div class="l2">${appLang()==='nl' ? 'Loop alle pagina\u2019s nog eens langs met korte uitleg' : 'Walk every page again with a short guide'}</div></div></div>
             <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">Comprehensive Rules</div><div class="l2">The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back</div></div></div>
     <div class="settings-section">
       <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Eleven formats this app knows — tap to unfold.</div></div><span class="l2">▾</span></div>
@@ -18835,7 +19093,11 @@ function settingsPageHtml(){
     </div>
     <div class="settings-section">
       <div class="settings-row" id="dataSourcesRow"><div style="width:100%;"><div class="l1">Data Sources</div><div class="l2" id="dataSourcesBody">${dataSourcesHtml()}</div></div></div>
-      <div class="settings-row"><div><div class="l1">Backup &amp; Restore</div><div class="l2">Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.</div></div>
+      <div class="settings-row"><div><div class="l1">Backup &amp; Restore</div><div class="l2">Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.</div><div class="l2" style="margin-top:5px;">${state._persisted === true
+        ? (appLang()==='nl' ? '🛡 Opslag beschermd — Android ruimt je decks en collectie niet op bij ruimtegebrek.' : '🛡 Storage protected — Android won\u2019t clear your decks and collection under storage pressure.')
+        : state._persisted === false
+        ? (appLang()==='nl' ? '⚠ Opslag nog niet beschermd — installeer Deckhand als app en maak regelmatig een back-up.' : '⚠ Storage not protected yet — install Deckhand as an app and back up regularly.')
+        : (appLang()==='nl' ? 'Opslagbescherming wordt gecontroleerd\u2026' : 'Checking storage protection\u2026')}</div></div>
         <div style="display:flex;gap:8px;flex:0 0 auto;margin-left:auto;">
           <button class="ghost-btn" id="backupBtn" style="padding:7px 12px;font-size:13px;">⬇ Back Up</button>
           <button class="ghost-btn" id="restoreBtn" style="padding:7px 12px;font-size:13px;">⬆ Restore</button>
@@ -19126,6 +19388,7 @@ function wireSettingsPage(){
     });
   });
   document.getElementById('lifeRow').addEventListener('click', openLifeOverlay);
+  document.getElementById('tourRow')?.addEventListener('click', startAppTour);
   document.getElementById('crRow')?.addEventListener('click', openCROverlay);
   document.getElementById('fullRulesToggle')?.addEventListener('click', ()=>{
     state.settingsFullRulesOpen = !state.settingsFullRulesOpen;
@@ -21093,9 +21356,21 @@ if('serviceWorker' in navigator && /^https:/.test(location.protocol)){
 window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); state._installEvt = e; try{ if(state.screen === 'home') refreshInstallPill(); }catch(err){} });
 window.addEventListener('appinstalled', ()=>{ state._installEvt = null; try{ refreshInstallPill(); }catch(e){} });
 
-if(navigator.storage && navigator.storage.persist){
-  navigator.storage.persist().catch(()=>{});
+/* Onderdeel A: ask Android to PROTECT this origin's storage (decks,
+   collection, caches survive storage pressure). The verdict lands in
+   state._persisted and shows under Extras → Backup & Restore; an installed
+   WebAPK is granted this automatically, a plain tab often only after use. */
+async function ensurePersistentStorage(){
+  try{
+    if(!(navigator.storage && (navigator.storage.persisted || navigator.storage.persist))) return;
+    let ok = false;
+    if(navigator.storage.persisted) ok = await navigator.storage.persisted();
+    if(!ok && navigator.storage.persist) ok = await navigator.storage.persist();
+    state._persisted = !!ok;
+    if(state.screen === 'settings') render();
+  }catch(e){}
 }
+ensurePersistentStorage();
 
 document.addEventListener('gesturestart', e=>e.preventDefault());
 document.addEventListener('gesturechange', e=>e.preventDefault());
