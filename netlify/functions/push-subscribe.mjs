@@ -18,6 +18,10 @@ export default async (req) => {
   }
   if(req.method !== 'POST') return new Response('POST or DELETE', { status: 405, headers: cors });
   if(!body.keys || !body.keys.p256dh || !body.keys.auth) return new Response('keys required', { status: 400, headers: cors });
-  await store.setJSON(key, { sub: body, t: Date.now() });
+  // Remember the reader's language so the daily check can write to them in it.
+  // Subscriptions saved before this existed carry no lang and fall back to Dutch,
+  // which is what they have been receiving all along.
+  const lang = body.lang === 'en' ? 'en' : (body.lang === 'nl' ? 'nl' : undefined);
+  await store.setJSON(key, { sub: { endpoint: body.endpoint, keys: body.keys }, lang, t: Date.now() });
   return Response.json({ ok: true }, { headers: cors });
 };

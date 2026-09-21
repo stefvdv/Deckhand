@@ -9,13 +9,19 @@
 import webpush from 'web-push';
 import { getStore } from '@netlify/blobs';
 
-async function pushToAll(payload){
+/* `build` receives 'nl' or 'en' and returns the payload for that reader, so
+   nobody gets a notification in a language they did not choose. Subscriptions
+   saved before the language was recorded keep getting Dutch. */
+async function pushToAll(build){
   const subsStore = getStore('push-subs');
   let sent = 0, pruned = 0;
   const { blobs } = await subsStore.list();
   for(const b of blobs || []){
     const rec = await subsStore.get(b.key, { type: 'json' });
     if(!rec || !rec.sub) continue;
+    const payload = typeof build === 'function'
+      ? JSON.stringify(build(rec.lang === 'en' ? 'en' : 'nl'))
+      : build;
     try{ await webpush.sendNotification(rec.sub, payload); sent++; }
     catch(e){
       const code = e && e.statusCode;
@@ -28,7 +34,7 @@ async function pushToAll(payload){
 export default async () => {
   const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
   if(!pub || !priv) return new Response('VAPID env vars missing', { status: 500 });
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:deckhand@example.com', pub, priv);
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://deckhandcompanion.netlify.app', pub, priv);
   const state = getStore('push-state');
   const report = [];
 
@@ -48,11 +54,15 @@ export default async () => {
       const fresh = interesting.filter(s => !seen.includes(s.code));
       if(fresh.length){
         const names = fresh.map(s => s.name).slice(0, 3).join(', ');
-        const r = await pushToAll(JSON.stringify({
+        const r = await pushToAll((lang)=>lang === 'en' ? {
+          title: '🔮 A new Magic set is up',
+          body: names + ' — the spoilers are gathering in Deckhand.',
+          url: './?go=spoilers'
+        } : {
           title: '🔮 Nieuwe Magic-set gespot',
           body: names + ' — de spoilers verzamelen zich in Deckhand.',
           url: './?go=spoilers'
-        }));
+        });
         await state.setJSON('announced', seen.concat(fresh.map(s => s.code)).slice(-300));
         report.push(`sets: ${names} → sent ${r.sent}, pruned ${r.pruned}`);
       } else report.push('sets: nothing new');
@@ -70,12 +80,17 @@ export default async () => {
         await state.setJSON('lastVersion', { version: v.version });   // first run: remember, never spam
         report.push('version: baseline ' + v.version);
       } else if(last.version !== v.version){
-        const bullets = ((v.notes && v.notes.nl) || []).slice(0, 3).map(x => '• ' + x).join('\n');
-        const r = await pushToAll(JSON.stringify({
-          title: '⚓ Deckhand bijgewerkt — v' + v.version,
-          body: bullets || 'Open de app voor de details.',
+        const bulletsFor = (lang)=>(((v.notes && v.notes[lang]) || (v.notes && v.notes.nl) || [])
+          .slice(0, 3).map(x => '• ' + x).join('\n'));
+        const r = await pushToAll((lang)=>lang === 'en' ? {
+          title: '⚓ Deckhand updated — v' + v.version,
+          body: bulletsFor('en') || 'Open the app to see what changed.',
           url: './'
-        }));
+        } : {
+          title: '⚓ Deckhand bijgewerkt — v' + v.version,
+          body: bulletsFor('nl') || 'Open de app voor de details.',
+          url: './'
+        });
         await state.setJSON('lastVersion', { version: v.version });
         report.push(`version: ${last.version} → ${v.version}, sent ${r.sent}, pruned ${r.pruned}`);
       } else report.push('version: unchanged ' + v.version);
