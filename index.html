@@ -977,6 +977,24 @@ main.has-dock{padding-bottom:84px;}
    the art and frame fill the tile — the gold rim lives on the tile itself. */
 .vg-card img{width:108.5%;max-width:none;margin:-4.25% 0 0 -4.25%;display:block;border:none;border-radius:0;}
 
+/* Offline, a card picture the phone has never fetched simply is not there.
+   In its place the app draws the card itself from what it DOES have: name,
+   type, colour, stats -- a skeleton in the card's own colour (gold when it
+   is multicolour), in exactly the spot the picture would occupy. The moment
+   the line is back the real picture takes over again.
+   Pseudo-elements only render on a FAILED image, which is precisely when
+   this is wanted, and the ::after covers whatever the browser drew. */
+img.art-missing{
+  position:relative;color:transparent;font-size:0;aspect-ratio:488/680;
+  background:transparent;
+}
+img.art-missing::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  background:var(--sk) center/cover no-repeat;
+}
+.vg-card img.art-missing, .sc-tile img.art-missing, .sr-tile img.art-missing{
+  width:100%;margin:0;
+}
 .empty-note{color:var(--sub-text);font-size:14px;text-align:center;padding:12px 10px;}
 .status{text-align:center;color:var(--sub-text);font-size:14px;padding:16px;}
 #searchResultsBox > .status:only-child, #browseResults > .status:only-child,
@@ -3920,6 +3938,7 @@ function _netSetDown(down){
   _netDown = down;
   try{ _netChipSync(); }catch(e){}
   try{ sfJournal(down ? 'NETWORK DOWN — queue holding, banner up' : 'network back — queue resumed'); }catch(e){}
+  if(!down) try{ setTimeout(retryMissingArt, 600); }catch(e){}
   if(down && !_netProbeT){
     _netProbeT = setInterval(async ()=>{
       try{
@@ -4687,17 +4706,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.609';
+const APP_VERSION = '2.51.611';
 const CHANGELOG_NOTES = {
   en: [
-    'The app starts faster: the page is served from the copy on your phone as soon as the download takes longer than 1.2 seconds, and the fresh copy finishes downloading in the background.',
-    'When that happens you get a short note that a newer version is ready for the next start.',
-    'Copy diagnostics now shows where the startup time goes: service worker, document download, reading the page, first render, first picture.'
+    'Offline, a card whose picture is missing is now drawn from what the app does know: a card skeleton with its name, mana cost, type and power/toughness, framed in the card\u2019s own colour \u2014 gold for multicoloured ones.',
+    'The skeleton sits exactly where the picture belongs, and the moment the connection is back the real picture quietly takes its place again.'
   ],
   nl: [
-    'De app start sneller: duurt het downloaden van de pagina langer dan 1,2 seconde, dan komt hij uit de kopie op je telefoon en wordt de nieuwe versie op de achtergrond opgehaald.',
-    'Gebeurt dat, dan zie je kort een melding dat er een nieuwere versie klaarstaat voor de volgende start.',
-    'Kopieer diagnostiek laat nu zien waar de starttijd heen gaat: serviceworker, download van de pagina, inlezen, eerste render, eerste beeld.'
+    'Zonder verbinding wordt een kaart zonder plaatje nu getekend uit wat de app w\u00e9l weet: een kaartskelet met naam, manakosten, type en power/toughness, omlijst in de eigen kleur van de kaart \u2014 goud bij meerkleurig.',
+    'Het skelet staat precies waar het plaatje hoort, en zodra er weer verbinding is neemt het echte plaatje stilletjes zijn plek weer in.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -21863,6 +21880,120 @@ function appReady(){
   }catch(e){}
   try{ if(window.DeckhandNotify && DeckhandNotify.appReady) DeckhandNotify.appReady(); }catch(e){}
 }
+/* ---- The offline card skeleton ---------------------------------------
+   The same five colours the mana charts use, plus the app's flat gold for
+   anything multicoloured (kleurenwet: no new colours are invented here). */
+const SK_INK = { W:'#F1E6C8', U:'#7CB8DB', B:'#8B7EA8', R:'#D98A6B', G:'#8FBD8F' };
+const SK_GREY = '#9AA0A6';
+const _skCache = new Map();
+function _skColorOf(c){
+  if(!c) return SK_GREY;
+  let cols = (c.colors && c.colors.length) ? c.colors
+           : (c.c ? String(c.c).split('') : null);
+  if(!cols || !cols.length){
+    // A land or an artifact has no colour of its own; its identity still
+    // says which deck it belongs to, so a gold/one-colour hint is fair.
+    cols = (c.color_identity && c.color_identity.length) ? c.color_identity
+         : (c.ci ? String(c.ci).split('') : []);
+  }
+  cols = cols.filter(x=>SK_INK[x]);
+  if(cols.length > 1){
+    let g = '';
+    try{ g = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim(); }catch(e){}
+    return g || '#E8BE58';
+  }
+  return cols.length === 1 ? SK_INK[cols[0]] : SK_GREY;
+}
+function _skEsc(t){
+  return String(t == null ? '' : t)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _skFit(t, n){
+  t = String(t || '');
+  return t.length > n ? t.slice(0, n - 1) + '\u2026' : t;
+}
+/* One card, drawn: frame, title bar, empty art window, type bar, four blank
+   text rules and a power/toughness box when the card has one. */
+function cardSkeletonUri(card){
+  const name = String((card && (card.name || card.n)) || '');
+  const key = name || '?';
+  if(_skCache.has(key)) return _skCache.get(key);
+  const col = _skColorOf(card);
+  const type = String((card && (card.type_line || card.tl)) || '').split('//')[0].trim();
+  const cost = String((card && (card.mana_cost || card.mc)) || '').replace(/[{}]/g, ' ').trim();
+  const pw = (card && (card.power != null ? card.power : card.pw));
+  const tg = (card && (card.toughness != null ? card.toughness : card.tg));
+  const pt = (pw != null && tg != null && pw !== '' ) ? (pw + '/' + tg) : '';
+  const L = (y)=>`<rect x="58" y="${y}" width="${372 - (y % 3) * 26}" height="7" rx="3.5" fill="${col}" fill-opacity="0.22"/>`;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 680" width="488" height="680">` +
+    `<rect width="488" height="680" rx="26" fill="#100D0B"/>` +
+    `<rect x="14" y="14" width="460" height="652" rx="20" fill="none" stroke="${col}" stroke-opacity="0.55" stroke-width="3"/>` +
+    `<rect x="36" y="38" width="416" height="52" rx="12" fill="${col}" fill-opacity="0.12" stroke="${col}" stroke-opacity="0.45" stroke-width="2"/>` +
+    `<text x="54" y="72" fill="${col}" fill-opacity="0.95" font-family="Georgia,serif" font-size="25">${_skEsc(_skFit(name, 24))}</text>` +
+    (cost ? `<text x="434" y="72" text-anchor="end" fill="${col}" fill-opacity="0.8" font-family="Georgia,serif" font-size="21">${_skEsc(_skFit(cost, 12))}</text>` : '') +
+    `<rect x="36" y="104" width="416" height="286" rx="10" fill="none" stroke="${col}" stroke-opacity="0.35" stroke-width="2" stroke-dasharray="10 8"/>` +
+    `<rect x="36" y="404" width="416" height="44" rx="10" fill="${col}" fill-opacity="0.12" stroke="${col}" stroke-opacity="0.45" stroke-width="2"/>` +
+    `<text x="54" y="434" fill="${col}" fill-opacity="0.9" font-family="Georgia,serif" font-size="21">${_skEsc(_skFit(type, 28))}</text>` +
+    `<rect x="36" y="462" width="416" height="180" rx="10" fill="none" stroke="${col}" stroke-opacity="0.35" stroke-width="2"/>` +
+    L(492) + L(524) + L(556) + L(588) +
+    (pt ? `<rect x="336" y="604" width="116" height="50" rx="10" fill="${col}" fill-opacity="0.16" stroke="${col}" stroke-opacity="0.5" stroke-width="2"/>` +
+          `<text x="394" y="638" text-anchor="middle" fill="${col}" fill-opacity="0.95" font-family="Georgia,serif" font-size="24">${_skEsc(pt)}</text>` : '') +
+    `</svg>`;
+  const uri = 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '")';
+  if(_skCache.size > 400) _skCache.clear();
+  _skCache.set(key, uri);
+  return uri;
+}
+/* The picture failed: find out WHICH card this was and draw its skeleton.
+   The local database is already in memory, so its type, colour and stats
+   come for free -- exactly the information the card sheet shows offline. */
+function _skFor(name){
+  let bc = null;
+  try{ if(_bulkIdx && _bulkIdx.byName && name) bc = _bulkIdx.byName.get(String(name).toLowerCase()); }catch(e){}
+  return cardSkeletonUri(bc || { name });
+}
+/* Line back? Give every skeleton one quiet chance at its real picture. A
+   probe loads it out of sight, so the tile only changes once it succeeded. */
+function retryMissingArt(){
+  document.querySelectorAll('img.art-missing').forEach(im=>{
+    const src = im.dataset.artsrc || im.currentSrc || im.src;
+    if(!src) return;
+    im.dataset.artsrc = src;
+    const probe = new Image();
+    probe.onload = ()=>{
+      im.classList.remove('art-missing');
+      im.style.removeProperty('--sk');
+      if(im.src !== src) im.src = src;
+    };
+    probe.src = src;
+  });
+}
+try{ window.addEventListener('online', ()=>setTimeout(retryMissingArt, 1000)); }catch(e){}
+/* Card art that cannot be fetched (offline, or a picture never opened
+   before) gets the plate above instead of a broken-image icon. Image errors
+   do not bubble, so this listens in the capture phase -- one handler for
+   every card picture in the app, present and future. */
+document.addEventListener('error', (e)=>{
+  const im = e.target;
+  if(!im || im.tagName !== 'IMG') return;
+  if(im.classList.contains('art-missing')) return;
+  const src = String(im.currentSrc || im.src || '');
+  if(!/scryfall\.io/.test(src)) return;                  // only card art
+  let nm = im.getAttribute('alt') || '';
+  if(!nm){
+    // Several tiles carry the name on the tile, not on the picture.
+    const h = im.closest('[data-name],[data-spn],[data-scn]');
+    if(h){
+      nm = h.dataset.spn || h.dataset.scn || '';
+      if(!nm && h.dataset.name){ try{ nm = decodeURIComponent(h.dataset.name); }catch(err){ nm = h.dataset.name; } }
+    }
+  }
+  im.setAttribute('alt', nm);
+  im.dataset.artsrc = src;
+  try{ im.style.setProperty('--sk', _skFor(nm)); }catch(err){}
+  im.classList.add('art-missing');
+}, true);
 setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
 /* The page may have been served from the cache to keep the launch quick, so
    the newest deploy can be one start behind. Say so, quietly, once. */
