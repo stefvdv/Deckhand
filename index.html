@@ -964,6 +964,14 @@ main.has-dock{padding-bottom:84px;}
   position:fixed;left:50%;top:44%;transform:translate(-50%,-50%);
   width:max-content;max-width:80vw;padding:0;z-index:5;
 }
+/* Set symbols in the set pickers. Scryfall ships them as black SVGs; masking
+   instead of filtering means the glyph takes the INK of the label beside it,
+   so it is monochrome by construction and never introduces an eighth colour. */
+.set-ico{display:inline-block;width:15px;height:15px;flex:none;vertical-align:-2px;margin-right:5px;
+  background-color:currentColor;opacity:0.92;
+  -webkit-mask-position:center;mask-position:center;
+  -webkit-mask-size:contain;mask-size:contain;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;}
 .spinner{width:40px;height:40px;border:3px solid var(--line);border-top-color:var(--brass);border-bottom-color:var(--brass-dim);border-radius:50%;animation:sp 0.7s cubic-bezier(0.45,0.15,0.55,0.85) infinite;margin:0 auto 10px;}
 .status-flavor{font-size:14.5px;color:var(--ink-text);font-style:italic;margin-top:6px;animation:flavorIn 0.45s ease;}
 @keyframes flavorIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
@@ -2204,6 +2212,17 @@ let saveTimers = {};
    options, matches the app's styling, and only one is open at a time
    (state.openCSelect). Handlers register per id in _csHandlers. */
 const _csHandlers = {};
+/* The symbol for a set code, as ink-coloured HTML — empty when the set list
+   has not arrived yet, so a picker never waits on it. */
+function setIconHtml(code){
+  try{
+    if(!code) return '';
+    const row = (state.allSetsRaw || []).find(x=>x && String(x.code).toLowerCase() === String(code).toLowerCase());
+    if(!row || !row.icon) return '';
+    const u = String(row.icon).replace(/'/g, '%27');
+    return `<span class="set-ico" style="-webkit-mask-image:url('${u}');mask-image:url('${u}');"></span>`;
+  }catch(e){ return ''; }
+}
 function cselectHtml(id, options, value, placeholder, o){
   o = o || {};
   const cur = options.find(x=>String(x.v)===String(value ?? ''));
@@ -4660,15 +4679,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.599';
+const APP_VERSION = '2.51.600';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck prices now come from the card database already on your phone, so they appear at once and without asking Scryfall. Only genuinely new cards still need a lookup.',
-    'Spoiler cards that showed no price at all now show one \u2014 the price was in the weekly database all along, unread.'
+    'Prices now come from a file rebuilt every morning, so a deck total is never more than a day behind \u2014 and still costs no requests.',
+    'Every set picker shows the set symbol before the name, in the same ink as the label.',
+    'Top Commanders no longer keeps Week lit when EDHREC is unreachable and the list is Scryfall\u2019s overall popularity instead.'
   ],
   nl: [
-    'Deckprijzen komen nu uit de kaartendatabase die al op je telefoon staat, dus ze verschijnen meteen en zonder Scryfall te vragen. Alleen echt nieuwe kaarten worden nog opgezocht.',
-    'Spoilerkaarten die helemaal geen prijs toonden hebben er nu wel een \u2014 die prijs stond al die tijd ongelezen in het weekbestand.'
+    'Prijzen komen nu uit een bestand dat elke ochtend opnieuw gemaakt wordt, dus een decktotaal loopt nooit meer dan een dag achter \u2014 en kost nog steeds geen enkele aanvraag.',
+    'Elk setmenu toont het setsymbool v\u00f3\u00f3r de naam, in dezelfde inkt als het label.',
+    'Top Commanders laat Week niet langer oplichten als EDHREC onbereikbaar is en de lijst dus Scryfalls algemene populariteit toont.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6938,7 +6959,7 @@ function collectionPageHtml(){
     <div id="colAdvBox" style="${state.colAdvOpen?'':'display:none;'}">${(()=>{
       const sets = Array.from(new Map(state.collection.items.map(it=>[it.set, it.set_name||it.set])).entries())
         .sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
-      const setOpts = [{v:'',l:'All sets'}].concat(sets.map(([code,name])=>({v:code, l:name})));
+      const setOpts = [{v:'',l:'All sets'}].concat(sets.map(([code,name])=>({v:code, l:name, icons:setIconHtml(code)})));
       const colorOrder = ['W','U','B','R','G','C'];
       return `<div class="panel-card" id="colAdvPanel" style="margin-bottom:12px;display:flex;flex-direction:column-reverse;">
         <div class="adv-row"><label>Name</label><input id="colFq" class="col-filter-input" placeholder="Card name…" value="${escapeHtml(f.q)}"></div>
@@ -8652,8 +8673,71 @@ function fmtEur(v){
    over the network -- which is what kept tripping Scryfall's limiter. This
    reads it straight out of the already-loaded index; when the index is not in
    memory yet it simply answers "don't know" and the online path takes over. */
+/* The daily price file. The weekly build carries prices too, but those are up
+   to a week old; this one is rebuilt every morning and is a fraction of the
+   size, so prices are never more than a day behind without asking Scryfall a
+   single question. The weekly numbers stay as the fallback for anything the
+   daily file does not list. */
+const DPRICE_META = './prices-meta.json';
+const DPRICE_FILE = './prices-slim.tsv.gz';
+let _dPrices = null, _dPricesBuilt = '';
+
+async function dailyPricesReady(){
+  if(_dPrices) return _dPrices;
+  try{
+    const rows = await bulkKvGet('dprices');
+    if(Array.isArray(rows) && rows.length){
+      _dPrices = new Map(rows);
+      const meta = await bulkKvGet('dpricesMeta');
+      _dPricesBuilt = (meta && meta.built) || '';
+    }
+  }catch(e){}
+  return _dPrices;
+}
+
+async function dailyPricesCheck(force){
+  try{
+    if(!('DecompressionStream' in window)) return;
+    if(!force && (navigator.onLine === false || document.hidden)) return;
+    const r = await fetch(DPRICE_META, { cache: 'no-store' });
+    if(!r.ok) return;                         // not published yet: no harm done
+    const meta = await r.json();
+    await dailyPricesReady();
+    if(meta && meta.built && meta.built === _dPricesBuilt) return;   // already have today's
+    const res = await fetch(DPRICE_FILE, { cache: 'no-store' });
+    if(!res.ok || !res.body) return;
+    const text = await new Response(res.body.pipeThrough(new DecompressionStream('gzip'))).text();
+    const map = new Map();
+    for(const line of text.split('\n')){
+      const t = line.indexOf('\t');
+      if(t < 1) continue;
+      const v = parseFloat(line.slice(t + 1));
+      if(!isNaN(v)) map.set(line.slice(0, t).toLowerCase(), v);
+    }
+    if(map.size < 1000) return;               // a thin file is a broken file
+    _dPrices = map;
+    _dPricesBuilt = (meta && meta.built) || '';
+    await bulkKvSet('dprices', Array.from(map.entries()));
+    await bulkKvSet('dpricesMeta', { built: _dPricesBuilt, count: map.size });
+    // Everything seeded from the older weekly numbers is now out of date. Live
+    // answers (no mark) are left alone -- they came from Scryfall itself.
+    let dropped = 0;
+    for(const k of Object.keys(state.priceCache || {})){
+      if(state.priceCache[k] && state.priceCache[k].s === 1){ delete state.priceCache[k]; dropped++; }
+    }
+    if(dropped) try{ savePriceCache(); }catch(e){}
+    try{ sfJournal('prices: daily file, ' + map.size + ' cards, built ' + _dPricesBuilt + (dropped ? ', ' + dropped + ' week-old entries dropped' : '')); }catch(e){}
+    if(state.screen === 'decks' || state.screen === 'decklist') render();
+  }catch(e){}
+}
+
 function bulkEurFor(name){
   try{
+    // Today's number wins over the weekly one.
+    if(_dPrices){
+      const d = _dPrices.get(String(name).toLowerCase());
+      if(typeof d === 'number' && isFinite(d)) return d;
+    }
     const ix = _bulkIdx;
     if(!ix || !ix.byName) return undefined;
     const e = ix.byName.get(String(name).toLowerCase());
@@ -8673,7 +8757,7 @@ function seedPricesFromBulk(cards){
     if(state.priceCache[c.name]) continue;         // never overwrite a live answer
     const v = bulkEurFor(c.name);
     if(v === undefined) continue;
-    state.priceCache[c.name] = { v, t: now };
+    state.priceCache[c.name] = { v, t: now, s: 1 };   // s: came from the local database
     try{ notePrice(c.name, v); }catch(e){}
     seeded++;
   }
@@ -8690,7 +8774,7 @@ async function cheapestEur(card, front, fresh){
     // could show no price at all while its price sat in the weekly build.
     const local = bulkEurFor(card.name);
     if(local !== undefined){
-      state.priceCache[card.name] = { v: local, t: Date.now() };
+      state.priceCache[card.name] = { v: local, t: Date.now(), s: 1 };
       try{ notePrice(card.name, local); savePriceCache(); }catch(e){}
       return local;
     }
@@ -9200,7 +9284,7 @@ function spoilersPageHtml(){
       : `<div class="empty-note" style="margin-top:24px;">No sets are previewing right now.<br>Spoiler season returns in the weeks before each release.</div>`}
     ${sets.length ? (()=>{
       const sf = state.spFilter;
-      const setOpts = [{v:'', l:'All sets'}].concat(sets.map(x=>({v:x.code, l:x.name})));
+      const setOpts = [{v:'', l:'All sets'}].concat(sets.map(x=>({v:x.code, l:x.name, icons:setIconHtml(x.code)})));
       const colorOrder = ['W','U','B','R','G','C'];
       return `<button class="adv-toggle" id="spAdvToggle">Advanced filter ${state.spAdvOpen?'\u25b4':'\u25be'}</button>
       <div class="adv-panel" id="spAdvBox" style="${state.spAdvOpen?'':'display:none;'}">
@@ -12109,7 +12193,7 @@ function advancedPanelHtml(){
       ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<p class="adv-hint">Pre-set to the deck you\u2019re adding to.</p>` : ''}
     </div>
     <div class="adv-row"><label>Set / Expansion</label>
-      ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name)}))), s.searchSetCode, 'Any Set', {search:true, cls:'cs-up cs-foot'})}
+      ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name), icons:setIconHtml(code)}))), s.searchSetCode, 'Any Set', {search:true, cls:'cs-up cs-foot'})}
       ${sets.length?'':`<p class="adv-hint">Set list still loading…</p>`}
     </div>
     <div class="adv-row"><label>Oracle Text</label><input id="oracleText" type="text" placeholder="Any text, e.g. draw a card" value="${escapeHtml(s.searchOracleText)}">
@@ -16080,6 +16164,7 @@ function dataSourcesHtml(){
   const rows = [
     { id:'sets',  n:'Scryfall sets & spoilers', t: autoSets.lastCheck||0 },
     { id:'tags',  n:'EDHREC themes & Kindred',  t: tagsT },
+    { id:'dprices', n:'Card prices', t: Date.parse(_dPricesBuilt) || 0, noBtn: true },
     { id:'types', n:'Creature types',           t: ctT },
     { id:'ban',   n:'Bans & Game Changers',     t: null, note: trS('live, per card') },
     { id:'price', n:'Prices',                   t: null, note: trS('24h per card') },
@@ -17110,6 +17195,12 @@ async function loadInspFeed(){
                : 'Could not load these. Tap to retry.')}</div>`;
   const lab = box.querySelector('[data-iflab]');
   if(lab && out) lab.textContent = `${INSP_FEED_LABELS[bf] || bf} · ${INSP_WIN_LABELS[out.win] || ''}`;
+  // When EDHREC could not be reached we are showing Scryfall's own popularity
+  // instead of a period list. Leaving Week lit would claim something untrue,
+  // so the period buttons stand down until the real list arrives.
+  if(out) box.querySelectorAll('[data-ifwin]').forEach(b=>{
+    b.classList.toggle('active', !out.fallback && b.dataset.ifwin === out.win);
+  });
   if(_anchor && _y0 !== null){ const _dy = _anchor.getBoundingClientRect().top - _y0; if(_dy) _se.scrollTop += _dy; }
 }
 function maybePairThenReco(c){
@@ -21168,6 +21259,8 @@ async function _bulkStreamJsonl(url, onLine){
 }
 const BULK_CHUNK = 2000;
 async function bulkSyncCheck(force){
+  // The price file is tiny and independent; it never waits on the weekly one.
+  if(!force) dailyPricesCheck();
   // force = the Extras button: every silent bail becomes a spoken toast, so
   // an empty database can never be a mystery again.
   if(_bulkSyncing){ if(force) toast(trS('Already downloading…')); return; }

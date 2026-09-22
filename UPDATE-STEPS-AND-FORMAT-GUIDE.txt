@@ -1,6 +1,6 @@
 =====================================================================
 DECKHAND — HOE JE DINGEN AANPAST
-Bijgewerkt bij v2.51.596 · 22 september 2026
+Bijgewerkt bij v2.51.600 · 22 september 2026
 =====================================================================
 
 Dit bestand is je naslagwerk. Alles wat je zelf kunt veranderen zonder
@@ -43,9 +43,12 @@ moet gelijk zijn, anders klopt de update-melding niet.
   manifest.json          alleen bij naam-, icoon- of screenshotwijziging
   format.txt             alleen bij een formatwijziging (zie PART 2)
   Deckhand.apk           alleen als het Android-jasje zelf verandert
-  de vijf bulkbestanden   die zet de wekelijkse robot er zelf neer
+  de bulkbestanden        die zetten de robots er zelf neer
+                          (vijf wekelijks + twee dagelijks voor prijzen)
   netlify/functions/*     alleen als de serverfuncties veranderen
-  scripts/build-bulk.mjs  alleen als de wekelijkse bouw verandert
+  scripts/build-bulk.mjs  alleen als de wekelijkse of dagelijkse bouw
+                          verandert (hetzelfde script doet allebei)
+  .github/workflows/*     alleen als je een robot zelf aanpast
 
 --- Belangrijk: tijdens de wekelijkse bouw ---
 
@@ -176,6 +179,10 @@ PART 4 — WAT ER VERDER AUTOMATISCH GEBEURT
 
   elke maandag 03:20 UTC   de kaartendatabase wordt herbouwd en
                            gepubliceerd (een half uur werk)
+  elke dag 10:00 UTC       de prijzen worden opnieuw opgehaald en als
+                           prices-slim.tsv.gz gepubliceerd (een paar
+                           minuten). Scryfall ververst zijn prijzen 's
+                           ochtends vroeg; wij lopen daar net achteraan.
   elke dag 08:30 UTC       de serverfunctie kijkt of er een nieuwe set
                            of een nieuwe Deckhand-versie is en stuurt
                            zo nodig een pushmelding
