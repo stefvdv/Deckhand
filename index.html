@@ -596,9 +596,15 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 }
 @keyframes homePulse{ 0%,100%{transform:scale(0.94);opacity:0.75;} 50%{transform:scale(1.06);opacity:1;} }
 @media (prefers-reduced-motion:reduce){ .home-glow{animation:none;} }
-/* The home wordmark. It stands where the badge used to, carries the same tap
-   to About, and -- the point of the exercise -- is NOT the launch artwork, so
-   opening the app no longer shows that drawing a second time at another size. */
+/* The badge is the app's face on Home. It shares its artwork with the launcher
+   icon on purpose -- that is the brand, not a bug. (The startup flicker came
+   from the APK drawing a SECOND copy behind Android's splash; that copy is
+   gone as of APK 1.8, and the launcher icon now simply stays until the app is
+   there.) z-index keeps it above the glow, which is positioned and would
+   otherwise paint over it and swallow the tap. */
+.home-logo{position:relative;width:118px;height:118px;object-fit:contain;filter:drop-shadow(0 14px 30px rgba(0,0,0,0.6));}
+.home-logo-clip{position:relative;display:block;width:118px;height:118px;border-radius:50%;overflow:hidden;z-index:1;cursor:pointer;filter:drop-shadow(0 14px 30px rgba(0,0,0,0.6));animation:logoIdle 3.4s ease-in-out infinite;}
+.home-logo-clip .home-logo{width:100%;height:100%;filter:none;animation:none;transform:scale(1.24);transform-origin:50% 50%;cursor:pointer;}
 .home-logo-txt{display:block;position:relative;z-index:1;cursor:pointer;font-family:'Cinzel',serif;font-weight:800;font-size:34px;letter-spacing:.3em;text-indent:.3em;color:var(--brass);text-shadow:0 4px 22px color-mix(in srgb, var(--brass) 35%, transparent);}
 .crest-stack{display:inline-block;}
 .crest-stack .cl-base{width:100%;height:100%;object-fit:contain;display:block;}
@@ -613,6 +619,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .home-points li{position:relative;padding-left:18px;margin:7px 0;font-size:14.5px;line-height:1.45;color:var(--ink-text);opacity:0.92;}
 .home-points li::before{content:'✦';position:absolute;left:0;top:1px;color:var(--brass);font-size:11px;}
 .home-hero-wrap{position:relative;}
+.home-logo{cursor:default;animation:logoIdle 3.4s ease-in-out infinite;}
 @keyframes logoIdle{0%,100%{transform:scale(1);filter:drop-shadow(0 0 6px color-mix(in srgb, var(--brass) 18%, transparent));}50%{transform:scale(1.035);filter:drop-shadow(0 0 16px color-mix(in srgb, var(--brass) 42%, transparent));}}
 .logo-depart-swing .cl-sword-l{animation:swordL .55s ease-in-out 1 !important;}
 .logo-depart-swing .cl-sword-r{animation:swordR .55s ease-in-out 1 !important;}
@@ -2031,6 +2038,7 @@ const PLAYER_COLORS = [
    BUILD/PLAY/COLLECT fan) rendered as a round gold-rimmed emblem. Used by the
    nav home button and the home-page logo; the same art ships as icon-512/192
    and apple-touch-icon for the installed app. */
+const DECKHAND_BADGE = 'data:image/webp;base64,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';
 
 const SALTY_MESSAGES = [
   "The crew has mutinied against you.",
@@ -4653,15 +4661,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.603';
+const APP_VERSION = '2.51.604';
 const CHANGELOG_NOTES = {
   en: [
-    'Home now carries the Deckhand wordmark instead of the round badge. The launch artwork appears once, on the splash \u2014 opening the app no longer shows the same drawing again at another size.',
-    'Tapping it still opens About, in the same place as before.'
+    'The hand-and-deck badge is back on Home. The startup flicker was never coming from this \u2014 it came from the Android app drawing a second copy of the artwork behind the launcher splash, which is fixed in app version 1.8.'
   ],
   nl: [
-    'Home draagt nu het woordmerk Deckhand in plaats van de ronde badge. De tekening staat nog maar op \u00e9\u00e9n plek, het opstartscherm \u2014 bij het openen zie je hem niet nog een keer op een ander formaat.',
-    'Erop tikken opent nog steeds Over deze app, op dezelfde plek als eerst.'
+    'De badge met de hand en het deck staat weer op Home. Het knipperen bij het opstarten kwam hier niet vandaan \u2014 de Android-app tekende achter het splashscherm nog een tweede keer dezelfde tekening, en dat is verholpen in app-versie 1.8.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5921,7 +5927,7 @@ function homePageHtml(){
     <div class="home-sea"></div>
     <div class="home-hero-wrap">
       <div class="home-glow"></div>
-      <span class="home-logo-txt" id="homeModeLogo" title="About this app">Deckhand</span>
+      <span class="home-logo-clip"><img class="home-logo" id="homeModeLogo" src="${DECKHAND_BADGE}" alt="Deckhand" title="About this app"></span>
     </div>
     <div class="home-rule"><span class="home-rule-line"></span><span class="home-rule-star">⚔</span><span class="home-rule-line"></span></div>
     <p class="home-kicker">Your deck builder for Commander &amp; beyond</p>
