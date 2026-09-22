@@ -1,14 +1,21 @@
 /* Deckhand — service worker
    Strategy:
-   - App shell (this page, icons, manifest): network-first with cache fallback,
-     so hosted updates arrive immediately but the app still opens offline.
+   - The page itself: the network gets SHELL_WAIT ms to answer, then the
+     cached copy wins and the download finishes in the background. A quick
+     line still serves the newest deploy at once; a slow one no longer holds
+     the launch hostage behind a ~430 kB download.
+   - Other shell files (icons, manifest): network-first with cache fallback.
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v2.51.608';
+const VERSION = 'admiral-v2.51.609';
 // Card images and fonts survive app updates: this cache is deliberately
 // NOT version-named, so activating a new version never wipes it.
 const ASSETS = 'admiral-assets-v1';
+// How long the page may wait for a fresh copy before the cached one wins.
+// Long enough that a quick connection still serves the newest deploy at once,
+// short enough that a slow one never holds the launcher's icon hostage.
+const SHELL_WAIT = 1200;
 const SHELL = ['./', './index.html', './manifest.json', './format.txt', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
 
 self.addEventListener('install', (e) => {
@@ -75,16 +82,40 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // App shell: network-first, fall back to cache when offline
+  // App shell: network-first, fall back to cache when offline.
+  // The PAGE ITSELF races the network against the clock: index.html is ~430 kB
+  // over the wire, and on mobile data that download WAS the startup wait --
+  // nothing can be drawn until it lands. A copy is already in the cache, so
+  // after SHELL_WAIT ms we serve that instead and let the download finish in
+  // the background, where it refreshes the cache for the next launch.
   if (url.origin === location.origin) {
+    const isPage = e.request.mode === 'navigate';
     e.respondWith(
-      fetch(e.request).then(res => {
-        const copy = res.clone();
-        caches.open(VERSION).then(c => c.put(e.request, copy));
-        return res;
-      }).catch(() =>
-        caches.match(e.request, {ignoreSearch:true}).then(hit => hit || caches.match('./index.html'))
-      )
+      (async () => {
+        const store = caches.open(VERSION);
+        const live = fetch(e.request).then(res => {
+          if (res && res.ok) { const copy = res.clone(); store.then(c => c.put(e.request, copy)); }
+          return res;
+        });
+        if (isPage) {
+          const cached = await caches.match(e.request, { ignoreSearch: true })
+                      || await caches.match('./index.html');
+          if (cached) {
+            const waited = await Promise.race([
+              live.catch(() => null),
+              new Promise(r => setTimeout(() => r('slow'), SHELL_WAIT))
+            ]);
+            if (waited && waited !== 'slow' && waited.ok) return waited;
+            live.catch(() => {});        // keep refreshing the cache in the background
+            return cached;
+          }
+        }
+        try {
+          const res = await live;
+          if (res) return res;
+        } catch (err) {}
+        return (await caches.match(e.request, { ignoreSearch: true })) || (await caches.match('./index.html'));
+      })()
     );
   }
 });
