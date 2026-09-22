@@ -4661,13 +4661,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.604';
+const APP_VERSION = '2.51.605';
 const CHANGELOG_NOTES = {
   en: [
-    'The hand-and-deck badge is back on Home. The startup flicker was never coming from this \u2014 it came from the Android app drawing a second copy of the artwork behind the launcher splash, which is fixed in app version 1.8.'
+    'In the Android app the launcher icon now stays until Home is actually drawn. It used to let go while the screen was still being built, which showed a black and then a dark red flash first.'
   ],
   nl: [
-    'De badge met de hand en het deck staat weer op Home. Het knipperen bij het opstarten kwam hier niet vandaan \u2014 de Android-app tekende achter het splashscherm nog een tweede keer dezelfde tekening, en dat is verholpen in app-versie 1.8.'
+    'In de Android-app blijft het icoon nu staan tot Home echt getekend is. Het liet eerder al los terwijl het scherm nog opgebouwd werd, en dat gaf eerst een zwarte en daarna een donkerrode flits.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5587,6 +5587,8 @@ function pageBodyHtml(screen){
   if(screen==='trade') return tradePageHtml();
   return '';
 }
+/* Set the moment the first screen has been painted; see the foot of render(). */
+var _firstPaintDone = false;
 function render(){
   document.getElementById('tradeBarHost')?.remove();   // trade's portal bar, page-scoped
   // The navigation ladder: every screen change made by the USER (not by a
@@ -5642,6 +5644,16 @@ function render(){
         render();
       };
     }catch(_e2){}
+  }
+  // The very first screen is on: tell the Android shell it may drop the
+  // launcher splash. Two frames, because a screen that has been BUILT has not
+  // yet been DRAWN -- letting go one frame too early is exactly what showed a
+  // black, then a dark red, then Home.
+  if(!_firstPaintDone){
+    _firstPaintDone = true;
+    try{
+      requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(appReady, 120)));
+    }catch(e){ appReady(); }
   }
 }
 function renderInner(){
@@ -21637,7 +21649,8 @@ function appReady(){
 }
 setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
 // Safety: the shell may never be left holding an icon over a working app.
-setTimeout(appReady, pendingShareToken() ? 3000 : 2400);
+// Later than it was -- the point is to lose to the real signal, not beat it.
+setTimeout(appReady, pendingShareToken() ? 6000 : 5000);
 setTimeout(()=>{ try{
   if(!localStorage.getItem(LS_PREFIX+'slimmed1')){
     compactAllDecks(null);                                // shrink legacy fat saves once
@@ -21656,7 +21669,9 @@ loadDecksIndex().then(async ()=>{
   if(state.screen==='decks') render();
   // A share link keeps the splash up until the deck page itself is drawn —
   // flashing the home screen first made receivers doubt the link worked.
-  if(!pendingShareToken()) appReady();     // decks are drawn: the app is open
+  // render() now sends the signal on the first painted frame; this is only a
+  // backstop for a start that somehow never paints.
+  if(!pendingShareToken()) setTimeout(appReady, 1500);
   if(!maybeShowWelcome()) maybeShowChangelog();
   // A share link needs the legal-set list before it can resolve any cards
   if(pendingShareToken()){
