@@ -995,6 +995,15 @@ img.art-missing::after{
 .vg-card img.art-missing, .sc-tile img.art-missing, .sr-tile img.art-missing{
   width:100%;margin:0;
 }
+/* A broken picture has no width of its own. Everywhere the card is shown
+   BIG -- the card sheet, the deck sheet, the card of the day, the printing
+   picker -- the frame has to fill its holder instead of collapsing to a
+   sliver between the chevrons. */
+#ciImg.art-missing, #dcImg.art-missing, #cotdImg.art-missing, #ciSheetImg.art-missing,
+.pp-imghold img.art-missing, .glog-cimg img.art-missing, main.card-detail img.art-missing{
+  width:100%;min-width:120px;display:block;
+}
+.art-missing-holder{display:block !important;width:100% !important;}
 .empty-note{color:var(--sub-text);font-size:14px;text-align:center;padding:12px 10px;}
 .status{text-align:center;color:var(--sub-text);font-size:14px;padding:16px;}
 #searchResultsBox > .status:only-child, #browseResults > .status:only-child,
@@ -4706,15 +4715,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.611';
+const APP_VERSION = '2.51.612';
 const CHANGELOG_NOTES = {
   en: [
-    'Offline, a card whose picture is missing is now drawn from what the app does know: a card skeleton with its name, mana cost, type and power/toughness, framed in the card\u2019s own colour \u2014 gold for multicoloured ones.',
-    'The skeleton sits exactly where the picture belongs, and the moment the connection is back the real picture quietly takes its place again.'
+    'The offline card skeleton now carries the card\u2019s details everywhere: name, mana cost, type line and power/toughness, read from the database on your phone \u2014 in the decklist and in the card sheet alike.',
+    'In the card sheet the skeleton now fills the whole card slot instead of collapsing to a sliver between the arrows.'
   ],
   nl: [
-    'Zonder verbinding wordt een kaart zonder plaatje nu getekend uit wat de app w\u00e9l weet: een kaartskelet met naam, manakosten, type en power/toughness, omlijst in de eigen kleur van de kaart \u2014 goud bij meerkleurig.',
-    'Het skelet staat precies waar het plaatje hoort, en zodra er weer verbinding is neemt het echte plaatje stilletjes zijn plek weer in.'
+    'Het offline kaartskelet draagt nu overal de gegevens van de kaart: naam, manakosten, typeregel en power/toughness, gelezen uit de database op je telefoon \u2014 in de decklijst \u00e9n in het kaartblad.',
+    'In het kaartblad vult het skelet nu de hele kaartplek in plaats van in te klappen tot een streepje tussen de pijltjes.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -11357,7 +11366,7 @@ function renderCardSheet(d, card, loc, idx){
     <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><div class="card-price" id="csPrice" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;">Checking price…</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
-        <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
+        <span style="position:relative;display:block;max-width:270px;width:100%;margin:0 auto;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" alt="${escapeHtml(card.name)}" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:13.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
         <div style="position:relative;max-width:330px;margin:0 auto;min-height:36px;display:flex;align-items:center;justify-content:center;"><span id="csSaltRow" class="card-price" style="margin:0;font-size:13px;"></span><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
@@ -13580,7 +13589,7 @@ function openCardInfo(card, opts){
     <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><div class="card-price" id="csPrice" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;">Checking price…</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
-        <span style="position:relative;display:inline-block;max-width:270px;width:100%;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
+        <span style="position:relative;display:block;max-width:270px;width:100%;margin:0 auto;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" alt="${escapeHtml(card.name)}" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:13.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${(isUBCard(card) && !isCmdrMode())?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
         <div style="position:relative;max-width:330px;margin:0 auto;min-height:36px;display:flex;align-items:center;justify-content:center;"><span id="csSaltRow" class="card-price" style="margin:0;font-size:13px;"></span><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
@@ -21916,7 +21925,10 @@ function _skFit(t, n){
    text rules and a power/toughness box when the card has one. */
 function cardSkeletonUri(card){
   const name = String((card && (card.name || card.n)) || '');
-  const key = name || '?';
+  // A skeleton drawn before the database was loaded carries only the name,
+  // so the cache key says HOW MUCH was known -- a fuller one replaces it.
+  const known = (card && (card.type_line || card.tl)) ? 'full' : 'bare';
+  const key = (name || '?') + '|' + known;
   if(_skCache.has(key)) return _skCache.get(key);
   const col = _skColorOf(card);
   const type = String((card && (card.type_line || card.tl)) || '').split('//')[0].trim();
@@ -21948,10 +21960,44 @@ function cardSkeletonUri(card){
 /* The picture failed: find out WHICH card this was and draw its skeleton.
    The local database is already in memory, so its type, colour and stats
    come for free -- exactly the information the card sheet shows offline. */
+let _skIdxAsked = false;
+function _skLookup(name){
+  const key = String(name || '').toLowerCase();
+  if(!key) return null;
+  // The database in memory is the best source -- but at boot it is still
+  // loading, which is exactly when the first pictures fail. Ask for it once
+  // and redraw every skeleton the moment it lands.
+  try{ if(_bulkIdx && _bulkIdx.byName){ const bc = _bulkIdx.byName.get(key); if(bc) return bc; } }
+  catch(e){}
+  if(!_bulkIdx && !_skIdxAsked){
+    _skIdxAsked = true;
+    try{ bulkIndexReady().then(()=>{ try{ repaintSkeletons(); }catch(e){} }).catch(()=>{}); }catch(e){}
+  }
+  // Meanwhile: the card is almost certainly already in front of us.
+  const pots = [];
+  try{ const d = getDeck(state.activeDeckId); if(d){ pots.push(d.cards || []); pots.push(d.maybeboard || []); } }catch(e){}
+  try{ if(state.searchResults) pots.push(state.searchResults); }catch(e){}
+  try{ if(state.reco && state.reco.pool) pots.push(state.reco.pool); }catch(e){}
+  try{ if(state.collection && state.collection.items) pots.push(state.collection.items); }catch(e){}
+  try{ (state.decksIndex || []).forEach(d=>{ if(d && d.cards) pots.push(d.cards); }); }catch(e){}
+  for(const arr of pots){
+    for(const c of arr){
+      if(c && String(c.name || c.n || '').toLowerCase() === key) return c;
+    }
+  }
+  return null;
+}
 function _skFor(name){
-  let bc = null;
-  try{ if(_bulkIdx && _bulkIdx.byName && name) bc = _bulkIdx.byName.get(String(name).toLowerCase()); }catch(e){}
-  return cardSkeletonUri(bc || { name });
+  return cardSkeletonUri(_skLookup(name) || { name });
+}
+/* Redraw every skeleton on screen — used once the card database finishes
+   loading, so the frames fill in with type, cost and stats by themselves. */
+function repaintSkeletons(){
+  document.querySelectorAll('img.art-missing').forEach(im=>{
+    const nm = im.getAttribute('alt') || '';
+    if(!nm) return;
+    try{ im.style.setProperty('--sk', _skFor(nm)); }catch(e){}
+  });
 }
 /* Line back? Give every skeleton one quiet chance at its real picture. A
    probe loads it out of sight, so the tile only changes once it succeeded. */
@@ -21993,6 +22039,13 @@ document.addEventListener('error', (e)=>{
   im.dataset.artsrc = src;
   try{ im.style.setProperty('--sk', _skFor(nm)); }catch(err){}
   im.classList.add('art-missing');
+  /* A broken picture has no width of its own, so an inline-block holder
+     shrinks around nothing and the frame ends up a sliver between the
+     chevrons. Tell that holder to keep the room the picture had. */
+  try{
+    const holder = im.parentElement;
+    if(holder && /^inline/.test(getComputedStyle(holder).display)) holder.classList.add('art-missing-holder');
+  }catch(err){}
 }, true);
 setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
 /* The page may have been served from the cache to keep the launch quick, so
