@@ -708,6 +708,13 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .deck-tile .nm{font-size:14px;font-weight:700;line-height:1.25;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .deck-tile .meta{font-size:11.5px;color:var(--sub-text);display:flex;justify-content:space-between;align-items:center;}
 .deck-tile .edited{font-size:13px;color:var(--sub-text-2);margin-top:1px;}
+/* The price ring replaces the old "+". Spinning means this deck is being
+   priced right now; standing still and dimmed means the total is still
+   partial but nothing is happening for it at this moment. */
+.price-ring{display:inline-block;width:9px;height:9px;vertical-align:-1px;margin-left:3px;
+  border:1.5px solid var(--sub-text-2);border-top-color:var(--brass);border-radius:50%;
+  animation:sp 0.8s linear infinite;}
+.price-ring.idle{animation:none;opacity:0.45;}
 .deck-tile.active-marker{border-color:var(--brass);}
 .pips-mini{display:flex;gap:3px;align-items:center;}
 .pips-mini svg{display:block;}
@@ -4653,15 +4660,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.597';
+const APP_VERSION = '2.51.599';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck prices that never finished loading now do: the app was asking Scryfall faster than allowed, and answering every refusal with ten more requests.',
-    'When Scryfall asks the app to slow down it now eases off for a minute instead of pushing harder.'
+    'Deck prices now come from the card database already on your phone, so they appear at once and without asking Scryfall. Only genuinely new cards still need a lookup.',
+    'Spoiler cards that showed no price at all now show one \u2014 the price was in the weekly database all along, unread.'
   ],
   nl: [
-    'Deckprijzen die eindeloos bleven laden komen nu wel binnen: de app vroeg sneller bij Scryfall dan toegestaan, en beantwoordde elke weigering met tien nieuwe aanvragen.',
-    'Vraagt Scryfall de app om rustiger aan te doen, dan neemt hij nu een minuut gas terug in plaats van harder te duwen.'
+    'Deckprijzen komen nu uit de kaartendatabase die al op je telefoon staat, dus ze verschijnen meteen en zonder Scryfall te vragen. Alleen echt nieuwe kaarten worden nog opgezocht.',
+    'Spoilerkaarten die helemaal geen prijs toonden hebben er nu wel een \u2014 die prijs stond al die tijd ongelezen in het weekbestand.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6202,6 +6209,27 @@ function deckPriceFromCache(d){
   });
   return { total, complete };
 }
+/* The price as it stands right now, ring and all. Rebuilt in place whenever a
+   batch lands, so the number climbs while you watch instead of only changing
+   after you have been away to a deck and back. */
+function priceRingHtml(complete, busy){
+  if(complete) return '';
+  const title = busy
+    ? (appLang()==='nl' ? 'Prijzen worden opgehaald\u2026' : 'Fetching prices\u2026')
+    : (appLang()==='nl' ? 'Nog niet compleet' : 'Not complete yet');
+  return `<span class="price-ring${busy ? '' : ' idle'}" title="${title}"></span>`;
+}
+function deckPriceLabel(d){
+  const p = deckPriceFromCache(d);
+  if(!(p.total > 0)) return '';
+  if(p.complete) return ' \u00b7 ' + fmtEur(p.total);
+  return ' \u00b7 ' + fmtEur(p.total) + priceRingHtml(false, state._pricingDeck === d.id);
+}
+function paintDeckPrice(d){
+  if(!d) return;
+  const el = document.querySelector(`[data-deckprice="${d.id}"]`);
+  if(el) el.innerHTML = deckPriceLabel(d);
+}
 function deckTileHtml(d){
   const art = d.admiral ? cardImageLarge(d.admiral) : '';
   const count = (d.cards?d.cards.length:0) + deckLeaders(d).length;
@@ -6215,7 +6243,7 @@ function deckTileHtml(d){
       <div class="body">
         <div class="nm">${escapeHtml(d.name||'Untitled Fleet')}</div>
         <div class="meta"><span>${count}/${deckTotal(d)}${d.primer&&d.primer.trim()?' · ✎':''}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span>${isCmdrMode() ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span>` : ''}</span></div>
-        <div class="edited">${relTime(d.updatedAt)}${price.total > 0 ? ` · ${fmtEur(price.total)}${price.complete ? '' : '+'}` : ''}</div>
+        <div class="edited">${relTime(d.updatedAt)}<span data-deckprice="${d.id}">${deckPriceLabel(d)}</span></div>
       </div>
     </div>`;
 }
@@ -6346,7 +6374,35 @@ function wireDecksNotice(){
   document.getElementById('welcomeOk')?.addEventListener('click', ()=>{ try{localStorage.setItem(LS_PREFIX+'welcomed','1');}catch(e){} render(); });
   document.getElementById('backupLater')?.addEventListener('click', ()=>{ try{localStorage.setItem(LS_PREFIX+'backupSnooze',String(Date.now()));}catch(e){} render(); });
 }
+/* Walks the decks on screen and finishes their prices, one deck at a time, in
+   the background lane -- so anything you tap goes first and this simply waits
+   its turn. A generation counter retires the sweep the moment you leave the
+   page or the list is rebuilt. */
+let _deckSweepGen = 0;
+async function sweepDeckPrices(){
+  const gen = ++_deckSweepGen;
+  await new Promise(r=>setTimeout(r, 400));          // let the page settle first
+  if(gen !== _deckSweepGen || state.screen !== 'decks') return;
+  const ids = Array.from(document.querySelectorAll('[data-deckprice]')).map(e=>e.dataset.deckprice);
+  for(const id of ids){
+    if(gen !== _deckSweepGen || state.screen !== 'decks') return;
+    if(state._priceHoldUntil && Date.now() < state._priceHoldUntil) return;   // Scryfall is pushing back
+    if(state._pricingDeck) return;                   // a deck page is already at it
+    const d = (state.decksIndex || []).find(x=>x.id === id);
+    if(!d || deckPriceFromCache(d).complete) continue;
+    state._pricingDeck = d.id;
+    paintDeckPrice(d);                               // ring starts turning
+    try{
+      await priceDeck(d, ()=>{ if(gen === _deckSweepGen) paintDeckPrice(d); }, true);
+    }catch(e){}
+    state._pricingDeck = null;
+    if(gen !== _deckSweepGen) return;
+    paintDeckPrice(d);                               // ring stops
+    await new Promise(r=>setTimeout(r, 600));        // breathe between decks
+  }
+}
 function wireHome(){
+  sweepDeckPrices();
   wireDecksNotice();
   document.getElementById('newDeckBtn2')?.addEventListener('click', ()=>openModal('newdeck'));
   document.querySelector('[data-opencollection]')?.addEventListener('click', ()=>switchPage('collection'));
@@ -7992,7 +8048,7 @@ function refreshCapPrice(){
   const d = getDeck(state.activeDeckId);
   if(!d) return;
   const dv = deckPriceFromCache(d);
-  const txt = (dv && dv.total > 0) ? fmtEur(dv.total) + (dv.complete ? '' : '+') : '';
+  const txt = (dv && dv.total > 0) ? fmtEur(dv.total) + priceRingHtml(dv.complete, state._pricingDeck === d.id) : '';
   state._capNote = txt;
   const cap = document.querySelector('.page-cap');
   if(!cap) return;
@@ -8004,13 +8060,13 @@ function refreshCapPrice(){
     el.id = 'capNoteBtn';
     cap.appendChild(el);
   }
-  el.textContent = txt;
+  el.innerHTML = txt;   // carries the ring, which textContent would print literally
 }
 function decklistPageHtml(){
   const d = getDeck(state.activeDeckId);
   if(!d) return `<main>${needDeckHtml('No deck open yet. Choose or create one from My Stuff.')}</main>`;
   const _dv = deckPriceFromCache(d);
-  if(_dv && _dv.total > 0) state._capNote = fmtEur(_dv.total) + (_dv.complete ? '' : '+');
+  if(_dv && _dv.total > 0) state._capNote = fmtEur(_dv.total) + priceRingHtml(_dv.complete, state._pricingDeck === d.id);
   return `
   <main class="has-dock">
     <div class="builder-tabs">
@@ -8591,11 +8647,54 @@ function fmtEur(v){
   if(v===null || v===undefined || isNaN(v)) return '—';
   return '€' + Number(v).toFixed(2);
 }
+/* The weekly build carries a price for nearly every card, sitting in IndexedDB
+   on the phone. Until now nothing read it for deck totals, so every price went
+   over the network -- which is what kept tripping Scryfall's limiter. This
+   reads it straight out of the already-loaded index; when the index is not in
+   memory yet it simply answers "don't know" and the online path takes over. */
+function bulkEurFor(name){
+  try{
+    const ix = _bulkIdx;
+    if(!ix || !ix.byName) return undefined;
+    const e = ix.byName.get(String(name).toLowerCase());
+    if(!e) return undefined;
+    // Only a real number counts. A card the build has no price for must still
+    // be asked about online -- never cache "no price" on the build's say-so.
+    return (typeof e.eur === 'number' && isFinite(e.eur)) ? e.eur : undefined;
+  }catch(err){ return undefined; }
+}
+/* Fills the cache from the local database for every card it knows, and reports
+   how many were still left for the network. */
+function seedPricesFromBulk(cards){
+  let seeded = 0;
+  const now = Date.now();
+  for(const c of cards || []){
+    if(!c || !c.name) continue;
+    if(state.priceCache[c.name]) continue;         // never overwrite a live answer
+    const v = bulkEurFor(c.name);
+    if(v === undefined) continue;
+    state.priceCache[c.name] = { v, t: now };
+    try{ notePrice(c.name, v); }catch(e){}
+    seeded++;
+  }
+  if(seeded) try{ savePriceCache(); }catch(e){}
+  return seeded;
+}
 async function cheapestEur(card, front, fresh){
   if(!card || !card.name) return null;
   const hit = state.priceCache[card.name];
   const cached = (hit && Date.now()-hit.t < PRICE_TTL) ? hit.v : undefined;
   if(!fresh && cached !== undefined) return cached;
+  if(!fresh){
+    // The database on this phone usually knows. This is why a spoiler card
+    // could show no price at all while its price sat in the weekly build.
+    const local = bulkEurFor(card.name);
+    if(local !== undefined){
+      state.priceCache[card.name] = { v: local, t: Date.now() };
+      try{ notePrice(card.name, local); savePriceCache(); }catch(e){}
+      return local;
+    }
+  }
   if(!card.prints_search_uri) return cached !== undefined ? cached : null;
   let min = null;
   try{
@@ -8673,6 +8772,12 @@ async function priceDeck(d, onProgress, bg){
   const seen = new Set(); const unique = [];
   all.forEach(c=>{ if(!seen.has(c.name)){ seen.add(c.name); unique.push(c); } });
 
+  // Make sure the local database is in memory, then take everything it knows.
+  // Whatever is left over is genuinely new and worth a request.
+  try{ await bulkIndexReady(); }catch(e){}
+  const _seeded = seedPricesFromBulk(unique);
+  if(_seeded) try{ sfJournal('prices: ' + _seeded + ' from the local database, no request needed'); }catch(e){}
+
   const now = Date.now();
   // Anything priced within the last week is served immediately; entries past a
   // day old are re-priced quietly in the background afterwards, so daily deck
@@ -8732,6 +8837,7 @@ async function priceDeck(d, onProgress, bg){
           state._priceHoldUntil = 0;
           priceDeck(d, onProgress, true).then(()=>{   // background lane: no rush
             if(state.screen === 'decklist' && state.activeDeckId === d.id) refreshDecklistBox(d);
+            if(state.screen === 'decks') paintDeckPrice(d);
           }).catch(()=>{});
         }, 50000 + tries * 15000);
       }
@@ -10785,7 +10891,7 @@ async function ensureDeckPriced(d){
   if(state._priceHoldUntil && Date.now() < state._priceHoldUntil) return;
   state._pricingDeck = d.id;
   try{
-    await priceDeck(d);
+    await priceDeck(d, ()=>{ try{ refreshCapPrice(d); }catch(e){} });
     // Only repaint if the user is still looking at this deck's list
     if(state.screen==='decklist' && state.activeDeckId===d.id && state.builderTab==='list'){
       refreshDecklistBox(d);
