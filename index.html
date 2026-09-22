@@ -375,6 +375,11 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > #searchResultsBox{order:98;min-height:0;}
 .app > main > #advSlot{order:99;}
 .app > main > .cotd{order:96;}
+/* An empty state is content too: it belongs in the foot cluster (below the
+   order:97 pusher), not stranded at the top of an otherwise empty page.
+   Direct children only -- on the reversed mains these live inside a wrapper
+   and pack at the foot by themselves. */
+.app > main > .need-deck, .app > main > .empty-home{order:98;}
 .app > main:has(> #searchResultsBox){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));}
 #cotdBox{display:flex;flex-direction:column-reverse;align-items:center;gap:8px;}
 .searchbar > button{min-height:44px;box-sizing:border-box;}
@@ -394,7 +399,16 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 main.card-detail > .detail-sec:has(#csRulings){order:0;}
 main.card-detail > .detail-sec:has(#sheetOracle){order:1;}
 main.card-detail > div[style*="text-align:center"]{order:8;}
-main.card-detail > #csTagBox{order:9;}
+main.card-detail > #csTagBox, main.card-detail > #ciTagBox{order:9;}
+/* Bottom-anchored, properly. This eats whatever room is left over, so a short
+   card's content rests ON the foot: anything that opens -- the tag box -- then
+   pushes the CARD up instead of shoving the buttons down. The moment the
+   content overflows there is no room left, it collapses to nothing and
+   scrolling is untouched. (justify-content:flex-end was measured first and
+   rejected: it kills the scroll and puts the top out of reach.)
+   Its own class and its own margins on purpose: a spacer that borrows an
+   existing class inherits that class's margins. */
+main.card-detail > .sheet-foot-spacer{order:-1;flex:0 0 auto;height:0;padding:0;margin:auto 0 0;}
 main.card-detail > div:nth-child(2){order:10;}
 /* ---------- the complete flip ---------- */
 /* Decklist tabs join the bottom stack, riding just above the dock. */
@@ -4661,13 +4675,17 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.606';
+const APP_VERSION = '2.51.607';
 const CHANGELOG_NOTES = {
   en: [
-    'The badge on Home is drawn from the original artwork now, at twice the resolution \u2014 sharp instead of blown up from a small copy.'
+    'Opening Tags on a card now pushes the card up instead of pushing the buttons off the foot \u2014 the box fills the space that opens between them.',
+    'The tag list starts with the ones you last chose, right at the foot; everything above stays alphabetical.',
+    'Empty pages now rest on the foot as well: the Inspiration and My Decks placeholders sit by your thumb instead of floating at the top.'
   ],
   nl: [
-    'De badge op Home komt nu uit de oorspronkelijke tekening, op twee keer de resolutie \u2014 scherp in plaats van uitvergroot uit een kleine kopie.'
+    'Tags openen op een kaart duwt nu de kaart omhoog in plaats van de knoppen van de voet af \u2014 de box vult de ruimte die daartussen ontstaat.',
+    'De taglijst begint met de tags die je het laatst koos, onderaan bij je duim; daarboven blijft alles alfabetisch.',
+    'Lege pagina\u2019s staan nu ook onderaan: de teksten op Inspiratie en Mijn Decks zitten bij je duim in plaats van bovenin te zweven.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -11316,6 +11334,7 @@ function renderCardSheet(d, card, loc, idx){
       <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
       <div class="detail-sec"><div class="detail-h">Legality</div>${legalityBlockHtml(card)}</div>
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
+      <div class="sheet-foot-spacer" aria-hidden="true"></div>
     </main>
   </div>`;
 
@@ -11358,6 +11377,7 @@ function renderCardSheet(d, card, loc, idx){
       }, true);
     }
     renderTagEditor(d, card, box);
+    keepSheetFoot(box);
   });
   document.getElementById('csToMaybe')?.addEventListener('click', ()=>{
     d.cards.splice(idx,1);
@@ -11570,6 +11590,19 @@ function _tagNorm(t){ return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '');
      ─ Scryfall recommended ─   (bottom, right by the input)
    Dedup ignores case and punctuation; a tag lives in the FIRST section it
    qualifies for, and the person's spelling wins every collision. */
+/* Opening the tag editor adds height ABOVE the action buttons. Left alone the
+   browser keeps its scroll position, so the buttons slide down off the foot --
+   which is exactly backwards. Re-pinning the sheet pushes the CARD up instead
+   and leaves the buttons where your thumb already was, with the new box in the
+   space that opens between them. Same rule as every other panel: opening one
+   shows the foot again. */
+function keepSheetFoot(el){
+  const m = el && el.closest && el.closest('main');
+  if(!m) return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    try{ m.scrollTop = m.scrollHeight; }catch(e){}
+  }));
+}
 function buildTagPickerSections(applied, autoTags, userTags, catalog){
   const appliedN = new Set((applied || []).map(_tagNorm));
   const userByNorm = new Map();
@@ -11587,7 +11620,29 @@ function buildTagPickerSections(applied, autoTags, userTags, catalog){
     out.sort((a, b)=>a.localeCompare(b));
     return out;
   };
+  /* The app has been noting when each tag was last chosen since v2.51.5xx and
+     never used it. It does now: a short list of the ones you reach for, at the
+     very foot of the drop-up where your thumb already is, newest first. The
+     `seen` set means they are not repeated in the sections above. */
+  const recent = (()=>{
+    let m = {};
+    try{ m = tagRecency() || {}; }catch(e){ return []; }
+    const known = new Map();
+    [].concat(userTags || [], catalog || []).forEach(t=>{
+      const k = _tagNorm(t);
+      if(k && !known.has(k)) known.set(k, String(t));
+    });
+    return Object.keys(m)
+      .map(k=>({ t: known.get(_tagNorm(k)) || k, at: m[k] }))
+      .filter(x=>x.t && x.at)
+      .sort((a, b)=>b.at - a.at)          // newest first = nearest the thumb
+      .slice(0, 8)
+      .map(x=>x.t);
+  })();
+  // DOM order is bottom-to-top here: the list is drawn column-reverse.
+  const takeAll = (arr)=>{ const out = []; (arr||[]).forEach(t=>{ const v = take(t); if(v) out.push(v); }); return out; };
   return [
+    { label: 'Recently used',        items: takeAll(recent) },
     { label: 'Scryfall recommended', items: collect(autoTags) },
     { label: 'Your tags',            items: collect(userTags) },
     { label: 'All Scryfall tags',    items: collect(catalog) },
@@ -11616,7 +11671,7 @@ function renderTagEditor(d, card, box){
       <button class="ghost-btn" id="tagAddBtn" style="width:auto;flex:0 0 auto;padding:9px 14px;">Add</button>
     </div>
   </div>`;
-  const refresh = ()=>{ scheduleSave(d); renderTagEditor(d, card, box); refreshDecklistBox(d); };
+  const refresh = ()=>{ scheduleSave(d); renderTagEditor(d, card, box); refreshDecklistBox(d); keepSheetFoot(box); };
   const input = box.querySelector('#tagInput');
   const commit = ()=>{
     const v = input.value;
@@ -13522,6 +13577,7 @@ function openCardInfo(card, opts){
       <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
       <div class="detail-sec"><div class="detail-h">Legality</div>${legalityBlockHtml(card)}</div>
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
+      <div class="sheet-foot-spacer" aria-hidden="true"></div>
     </main>
   </div>`;
   pinSheetToFoot(el);
@@ -13628,6 +13684,7 @@ function openCardInfo(card, opts){
     box.dataset.open='1';
     pushOverlay('tagBox', ()=>{ const b = document.getElementById('ciTagBox'); if(b){ b.dataset.open='0'; b.innerHTML=''; } });
     renderTagEditor(null, card, box);   // deckless: the global registry directly
+    keepSheetFoot(box);
   });
   loadRulings(card);
   loadCardPrice(card);
