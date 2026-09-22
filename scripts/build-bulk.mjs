@@ -14,6 +14,17 @@
    The phone never touches the raw 148 MB — all trimming happens
    on GitHub's machines, and Scryfall sees ONE download a week.
 
+   Run with --prices (or BULK_MODE=prices) and it does something much
+   smaller instead: it streams the Default Cards bulk file, which holds
+   EVERY printing, and writes the cheapest paper euro price per card name:
+
+     prices-slim.tsv.gz      "name<TAB>eur" per line, ~300 KB
+     prices-meta.json        when it was built, and how many names
+
+   That mode runs daily. It is the same arithmetic the app does when it
+   asks Scryfall itself — cheapest prices.eur across non-digital prints —
+   so a deck total is right without a single request from the phone.
+
    Field legend for oracle-slim lines (absent = empty/false):
      n  name                id  scryfall id (drives image URLs)
      o  oracle_id           mc  mana_cost        mv cmc
@@ -288,6 +299,70 @@ async function writeJsonlGz(path, lines){
   await pipeline(Readable.from(lines), createGzip({ level: 9 }), createWriteStream(path));
 }
 
+/* ---- the daily price file ----
+   Default Cards carries every printing, so this is where "cheapest" can
+   actually be worked out. Streamed line by line: constant memory, however
+   large Scryfall's file grows.
+
+   Deliberately the same rule as cheapestEur() in the app: the lowest
+   prices.eur among non-digital printings. Foil prices are left out, exactly
+   as the app leaves them out -- a foil is not the cheapest way to own the
+   card. */
+export function priceOf(card, best){
+  if(!card || !card.name || card.digital) return;
+  const raw = card.prices && card.prices.eur;
+  if(!raw) return;
+  const e = Number(raw);
+  if(!isFinite(e) || e <= 0) return;
+  // Double-faced cards are sold as one card; the app prices them by full name.
+  const key = String(card.name).toLowerCase();
+  const cur = best.get(key);
+  if(cur === undefined || e < cur) best.set(key, e);
+}
+
+async function buildPrices(){
+  console.log('Fetching bulk-data index\u2026');
+  const idx = await bulkIndex();
+  const entry = idx.default_cards || idx['default-cards'] || idx.all_cards;
+  if(!entry) throw new Error('bulk-data index has no default_cards entry');
+  const url = requireDownloadUrl(entry, 'Default Cards');
+  console.log('Default Cards:', url);
+
+  const best = new Map();
+  let seen = 0;
+  for await (const card of bulkLines(url)){
+    seen++;
+    priceOf(card, best);
+    if(seen % 100000 === 0) console.log(`  \u2026${seen} printings read, ${best.size} names priced`);
+  }
+  console.log(`${seen} printings read, ${best.size} names priced`);
+  if(best.size < 15000) throw new Error(`Sanity check failed: only ${best.size} priced names \u2014 refusing to publish a broken file.`);
+
+  // A day where Scryfall served a partial file must not shrink the app's
+  // knowledge. Same ratchet the weekly artifacts use.
+  let prev = 0;
+  try{ prev = gunzipSync(await readFile(`${OUT_DIR}/prices-slim.tsv.gz`)).toString('utf-8').split('\n').filter(Boolean).length; }catch(e){}
+  if(prev && best.size < prev * 0.8){
+    console.log(`Thinner than yesterday (${best.size} vs ${prev}) \u2014 keeping yesterday's file.`);
+    return;
+  }
+
+  // Sorted, so an unchanged day produces a byte-identical file and git has
+  // nothing to commit.
+  const names = Array.from(best.keys()).sort();
+  const lines = (function*(){
+    for(const n of names) yield n + '\t' + best.get(n).toFixed(2) + '\n';
+  })();
+  await writeJsonlGz(`${OUT_DIR}/prices-slim.tsv.gz`, lines);
+  await writeFile(`${OUT_DIR}/prices-meta.json`, JSON.stringify({
+    format: 1,
+    built: new Date().toISOString(),
+    count: best.size,
+    sourceUpdatedAt: entry.updated_at || ''
+  }, null, 2) + '\n');
+  console.log(`prices-slim.tsv.gz: ${best.size} names. prices-meta.json written. Done.`);
+}
+
 /* ---- main ---- */
 async function main(){
   console.log('Fetching bulk-data index…');
@@ -446,5 +521,6 @@ async function main(){
 
 const runDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
 if(runDirectly && !process.env.BULK_NO_MAIN){
-  main().catch(e=>{ console.error(e); process.exit(1); });
+  const pricesOnly = process.argv.includes('--prices') || process.env.BULK_MODE === 'prices';
+  (pricesOnly ? buildPrices() : main()).catch(e=>{ console.error(e); process.exit(1); });
 }
