@@ -3784,6 +3784,26 @@ let _nextSfSlot = 0;
    3. Retries rejoin the FRONT of their own lane after backoff. */
 const _sfQ = { hi: [], lo: [] };
 let _sfWorking = false, _sfGen = 0, _sfBeat = 0;
+/* Scryfall asks for 50-100ms between requests. The queue normally runs at 80ms,
+   which is inside that, but a burst of deck pricing still managed to trip their
+   limiter -- and a refused request comes back as a fast network error, not a
+   429, because the refusal carries no CORS headers. So the queue watches for
+   the signature (several sub-100ms failures in a row, or a real 429) and eases
+   off for a minute before returning to full speed. Still one request at a time:
+   only the spacing changes. */
+const SF_GAP = 80, SF_GAP_EASY = 250, SF_COOL_MS = 60000;
+let _sfCoolUntil = 0, _sfFastFails = 0;
+function _sfCooling(){ return Date.now() < _sfCoolUntil; }
+function _sfNoteRefusal(ms, status){
+  if(status === 429 || (ms != null && ms < 100)){
+    if(++_sfFastFails >= 3 || status === 429){
+      if(!_sfCooling()) try{ sfJournal('queue: Scryfall is pushing back \u2014 easing to ' + SF_GAP_EASY + 'ms for ' + (SF_COOL_MS/1000) + 's'); }catch(e){}
+      _sfCoolUntil = Date.now() + SF_COOL_MS;
+      _sfFastFails = 0;
+    }
+  }
+}
+function _sfNoteOk(){ _sfFastFails = 0; }
 /* Black box: the last network outcomes and JS errors, readable via
    Extras -> Copy diagnostics. When "nothing loads", this says why. */
 const _sfLog = [];
@@ -4010,9 +4030,15 @@ async function _sfPump(){
       const _verdict = res ? 'ok' : _netClassify(err);
       if(_verdict === 'ok') _netNote(true);
       else if(_verdict === 'dead') _netNoteFail(job.url);
+      // A refusal is fast; a genuinely slow line is not. Only the fast kind,
+      // and a real 429, mean "you are asking too often".
+      if(res && res.status === 429) _sfNoteRefusal(null, 429);
+      else if(_verdict === 'dead') _sfNoteRefusal(Date.now() - t0, null);
+      else if(res && res.ok) _sfNoteOk();
       const retryable = err || (res && (res.status === 429 || res.status >= 500));
       if(res && res.status === 429){ await new Promise(r=>setTimeout(r, 1600)); }   // let the limit breathe
-      if(retryable && job.attempt < 6){
+      const _maxTries = _sfCooling() ? 2 : 6;
+      if(retryable && job.attempt < _maxTries){
         if(res) console.warn('Scryfall ' + res.status + ', retrying (attempt ' + (job.attempt+1) + ')', job.url);
         job.attempt++;
         const lane = job.bg ? _sfQ.lo : _sfQ.hi;
@@ -4026,7 +4052,7 @@ async function _sfPump(){
       } else {
         job.resolve(res);
       }
-      await new Promise(r=>setTimeout(r, 80));
+      await new Promise(r=>setTimeout(r, _sfCooling() ? SF_GAP_EASY : SF_GAP));
     }
   } finally {
     if(myGen === _sfGen) _sfWorking = false;
@@ -4627,17 +4653,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.596';
+const APP_VERSION = '2.51.597';
 const CHANGELOG_NOTES = {
   en: [
-    'A third smaller to download: seven pieces of artwork nobody was using sat baked into the app, alongside thirty functions nothing ever called.',
-    'Your phone no longer keeps a second copy of the weekly card database \u2014 about 11 MB of storage back.',
-    'The offline notice finally works on the Inspiration page, which could never trigger it before.'
+    'Deck prices that never finished loading now do: the app was asking Scryfall faster than allowed, and answering every refusal with ten more requests.',
+    'When Scryfall asks the app to slow down it now eases off for a minute instead of pushing harder.'
   ],
   nl: [
-    'Een derde kleiner om te downloaden: zeven afbeeldingen die niemand gebruikte zaten ingebakken in de app, naast dertig functies die nooit werden aangeroepen.',
-    'Je telefoon bewaart niet langer een tweede kopie van de wekelijkse kaartendatabase \u2014 zo\u2019n 11 MB opslag terug.',
-    'De offline-melding werkt eindelijk op de Inspiratie-pagina, die hem voorheen nooit kon laten afgaan.'
+    'Deckprijzen die eindeloos bleven laden komen nu wel binnen: de app vroeg sneller bij Scryfall dan toegestaan, en beantwoordde elke weigering met tien nieuwe aanvragen.',
+    'Vraagt Scryfall de app om rustiger aan te doen, dan neemt hij nu een minuut gas terug in plaats van harder te duwen.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -8601,6 +8625,9 @@ function exactNameClause(name){
   // Scryfall's !"..." is an exact-name match; strip stray quotes so we can't break the query
   return '!"' + name.replace(/"/g,'') + '"';
 }
+/* Returned instead of a result when Scryfall refused the request outright, so
+   the caller can back off rather than ask ten more times. */
+const REFUSED = Symbol('scryfall-refused');
 async function fetchPricesForBatch(names, bg){
   const found = {};
   names.forEach(n=>{ found[n] = null; });
@@ -8618,7 +8645,15 @@ async function fetchPricesForBatch(names, bg){
         throw new Error('status '+res.status);
       }
       data = await res.json();
-    }catch(e){ console.error('batch price query failed', e); return null; }
+    }catch(e){
+      // Two very different failures wear the same coat here. A network error
+      // (or a 429) means Scryfall refused us -- answering that with ten single
+      // lookups is exactly the wrong move. A query-level failure is the case
+      // the per-card fallback was written for.
+      const refused = !(e && /status (4[0-9]{2})/.test(String(e.message))) || /status 429/.test(String(e && e.message));
+      console.error('batch price query failed', e);
+      return refused ? REFUSED : null;
+    }
     (data.data||[]).forEach(p=>{
       if(p.digital) return;
       const key = byLower[(p.name||'').toLowerCase()];
@@ -8656,13 +8691,26 @@ async function priceDeck(d, onProgress, bg){
     let doneNames = unique.length - needed.length;
     if(onProgress) onProgress(doneNames, unique.length);
     // A few batches in parallel; sfFetch's queue still paces the actual requests
+    let _refused = false;
+    // How many times this deck has already been picked back up. Three is
+    // plenty: beyond that something is wrong that waiting will not fix.
+    state._priceResume = state._priceResume || {};
     await runLimited(batches, async (names)=>{
+      if(_refused) return;                      // the server already said no
       const found = await fetchPricesForBatch(names, bg);
+      if(found === REFUSED){
+        // Scryfall is refusing. Ten single lookups would be ten more refusals
+        // and six retries each; stop this run and let the queue's cool-off do
+        // its work. What we did get is kept.
+        _refused = true;
+        state._priceHoldUntil = Date.now() + 45000;
+        try{ sfJournal('prices: Scryfall refused the batch \u2014 pausing, will finish this by itself'); }catch(e){}
+        return;
+      }
       if(found){
         names.forEach(n=>{ state.priceCache[n] = { v: found[n], t: Date.now() }; notePrice(n, found[n]); });
       } else {
-        // Batch failed outright — fall back to per-card lookups so one bad
-        // query doesn't wipe out the whole deck's pricing
+        // The query itself broke — this is what the per-card fallback is for.
         for(const n of names){
           const card = unique.find(c=>c.name===n);
           if(card) await cheapestEur(card);
@@ -8672,6 +8720,24 @@ async function priceDeck(d, onProgress, bg){
       if(onProgress) onProgress(Math.min(doneNames, unique.length), unique.length);
     }, 2);
     savePriceCache();
+    if(_refused){
+      // Come back to it on our own, once the hold and the queue's cool-off have
+      // passed. The person should not have to keep reopening the deck -- that
+      // habit is what kept Scryfall's limiter awake in the first place.
+      const tries = (state._priceResume[d.id] || 0) + 1;
+      state._priceResume[d.id] = tries;
+      if(tries <= 3){
+        setTimeout(()=>{
+          if(state._pricingDeck) return;              // something else is busy
+          state._priceHoldUntil = 0;
+          priceDeck(d, onProgress, true).then(()=>{   // background lane: no rush
+            if(state.screen === 'decklist' && state.activeDeckId === d.id) refreshDecklistBox(d);
+          }).catch(()=>{});
+        }, 50000 + tries * 15000);
+      }
+    } else {
+      state._priceResume[d.id] = 0;
+    }
   }
 
   let total = 0, missing = 0;
@@ -10713,6 +10779,10 @@ function wireDlPanel(d){
 async function ensureDeckPriced(d){
   if(deckPriceFromCache(d).complete) return;   // nothing to fetch
   if(state._pricingDeck === d.id) return;      // already in flight
+  // A run that ended in a refusal left a hold. Without it, every glance at the
+  // deck page started the same doomed burst over again -- which is why the same
+  // decks never finished while fully cached ones opened instantly.
+  if(state._priceHoldUntil && Date.now() < state._priceHoldUntil) return;
   state._pricingDeck = d.id;
   try{
     await priceDeck(d);
