@@ -37,14 +37,15 @@ async function spoiledCards(codes){
   const out = [];
   for(const code of codes){
     let url = 'https://api.scryfall.com/cards/search?unique=cards&order=spoiled&q=' + encodeURIComponent('set:' + code);
-    for(let page = 0; page < 3 && url; page++){
+    for(let page = 0; page < 5 && url; page++){
       let d = null;
       try{
         const r = await fetch(url, { headers: SF_HEADERS });
         if(!r.ok) break;
         d = await r.json();
       }catch(e){ break; }               // one bad set never strands the rest
-      (d.data || []).forEach(c => { if(!c.reprint) out.push({ id: c.id, name: c.name }); });
+      (d.data || []).forEach(c => { if(!c.reprint) out.push({
+        id: c.id, name: c.name, prev: (c.preview && c.preview.previewed_at) || '' }); });
       url = d.has_more ? d.next_page : null;
       await nap(120);
     }
@@ -172,11 +173,14 @@ export default async () => {
       const now = Date.now();
       const KINDS = new Set(['expansion','commander','masters','draft_innovation','core']);
       // Spoiler season = a paper set whose release day is still ahead.
+      // De sets die het EERST uitkomen zijn de sets die nu gespoild worden;
+      // die krijgen de aandacht als er meer dan zes tegelijk op de rol staan.
       const komend = sets.filter(s => {
         if(!KINDS.has(s.set_type) || s.digital) return false;
         const t = Date.parse(s.released_at || '');
         return t && t > now;
-      }).map(s => s.code).slice(0, 6);
+      }).sort((a, b) => String(a.released_at).localeCompare(String(b.released_at)))
+        .map(s => s.code).slice(0, 6);
       const kaarten = komend.length ? await spoiledCards(komend) : [];
       // The log is a RUNNING COUNT, not a batch: every card ever spoiled gets
       // the next number. Each reader remembers the number they were last told
@@ -187,18 +191,28 @@ export default async () => {
       const boek = log || { seq: 0, ids: [], recent: [] };
       const bekend = new Set(boek.ids || []);
       const verse = kaarten.filter(c => !bekend.has(c.id)).reverse();   // oldest first
+      // A card we have not seen before is not necessarily NEWS. Scryfall
+      // reorders, pages shift, a set enters the window late — and then a
+      // card spoiled a week ago turns up looking fresh. Its own preview date
+      // is the honest answer: older than three days, and it is filed away
+      // without waking anybody.
+      const OUD = 3 * 24 * 3600 * 1000;
+      let gemeld = 0;
       verse.forEach(c => {
-        boek.seq = (boek.seq || 0) + 1;
         boek.ids.push(c.id);
+        const t = c.prev ? Date.parse(c.prev + 'T00:00:00Z') : NaN;
+        if(Number.isFinite(t) && (now - t) > OUD) return;    // old news, quietly filed
+        boek.seq = (boek.seq || 0) + 1;
         boek.recent.push({ seq: boek.seq, name: c.name });
+        gemeld++;
       });
       boek.ids = boek.ids.slice(-4000);
       boek.recent = boek.recent.slice(-200);
       await state.setJSON('spoilerLog', boek);
       if(eerste){
         report.push('spoilers: baseline ' + verse.length);   // first run says nothing
-      } else if(!verse.length){
-        report.push('spoilers: nothing new');
+      } else if(!gemeld){
+        report.push(`spoilers: nothing new (${verse.length - gemeld} filed as old)`);
       } else {
         const r = await eachSub(async (rec, key, store)=>{
           const drempel = spoilerThreshold(rec);
@@ -209,7 +223,7 @@ export default async () => {
             // BEFORE this one and write it down straight away. Without that
             // the count would restart every hour and a slow threshold could
             // never be reached.
-            mijn = boek.seq - verse.length;
+            mijn = boek.seq - gemeld;
             rec = Object.assign({}, rec, { spoilerSeq: mijn });
             await store.setJSON(key, rec);
           }
@@ -229,7 +243,7 @@ export default async () => {
             url: './?go=spoilers'
           };
         });
-        report.push(`spoilers: ${verse.length} new (seq ${boek.seq}) → sent ${r.sent}, waiting ${r.skipped}, pruned ${r.pruned}`);
+        report.push(`spoilers: ${gemeld} new, ${verse.length - gemeld} old (seq ${boek.seq}) → sent ${r.sent}, waiting ${r.skipped}, pruned ${r.pruned}`);
       }
     }
   }catch(e){ report.push('spoiler check failed: ' + (e && e.message)); }
