@@ -4798,13 +4798,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.623';
+const APP_VERSION = '2.51.624';
 const CHANGELOG_NOTES = {
   en: [
-    'Spoiler alerts: pick every card, every 5, every 10, or none.'
+    'Tapping a spoiler alert opens the spoiler page.',
+    'Cards spoiled days ago no longer count as news.'
   ],
   nl: [
-    'Spoilermeldingen: kies elke kaart, per 5, per 10, of geen.'
+    'Op een spoilermelding tikken opent de spoilerpagina.',
+    'Kaarten van dagen geleden tellen niet meer als nieuws.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -21528,7 +21530,10 @@ try{
     setTimeout(()=>{
       try{
         if(_goParam === 'life'){ openLifeOverlay(); return; }
-        const pages = { decks:'decks', search:'search', browse:'browse', collection:'collection', extras:'settings', settings:'settings' };
+        // ?go=spoilers komt ook uit de pushmelding over nieuwe kaarten: die
+        // hoort de spoilerpagina te openen, niet stilletjes thuis te landen.
+        const pages = { decks:'decks', search:'search', browse:'browse', collection:'collection',
+                        extras:'settings', settings:'settings', spoilers:'spoilers', news:'news' };
         if(pages[_goParam]) switchPage(pages[_goParam]);
       }catch(e){}
     }, 150);
