@@ -984,6 +984,7 @@ main.has-dock{padding-bottom:84px;}
    the line is back the real picture takes over again.
    Pseudo-elements only render on a FAILED image, which is precisely when
    this is wanted, and the ::after covers whatever the browser drew. */
+img.art-pending{background:var(--sk) center/cover no-repeat;}
 img.art-missing{
   position:relative;color:transparent;font-size:0;aspect-ratio:488/680;
   background:transparent;
@@ -3947,7 +3948,7 @@ function _netSetDown(down){
   _netDown = down;
   try{ _netChipSync(); }catch(e){}
   try{ sfJournal(down ? 'NETWORK DOWN — queue holding, banner up' : 'network back — queue resumed'); }catch(e){}
-  if(!down) try{ setTimeout(retryMissingArt, 600); }catch(e){}
+  if(!down) try{ netBackRefresh(); }catch(e){}
   if(down && !_netProbeT){
     _netProbeT = setInterval(async ()=>{
       try{
@@ -4715,15 +4716,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.612';
+const APP_VERSION = '2.51.614';
 const CHANGELOG_NOTES = {
   en: [
-    'The offline card skeleton now carries the card\u2019s details everywhere: name, mana cost, type line and power/toughness, read from the database on your phone \u2014 in the decklist and in the card sheet alike.',
-    'In the card sheet the skeleton now fills the whole card slot instead of collapsing to a sliver between the arrows.'
+    'The back button works properly in the Android app again: it closes the open sheet or steps back a page, and only asks \u2014 with a warning first \u2014 when you are already home.',
+    'Opening Tags on a card no longer flings the whole tag list open: the tap that opened the box can no longer land in the input behind it.'
   ],
   nl: [
-    'Het offline kaartskelet draagt nu overal de gegevens van de kaart: naam, manakosten, typeregel en power/toughness, gelezen uit de database op je telefoon \u2014 in de decklijst \u00e9n in het kaartblad.',
-    'In het kaartblad vult het skelet nu de hele kaartplek in plaats van in te klappen tot een streepje tussen de pijltjes.'
+    'De terugknop werkt weer goed in de Android-app: hij sluit het open blad of gaat een pagina terug, en pas op de thuispagina vraagt hij \u2014 met een waarschuwing vooraf \u2014 om afsluiten.',
+    'Tags openen op een kaart klapt niet meer meteen de hele taglijst uit: de tik waarmee je het vak opent kan niet langer in het invoerveld erachter landen.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5710,7 +5711,8 @@ function render(){
   if(!_firstPaintDone){
     _firstPaintDone = true;
     try{
-      try{ if(!_bootRenderMs) _bootRenderMs = Math.round(performance.now()); }catch(e){}
+      try{ paintPendingArt(); }catch(e){}
+  try{ if(!_bootRenderMs) _bootRenderMs = Math.round(performance.now()); }catch(e){}
   requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(appReady, 120)));
     }catch(e){ appReady(); }
   }
@@ -11032,6 +11034,32 @@ async function ensureDeckPriced(d){
     state._pricingDeck = null;
   }
 }
+/* ---- Redraw without the page moving under the thumb -------------------
+   Replacing a list's markup changes its height, and in a bottom-anchored
+   page that height change lands entirely above the viewport -- which reads
+   as the page jumping to the top. Measure where the element the person
+   touched sat, redraw, find it again, and give the scroll back exactly the
+   difference. The tapped heading stays put; the list grows around it. */
+function scrollParentOf(el){
+  let p = el && el.parentElement;
+  while(p && p !== document.body){
+    const cs = getComputedStyle(p);
+    if(/(auto|scroll)/.test(cs.overflowY) && p.scrollHeight > p.clientHeight + 4) return p;
+    p = p.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+function keepAnchored(anchorEl, redraw, findAgain){
+  let sc = null, before = 0;
+  try{ sc = scrollParentOf(anchorEl); before = anchorEl.getBoundingClientRect().top; }catch(e){}
+  redraw();
+  if(!sc) return;
+  let again = null;
+  try{ again = findAgain ? findAgain() : null; }catch(e){}
+  if(!again) return;
+  const shift = again.getBoundingClientRect().top - before;
+  if(Math.abs(shift) > 0.5) sc.scrollTop += shift;
+}
 function refreshDecklistBox(d){
   const box = document.getElementById('decklistBox');
   if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
@@ -11143,8 +11171,16 @@ function wireDecklistInteractions(d){
   });
   document.querySelectorAll('.cat-head').forEach(h=>{
     h.addEventListener('click', ()=>{
-      state.collapsed[h.dataset.cat] = !state.collapsed[h.dataset.cat];
-      refreshDecklistBox(d);
+      const key = h.dataset.cat;
+      // The heading you tapped keeps its exact place on screen; the section
+      // opens around it, upward, instead of the page jumping to the top.
+      keepAnchored(h, ()=>{
+        state.collapsed[key] = !state.collapsed[key];
+        refreshDecklistBox(d);
+      }, ()=>{
+        try{ return document.querySelector('.cat-head[data-cat="' + CSS.escape(key) + '"]'); }
+        catch(e){ return null; }
+      });
     });
   });
   // LONG-PRESS a card = start multi-select; short taps then toggle more.
@@ -11300,7 +11336,48 @@ function wireMeterRow(d){
 }
 
 /* ---- card action sheet: change printing / move to maybeboard / remove ---- */
+/* A card saved inside a deck is stored slim -- no oracle text, no flavour --
+   because 100 full cards per deck was megabytes of storage. Online the sheet
+   fetches the rest; offline it did not, so the Oracle Text panel stayed
+   empty. The phone's own database has every word of it, so take it there. */
+function cardWithLocalText(card){
+  if(!card) return card;
+  const hasText = !!card.oracle_text || (card.card_faces || []).some(f=>f.oracle_text);
+  if(hasText) return card;
+  let bc = null;
+  try{ if(_bulkIdx && _bulkIdx.byName) bc = _bulkIdx.byName.get(String(card.name || '').toLowerCase()); }catch(e){}
+  if(!bc){
+    // Not loaded yet: fetch it and repaint the panel when it lands.
+    if(!_bulkIdx && !_skIdxAsked){
+      _skIdxAsked = true;
+      try{ bulkIndexReady().then(()=>{ try{ repaintOracleBox(); repaintSkeletons(); }catch(e){} }).catch(()=>{}); }catch(e){}
+    }
+    return card;
+  }
+  const out = Object.assign({}, card);
+  if(!out.oracle_text && bc.ot) out.oracle_text = bc.ot;
+  if(!out.type_line && bc.tl) out.type_line = bc.tl;
+  if(!out.mana_cost && bc.mc) out.mana_cost = bc.mc;
+  if(out.power == null && bc.pw != null) out.power = bc.pw;
+  if(out.toughness == null && bc.tg != null) out.toughness = bc.tg;
+  if((!out.card_faces || !out.card_faces.length) && bc.f && bc.f.length){
+    out.card_faces = bc.f.map(f=>({ name:f.name, mana_cost:f.mc || '', type_line:f.tl || '',
+      oracle_text:f.ot || '', colors:(f.c || '').split('').filter(Boolean), power:f.pw, toughness:f.tg }));
+  }
+  return out;
+}
+/* The open sheet's Oracle panel, redrawn once the database is in memory. */
+function repaintOracleBox(){
+  const box = document.getElementById('sheetOracle');
+  if(!box || !box.dataset.cardname) return;
+  let c = null;
+  try{ if(_bulkIdx && _bulkIdx.byName) c = _bulkIdx.byName.get(box.dataset.cardname.toLowerCase()); }catch(e){}
+  if(!c) return;
+  const full = bulkToCardish(c);
+  if(full) box.innerHTML = oracleBlockHtml(full);
+}
 function oracleBlockHtml(card){
+  card = cardWithLocalText(card);
   const faces = (card.card_faces && card.card_faces.length) ? card.card_faces : [card];
   return faces.map(f=>{
     const cost = (f.mana_cost||'').replace(/[{}]/g,'');
@@ -11372,7 +11449,7 @@ function renderCardSheet(d, card, loc, idx){
       </div>
       <div class="cs-actions-grid">${actions.join('')}</div>
       <div id="csTagBox"></div>
-      <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
+      <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle" data-cardname="${escapeHtml(card.name||'')}">${oracleBlockHtml(card)}</div></div>
       <div class="detail-sec"><div class="detail-h">Legality</div>${legalityBlockHtml(card)}</div>
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
       <div class="sheet-foot-spacer" aria-hidden="true"></div>
@@ -11385,6 +11462,7 @@ function renderCardSheet(d, card, loc, idx){
   wireCombosButton(el, card);
   { const pr = el.querySelector('#csPrice'); if(pr){ pr.style.cursor = 'pointer'; pr.title = 'Price history'; pr.addEventListener('click', ()=>openPriceHistory(card)); } }
   applyLocalizedSheetImage(card, 'dcImg');
+  try{ paintPendingArt(); }catch(e){}
   document.getElementById('csChangePrinting').addEventListener('click', ()=>openPrintingPicker(d, card, loc, idx));
   document.getElementById('csSimilar')?.addEventListener('click', ()=>openSimilarCards(card, true));
   document.getElementById('csReco')?.addEventListener('click', ()=>openCardReco(card, d));
@@ -11751,7 +11829,12 @@ function renderTagEditor(d, card, box){
     input.focus();
     renderDrop();
   });
-  input.addEventListener('focus', renderDrop);
+  // The tag box appears right where the Tags button was, so the tap that
+   // opened it can land on this input a heartbeat later and fling the whole
+   // list open. A focus in the first moments of its life is that stray tap,
+   // never a deliberate one.
+  const _bornAt = Date.now();
+  input.addEventListener('focus', ()=>{ if(Date.now() - _bornAt < 500) return; renderDrop(); });
   input.addEventListener('input', renderDrop);
   let _dropHideT = null;
   input.addEventListener('blur', ()=>{ _dropHideT = setTimeout(()=>{ if(drop) drop.hidden = true; }, 150); });
@@ -13615,7 +13698,7 @@ function openCardInfo(card, opts){
         </div>
       </div>
       <div id="ciTagBox"></div>
-      <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle">${oracleBlockHtml(card)}</div></div>
+      <div class="detail-sec sel-text"><div class="detail-h">Oracle Text</div><div id="sheetOracle" data-cardname="${escapeHtml(card.name||'')}">${oracleBlockHtml(card)}</div></div>
       <div class="detail-sec"><div class="detail-h">Legality</div>${legalityBlockHtml(card)}</div>
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
       <div class="sheet-foot-spacer" aria-hidden="true"></div>
@@ -13627,6 +13710,7 @@ function openCardInfo(card, opts){
   wireCombosButton(el, card);
   { const pr = el.querySelector('#csPrice'); if(pr){ pr.style.cursor = 'pointer'; pr.title = 'Price history'; pr.addEventListener('click', ()=>openPriceHistory(card)); } }
   applyLocalizedSheetImage(card, 'ciImg');
+  try{ paintPendingArt(); }catch(e){}
   document.getElementById('ciReco')?.addEventListener('click', ()=>{
     if(pinned) openCardReco(card, pinned);
     else if(state.decksIndex.length) openDeckPickPopup(card, 'reco');
@@ -21152,6 +21236,17 @@ window.addEventListener('popstate', (e)=>{
    through history (popstate) or was absorbed by the CloseWatcher before
    history could move. Only the history path re-arms consumed entries;
    returns true when the press was consumed, false at the home floor. */
+/* The Android shell hands its hardware back press to this, so one decision
+   chain serves both the browser and the app. Returns 1 when the app dealt
+   with the press (an overlay closed, a page stepped back) and 0 when it is
+   standing on the home floor -- the shell then asks for a second press
+   before it puts the app away, and the wording stays here, in the app's
+   own language. */
+window.androidBack = function(){
+  try{ if(appBackStep(false)) return 1; }catch(e){}
+  try{ toast(trS('Press back once more to close.')); }catch(e){}
+  return 0;
+};
 function appBackStep(viaHistory){
   const rearm = (obj, tag)=>{ if(viaHistory){ try{ history.pushState(obj, '', tag); }catch(err){} } };
   // An open picker inside a sheet (the game-log MVP/Weakest drop-ups) is the
@@ -21990,6 +22085,26 @@ function _skLookup(name){
 function _skFor(name){
   return cardSkeletonUri(_skLookup(name) || { name });
 }
+/* Every card picture still on its way gets its skeleton painted BEHIND it,
+   so nothing is ever blank or broken while it loads -- and offline the
+   frame is simply what stays. The picture covers it the moment it lands. */
+function paintPendingArt(root){
+  const scope = root || document;
+  let n = 0;
+  scope.querySelectorAll('img').forEach(im=>{
+    if(n > 80) return;                                  // never a long job
+    if(im.classList.contains('art-missing') || im.classList.contains('art-pending')) return;
+    const src = String(im.currentSrc || im.src || '');
+    if(!/scryfall\.io/.test(src)) return;
+    if(im.complete && im.naturalWidth > 0) return;      // already there
+    const nm = im.getAttribute('alt') || '';
+    if(!nm) return;
+    n++;
+    try{ im.style.setProperty('--sk', _skFor(nm)); im.classList.add('art-pending'); }catch(e){}
+    const done = ()=>{ im.classList.remove('art-pending'); };
+    im.addEventListener('load', done, { once:true });
+  });
+}
 /* Redraw every skeleton on screen — used once the card database finishes
    loading, so the frames fill in with type, cost and stats by themselves. */
 function repaintSkeletons(){
@@ -22015,7 +22130,40 @@ function retryMissingArt(){
     probe.src = src;
   });
 }
-try{ window.addEventListener('online', ()=>setTimeout(retryMissingArt, 1000)); }catch(e){}
+/* ---- The line is back: pick up what was left hanging -------------------
+   Jobs that failed while the line was down are gone -- nothing re-runs them
+   by itself, so a page that was loading at that moment keeps its spinner
+   for ever. This is the one place that notices, and it only touches pages
+   that are actually still waiting: a spinner on screen has nothing to lose
+   from a fresh load, and a settled page is left exactly as it is. */
+let _netBackT = null;
+function netBackRefresh(){
+  clearTimeout(_netBackT);
+  // A moment's grace: the first request after a handover often still fails.
+  _netBackT = setTimeout(()=>{
+    try{ retryMissingArt(); }catch(e){}
+    try{
+      const R = state.reco;
+      if(R && (R.error || R.localSourced || R.loading)){
+        try{ delete state._recoCache[recoCacheKey(R.admiral, R.partner)]; }catch(e){}
+        R.loading = true; R.error = false; R.localSourced = false;
+        R.pool = []; R._mainPool = null; R.activeThemeSlug = null;
+        sfJournal('net terug: aanbevelingen opnieuw opgehaald');
+        renderRecoOverlay();
+        loadRecoPool();
+        return;
+      }
+    }catch(e){}
+    try{
+      const stuck = document.querySelector('.overlay .spinner') || document.querySelector('main .spinner');
+      if(stuck){
+        sfJournal('net terug: pagina opnieuw geladen (stond nog te laden)');
+        render();
+      }
+    }catch(e){}
+  }, 1200);
+}
+try{ window.addEventListener('online', ()=>netBackRefresh()); }catch(e){}
 /* Card art that cannot be fetched (offline, or a picture never opened
    before) gets the plate above instead of a broken-image icon. Image errors
    do not bubble, so this listens in the capture phase -- one handler for
@@ -22038,6 +22186,7 @@ document.addEventListener('error', (e)=>{
   im.setAttribute('alt', nm);
   im.dataset.artsrc = src;
   try{ im.style.setProperty('--sk', _skFor(nm)); }catch(err){}
+  im.classList.remove('art-pending');
   im.classList.add('art-missing');
   /* A broken picture has no width of its own, so an inline-block holder
      shrinks around nothing and the frame ends up a sliver between the
