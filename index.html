@@ -333,10 +333,10 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    behind it are hidden. They kept showing through the gaps and made the
    list unreadable. The selects and the search bar stay, so the page still
    reads as itself. */
-.app > main.cs-open > *:not(.browse-selects):not(.searchbar):not(.adv-panel):not(#colAdvBox):not(#advSlot){
+.app > main.cs-open:has(> .browse-selects) > *:not(.browse-selects):not(.searchbar):not(.adv-panel):not(#colAdvBox):not(#advSlot){
   visibility:hidden;
 }
-.app > main.cs-open > .browse-selects{background:var(--ink);}
+.app > main.cs-open:has(> .browse-selects) > .browse-selects{background:var(--ink);}
 .app > main > #inspireResults{order:95;}
 .app > main:has(> #inspireResults) > .hint{order:98;}
 .app > main > .browse-hero{order:98;margin:10px 0 14px;}
@@ -362,6 +362,10 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main:has(> #bsNameResults:not(:empty)) > .browse-hero{display:none;}
 .app > main:has(> .browse-selects){padding-bottom:calc(var(--nav-h) + 6px + env(safe-area-inset-bottom));}
 .browse-selects .cselect-panel{top:auto;bottom:calc(100% + 4px);}
+/* The recommendation page's Theme and Kindred lists are drop-ups too --
+   they sit at the foot of the sheet, so a list that opened downward ran
+   straight off the screen. */
+#recoOverlay .cselect-panel, .overlay .reco-themes .cselect-panel{top:auto;bottom:calc(100% + 4px);}
 .app > main > .pin-pill{order:96;}
 .app > main > .sp-jump{order:99;}
 /* (1) Home packs downward — the foot gap closes. */
@@ -941,6 +945,9 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .df-compact .df-btn-row{margin-top:6px;}
 .df-compact .df-btn-row button{padding:11px 8px;font-size:13.5px;}
 .dl-panel-x{flex:none;margin-left:auto;}
+/* A panel is a light plate: the page's own plate ink lands black on it.
+   Inside a panel the icon button wears the panel's ink, like its text. */
+.panel-card .icon-btn, .panel-h .icon-btn{color:var(--ink-text);border-color:var(--line);}
 .dl-bridge-btns .ghost-btn{width:100%;padding:7px 2px;font-size:11.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;line-height:1.05;white-space:nowrap;}
 .dl-bridge-btns .bi svg{width:21px;height:21px;display:block;color:var(--sub-text);}
 .dl-bridge-btns .ghost-btn.active .bi svg{color:var(--brass);}
@@ -4751,19 +4758,23 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.615';
+const APP_VERSION = '2.51.616';
 const CHANGELOG_NOTES = {
   en: [
-    'Opening a drop-up in the filters no longer moves the page: the button you tapped keeps its place and the list opens upward around it.',
-    'While a drop-up is open, the page behind it \u2014 the feed, the Week/Month/Year row, the commander grid \u2014 is hidden instead of showing through.',
-    'Every filter sheet now rests directly on the bar below it, with no strip of page left showing between them.',
-    'Leader names are resolved from the database on your phone first, and a refused request is no longer split into a flood of one-name queries \u2014 which is why some Kindred pages came up empty.'
+    'Back while adding cards returns to the deck.',
+    'Drop-ups in Recommendations open upward again.',
+    'Filter drop-ups no longer jump.',
+    'Second tap on a colour unticks it.',
+    'Readable \u2715 in panel headers.',
+    'Budget: one search at a time, and it says when the line is tight.'
   ],
   nl: [
-    'Een drop-up openen in de filters verschuift de pagina niet meer: de knop die je aanraakt blijft staan en de lijst opent naar boven eromheen.',
-    'Zolang een drop-up openstaat is de pagina erachter \u2014 de feed, de Week/Maand/Jaar-rij, het commanderraster \u2014 verborgen in plaats van dat hij doorschijnt.',
-    'Elk filterpaneel rust nu direct op de balk eronder, zonder strook pagina ertussen.',
-    'Namen van leiders komen eerst uit de database op je telefoon, en een geweigerde aanvraag wordt niet meer opgesplitst in een stortvloed van losse vragen \u2014 daardoor bleven sommige Kindred-pagina\u2019s leeg.'
+    'Terug tijdens kaarten toevoegen gaat naar het deck.',
+    'Drop-ups in Aanbevelingen openen weer naar boven.',
+    'Filter-drop-ups verspringen niet meer.',
+    'Tweede tik op een kleur zet hem uit.',
+    'Leesbare \u2715 in paneelkoppen.',
+    'Budget: \u00e9\u00e9n zoektocht tegelijk, en hij meldt een krappe grens.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -10985,7 +10996,12 @@ function wireDlPanel(d){
       if(chk.checked){ if(at < 0) f.ci.push(col); }
       else if(at >= 0) f.ci.splice(at, 1);
       state.dlFilterOn = true;
-      refreshDecklistBox(d);
+      // Unticking the last colour brings the whole deck back, and that
+      // height change used to shove the panel off the screen -- it looked
+      // as if the menu had closed. The panel keeps its place instead.
+      const box = document.getElementById('dlPanelBox');
+      if(box) keepAnchored(box, ()=>refreshDecklistBox(d), ()=>document.getElementById('dlPanelBox'));
+      else refreshDecklistBox(d);
     }));
     // The deck page never calls wireCSelects, so the panel wires its own
     // ≤/=/≥ dropdown — the _csw flag keeps a re-render from ever stacking a
@@ -11091,13 +11107,18 @@ function scrollParentOf(el){
   return document.scrollingElement || document.documentElement;
 }
 function keepAnchored(anchorEl, redraw, findAgain){
-  let sc = null, before = 0;
-  try{ sc = scrollParentOf(anchorEl); before = anchorEl.getBoundingClientRect().top; }catch(e){}
+  let before = 0;
+  try{ before = anchorEl.getBoundingClientRect().top; }catch(e){}
   redraw();
-  if(!sc) return;
   let again = null;
   try{ again = findAgain ? findAgain() : null; }catch(e){}
   if(!again) return;
+  // The scroller has to be found on the NEW element: a redraw that replaces
+  // the markup leaves the old one detached, and correcting a detached node's
+  // scrollTop moves nothing -- which is why the filter sheet kept jumping
+  // while the pages that scroll as a whole behaved.
+  const sc = scrollParentOf(again);
+  if(!sc) return;
   const shift = again.getBoundingClientRect().top - before;
   if(Math.abs(shift) > 0.5) sc.scrollTop += shift;
 }
@@ -18384,7 +18405,47 @@ async function detectOtagsForCards(cards, bg){
   saveOtagCache();
   return byName;
 }
+/* Budget pools straight from the phone's own database: every card under the
+   line, in the deck's colours, grouped by the function tags the weekly build
+   already carries. One pass over the corpus answers every tag at once -- so
+   the page works offline, and online it saves a search per tag. */
+function localBudgetPools(tags, ident, ceiling, inDeck){
+  const out = { byTag:{}, lands:[], all:[] };
+  let ix = null;
+  try{ ix = _bulkIdx; }catch(e){}
+  if(!ix || !ix.cards || !ix.cards.length || !isCmdrMode()) return null;
+  const want = new Set(tags || []);
+  want.forEach(t=>{ out.byTag[t] = []; });
+  const ciSet = new Set((ident || []).map(x=>String(x).toUpperCase()));
+  for(const bc of ix.cards){
+    if(bc.lg !== 'legal') continue;
+    if(bc.eur == null || bc.eur > ceiling) continue;
+    if(ciSet.size && ![...(bc.ci || '')].every(ch=>ciSet.has(ch))) continue;
+    if(inDeck && inDeck.has(bc.n)) continue;
+    const isLand = /\bLand\b/.test(String(bc.tl || '').split('//')[0]);
+    const x = bulkToCardish(bc);
+    if(!x || isBanned(x)) continue;
+    if(isLand){ out.lands.push(x); continue; }
+    out.all.push(x);
+    if(!want.size) continue;
+    let tg = null;
+    try{ tg = ix.tagByOid ? ix.tagByOid.get(bc.o) : null; }catch(e){}
+    if(!tg || !tg.length) continue;
+    tg.forEach(t=>{ if(want.has(t)) out.byTag[t].push(x); });
+  }
+  const byRank = (a, b)=>((a.edhrec_rank ?? 999999) - (b.edhrec_rank ?? 999999));
+  Object.keys(out.byTag).forEach(t=>{ out.byTag[t].sort(byRank); out.byTag[t] = out.byTag[t].slice(0, 60); });
+  out.lands.sort(byRank); out.lands = out.lands.slice(0, 120);
+  out.all.sort(byRank); out.all = out.all.slice(0, 250);
+  return out;
+}
 async function loadBudgetAlternatives(d){
+  // Moving the slider reopens this page while the previous run is still
+  // fetching. Both wrote into the same body, and the older run's spinners
+  // never resolved -- that is the page that "kept hanging". A run that is no
+  // longer the newest stops at its next checkpoint.
+  const mySeq = (state._bgSeq = (state._bgSeq || 0) + 1);
+  const alive = ()=> mySeq === state._bgSeq && !!document.getElementById('bgBody');
   const all = deckLeaders(d).concat(d.cards||[]);
   if(!all.length){ const b=document.getElementById('bgBody'); if(b) b.innerHTML=`<div class="empty-note">No cards in this deck yet.</div>`; return; }
   // Same batched pricer the stats tab uses (10 names per request) — the old
@@ -18496,7 +18557,19 @@ async function loadBudgetAlternatives(d){
   // reopening this page (any deck in the same colours) skips the searches.
   const poolCache = (state._budgetPoolCache = state._budgetPoolCache || {});
   const tagPools = {}, candTags = {};
+  // The phone first: one pass over the local corpus answers every tag, the
+  // lands and the general pool at once. Offline that is the whole page;
+  // online it means the searches below have little left to do.
+  const identList = (d.admiral ? (deckLeaders(d)[0] || {}).color_identity : null) || [];
+  let localPools = null;
+  try{ localPools = localBudgetPools(Array.from(tagUnion), identList, BUDGET_FLOOR, inDeck); }catch(e){}
+  if(localPools){
+    Object.entries(localPools.byTag).forEach(([t, arr])=>{ if(arr.length) tagPools[t] = arr.slice(); });
+    if(!pool.length) pool = localPools.all.slice(0, 120);
+    try{ sfJournal('budget: ' + localPools.all.length + ' candidates from the local database'); }catch(e){}
+  }
   await runLimited(Array.from(tagUnion), async (tag)=>{
+    if(tagPools[tag] && tagPools[tag].length >= 20) return;     // the phone already answered this one
     const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|' + tag;
     if(poolCache[ck]){ tagPools[tag] = poolCache[ck]; return; }
     try{
@@ -18506,8 +18579,8 @@ async function loadBudgetAlternatives(d){
     }catch(e){ tagPools[tag] = []; }
   }, 4);
   Object.entries(tagPools).forEach(([tag, arr])=>arr.forEach(x=>{ (candTags[x.name] = candTags[x.name] || new Set()).add(tag); }));
-  let landPool = [];
-  if(landPriced.length){
+  let landPool = (localPools && localPools.lands.length) ? localPools.lands.slice() : [];
+  if(landPriced.length && landPool.length < 20){
     const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|land';
     if(poolCache[ck]) landPool = poolCache[ck];
     else try{
@@ -18516,16 +18589,31 @@ async function loadBudgetAlternatives(d){
       poolCache[ck] = landPool;
     }catch(e){}
   }
-  if(!document.getElementById('bgBody')) return;
+  if(!alive()) return;
   const anyTagged = Object.values(tagPools).some(a=>a.length);
   if(!pool.length && !anyTagged && !landPool.length){
     box.insertAdjacentHTML('beforeend', `<div class="empty-note">Couldn't gather budget candidates — check your connection and reopen this page.</div>`);
     return;
   }
+  // A tight line simply has few answers. Say so at the top instead of
+  // leaving rows of empty spinners behind.
+  try{
+    const totalCands = new Set();
+    Object.values(tagPools).forEach(a=>a.forEach(x=>totalCands.add(x.name)));
+    pool.forEach(x=>totalCands.add(x.name));
+    landPool.forEach(x=>totalCands.add(x.name));
+    if(totalCands.size < 25){
+      const nl = appLang() === 'nl';
+      box.insertAdjacentHTML('afterbegin',
+        `<p class="hint" style="text-align:center;margin:0 0 8px;color:var(--brass);">` +
+        (nl ? `Weinig kaarten onder \u20ac${BUDGET_FLOOR} in deze kleuren \u2014 schuif de grens hoger voor meer keuze.`
+            : `Few cards under \u20ac${BUDGET_FLOOR} in these colours \u2014 slide the line up for more choice.`) + `</p>`);
+    }
+  }catch(e){}
   const fp = new Map();
   const themesOf = (x)=>{ if(!fp.has(x.name)) fp.set(x.name, new Set(detectCardThemes(x).map(t=>t.key))); return fp.get(x.name); };
   for(const {c, v, trio} of trioRefs){
-    if(!document.getElementById('bgBody')) return;   // overlay closed
+    if(!alive()) return;                            // closed, or a newer run took over
     if(!trio.isConnected) continue;
     const land = isLandC(c);
     const myTags = land ? [] : (otagByName[c.name] || []);
@@ -18555,7 +18643,7 @@ async function loadBudgetAlternatives(d){
         }
         featPools.push(poolCache[ck]);
       }, 2);
-      if(!document.getElementById('bgBody')) return;   // overlay closed while fetching
+      if(!alive()) return;                           // closed, or superseded, while fetching
     }
     if(land){
       // Lands answer lands: same identity, cheapest, most played — with a nudge
@@ -19408,8 +19496,12 @@ function renderRecoBody(){
   const ovRoot = document.getElementById('recoOverlay') || box;
   ovRoot.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', e=>{
     e.stopPropagation();
-    state.openCSelect = state.openCSelect === b.dataset.cs ? null : b.dataset.cs;
-    renderRecoBody();
+    const csId = b.dataset.cs;
+    // Same rule as everywhere else: the button you tapped keeps its place.
+    keepAnchored(b, ()=>{
+      state.openCSelect = state.openCSelect === csId ? null : csId;
+      renderRecoBody();
+    }, ()=>{ try{ return document.querySelector('#recoOverlay [data-cs="' + CSS.escape(csId) + '"]'); }catch(err){ return null; } });
   }));
   ovRoot.querySelectorAll('[data-csopt]').forEach(opt=>opt.addEventListener('click', e=>{
     e.stopPropagation();
@@ -21364,6 +21456,19 @@ function appBackStep(viaHistory){
   // Inspiration both work this way, so the hardware back always means the
   // same thing. An open dropdown closes first (its own handler below), and
   // an open overlay still outranks the page.
+  // Adding cards to a deck: the Search page was opened FROM that deck and
+  // every add goes into it, so back belongs there -- not to a blank search.
+  if(state.screen === 'search' && state.searchPinnedDeckId && !state.openCSelect && !state.overlayStack.length){
+    const pinned = state.searchPinnedDeckId;
+    if(getDeck(pinned)){
+      state.searchPinnedDeckId = null; state._pinArm = false;
+      state.searchResults = []; state.searchRan = false; state.searchName = '';
+      state.activeDeckId = pinned;
+      switchPage('decklist');
+      rearm({screen:'decklist'}, '#decklist');
+      return true;
+    }
+  }
   if(state.screen === 'search' && !state.openCSelect && !state.overlayStack.length
      && ((state.searchResults && state.searchResults.length) || state.searchRan
          || (state.searchName || '').trim() || searchFiltersActive())){
