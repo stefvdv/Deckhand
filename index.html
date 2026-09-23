@@ -334,7 +334,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    list unreadable. The selects and the search bar stay, so the page still
    reads as itself. */
 .app > main.cs-open:has(> .browse-selects) > *:not(.browse-selects):not(.searchbar):not(.adv-panel):not(#colAdvBox):not(#advSlot){
-  visibility:hidden;
+  display:none;
 }
 .app > main.cs-open:has(> .browse-selects) > .browse-selects{background:var(--ink);}
 .app > main > #inspireResults{order:95;}
@@ -2360,12 +2360,23 @@ function csRerender(){
   // Opening or closing a dropdown re-renders the whole page — without this,
   // the browser would snap the scroll back to the top every time.
   const y = window.scrollY;
+  // On Inspiration the page behind a drop-up is taken OUT of the layout,
+  // so the scroll collapses to nothing. Remember where the feed stood when
+  // the sheet opened and put it back when it closes.
+  const csHides = !!document.querySelector('.app > main > .browse-selects');
+  if(csHides){
+    if(state.openCSelect){ if(state._csPageY == null) state._csPageY = y; }
+  }
   // A filter sheet is bottom-anchored: whatever a dropdown adds must push
   // the TOP up, never the foot down. Distance to the bottom of the content
   // is the quantity that has to survive the re-render.
   const feet = Array.from(document.querySelectorAll(CS_SHEETS)).map(el=>el.scrollHeight - el.scrollTop);
   render();
   window.scrollTo(0, y);
+  if(csHides && !state.openCSelect && state._csPageY != null){
+    const back = state._csPageY; state._csPageY = null;
+    requestAnimationFrame(()=>{ try{ window.scrollTo(0, back); }catch(e){} });
+  }
   Array.from(document.querySelectorAll(CS_SHEETS)).forEach((el, i)=>{
     if(feet[i] == null) return;
     el.scrollTop = Math.max(0, el.scrollHeight - feet[i]);
@@ -4758,23 +4769,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.616';
+const APP_VERSION = '2.51.619';
 const CHANGELOG_NOTES = {
   en: [
-    'Back while adding cards returns to the deck.',
-    'Drop-ups in Recommendations open upward again.',
-    'Filter drop-ups no longer jump.',
-    'Second tap on a colour unticks it.',
-    'Readable \u2715 in panel headers.',
-    'Budget: one search at a time, and it says when the line is tight.'
+    'Offline card frames: the lettering shrinks so nothing is cut off.'
   ],
   nl: [
-    'Terug tijdens kaarten toevoegen gaat naar het deck.',
-    'Drop-ups in Aanbevelingen openen weer naar boven.',
-    'Filter-drop-ups verspringen niet meer.',
-    'Tweede tik op een kleur zet hem uit.',
-    'Leesbare \u2715 in paneelkoppen.',
-    'Budget: \u00e9\u00e9n zoektocht tegelijk, en hij meldt een krappe grens.'
+    'Offline kaartskeletten: de letter krimpt zodat er niets wegvalt.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -20393,10 +20394,13 @@ function renderLifeOverlay(){
     ${(state.life.historyOpen || state.life.settingsOpen) ? '<div id="lifePanelShield"></div>' : ''}
   </div>`;
   const lifeNavGo = (k)=>{
-    // Close via the overlay stack first (history.back settles the entry),
-    // THEN navigate — pushing a page during the popstate would race it.
-    closeLifeOverlayUI();
-    setTimeout(()=>{ try{ switchPage(k, true); }catch(e){} }, 90);
+    // switchPage sweeps every overlay itself, so the counter comes down and
+    // the new page is painted in ONE frame. Closing first and navigating
+    // 90 ms later showed the page underneath in between — the flash. The
+    // menu flag goes down first: the stray document-click that closes it
+    // would otherwise rebuild the table on its way out.
+    state.life.menuOpen = false;
+    try{ switchPage(k, true); }catch(e){}
   };
   document.getElementById('lifeNavHome').addEventListener('click', ()=>lifeNavGo('home'));
   document.getElementById('lifeNavBack').addEventListener('click', closeLifeOverlayUI);
@@ -20482,7 +20486,7 @@ function renderLifeOverlay(){
     }));
   }
 }
-function closeLifeMenuOnce(){ if(state.life.menuOpen){ state.life.menuOpen=false; renderLifeOverlay(); } }
+function closeLifeMenuOnce(){ if(!state.lifeOpen){ state.life.menuOpen=false; return; } if(state.life.menuOpen){ state.life.menuOpen=false; renderLifeOverlay(); } }
 function renderHistoryPanel(){
   const box = document.getElementById('lifeHistoryPanel');
   if(!box) return;
@@ -22197,13 +22201,91 @@ function _skFit(t, n){
   t = String(t || '');
   return t.length > n ? t.slice(0, n - 1) + '\u2026' : t;
 }
+/* De Oracle-tekst zoals de database op de telefoon hem kent: de volle kaart
+   (oracle_text), een dubbelzijdige kaart (card_faces) of het slanke veld
+   `ot` uit de lokale database. */
+function _skOracleOf(c){
+  if(!c) return '';
+  if(c.oracle_text) return String(c.oracle_text);
+  if(Array.isArray(c.card_faces) && c.card_faces.length){
+    return c.card_faces.map(f=>String((f && f.oracle_text) || '')).filter(Boolean).join('\n//\n');
+  }
+  return String(c.ot || '');
+}
+/* Een tekening kan niets meten -- een SVG-achtergrond heeft geen layout.
+   Dus schatten we de breedte per teken, in eenheden van de lettergrootte.
+   Ruim genomen: liever een tikje kleiner dan over de rand. */
+function _skW(t, size){
+  let w = 0;
+  const str = String(t == null ? '' : t);
+  for(let i = 0; i < str.length; i++){
+    const ch = str[i];
+    if(/[ .,:;'`!|\u2019]/.test(ch)) w += 0.30;
+    else if(/[ijlt()\[\]\/]/.test(ch)) w += 0.36;
+    else if(/[MW\u2014]/.test(ch)) w += 0.95;
+    else if(/[mw]/.test(ch)) w += 0.82;
+    else if(/[A-Z0-9]/.test(ch)) w += 0.68;
+    else w += 0.54;
+  }
+  return w * size;
+}
+/* Eén regel die in een vak moet passen: de letter krimpt tot hij past.
+   Pas als hij op zijn kleinst nog te breed is, wordt er afgekapt. */
+function _skFitW(t, maxW, base, min){
+  let size = base;
+  let str = String(t == null ? '' : t);
+  while(size > min && _skW(str, size) > maxW) size--;
+  if(_skW(str, size) > maxW){
+    while(str.length > 1 && _skW(str + '\u2026', size) > maxW) str = str.slice(0, -1);
+    str = str.replace(/[\s\u2014-]+$/, '') + '\u2026';
+  }
+  return { t: str, size };
+}
+/* Tekst in regels breken op BREEDTE in plaats van op aantal tekens.
+   Manasymbolen staan in accolades ({1}{G}); die vallen weg, de tekens
+   blijven los van elkaar staan. */
+function _skWrapW(text, maxW, size){
+  const lines = [];
+  String(text || '').split(/\n+/).forEach(para=>{
+    const woorden = para.replace(/\}\{/g, ' ').replace(/[{}]/g, '')
+      .replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+    let regel = '';
+    woorden.forEach(w=>{
+      const t = regel ? regel + ' ' + w : w;
+      if(_skW(t, size) <= maxW || !regel) regel = t;
+      else { lines.push(regel); regel = w; }
+    });
+    if(regel) lines.push(regel);
+  });
+  return lines;
+}
+/* Het hele tekstvak: de letter krimpt tot de VOLLEDIGE Oracle-tekst
+   binnen het vak past -- breedte én hoogte. Alleen als hij op zijn
+   kleinst nog niet past, eindigt de laatste regel op een beletselteken. */
+function _skBlock(text, maxW, top, bottom, base, min){
+  const plek = (size)=>{
+    const lead = Math.round(size * 1.34);
+    return { lead, ruimte: Math.max(1, Math.floor((bottom - top - size) / lead) + 1) };
+  };
+  if(!String(text || '').trim()) return { lines: [], size: base, lead: Math.round(base * 1.34) };
+  for(let size = base; size >= min; size--){
+    const { lead, ruimte } = plek(size);
+    const lines = _skWrapW(text, maxW, size);
+    if(lines.length <= ruimte) return { lines, size, lead };
+  }
+  const { lead, ruimte } = plek(min);
+  const lines = _skWrapW(text, maxW, min).slice(0, ruimte);
+  if(lines.length) lines[lines.length - 1] += ' \u2026';
+  return { lines, size: min, lead };
+}
 /* One card, drawn: frame, title bar, empty art window, type bar, four blank
    text rules and a power/toughness box when the card has one. */
 function cardSkeletonUri(card){
   const name = String((card && (card.name || card.n)) || '');
   // A skeleton drawn before the database was loaded carries only the name,
   // so the cache key says HOW MUCH was known -- a fuller one replaces it.
-  const known = (card && (card.type_line || card.tl)) ? 'full' : 'bare';
+  const ot = _skOracleOf(card);
+  const known = ot ? 'text' : ((card && (card.type_line || card.tl)) ? 'full' : 'bare');
   const key = (name || '?') + '|' + known;
   if(_skCache.has(key)) return _skCache.get(key);
   const col = _skColorOf(card);
@@ -22212,19 +22294,33 @@ function cardSkeletonUri(card){
   const pw = (card && (card.power != null ? card.power : card.pw));
   const tg = (card && (card.toughness != null ? card.toughness : card.tg));
   const pt = (pw != null && tg != null && pw !== '' ) ? (pw + '/' + tg) : '';
+  // Elk vak van de kaart heeft een vaste breedte; de letter past zich aan.
+  // De naambalk deelt zijn ruimte met de manakosten rechts.
+  const costF = cost ? _skFitW(cost, 150, 21, 12) : null;
+  const nameF = _skFitW(name, 380 - (costF ? _skW(costF.t, costF.size) + 16 : 0), 25, 12);
+  const typeF = _skFitW(type, 380, 21, 11);
+  // Het tekstvak loopt van y=462 tot y=642; het power/toughness-vakje bijt
+  // er onderaan een hoek uit, dus daar is minder hoogte beschikbaar.
+  const otBox = _skBlock(ot, 380, 472, pt ? 598 : 634, 18, 10);
+  const otLines = otBox.lines;
   const L = (y)=>`<rect x="58" y="${y}" width="${372 - (y % 3) * 26}" height="7" rx="3.5" fill="${col}" fill-opacity="0.22"/>`;
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 680" width="488" height="680">` +
     `<rect width="488" height="680" rx="26" fill="#100D0B"/>` +
     `<rect x="14" y="14" width="460" height="652" rx="20" fill="none" stroke="${col}" stroke-opacity="0.55" stroke-width="3"/>` +
     `<rect x="36" y="38" width="416" height="52" rx="12" fill="${col}" fill-opacity="0.12" stroke="${col}" stroke-opacity="0.45" stroke-width="2"/>` +
-    `<text x="54" y="72" fill="${col}" fill-opacity="0.95" font-family="Georgia,serif" font-size="25">${_skEsc(_skFit(name, 24))}</text>` +
-    (cost ? `<text x="434" y="72" text-anchor="end" fill="${col}" fill-opacity="0.8" font-family="Georgia,serif" font-size="21">${_skEsc(_skFit(cost, 12))}</text>` : '') +
+    `<text x="54" y="${64 + Math.round(nameF.size * 0.34)}" fill="${col}" fill-opacity="0.95" font-family="Georgia,serif" font-size="${nameF.size}">${_skEsc(nameF.t)}</text>` +
+    (costF ? `<text x="434" y="${64 + Math.round(costF.size * 0.34)}" text-anchor="end" fill="${col}" fill-opacity="0.8" font-family="Georgia,serif" font-size="${costF.size}">${_skEsc(costF.t)}</text>` : '') +
     `<rect x="36" y="104" width="416" height="286" rx="10" fill="none" stroke="${col}" stroke-opacity="0.35" stroke-width="2" stroke-dasharray="10 8"/>` +
     `<rect x="36" y="404" width="416" height="44" rx="10" fill="${col}" fill-opacity="0.12" stroke="${col}" stroke-opacity="0.45" stroke-width="2"/>` +
-    `<text x="54" y="434" fill="${col}" fill-opacity="0.9" font-family="Georgia,serif" font-size="21">${_skEsc(_skFit(type, 28))}</text>` +
+    `<text x="54" y="${426 + Math.round(typeF.size * 0.34)}" fill="${col}" fill-opacity="0.9" font-family="Georgia,serif" font-size="${typeF.size}">${_skEsc(typeF.t)}</text>` +
     `<rect x="36" y="462" width="416" height="180" rx="10" fill="none" stroke="${col}" stroke-opacity="0.35" stroke-width="2"/>` +
-    L(492) + L(524) + L(556) + L(588) +
+    // De echte Oracle-tekst uit de database op de telefoon. Staat hij er
+    // niet (nog niet geladen, of een kaart zonder tekst), dan blijven de
+    // vier blinde regels staan.
+    (otLines.length
+      ? otLines.map((ln, i)=>`<text x="54" y="${472 + otBox.size + i * otBox.lead}" fill="${col}" fill-opacity="0.72" font-family="Georgia,serif" font-size="${otBox.size}">${_skEsc(ln)}</text>`).join('')
+      : (L(492) + L(524) + L(556) + L(588))) +
     (pt ? `<rect x="336" y="604" width="116" height="50" rx="10" fill="${col}" fill-opacity="0.16" stroke="${col}" stroke-opacity="0.5" stroke-width="2"/>` +
           `<text x="394" y="638" text-anchor="middle" fill="${col}" fill-opacity="0.95" font-family="Georgia,serif" font-size="24">${_skEsc(pt)}</text>` : '') +
     `</svg>`;
