@@ -491,6 +491,12 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 /* Het Nieuw-deck-blad mag zijn drop-ups niet afknippen: de formatlijst
    hangt vlak boven zijn eigen knop, net als elke andere drop-up. */
 .modal-sheet.nd-sheet{overflow:visible !important;}
+/* De spoilerkeuze is een drop-up; de instellingenkaart knipt normaal alles
+   af wat buiten haar rand valt. */
+.settings-section:has(#pushSpoilPop){overflow:visible;}
+#pushSpoilWrap{min-width:132px;}
+#pushSpoilBtn{width:100%;text-align:left;white-space:nowrap;}
+#pushSpoilPop{min-width:190px;right:0;left:auto;}
 #newDeckFmtPop{position:absolute;left:0;right:0;top:auto;bottom:calc(100% + 4px);max-height:min(48vh,380px);z-index:400;}
 .modal-backdrop{overflow:visible;}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:13.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
@@ -4792,17 +4798,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.620';
+const APP_VERSION = '2.51.623';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration: every drop-up gets the same full height.',
-    'New Deck: deck name on top, format list opens upward.',
-    'The leader field follows the format you pick.'
+    'Spoiler alerts: pick every card, every 5, every 10, or none.'
   ],
   nl: [
-    'Inspiratie: elke drop-up krijgt dezelfde volle hoogte.',
-    'Nieuw deck: decknaam bovenaan, formatlijst opent naar boven.',
-    'De aanvoerder-balk volgt het gekozen format.'
+    'Spoilermeldingen: kies elke kaart, per 5, per 10, of geen.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -19721,7 +19723,12 @@ function settingsPageHtml(){
       </div>
     </div>
     <div class="settings-section"><div class="settings-row" id="tourRow"><div class="l1">🧭 ${appLang()==='nl' ? 'Rondleiding' : 'App tour'}</div><div class="l2">${appLang()==='nl' ? 'Loop alle pagina\u2019s nog eens langs met korte uitleg' : 'Walk every page again with a short guide'}</div></div></div>
-    <div class="settings-section"><div class="settings-row"><div><div class="l1">🔔 ${appLang()==='nl' ? 'Spoiler-meldingen' : 'Spoiler notifications'}</div><div class="l2">${appLang()==='nl' ? 'Een pushmelding zodra er een nieuwe set opduikt \u2014 ook als de app dicht is.' : 'A push the moment a new set shows up \u2014 even with the app closed.'}</div><div class="l2" id="pushStatus" style="margin-top:4px;"></div></div><label class="toggle-switch"><input type="checkbox" id="pushToggle" ${localStorage.getItem(LS_PREFIX+'pushOn')==='1'?'checked':''}><span class="track"></span><span class="knob"></span></label></div></div>
+    ${(()=>{ const _pp = pushPrefs(); const _nl = appLang()==='nl'; return `
+    <div class="settings-section">
+      <div class="settings-row"><div><div class="l1">🔮 ${_nl ? 'Spoilermeldingen' : 'Spoiler alerts'}</div><div class="l2">${_nl ? 'Hoe vaak je iets hoort als er kaarten gespoild worden.' : 'How often you hear about newly spoiled cards.'}</div></div><div class="otag-wrap" id="pushSpoilWrap"><button type="button" id="pushSpoilBtn" class="col-filter-input">${escapeHtml(spoilEveryLabel(_pp.spoilerEvery))} <span style="float:right;opacity:0.6;">▾</span></button><div id="pushSpoilPop" class="otag-pop" hidden>${SPOIL_EVERY_CHOICES.map(v=>`<button type="button" data-spoilevery="${v}">${escapeHtml(spoilEveryLabel(v))}</button>`).join('')}</div></div></div>
+      <div class="settings-row" style="border-top:2px solid var(--line);"><div><div class="l1">🔔 ${_nl ? 'App-updates' : 'App updates'}</div><div class="l2">${_nl ? 'Als er een nieuwe versie van Deckhand klaarstaat, met wat er veranderd is.' : 'When a new version of Deckhand is ready, with what changed.'}</div></div><label class="toggle-switch"><input type="checkbox" id="pushUpdToggle" ${_pp.updates?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
+      <div class="settings-body" style="padding-top:10px;"><div style="font-size:12px;color:var(--sub-text);">${_nl ? 'Meldingen komen alleen tussen 09:00 en 21:00, ook als de app dicht is.' : 'Pushes arrive only between 09:00 and 21:00, even with the app closed.'}</div><div style="font-size:12px;color:var(--sub-text);margin-top:4px;" id="pushStatus"></div></div>
+    </div>`; })()}
     <p class="hint" style="text-align:center;margin:18px 8px 4px;line-height:1.6;">Deckhand v${APP_VERSION} · Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a>. Deck theme and synergy data courtesy of <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a>. Prices are estimates from Scryfall's Cardmarket data.<br>Unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. © Wizards of the Coast LLC.</p>
   </main>`;
 }
@@ -19979,10 +19986,36 @@ function wireSettingsPage(){
   });
   document.getElementById('lifeRow').addEventListener('click', openLifeOverlay);
   document.getElementById('tourRow')?.addEventListener('click', startAppTour);
-  document.getElementById('pushToggle')?.addEventListener('change', (e)=>{
-    if(nativeNotify()){ e.target.checked ? enableNativeNotify() : disableNativeNotify(); return; }
-    e.target.checked ? enableSpoilerPush() : disableSpoilerPush();
-  });
+  const _pushChanged = (every)=>{
+    const nu = pushPrefs();
+    const p = { spoilerEvery: normSpoilEvery(every != null ? every : nu.spoilerEvery),
+                updates: !!document.getElementById('pushUpdToggle')?.checked };
+    p.spoilers = p.spoilerEvery > 0;
+    if(nativeNotify()){
+      savePushPrefs(p);
+      applyNativePrefs(p);
+      return;
+    }
+    syncPushPrefs(p);
+  };
+  {
+    const sb = document.getElementById('pushSpoilBtn');
+    const sp = document.getElementById('pushSpoilPop');
+    if(sb && sp){
+      sb.addEventListener('click', (ev)=>{ ev.stopPropagation(); sp.hidden = !sp.hidden; });
+      sp.querySelectorAll('[data-spoilevery]').forEach(o=>o.addEventListener('click', (ev)=>{
+        ev.preventDefault(); ev.stopPropagation();
+        const v = normSpoilEvery(o.dataset.spoilevery);
+        sb.innerHTML = `${escapeHtml(spoilEveryLabel(v))} <span style="float:right;opacity:0.6;">▾</span>`;
+        sp.hidden = true;
+        _pushChanged(v);
+      }));
+      document.addEventListener('pointerdown', (ev)=>{
+        if(!sp.hidden && ev.target.closest && !ev.target.closest('#pushSpoilWrap')) sp.hidden = true;
+      }, true);
+    }
+  }
+  document.getElementById('pushUpdToggle')?.addEventListener('change', ()=>_pushChanged());
   paintPushAvailability();
   document.getElementById('crRow')?.addEventListener('click', openCROverlay);
   document.getElementById('fullRulesToggle')?.addEventListener('click', ()=>{
@@ -21211,6 +21244,62 @@ function _b64uToBytes(s){
   return out;
 }
 function _pushStatus(msg){ const el = document.getElementById('pushStatus'); if(el) el.textContent = msg || ''; }
+/* Twee schakelaars, één abonnement. De voorkeuren reizen mee naar de server,
+   die per melding kijkt wie hem wil. Staan ze allebei uit, dan wordt het
+   abonnement opgezegd. De oude ene schakelaar (pushOn) blijft bestaan als
+   hoofdstand: aan zodra er één van de twee aanstaat. */
+/* Hoe vaak je iets over spoilers hoort. De lijst staat in DOM-volgorde, en
+   .otag-pop is column-reverse: wat hier EERST staat, staat in beeld
+   ONDERAAN -- bij de duim. Vandaar: elke kaart, dan 5, dan 10, dan uit. */
+const SPOIL_EVERY_CHOICES = [1, 5, 10, 0];
+function spoilEveryLabel(v){
+  const NL = appLang() === 'nl';
+  if(!v) return NL ? 'Geen meldingen' : 'No alerts';
+  if(v === 1) return NL ? 'Elke kaart' : 'Every card';
+  return NL ? ('Per ' + v + ' kaarten') : ('Every ' + v + ' cards');
+}
+function normSpoilEvery(v){
+  const n = parseInt(v, 10);
+  return SPOIL_EVERY_CHOICES.indexOf(n) > -1 ? n : 5;
+}
+function pushPrefs(){
+  let sp = null, up = null, ev = null;
+  try{
+    sp = localStorage.getItem(LS_PREFIX+'pushSpoilers');
+    up = localStorage.getItem(LS_PREFIX+'pushUpdates');
+    ev = localStorage.getItem(LS_PREFIX+'pushSpoilEvery');
+  }catch(e){}
+  if(sp === null && up === null){
+    let oud = null;
+    try{ oud = localStorage.getItem(LS_PREFIX+'pushOn'); }catch(e){}
+    const aan = oud === '1';          // de oude schakelaar dekte allebei
+    return { spoilers: aan, updates: aan, spoilerEvery: aan ? 5 : 0 };
+  }
+  const spoilers = sp === '1';
+  // Wie eerder alleen aan/uit kende, valt op de oude stand terug: per 5.
+  const every = ev === null ? (spoilers ? 5 : 0) : normSpoilEvery(ev);
+  return { spoilers: every > 0, updates: up === '1', spoilerEvery: every };
+}
+function savePushPrefs(p){
+  const every = normSpoilEvery(p.spoilerEvery != null ? p.spoilerEvery : (p.spoilers ? 5 : 0));
+  try{
+    localStorage.setItem(LS_PREFIX+'pushSpoilEvery', String(every));
+    localStorage.setItem(LS_PREFIX+'pushSpoilers', every > 0 ? '1' : '0');
+    localStorage.setItem(LS_PREFIX+'pushUpdates', p.updates ? '1' : '0');
+    localStorage.setItem(LS_PREFIX+'pushOn', (every > 0 || p.updates) ? '1' : '0');
+  }catch(e){}
+}
+function _pushOnMsg(p){
+  const NL = appLang() === 'nl';
+  const stukken = [];
+  const every = normSpoilEvery(p.spoilerEvery != null ? p.spoilerEvery : (p.spoilers ? 5 : 0));
+  if(every === 1) stukken.push(NL ? 'elke gespoilde kaart' : 'every spoiled card');
+  else if(every > 1) stukken.push(NL ? ('spoilers per ' + every) : ('spoilers every ' + every));
+  if(p.updates) stukken.push(NL ? 'app-updates' : 'app updates');
+  if(!stukken.length) return NL ? 'Uit.' : 'Off.';
+  const lijst = stukken.length === 2 ? stukken.join(NL ? ' en ' : ' and ') : stukken[0];
+  return (NL ? '\u2713 Aan \u2014 ' : '\u2713 On \u2014 ') + lijst + '.';
+}
 /* Why push is off. Android's WebView -- what the Deckhand APK runs on -- has no
    Push API at all, so the honest answer there is not "your phone can't do this"
    but "this wrapper can't, the browser version can". */
@@ -21250,19 +21339,23 @@ async function enableNativeNotify(){
     n.setEnabled(true);
     try{ localStorage.setItem(LS_PREFIX+'pushOn', '1'); }catch(e){}
     _pushStatus(_nativeOnMsg());
-    // Android 13+ shows its own permission sheet; report the outcome honestly.
-    setTimeout(()=>{
-      try{
-        if(n.permissionGranted && !n.permissionGranted()){
-          _pushStatus(NL
-            ? '\u26a0 Meldingen staan nog uit voor Deckhand \u2014 zet ze aan bij Instellingen \u2192 Apps \u2192 Deckhand \u2192 Meldingen.'
-            : '\u26a0 Notifications are still off for Deckhand \u2014 turn them on in Settings \u2192 Apps \u2192 Deckhand \u2192 Notifications.');
-        }
-      }catch(e){}
-    }, 2500);
+    _nativePermCheck(n);
   }catch(e){
     _pushStatus((NL ? 'Aanzetten mislukt: ' : 'Could not enable: ') + (e && e.message || e));
   }
+}
+/* Android 13+ shows its own permission sheet; report the outcome honestly. */
+function _nativePermCheck(n){
+  const NL = appLang() === 'nl';
+  setTimeout(()=>{
+    try{
+      if(n.permissionGranted && !n.permissionGranted()){
+        _pushStatus(NL
+          ? '\u26a0 Meldingen staan nog uit voor Deckhand \u2014 zet ze aan bij Instellingen \u2192 Apps \u2192 Deckhand \u2192 Meldingen.'
+          : '\u26a0 Notifications are still off for Deckhand \u2014 turn them on in Settings \u2192 Apps \u2192 Deckhand \u2192 Notifications.');
+      }
+    }catch(e){}
+  }, 2500);
 }
 function disableNativeNotify(){
   const n = nativeNotify();
@@ -21272,53 +21365,100 @@ function disableNativeNotify(){
 }
 /* The verdict belongs on screen the moment Extras opens, not only after a tap.
    Three cases: the app's own lane, a browser that can push, and neither. */
+/* De app-laan (de Android-schil) kent de twee lanen en de spoilerfrequentie
+   sinds APK 3.3. Een oudere schil kent alleen setEnabled; dan valt alles
+   terug op \u00e9\u00e9n schakelaar. */
+function applyNativePrefs(p){
+  const n = nativeNotify();
+  if(!n) return;
+  try{ n.setLang(appLang()); }catch(e){}
+  let gesplitst = false;
+  try{
+    if(typeof n.setSpoilerEvery === 'function' && typeof n.setUpdates === 'function'){
+      n.setSpoilerEvery(normSpoilEvery(p.spoilerEvery));
+      n.setUpdates(!!p.updates);
+      gesplitst = true;
+    }
+  }catch(e){}
+  if(gesplitst){
+    try{ localStorage.setItem(LS_PREFIX+'pushOn', (p.spoilerEvery > 0 || p.updates) ? '1' : '0'); }catch(e){}
+    _pushStatus((p.spoilerEvery > 0 || p.updates) ? _nativeOnMsg() : (appLang()==='nl' ? 'Uit.' : 'Off.'));
+    // Android 13+ shows its own permission sheet; report the outcome honestly.
+    if(p.spoilerEvery > 0 || p.updates) _nativePermCheck(n);
+    return;
+  }
+  (p.spoilerEvery > 0 || p.updates) ? enableNativeNotify() : disableNativeNotify();
+}
 function paintPushAvailability(){
-  const t = document.getElementById('pushToggle');
-  if(!t) return;
+  const sb = document.getElementById('pushSpoilBtn');
+  const up = document.getElementById('pushUpdToggle');
+  if(!sb && !up) return;
+  const p = pushPrefs();
+  const zetKnop = (v)=>{ if(sb) sb.innerHTML = `${escapeHtml(spoilEveryLabel(v))} <span style="float:right;opacity:0.6;">▾</span>`; };
   const nat = nativeNotify();
   if(nat){
-    let on = false;
-    try{ on = !!nat.isEnabled(); }catch(e){}
+    let every = null, upd = null;
+    try{ if(typeof nat.getSpoilerEvery === 'function') every = nat.getSpoilerEvery(); }catch(e){}
+    try{ if(typeof nat.getUpdates === 'function') upd = nat.getUpdates(); }catch(e){}
     try{ nat.setLang(appLang()); }catch(e){}
-    t.disabled = false; t.checked = on;
-    _pushStatus(on ? _nativeOnMsg() : '');
+    if(every == null || upd == null){
+      // Oude schil: \u00e9\u00e9n schakelaar voor alles.
+      let on = false;
+      try{ on = !!nat.isEnabled(); }catch(e){}
+      every = on ? (p.spoilerEvery || 5) : 0;
+      upd = on;
+    }
+    zetKnop(normSpoilEvery(every));
+    if(up){ up.disabled = false; up.checked = !!upd; }
+    _pushStatus((every > 0 || upd) ? _nativeOnMsg() : '');
     return;
   }
   if(!('serviceWorker' in navigator) || !('PushManager' in window)){
-    t.checked = false; t.disabled = true;
-    t.closest('.settings-row')?.style.setProperty('opacity', '0.75');
+    if(sb){ sb.disabled = true; sb.closest('.settings-row')?.style.setProperty('opacity', '0.75'); }
+    if(up){ up.checked = false; up.disabled = true;
+      up.closest('.settings-row')?.style.setProperty('opacity', '0.75'); }
+    zetKnop(0);
     _pushStatus(_pushUnavailableMsg());
     return;
   }
   // A browser that already carries a subscription should say so on arrival,
   // not stay blank until the next tap.
-  let saved = null;
-  try{ saved = localStorage.getItem(LS_PREFIX+'pushOn'); }catch(e){}
-  if(saved === '1'){
-    t.checked = true;
-    _pushStatus(appLang() === 'nl' ? '\u2713 Aan \u2014 dagelijkse controle op nieuwe sets.' : '\u2713 On \u2014 daily check for new sets.');
-  }
+  zetKnop(p.spoilerEvery);
+  if(up) up.checked = p.updates;
+  if(p.spoilers || p.updates) _pushStatus(_pushOnMsg(p));
 }
-async function enableSpoilerPush(){
+async function syncPushPrefs(p){
   const NL = appLang() === 'nl';
+  p = Object.assign({}, p, { spoilerEvery: normSpoilEvery(p.spoilerEvery) });
+  p.spoilers = p.spoilerEvery > 0;
+  // Wat je koos wordt METEEN bewaard, ook als het aanmelden daarna misgaat:
+  // de knop hoort te tonen wat je gevraagd hebt, en de statusregel zegt het
+  // eerlijk als de server het niet heeft meegekregen.
+  savePushPrefs(p);
+  if(!p.spoilers && !p.updates){ await unsubscribePush(); return; }
   try{
-    if(!('serviceWorker' in navigator) || !('PushManager' in window)){ _pushStatus(_pushUnavailableMsg()); const t = document.getElementById('pushToggle'); if(t){ t.checked = false; t.disabled = true; } return; }
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)){ _pushStatus(_pushUnavailableMsg()); paintPushAvailability(); return; }
     const perm = await Notification.requestPermission();
-    if(perm !== 'granted'){ _pushStatus(NL ? 'Toestemming geweigerd \u2014 zet meldingen aan in Android-instellingen.' : 'Permission denied \u2014 allow notifications in Android settings.'); const t = document.getElementById('pushToggle'); if(t) t.checked = false; return; }
+    if(perm !== 'granted'){
+      _pushStatus(NL ? 'Toestemming geweigerd \u2014 zet meldingen aan in Android-instellingen.' : 'Permission denied \u2014 allow notifications in Android settings.');
+      savePushPrefs({ spoilers:false, updates:false, spoilerEvery:0 }); paintPushAvailability(); return;
+    }
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
     if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64uToBytes(VAPID_PUBLIC_KEY) });
-    // The server writes its notifications in the language chosen here.
-    const r = await fetch('/.netlify/functions/push-subscribe', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(Object.assign(JSON.parse(JSON.stringify(sub)), { lang: appLang() })) });
+    // Language AND the two switches travel with the subscription: the server
+    // decides per notification who wants it.
+    const r = await fetch('/.netlify/functions/push-subscribe', { method: 'POST', headers: {'content-type':'application/json'},
+      body: JSON.stringify(Object.assign(JSON.parse(JSON.stringify(sub)), { lang: appLang(),
+        spoilers: normSpoilEvery(p.spoilerEvery) > 0, spoilerEvery: normSpoilEvery(p.spoilerEvery), updates: !!p.updates })) });
     if(!r.ok) throw new Error('subscribe ' + r.status);
-    try{ localStorage.setItem(LS_PREFIX+'pushOn', '1'); }catch(e){}
-    _pushStatus(NL ? '\u2713 Aan \u2014 dagelijkse controle op nieuwe sets.' : '\u2713 On \u2014 daily check for new sets.');
+    _pushStatus(_pushOnMsg(p));
   }catch(e){
     _pushStatus((NL ? 'Aanzetten mislukt: ' : 'Could not enable: ') + (e && e.message || e));
-    const t = document.getElementById('pushToggle'); if(t) t.checked = false;
+    paintPushAvailability();
   }
 }
-async function disableSpoilerPush(){
+async function unsubscribePush(){
   const NL = appLang() === 'nl';
   try{
     const reg = await navigator.serviceWorker.ready;
@@ -21328,7 +21468,6 @@ async function disableSpoilerPush(){
       await sub.unsubscribe();
     }
   }catch(e){}
-  try{ localStorage.setItem(LS_PREFIX+'pushOn', '0'); }catch(e){}
   _pushStatus(NL ? 'Uit.' : 'Off.');
 }
 /* ---- Android share sheet → Deckhand (share_target, v2.51.589) ----
