@@ -83,11 +83,11 @@ export default async () => {
         const bulletsFor = (lang)=>(((v.notes && v.notes[lang]) || (v.notes && v.notes.nl) || [])
           .slice(0, 3).map(x => '• ' + x).join('\n'));
         const r = await pushToAll((lang)=>lang === 'en' ? {
-          title: '⚓ Deckhand updated — v' + v.version,
+          title: 'Deckhand Update — v' + v.version,
           body: bulletsFor('en') || 'Open the app to see what changed.',
           url: './'
         } : {
-          title: '⚓ Deckhand bijgewerkt — v' + v.version,
+          title: 'Deckhand Update — v' + v.version,
           body: bulletsFor('nl') || 'Open de app voor de details.',
           url: './'
         });
