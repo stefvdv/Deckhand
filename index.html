@@ -328,6 +328,15 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 /* Inspiration: the dropdown stack rides at the bottom too, and its menus
    open UPWARD — drop-ups, away from the thumb and the nav. */
 .app > main > .browse-selects{order:99;}
+/* A drop-up is a sheet, not a hover: while one is open on the Inspiration
+   or Browse page, the feed, the Week/Month/Year row and the commander grid
+   behind it are hidden. They kept showing through the gaps and made the
+   list unreadable. The selects and the search bar stay, so the page still
+   reads as itself. */
+.app > main.cs-open > *:not(.browse-selects):not(.searchbar):not(.adv-panel):not(#colAdvBox):not(#advSlot){
+  visibility:hidden;
+}
+.app > main.cs-open > .browse-selects{background:var(--ink);}
 .app > main > #inspireResults{order:95;}
 .app > main:has(> #inspireResults) > .hint{order:98;}
 .app > main > .browse-hero{order:98;margin:10px 0 14px;}
@@ -2302,6 +2311,26 @@ function cselectHtml(id, options, value, placeholder, o){
 /* Inspiration drop-ups: each panel opens upward from its own button, so the
    room it has differs per select. Size the open panel to reach just under
    the page cap, then keep the foot (most popular) in view. */
+/* The open filter sheet must rest ON the bar stack underneath it -- the
+   search row and its Advanced toggle -- instead of floating a fixed 120px
+   above the nav and leaving a strip of page showing through. Measured live,
+   because the stack is one bar on some pages and two on others. */
+function csFitSheetFoot(){
+  try{
+    document.querySelectorAll('.adv-panel, #colAdvBox').forEach(sheet=>{
+      if(getComputedStyle(sheet).position !== 'fixed') return;
+      const m = sheet.closest('main') || document;
+      // Everything that is pinned to the foot below the sheet.
+      const bars = Array.from(m.querySelectorAll('.searchbar, .adv-toggle, div:has(> #colAdvToggle), div:has(> #deckFilter)'))
+        .filter(el=>el !== sheet && !sheet.contains(el) && getComputedStyle(el).position === 'sticky' || getComputedStyle(el).position === 'fixed');
+      let top = null;
+      bars.forEach(el=>{ const t = el.getBoundingClientRect().top; if(t > 0 && (top === null || t < top)) top = t; });
+      if(top === null) return;
+      const gap = Math.max(0, Math.round(innerHeight - top));
+      sheet.style.bottom = gap + 'px';
+    });
+  }catch(e){}
+}
 function csFitBrowsePanel(){
   try{
     const p = document.querySelector('.browse-selects .cselect-panel.cs-artgrid');
@@ -2346,21 +2375,27 @@ function csRerender(){
   const dpPick = document.querySelector('#deckPickScrim #recoColorPick');
   if(dpPick && dpPick._paint){ try{ dpPick._paint(); }catch(e){} }
   csFitBrowsePanel();
+  csFitSheetFoot();
+  try{
+    const m = document.querySelector('.app > main');
+    if(m) m.classList.toggle('cs-open', !!state.openCSelect);
+  }catch(e){}
 }
 function wireCSelects(){
   document.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', e=>{
     e.stopPropagation();
-    state.openCSelect = state.openCSelect === b.dataset.cs ? null : b.dataset.cs;
-    csRerender();
+    const csId = b.dataset.cs;
+    // The button you tapped keeps its place on screen while the page is
+    // rebuilt around it — the list opens upward, nothing springs.
+    keepAnchored(b, ()=>{
+      state.openCSelect = state.openCSelect === csId ? null : csId;
+      csRerender();
+    }, ()=>{ try{ return document.querySelector('[data-cs="' + CSS.escape(csId) + '"]'); }catch(err){ return null; } });
     // Inside a scrolling filter sheet the panel opens UPWARD -- nudge the
     // sheet so the freshly opened panel is actually in view. Only sheet
     // panels match this selector, so nothing else ever moves.
-    if(state.openCSelect === b.dataset.cs){
-      try{
-        const p = document.querySelector('.adv-panel .cselect-panel, #colAdvBox .cselect-panel');
-        if(p) p.scrollIntoView({block:'nearest'});
-      }catch(e){}
-    }
+    // (The sheet panels used to be scrolled into view here; that scroll WAS
+    //  the jump. The anchor above already keeps them in sight.)
   }));
   document.querySelectorAll('[data-csopt]').forEach(opt=>opt.addEventListener('click', e=>{
     e.stopPropagation();
@@ -4716,15 +4751,19 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.614';
+const APP_VERSION = '2.51.615';
 const CHANGELOG_NOTES = {
   en: [
-    'The back button works properly in the Android app again: it closes the open sheet or steps back a page, and only asks \u2014 with a warning first \u2014 when you are already home.',
-    'Opening Tags on a card no longer flings the whole tag list open: the tap that opened the box can no longer land in the input behind it.'
+    'Opening a drop-up in the filters no longer moves the page: the button you tapped keeps its place and the list opens upward around it.',
+    'While a drop-up is open, the page behind it \u2014 the feed, the Week/Month/Year row, the commander grid \u2014 is hidden instead of showing through.',
+    'Every filter sheet now rests directly on the bar below it, with no strip of page left showing between them.',
+    'Leader names are resolved from the database on your phone first, and a refused request is no longer split into a flood of one-name queries \u2014 which is why some Kindred pages came up empty.'
   ],
   nl: [
-    'De terugknop werkt weer goed in de Android-app: hij sluit het open blad of gaat een pagina terug, en pas op de thuispagina vraagt hij \u2014 met een waarschuwing vooraf \u2014 om afsluiten.',
-    'Tags openen op een kaart klapt niet meer meteen de hele taglijst uit: de tik waarmee je het vak opent kan niet langer in het invoerveld erachter landen.'
+    'Een drop-up openen in de filters verschuift de pagina niet meer: de knop die je aanraakt blijft staan en de lijst opent naar boven eromheen.',
+    'Zolang een drop-up openstaat is de pagina erachter \u2014 de feed, de Week/Maand/Jaar-rij, het commanderraster \u2014 verborgen in plaats van dat hij doorschijnt.',
+    'Elk filterpaneel rust nu direct op de balk eronder, zonder strook pagina ertussen.',
+    'Namen van leiders komen eerst uit de database op je telefoon, en een geweigerde aanvraag wordt niet meer opgesplitst in een stortvloed van losse vragen \u2014 daardoor bleven sommige Kindred-pagina\u2019s leeg.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5712,6 +5751,7 @@ function render(){
     _firstPaintDone = true;
     try{
       try{ paintPendingArt(); }catch(e){}
+      try{ csFitSheetFoot(); }catch(e){}
   try{ if(!_bootRenderMs) _bootRenderMs = Math.round(performance.now()); }catch(e){}
   requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(appReady, 120)));
     }catch(e){ appReady(); }
@@ -7419,6 +7459,7 @@ function wireCollectionPage(){
     if(t) t.innerHTML = 'Advanced filter ' + (state.colAdvOpen ? '▴' : '▾');
     const cv = document.getElementById('colChev');
     if(cv) cv.textContent = state.colAdvOpen ? '▴' : '▾';
+    try{ csFitSheetFoot(); }catch(e){}   // the sheet rests ON the bar below it
   });
   _csHandlers['colSet'] = v=>{ state.colFilter.set = v; csRerender(); };
   _csHandlers['colCM'] = v=>{ state.colFilter.colorMode = v; csRerender(); };
@@ -12454,6 +12495,7 @@ function wireSearchPage(){
     if(!slot) return;
     slot.innerHTML = state.advOpen ? advancedPanelHtml() : '';
     if(state.advOpen){ wireAdvancedPanel(); scrollToPageFoot(); }   // open showing the BOTTOM of the menu
+    try{ csFitSheetFoot(); }catch(e){}
     // The Random Card steps aside while the filter menu is open, so the
     // menu sits right at the page foot by the search bar.
     const cotd = document.getElementById('cotdBox');
@@ -17996,16 +18038,50 @@ async function resolveNameChunk(chunk){
   const clause = '(' + chunk.flatMap(n=>[exactNameClause(n), 'name:"' + n.replace(/"/g,'') + '"']).join(' or ') + ')';
   const { results, error } = await searchAndVerifyLegal(clause, 'edhrec', 100).catch(()=>({results:[], error:true}));
   if(!error || chunk.length <= 2) return results || [];
+  // Splitting is for a query the SERVER choked on -- too long, too complex.
+  // A line that refused the request refuses both halves too, and the split
+  // doubles the traffic each round: measured on Stef's phone as dozens of
+  // single-name queries, each retried, none of them ever going to succeed.
+  // Nothing is asked twice for the same failure any more.
+  if(error !== 'badquery'){
+    try{ sfJournal('names: line refused ' + chunk.length + ' names \u2014 not splitting'); }catch(e){}
+    return results || [];
+  }
   const mid = Math.ceil(chunk.length/2);
   const halves = await Promise.all([resolveNameChunk(chunk.slice(0,mid)), resolveNameChunk(chunk.slice(mid))]);
   return halves.flat();
 }
+/* The names this phone can answer by itself. The weekly database holds every
+   card with its Commander legality, so a list of leader names does not need
+   the network at all -- and whatever it cannot place is all that is asked. */
+function namesFromLocalDb(names){
+  const out = new Map();
+  if(!isCmdrMode()) return out;                 // Admiral legality is set-pool bound
+  let ix = null;
+  try{ ix = _bulkIdx; }catch(e){}
+  if(!ix || !ix.byName) return out;
+  names.forEach(n=>{
+    const bc = ix.byName.get(String(n).toLowerCase());
+    if(!bc || (bc.lg && bc.lg === 'not_legal')) return;
+    const c = bulkToCardish(bc);
+    if(c) out.set(n, c);
+  });
+  return out;
+}
 async function namesToLegalCards(names){
   // The batch endpoint takes up to 75 identifiers per POST — big chunks in
   // Commander mode; the search path keeps its small ones in Admiral mode.
-  const chunks = chunkArr(names.slice(0, 600), isCmdrMode() ? 70 : 10);
-  const settled = await Promise.all(chunks.map(resolveNameChunk));
+  const wanted = names.slice(0, 600);
+  // The phone first: every name the local database knows costs no request,
+  // works offline, and keeps the list short enough that Scryfall never has
+  // reason to refuse it.
+  const local = namesFromLocalDb(wanted);
+  const askFor = wanted.filter(n=>!local.has(n));
+  try{ if(local.size) sfJournal('names: ' + local.size + ' from the local database, ' + askFor.length + ' asked'); }catch(e){}
+  const chunks = chunkArr(askFor, isCmdrMode() ? 70 : 10);
+  const settled = chunks.length ? await Promise.all(chunks.map(resolveNameChunk)) : [];
   const byName = new Map();
+  local.forEach((c, n)=>{ byName.set(n, c); if(c.name && !byName.has(c.name)) byName.set(c.name, c); });
   settled.flat().forEach(c=>{
     if(!byName.has(c.name)) byName.set(c.name, c);
     // Double-faced cards: EDHREC lists carry the FRONT face's name while
