@@ -35,11 +35,18 @@
      st set code            cn  collector_number
      sn set_name            r   rarity
      lg legalities.commander ('legal' | 'banned' | 'not_legal' | 'restricted')
+     lx the other formats, one letter each in the order of LX_FORMATS
+        (standard, pauper, modern, legacy, vintage, paupercommander, duel,
+        predh, premodern): l legal, b banned, r restricted, n not legal --
+        e.g. "nllllnlnn". Lets the phone judge those decks, and filter the
+        collection and search by them, offline -- like it already does
+        Commander with lg.
      eur cheapest of prices.eur / eur_foil   eurf prices.eur_foil
      rk edhrec_rank         gc  1 when game_changer
      f  card_faces, each {name, mc, tl, ot, c, pw, tg}
    ============================================================ */
 import { createGunzip, createGzip, gunzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { writeFile, readFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
@@ -178,6 +185,7 @@ export function trimCard(c){
   if(c.set_name) o.sn = c.set_name;
   if(c.rarity) o.r = c.rarity;
   if(c.legalities && c.legalities.commander) o.lg = c.legalities.commander;
+  if(c.legalities){ const lx = legalityLetters(c.legalities); if(lx) o.lx = lx; }
   if(cheapest != null && !Number.isNaN(cheapest)) o.eur = cheapest;
   if(eurf != null && !Number.isNaN(eurf)) o.eurf = eurf;
   if(c.edhrec_rank) o.rk = c.edhrec_rank;
@@ -186,6 +194,14 @@ export function trimCard(c){
   return o;
 }
 
+/* The constructed formats the app builds, in the fixed order of the lx field. */
+export const LX_FORMATS = ['standard', 'pauper', 'modern', 'legacy', 'vintage', 'paupercommander', 'duel', 'predh', 'premodern'];
+const LX_LETTER = { legal: 'l', banned: 'b', restricted: 'r', not_legal: 'n' };
+export function legalityLetters(leg){
+  if(!leg) return '';
+  const s = LX_FORMATS.map(f=>LX_LETTER[leg[f]] || 'n').join('');
+  return /^n+$/.test(s) ? '' : s;   // never legal anywhere: leave the field out
+}
 /* Only the tags the app actually consults — everything else is trimmed. */
 export const APP_TAGS = new Set(['removal','creature-removal','artifact-removal','enchantment-removal','planeswalker-removal','spot-removal','boardwipe','edict','bounce','tuck','bite','burn','counterspell','threaten','sacrifice-outlet','stifle','ramp','mana-rock','mana-dork','ritual','land-ramp','mana-doubler','mana-sink','untapper','lands-matter','cheat-into-play','draw','cantrip','card-advantage','wheel','impulse','rummage','tutor','peek','draw-engine','mill','self-mill','discard','reanimate','recursion','regrowth','graveyard-hate','token-doubler','anthem','overrun','counters-matter','counter-doubler','protection','fog','prevent-damage','lifegain','tax','hatebear','silence','rule-of-law','pillowfort','damage-doubler','extra-combat','extra-attack','evasion','unblockable','lure','attack-trigger','combat-trick','blink','flicker','clone','copy-spell','copy-permanent','copy-trigger','death-trigger','cast-trigger','group-hug','group-slug','voting','donate','extra-turn','removal-exile','removal-fight','removal-sacrifice','removal-toughness','removal-land','removal-permanent','mass-land-denial','mass-shrink','theft','theft-permanent','repeatable-token-generator','repeatable-creature-tokens','repeatable-artifact-tokens','repeatable-treasures','repeatable-clues','repeatable-food','repeatable-blood','repeatable-gold','affinity-for-tokens','creates-token-of-a-card','counter-fuel','counter-fuel-pt','counter-fuel-any','counter-fuel-energy','counter-fuel-loyalty','tutor-creature','tutor-artifact','tutor-land','tutor-enchantment','tutor-instant','tutor-sorcery','tutor-planeswalker','tutor-battle','tutor-legendary','tutor-color','gives-flying','gives-haste','gives-trample','gives-deathtouch','gives-lifelink','gives-menace','gives-hexproof','gives-indestructible','gives-first-strike','gives-double-strike','gives-vigilance','gives-flash','gives-evasion','gives-unblockable','gives-protection','gives-reach','repeatable-draw','repeatable-card-advantage','repeatable-impulse','repeatable-loot','repeatable-rummage','draw-matters','draw-to-seven','discard-outlet','discard-symmetrical','discard-matters','brainstorm','mana-fix','mana-filter','mana-increaser','mana-producer','mana-storage','utility-land','cost-reducer','cost-reducer-instant-sorcery','cost-reducer-creature','cost-reducer-artifact','free-cast-another','extra-land','extra-untap','extra-combat-phase','extra-draw-step','mana-value-matters','mass-reanimation','reanimate-creature','reanimate-from-any','leaving-graveyard-matters','castable-from-graveyard','sacrifice-matters','opponent-sacrifices','opponent-sacrifice-matters','mutual-sacrifice','free-sacrifice-outlet','repeatable-sacrifice-outlet','opponent-loses-life','life-loss-matters','lifegain-matters','opponent-lifegain','cards-in-exile-matter','castable-from-exile','storm-like','storm-count-matters','magecraft','landfall','land-count-matters','hand-size-matters','monarch-matters','sacrifice-outlet-creature','sacrifice-outlet-artifact','alternate-win-condition','lose-trigger','prevents-win-loss']);
 /* The Oracle Tags bulk file turned out to be a DICTIONARY — 4,500+ rows
@@ -295,8 +311,50 @@ export function groupRuling(map, r){
   a.push({ d: r.published_at || '', c: r.comment });
 }
 
+/* Writes the file and returns a fingerprint of its CONTENT (not of the gzip,
+   whose bytes drift with the compressor). A rebuild that produces the same
+   data keeps the same fingerprint, so its stamp does not move and no phone
+   downloads it again. */
 async function writeJsonlGz(path, lines){
-  await pipeline(Readable.from(lines), createGzip({ level: 9 }), createWriteStream(path));
+  const h = createHash('sha1');
+  const tapped = (function*(){ for(const l of lines){ h.update(l); yield l; } })();
+  await pipeline(Readable.from(tapped), createGzip({ level: 9 }), createWriteStream(path));
+  return h.digest('hex');
+}
+
+/* ---- what has to be rebuilt this run ----
+   Card data and combos change with every set, so they run weekly. Rulings and
+   the function tags barely move, and the tags alone cost ~150 polite searches
+   at Scryfall -- by far the longest part of the job. Those run monthly.
+   Legality is not in this list at all: it comes from format.txt, from the
+   official ban list the app fetches itself every 24 hours, and from the
+   legality field inside the card file. It never waited on this build. */
+const MONTHLY_DAYS = 28;
+const NOW_ISO = new Date().toISOString();
+
+async function readPrevMeta(){
+  try{ return JSON.parse(await readFile(`${OUT_DIR}/bulk-meta.json`, 'utf-8')); }
+  catch(e){ return null; }
+}
+async function fileExists(p){
+  try{ await readFile(p); return true; }catch(e){ return false; }
+}
+/* Due when: forced, never built, the previous file is gone, or the stamp is
+   older than a month. Anything unclear counts as due -- the cheap mistake is
+   rebuilding something that did not need it. */
+export function monthlyDue(prevSection, fileThere, force, now){
+  if(force) return true;
+  if(!fileThere) return true;
+  const built = prevSection && prevSection.built;
+  if(!built) return true;
+  const age = ((now || Date.now()) - Date.parse(built)) / 86400000;
+  if(!isFinite(age) || age < 0) return true;
+  return age >= MONTHLY_DAYS;
+}
+/* The stamp only advances when the fingerprint changed. */
+export function stampOf(prevSection, sha, extra, now){
+  const kept = prevSection && prevSection.sha === sha && prevSection.built;
+  return Object.assign({ sha, built: kept || (now || NOW_ISO) }, extra || {});
 }
 
 /* ---- the daily price file ----
@@ -365,6 +423,12 @@ async function buildPrices(){
 
 /* ---- main ---- */
 async function main(){
+  const prev = await readPrevMeta();
+  const forceAll = !!process.env.BULK_FORCE_ALL;
+  const rulingsDue = monthlyDue(prev && prev.rulings, await fileExists(`${OUT_DIR}/rulings-slim.jsonl.gz`), forceAll);
+  const tagsDue    = monthlyDue(prev && prev.tags,    await fileExists(`${OUT_DIR}/tags-slim.jsonl.gz`),    forceAll);
+  console.log(`This run: cards + combos always; rulings ${rulingsDue ? 'YES' : 'no (monthly, not due)'}; function tags ${tagsDue ? 'YES' : 'no (monthly, not due)'}.`);
+
   console.log('Fetching bulk-data index…');
   const idx = await bulkIndex();
   const oracleUrl  = requireDownloadUrl(idx.oracle_cards, 'Oracle Cards');
@@ -382,29 +446,39 @@ async function main(){
     oracleCount++;
   }
   if(oracleCount < 25000) throw new Error(`Sanity check failed: only ${oracleCount} oracle cards — refusing to publish a broken file.`);
-  await writeJsonlGz(`${OUT_DIR}/oracle-slim.jsonl.gz`, oracleOut);
+  const oracleSha = await writeJsonlGz(`${OUT_DIR}/oracle-slim.jsonl.gz`, oracleOut);
   console.log(`oracle-slim.jsonl.gz: ${oracleCount} cards (${skipped} skipped)`);
 
-  // Rulings — group by oracle_id, write
-  const rmap = new Map();
-  let rulingCount = 0;
-  for await (const r of bulkLines(rulingsUrl)){
-    groupRuling(rmap, r);
-    rulingCount++;
+  // Rulings — group by oracle_id, write. Monthly: a card's official rulings
+  // are written once, when it is printed, and then almost never touched.
+  let rulingsSection = prev && prev.rulings;
+  if(!rulingsDue){
+    console.log('rulings-slim.jsonl.gz: kept (last built ' + (rulingsSection && rulingsSection.built) + ')');
+  }else{
+    const rmap = new Map();
+    let rulingCount = 0;
+    for await (const r of bulkLines(rulingsUrl)){
+      groupRuling(rmap, r);
+      rulingCount++;
+    }
+    if(rulingCount < 20000) throw new Error(`Sanity check failed: only ${rulingCount} rulings — refusing to publish a broken file.`);
+    const rulingLines = (function*(){
+      for(const [oid, arr] of rmap) yield JSON.stringify({ o: oid, r: arr }) + '\n';
+    })();
+    const sha = await writeJsonlGz(`${OUT_DIR}/rulings-slim.jsonl.gz`, rulingLines);
+    rulingsSection = stampOf(prev && prev.rulings, sha,
+      { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at });
+    console.log(`rulings-slim.jsonl.gz: ${rulingCount} rulings on ${rmap.size} cards`);
   }
-  if(rulingCount < 20000) throw new Error(`Sanity check failed: only ${rulingCount} rulings — refusing to publish a broken file.`);
-  const rulingLines = (function*(){
-    for(const [oid, arr] of rmap) yield JSON.stringify({ o: oid, r: arr }) + '\n';
-  })();
-  await writeJsonlGz(`${OUT_DIR}/rulings-slim.jsonl.gz`, rulingLines);
-  console.log(`rulings-slim.jsonl.gz: ${rulingCount} rulings on ${rmap.size} cards`);
 
   // Oracle Tags, part 1: the DICTIONARY — every tag Scryfall knows, with
   // its description, published as browsable tags-index.json. Optional;
   // problems here never sink the job.
-  let tagIndexCount = 0;
+  let tagIndexCount = (prev && prev.tags && prev.tags.index) || 0;
   try{
-    if(!idx._tags){
+    if(!tagsDue){
+      console.log('tags-index.json: kept (monthly, not due)');
+    }else if(!idx._tags){
       console.log('No oracle_tags entry in the bulk index — skipping the tag dictionary.');
     }else{
       const tagsUrl = requireDownloadUrl(idx._tags, 'Oracle Tags');
@@ -424,9 +498,14 @@ async function main(){
   }
 
   // Oracle Tags, part 2: MEMBERSHIPS — one paged search per app tag, from
-  // this one machine, weekly. The phones never interrogate again.
-  let tagCards = 0;
-  try{
+  // this one machine. This is the expensive part: ~150 paged searches, most of
+  // the job's half hour. Monthly, because a printed card's function does not
+  // change; only new cards need tagging, and they arrive with their set.
+  let tagsSection = prev && prev.tags;
+  let tagCards = (tagsSection && tagsSection.cards) || 0;
+  if(!tagsDue){
+    console.log('tags-slim.jsonl.gz: kept (last built ' + (tagsSection && tagsSection.built) + ')');
+  }else try{
     const tmap = new Map();
     // One hour of cumulative throttle-waiting for the whole run — beyond
     // that, remaining tags pass and the ratchet below protects the data.
@@ -448,8 +527,9 @@ async function main(){
       tagCards = prevCount;
     }else{
       const lines = (function*(){ for(const [oid, g] of tmap) yield JSON.stringify({ o: oid, g: Array.from(g) }) + '\n'; })();
-      await writeJsonlGz(`${OUT_DIR}/tags-slim.jsonl.gz`, lines);
+      const sha = await writeJsonlGz(`${OUT_DIR}/tags-slim.jsonl.gz`, lines);
       tagCards = tmap.size;
+      tagsSection = stampOf(prev && prev.tags, sha, { cards: tagCards, index: tagIndexCount });
       console.log(`tags-slim.jsonl.gz: ${tagCards} tagged cards across ${APP_TAGS.size} tags`);
     }
 }catch(e){
@@ -458,7 +538,8 @@ async function main(){
 
   // Commander Spellbook combos — optional artifact; problems here never
   // sink the job. Source URLs are tried in order and self-document.
-  let comboCount = 0;
+  let comboCount = (prev && prev.combos && prev.combos.count) || 0;
+  let comboSha = null;
   try{
     // The bulk file is larger than Node's maximum string — STREAM it,
     // one variant at a time, constant memory.
@@ -496,7 +577,7 @@ async function main(){
           console.log(`Combos thinner than the previous run (${out.length} vs ${prev}) — keeping the previous file.`);
           comboCount = prev;
         }else{
-          await writeJsonlGz(`${OUT_DIR}/combos-slim.jsonl.gz`, (function*(){ for(const c of out) yield JSON.stringify(c) + '\n'; })());
+          comboSha = await writeJsonlGz(`${OUT_DIR}/combos-slim.jsonl.gz`, (function*(){ for(const c of out) yield JSON.stringify(c) + '\n'; })());
           comboCount = out.length;
           console.log(`combos-slim.jsonl.gz: ${comboCount} combos (2–4 cards, commander-legal)`);
         }
@@ -507,13 +588,19 @@ async function main(){
   }
 
   // Manifest — the app polls this tiny file to know when to refresh
+  /* Format 2: every file carries its own stamp, and a stamp only moves when
+     that file's contents actually changed. The app compares them one by one,
+     so a week in which only the card file moved costs a phone the card file
+     and nothing else. `built` at the top stays the run time, for the line in
+     Data Sources and for any older app version reading this. */
   const meta = {
-    format: 1,
-    built: new Date().toISOString(),
-    oracle:  { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at },
-    rulings: { count: rulingCount, cards: rmap.size, sourceUpdatedAt: idx.rulings.updated_at },
-    tags:    { cards: tagCards, index: tagIndexCount },
-    combos:  { count: comboCount }
+    format: 2,
+    built: NOW_ISO,
+    oracle:  stampOf(prev && prev.oracle, oracleSha, { count: oracleCount, sourceUpdatedAt: idx.oracle_cards.updated_at }),
+    rulings: rulingsSection || null,
+    tags:    tagsSection || (tagIndexCount ? { index: tagIndexCount, cards: tagCards, built: NOW_ISO } : null),
+    combos:  comboSha ? stampOf(prev && prev.combos, comboSha, { count: comboCount })
+                      : ((prev && prev.combos) || { count: comboCount, built: NOW_ISO })
   };
   await writeFile(`${OUT_DIR}/bulk-meta.json`, JSON.stringify(meta, null, 2) + '\n');
   console.log('bulk-meta.json written. Done.');
