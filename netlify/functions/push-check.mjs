@@ -96,6 +96,12 @@ function spoilerThreshold(rec){
 }
 
 export default async () => {
+  // Notifications come from the Android app only (v2.51.629). The browser
+  // lane stays in the code, switched off; DECKHAND_WEB_PUSH=on in Netlify's
+  // environment brings it back without a code change.
+  if(process.env.DECKHAND_WEB_PUSH !== 'on'){
+    return new Response('web push off: Deckhand notifications come from the Android app');
+  }
   const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
   if(!pub || !priv) return new Response('VAPID env vars missing', { status: 500 });
   webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://deckhandcompanion.netlify.app', pub, priv);
