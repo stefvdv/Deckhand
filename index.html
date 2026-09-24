@@ -1446,6 +1446,7 @@ img.art-missing::after{
 .dl-fmt-seat{line-height:1.5;font-size:13px;}
 .acc-up:not([hidden]){display:flex;flex-direction:column-reverse;}
 .acc-up [data-fmtrule] > div, .acc-up [data-banfmt] > div{display:flex;flex-direction:column-reverse;}
+input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .ub-wrap{display:flex;flex-direction:column-reverse;}
 .ub-switches{display:flex;flex-direction:column-reverse;margin:4px 0 8px;}
 .ub-switches[hidden]{display:none;}   /* bottom-up: its heading at the foot, the first set right above it */
@@ -5446,19 +5447,15 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.638';
+const APP_VERSION = '2.51.639';
 const CHANGELOG_NOTES = {
   en: [
-    'Extras: every fold closes on its own with back, the most recent first; switching page closes them all.',
-    'Admiral legal sets is now a button, like Complete rules. Fold triangles are bigger and point down when closed, up when open, everywhere in the app.',
-    'Deck count: the theme\'s colour once the minimum is reached; 60-card formats show main + sideboard (60 + 15). The format word under a 60-card deck\'s description is gone.',
-    'The \u2715 of the deck panels is visible in every theme, and more of the deck menu is in Dutch.'
+    'Search: a card the phone\'s card file does not know (like Yavimaya Hollow) is now looked up on Scryfall. The weekly card file also keeps cards that Scryfall shows through an MTGO-only printing, with their paper printing.',
+    'The typing cursor wears your colour scheme\'s secondary colour. Android app 3.8: its grab handle too.'
   ],
   nl: [
-    'Extra\'s: elke uitklap sluit apart met terug, de laatste eerst; naar een andere pagina gaan sluit ze allemaal.',
-    'Admiral legale sets is nu een knop, net als Complete rules. De uitklapdriehoekjes zijn groter en wijzen omlaag als ze dicht zijn en omhoog als ze open zijn, in de hele app.',
-    'Kaartenteller: in de themakleur zodra het minimum gehaald is; 60-kaartformats tonen main + sideboard (60 + 15). Het formatwoord onder de beschrijving van een 60-kaartdeck is weg.',
-    'De \u2715 van de deckpanelen is in elk thema zichtbaar, en meer van het deckmenu is Nederlands.'
+    'Zoeken: een kaart die het kaartbestand op je telefoon niet kent (zoals Yavimaya Hollow) wordt nu bij Scryfall opgezocht. Het wekelijkse kaartbestand houdt voortaan ook kaarten die Scryfall via een MTGO-versie toont, met hun papieren versie.',
+    'De typcursor heeft de secundaire kleur van je kleurenschema. Android-app 3.8: het sleepbolletje ook.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5951,8 +5948,15 @@ function applyTheme(){
   document.documentElement.setAttribute('data-side', g.side);
   // The browser chrome follows the ink colour of the chosen guild.
   try{ document.querySelector('meta[name="theme-color"]')?.setAttribute('content', GUILD_SWATCH[g.main][0]); }catch(e){}
+  // The typing cursor wears the SECONDARY colour of the pairing, as a tint
+  // that stands out on the fields (which are that colour's surface).
+  const caret = CARET_BY_SIDE[g.side] || CARET_BY_SIDE.U;
+  document.documentElement.style.setProperty('--caret', caret);
+  // The Android app draws the cursor's grab handle itself: tell it too.
+  try{ if(window.DeckhandNotify && typeof DeckhandNotify.setAccent === 'function') DeckhandNotify.setAccent(caret); }catch(e){}
   document.title = brandTitle();
 }
+const CARET_BY_SIDE = { W:'#8A6A1E', U:'#A6D0EE', B:'#D6D1CA', R:'#F4B6A2', G:'#B4DAB4' };
 
 function scheduleSave(deck){
   deck._saveStatus = 'saving';
@@ -14152,8 +14156,11 @@ async function runAdvancedSearch(){
   // the scroll position and shows as a flicker.
   const sameAsShown = (list)=> painted && list.length === localShown.length
                                && list.every((c, i)=>c.name === localShown[i].name);
-  // 2. Only what the snapshot CANNOT know is asked of Scryfall.
-  if(localShown){
+  // 2. Only what the snapshot CANNOT know is asked of Scryfall. When the
+  //    phone found NOTHING, the full online search runs instead: a card the
+  //    snapshot lacks (it only ever knew one printing per card) must still
+  //    be findable.
+  if(localShown && localShown.length){
     const newCodes = await newerThanBuildSets();
     if(mySeq !== _searchSeq) return;
     if(newCodes){
@@ -14178,7 +14185,7 @@ async function runAdvancedSearch(){
   if(localShown && localShown.length && (error || !results.length)) return;   // keep what the device found
   const shownRes = priceOk(results.filter(c=>landOk(c)));
   if(sameAsShown(shownRes)) return;
-  paint(shownRes, localShown ? false : error);
+  paint(shownRes, (localShown && localShown.length) ? false : error);
 }
 /* Surgical badge refresh: replace only the affected tile in place. A full
    grid rebuild for one IN DECK badge is what made the page lurch, however
