@@ -5315,21 +5315,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.632';
+const APP_VERSION = '2.51.633';
 const CHANGELOG_NOTES = {
   en: [
-    'Extras in a new order; data sources and colour scheme fold open upward.',
-    'Comprehensive Rules is a normal page with the nav bar, in Dutch too.',
-    'Saltiest Cards starts at the bottom and shows every card.',
-    'Ban lists read from the bottom up.',
-    'Long card names keep clear of the price.'
+    'Android app 3.5: the screen stays on at 75% brightness while the life counter is open.'
   ],
   nl: [
-    'Extra\u2019s in een nieuwe volgorde; databronnen en kleurenschema klappen naar boven open.',
-    'Offici\u00eble regels is een gewone pagina met navbalk, ook in het Nederlands.',
-    'Saltiest Cards begint onderaan en toont elke kaart.',
-    'Banlijsten lezen van onder naar boven.',
-    'Lange kaartnamen blijven vrij van de prijs.'
+    'Android-app 3.5: het scherm blijft aan op 75% helderheid zolang de life counter open is.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -21831,6 +21823,15 @@ function releaseWakeLock(){
   try{ if(_wakeLock) _wakeLock.release(); }catch(e){}
   _wakeLock = null;
 }
+/* The Android app has no Wake Lock API (its WebView lacks it). Since APK 3.5
+   the app itself keeps the screen on and holds this window at 75%
+   brightness -- auto-brightness left out -- only while the life counter is
+   open. An older app simply lacks the call. */
+function nativeTableMode(on){
+  try{ const n = window.DeckhandNotify; if(n && typeof n.setTableMode === 'function') n.setTableMode(!!on); }catch(e){}
+}
+// A page (re)loaded with the counter closed never inherits the table mode.
+try{ nativeTableMode(false); }catch(e){}
 document.addEventListener('visibilitychange', ()=>{
   // Browsers drop the lock when the tab is backgrounded — take it again on return
   if(document.visibilityState === 'visible' && state.lifeOpen && !_wakeLock) acquireWakeLock();
@@ -21839,9 +21840,11 @@ document.addEventListener('visibilitychange', ()=>{
 function openLifeOverlay(){
   state.lifeOpen = true;
   acquireWakeLock();
+  nativeTableMode(true);
   pushOverlay('life', ()=>{
     state.lifeOpen=false;
     releaseWakeLock();
+    nativeTableMode(false);
     // Setup modal isn't its own history entry, so tear it down with the overlay
     if(state.modal && state.modal.type==='lifeSetup') closeModal();
     document.getElementById('lifeOverlay')?.remove();
