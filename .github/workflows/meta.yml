@@ -1,0 +1,75 @@
+# Deckhand — weekly metagame for Standard, Pauper, Modern, Legacy, Vintage.
+#
+# Reads open tournament data (MTGODecklistCache) and the community's open
+# archetype rules (MTGOFormatData), both on GitHub, and writes meta.json next
+# to index.html. The app reads that file from its own site: no scraping of
+# other websites, no cross-site requests from the phone.
+#
+# Start by hand: Actions -> Weekly metagame -> Run workflow (website only).
+name: Weekly metagame
+
+on:
+  schedule:
+    - cron: '40 4 * * 2'      # Tuesdays 04:40 UTC -- after the weekend's events are in
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meta-data
+  cancel-in-progress: false
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch the last three months of tournaments
+        run: |
+          set -e
+          D15=$(date -u +%Y-%m-15)
+          M0=$(date -u -d "$D15" +%Y/%m)
+          M1=$(date -u -d "$D15 -1 month" +%Y/%m)
+          M2=$(date -u -d "$D15 -2 month" +%Y/%m)
+          git clone --depth 1 --filter=blob:none --no-checkout https://github.com/Jiliac/MTGODecklistCache.git ../MTGODecklistCache
+          cd ../MTGODecklistCache
+          git sparse-checkout init --no-cone
+          PATHS=""
+          for S in mtgo.com_limited_data melee.gg mtgo.com topdeck.gg; do
+            for M in $M2 $M1 $M0; do PATHS="$PATHS /Tournaments/$S/$M/"; done
+          done
+          git sparse-checkout set $PATHS
+          git checkout
+          du -sh Tournaments || true
+
+      - name: Fetch the archetype rules
+        run: git clone --depth 1 https://github.com/Badaro/MTGOFormatData.git ../MTGOFormatData
+
+      - name: Build meta.json
+        run: |
+          node scripts/build-meta.mjs --cache ../MTGODecklistCache --rules ../MTGOFormatData --out meta.json --days 28 --cards oracle-slim.jsonl.gz
+          ls -l meta.json
+
+      - name: Commit & push when changed
+        run: |
+          git config user.name "deckhand-bot"
+          git config user.email "deckhand-bot@users.noreply.github.com"
+          git add meta.json
+          if git diff --cached --quiet; then echo "Nothing changed."; exit 0; fi
+          git commit -m "Weekly metagame $(date -u +%Y-%m-%d)"
+          # Someone may upload a release while this runs: rebase and retry.
+          for i in 1 2 3 4 5; do
+            if git push; then exit 0; fi
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            sleep $((i * 5))
+          done
+          echo "Push failed five times." ; exit 1
