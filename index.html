@@ -190,11 +190,15 @@ button{font-family:'Inter';}
 }
 .tb-titles{display:flex;flex-direction:column;line-height:1.15;min-width:0;flex:1;}
 #printOverlay main > *{flex:0 0 auto;}
-#crOverlay .cr-head{order:1;}
-#crOverlay #crBody{order:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;min-height:0;}
+#crOverlay .ov-cap{order:1;}
+#crOverlay .ov-nav{order:4;position:static;flex:0 0 auto;}
+/* Bottom-up: the body is column-reverse -- the first thing written sits at
+   the foot, by the search field, and the view opens there. */
+#crOverlay #crBody{order:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column-reverse;min-height:0;}
+#crOverlay .cr-toc{flex-direction:column-reverse;}
 #crOverlay #crBody > *{flex:0 0 auto;}
 #crOverlay #crBody > .hint:only-child{margin:auto 14px;text-align:center;}
-#crOverlay .cr-bar{order:3;border-top:2px solid var(--line);padding-bottom:calc(10px + env(safe-area-inset-bottom));}
+#crOverlay .cr-bar{order:3;border-top:2px solid var(--line);padding-bottom:10px;}
 .tb-titles .t1{font-family:'Cinzel Decorative','Cinzel',serif;font-size:15.5px;color:var(--brass);font-weight:700;letter-spacing:0.6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tb-titles .t1.name2{font-size:14px;line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;overflow-wrap:anywhere;}
 .reco-admiral .ra-hint{font-size:12.5px;color:var(--sub-text);margin-top:8px;letter-spacing:0.3px;}
@@ -474,9 +478,12 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .overlay .ov-nav{position:static;flex:0 0 auto;z-index:20;}
 .overlay .ov-cap{justify-content:center;padding-left:54px;padding-right:54px;}
 .ov-cap .brand-txt{font-size:17px;flex:0 1 auto;max-width:100%;text-align:center;}
-.salt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 10px;padding:4px 0;}
+.salt-grid{display:flex;flex-wrap:wrap-reverse;gap:12px 10px;padding:4px 0;}
+.salt-grid > .salt-tile{width:calc(50% - 5px);}
+#saltOverlay main{display:flex;flex-direction:column;}
+#saltOverlay main > .salt-grid{margin-top:auto;}
 .salt-tile{cursor:pointer;}
-.salt-tile img{width:100%;display:block;border-radius:10px;}
+.salt-tile img{width:100%;display:block;border-radius:10px;aspect-ratio:63/88;object-fit:cover;background:var(--field);}
 .salt-noimg{border:1.5px solid var(--pop-line);border-radius:10px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;font-size:13.5px;color:var(--ink-text);}
 .salt-meta{text-align:center;color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:13.5px;margin-top:4px;}
 .edh-jump-row.insp-jump{position:fixed;right:14px;bottom:calc(78px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
@@ -1368,7 +1375,11 @@ img.art-missing::after{
 .rules-text h4:first-child{margin-top:0;}
 .rules-text ul{margin:4px 0;padding-left:18px;}
 .rules-text p{margin:6px 0;}
-.banlist-grid{columns:2;column-gap:10px;margin-top:6px;}
+/* Bottom-up: the first name (A) sits bottom-left, the list climbs upward;
+   each list's heading sits at its foot, nearest the format's name. */
+.banlist-grid{display:flex;flex-wrap:wrap-reverse;column-gap:10px;margin-top:6px;}
+.banlist-grid .ban-item{width:calc(50% - 5px);box-sizing:border-box;}
+.acc-up [data-banbox] > div:has(> .banlist-grid){display:flex;flex-direction:column-reverse;}
 .ban-item{display:block;width:100%;text-align:left;background:none;border:none;color:var(--sub-text);font-size:13px;padding:4px 6px;margin-bottom:2px;border-radius:6px;cursor:pointer;break-inside:avoid;font-family:'Inter';}
 .ban-item:hover{background:var(--brass-glow);color:var(--brass);}
 .ban-item:disabled{opacity:0.5;cursor:default;}
@@ -1392,6 +1403,9 @@ img.art-missing::after{
 /* Colour-scheme drop-up: the guild grid sits ABOVE its row in the DOM and on
    screen, unfolding upward out of the row like every other sheet. */
 .guild-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 10px 8px;border-bottom:2px solid var(--line);}
+.guild-list[hidden]{display:none;}
+#guildRow{justify-content:space-between;}
+#guildRow .guild-cur{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
 .guild-opt{display:flex;align-items:center;gap:8px;min-width:0;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;padding:8px 10px;color:var(--ink-text);font-family:'Inter';font-size:14px;cursor:pointer;text-align:left;}
 .guild-opt .mana-ic{flex:none;}
 .guild-opt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1548,7 +1562,7 @@ img.art-missing::after{
 
 /* ---------- card of the day ---------- */
 .cotd{margin-top:8px;text-align:center;}
-#crOverlay{position:fixed;inset:0;z-index:9600;background:var(--ink);display:flex;flex-direction:column;}
+#crOverlay{position:fixed;inset:0;z-index:9600;background:var(--ink);display:flex;flex-direction:column;max-width:none;}
 .cr-head{display:flex;align-items:center;gap:10px;padding:12px 14px 6px;}
 .cr-title{font-family:'Cinzel',serif;font-size:17px;color:var(--brass);letter-spacing:.04em;}
 .cr-bar{display:flex;gap:8px;padding:8px 14px 10px;}
@@ -2687,7 +2701,13 @@ document.addEventListener('click', (e)=>{
   const gRow = e.target.closest && e.target.closest('#guildRow');
   if(gRow){
     const b = document.getElementById('guildBody');
-    if(b) toggleAccordionBody(b, 'guild');
+    if(b) keepAnchored(gRow, ()=>toggleAccordionBody(b, 'guild'), ()=>gRow.isConnected ? gRow : null);
+    return;
+  }
+  const dsRow = e.target.closest && e.target.closest('#dataSourcesRow');
+  if(dsRow){
+    const b = document.getElementById('dataSourcesBody');
+    if(b) keepAnchored(dsRow, ()=>toggleAccordionBody(b, 'dataSrc'), ()=>dsRow.isConnected ? dsRow : null);
     return;
   }
   const gOpt = e.target.closest && e.target.closest('[data-guild]');
@@ -2828,7 +2848,7 @@ function fitTitleText(el){
     let size = base;
     if(!fitsAt(size, 1)){
       const lines = two ? 2 : 1;
-      while(size > 9 && !fitsAt(size, lines)) size -= 0.5;
+      while(size > 7 && !fitsAt(size, lines)) size -= 0.5;
       fitsAt(size, lines);
     }
     if(_fitCache.size > 400) _fitCache.clear();            // deck names come and go; never grow without bound
@@ -2854,12 +2874,18 @@ function fitCapRoom(cap){
     let L = cr.left + Math.max(8, parseFloat(ccs.paddingLeft) || 0), Rr = cr.right - Math.max(8, parseFloat(ccs.paddingRight) || 0);
     Array.from(cap.children).forEach(k=>{
       if(k === t) return;
+      // A corner item that changes size later (the price arriving in its
+      // pill) must re-measure the room -- a text change alone was not enough.
+      if(!k._fitRO && window.ResizeObserver){
+        k._fitRO = new ResizeObserver(()=>{ delete t.dataset.fitKey; fitTitleBars(); });
+        k._fitRO.observe(k);
+      }
       const cs = getComputedStyle(k);
       if(cs.position !== 'absolute' || cs.display === 'none' || cs.visibility === 'hidden') return;
       const r = k.getBoundingClientRect();
       if(!r.width) return;
-      if(r.right <= mid) L = Math.max(L, r.right + 8);
-      else if(r.left >= mid) Rr = Math.min(Rr, r.left - 8);
+      if(r.right <= mid) L = Math.max(L, r.right + 12);
+      else if(r.left >= mid) Rr = Math.min(Rr, r.left - 12);
     });
     const room = Math.max(80, Math.floor(2 * Math.min(mid - L, Rr - mid)));
     if(t.style.maxWidth !== room + 'px'){ t.style.maxWidth = room + 'px'; delete t.dataset.fitKey; }
@@ -3116,7 +3142,9 @@ let _cmdrBansLoading = false;
 function _cmdrBansTouchUi(){
   // A refreshed banlist re-judges whatever is on screen: the settings
   // list, or the open deck's legality box, cap count and red rims.
-  if(state.screen === 'settings'){ render(); return; }
+  // Extras: never redraw the whole page -- that folded every open list shut
+  // the moment a ban list finished loading. An open list fills itself.
+  if(state.screen === 'settings') return;
   if(state.screen === 'collection' && colLegalFmt(state.colFilter)){ try{ csRerender(); }catch(e){} return; }
   if(state.screen === 'decklist'){
     try{
@@ -5287,17 +5315,21 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.631';
+const APP_VERSION = '2.51.632';
 const CHANGELOG_NOTES = {
   en: [
-    'Titles always fit: smaller, or on two lines, without cutting a word.',
-    'Typing fields no longer autocorrect.',
-    'Pickers open as the app\u2019s own drop-up menu instead of the phone\u2019s list.'
+    'Extras in a new order; data sources and colour scheme fold open upward.',
+    'Comprehensive Rules is a normal page with the nav bar, in Dutch too.',
+    'Saltiest Cards starts at the bottom and shows every card.',
+    'Ban lists read from the bottom up.',
+    'Long card names keep clear of the price.'
   ],
   nl: [
-    'Titels passen altijd: kleiner, of op twee regels, zonder woorden te breken.',
-    'Invoervelden verbeteren niet meer automatisch.',
-    'Keuzelijsten openen als eigen menu naar boven in plaats van de lijst van de telefoon.'
+    'Extra\u2019s in een nieuwe volgorde; databronnen en kleurenschema klappen naar boven open.',
+    'Offici\u00eble regels is een gewone pagina met navbalk, ook in het Nederlands.',
+    'Saltiest Cards begint onderaan en toont elke kaart.',
+    'Banlijsten lezen van onder naar boven.',
+    'Lange kaartnamen blijven vrij van de prijs.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5313,7 +5345,7 @@ function tourSteps(){
   const soon = d0() ? '' : (NL ? '<p style="margin:0 0 6px;font-size:12.5px;color:var(--sub-text);">(Nog geen deck — dit zie je zodra je er een hebt.)</p>' : '<p style="margin:0 0 6px;font-size:12.5px;color:var(--sub-text);">(No deck yet — you\u2019ll see this once you have one.)</p>');
   return [
     { k:'home', go:()=>switchPage('home'),
-      t: NL ? 'Welkom aan boord' : 'Welcome aboard',
+      t: NL ? 'Welkom bij Deckhand' : 'Welcome to Deckhand',
       b: NL
         ? `<p style="margin:4px 0;">Deckhand is <strong>voor je telefoon</strong> gemaakt: alles is <strong>van onder naar boven</strong> gebouwd — knoppen, menu\u2019s en de beste content zitten onderin, binnen <strong>duimbereik</strong>.</p>
            <p style="margin:4px 0;">Bouw decks in <strong>Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern, Legacy en Vintage</strong>; alles werkt offline. Dit is <strong>Home</strong>, met onderin het laatste Magic-<strong>nieuws</strong>.</p>
@@ -5368,10 +5400,10 @@ function tourSteps(){
     { k:'extras', go:()=>switchPage('settings'),
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
-        ? `<p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel, <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, de complete <strong>Comprehensive Rules</strong>, <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; herstel</strong>, alles in één bestand. Deze rondleiding staat hier ook, voor als je hem nog eens wilt zien.</p>`
+        ? `<p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel, <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, de <strong>officiële regels</strong> (Comprehensive Rules), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; herstel</strong>, alles in één bestand.</p>`
         : `<p style="margin:6px 0;">The table-side <strong>Life Counter</strong>, <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. This tour lives here too, whenever you want it back.</p>` }
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file.</p>` }
   ];
 }
 function startAppTour(){
@@ -5421,7 +5453,7 @@ function endAppTour(finished){
   try{ localStorage.setItem(LS_PREFIX+'welcomed','1'); }catch(e){}
   if(finished){
     switchPage('home');
-    toast(appLang() === 'nl' ? 'Veel plezier aan boord! De rondleiding staat ook onder Extra\u2019s.' : 'Enjoy the voyage! The tour also lives under Extras.');
+    toast(appLang() === 'nl' ? 'Veel plezier met Deckhand!' : 'Enjoy Deckhand!');
   }
 }
 function showTourStep(){
@@ -6710,16 +6742,19 @@ function openCROverlay(){
   document.getElementById('crOverlay')?.remove();
   const el = document.createElement('div');
   el.id = 'crOverlay';
+  el.className = 'overlay';
+  const NL = appLang() === 'nl';
+  // Like every page: the cap on top, the text growing up from the search
+  // field, the search field right above the app's own nav bar.
   el.innerHTML = `
-    <div class="cr-head">
-      <button class="icon-btn" id="crBack">‹</button>
-      <div class="cr-title">Comprehensive Rules</div>
-    </div>
+    ${overlayCapHtml(NL ? 'Officiële regels' : 'Comprehensive Rules')}
+    <div id="crBody"><div class="empty-note" style="padding:14px;">${NL ? 'Regels laden\u2026' : 'Loading the rules\u2026'}</div></div>
     <div class="cr-bar">
-      <input id="crQ" type="search" placeholder="Ask a question, search words, or jump to a rule (601.2)…" autocomplete="off">
+      <input id="crQ" type="search" placeholder="${NL ? 'Vraag, woorden of regel (601.2)\u2026' : 'Question, words or rule (601.2)\u2026'}" autocomplete="off">
     </div>
-    <div id="crBody"><div class="empty-note" style="padding:14px;">Loading the rules…</div></div>`;
+    ${overlayNavHtml()}`;
   document.body.appendChild(el);
+  wireOverlayNav(el);
   const body = el.querySelector('#crBody');
   const q = el.querySelector('#crQ');
   // TWO-stage back, the app's blessed way: every level pushes its own history
@@ -6737,10 +6772,19 @@ function openCROverlay(){
     run();
   }
   pushOverlay('cr', ()=>{ state._crqArmed = false; document.getElementById('crOverlay')?.remove(); });
-  el.querySelector('#crBack').addEventListener('click', ()=>history.back());
   const showToc = (rules)=>{
-    const tops = rules.filter(r=>/^\d{3}$/.test(r.n) || /^\d\.$/.test(r.n));
-    const chapters = rules.filter(r=>/^\d{3}$/.test(r.n));
+    // Chapters: one per three-digit number. The source does not always carry
+    // the chapter headings as rules of their own ("100." vs "100"), so the
+    // list is built from the numbers themselves -- it can never come out empty.
+    const byChap = new Map();
+    rules.forEach(r=>{
+      const m = /^(\d{3})(\.?)(\d*)/.exec(r.n || '');
+      if(!m) return;
+      const own = !m[3];
+      const cur = byChap.get(m[1]);
+      if(!cur || (own && !cur.own)) byChap.set(m[1], { n: m[1], t: r.t, own });
+    });
+    const chapters = Array.from(byChap.values()).sort((a, b)=>+a.n - +b.n);
     body.innerHTML = `<p class="hint" style="margin:4px 12px 10px;">${appLang() === 'nl'
       ? `${rules.length} regels geladen, een week bewaard om offline te lezen. Tik op een hoofdstuk, typ woorden als "commander damage trample" of stel een hele vraag — het antwoord is de officiële tekst zelf (in het Engels).`
       : `${rules.length} rules loaded, kept a week for offline reading. Tap a section, type words like "commander damage trample", or ask a whole question — the answer is the official text itself.`}</p>
@@ -6757,9 +6801,12 @@ function openCROverlay(){
     }
     const toks = crTokens(query);
     const hits = crSearch(rules, query, 14);
+    const NLq = appLang() === 'nl';
+    // Bottom-up (#crBody is column-reverse): the hint sits at the foot, the
+    // most relevant rule right above it, less relevant ones climbing upward.
     body.innerHTML = hits.length
-      ? `<p class="hint" style="margin:4px 12px 8px;">The official rules answering that, most relevant first:</p>` + hits.map(r=>crRuleHtml(r, toks)).join('')
-      : `<div class="empty-note" style="padding:14px;">No rule matches those words — try fewer or different terms, or a rule number like 903 for Commander.</div>`;
+      ? `<p class="hint" style="margin:4px 12px 8px;">${NLq ? 'De officiële regels die dat beantwoorden, de beste onderaan (in het Engels):' : 'The official rules answering that, best match at the bottom:'}</p>` + hits.map(r=>crRuleHtml(r, toks)).join('')
+      : `<div class="empty-note" style="padding:14px;">${NLq ? 'Geen regel met die woorden \u2014 probeer minder of andere woorden, of een regelnummer zoals 903 voor Commander.' : 'No rule matches those words — try fewer or different terms, or a rule number like 903 for Commander.'}</div>`;
     body.scrollTop = 0;
   };
   el.addEventListener('click', (e)=>{
@@ -6769,7 +6816,7 @@ function openCROverlay(){
   q.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); run(); } });
   ensureCR().then(rules=>{
     if(!document.getElementById('crOverlay')) return;
-    if(!rules){ body.innerHTML = `<div class="empty-note" style="padding:14px;">The rules service could not be reached. Check your connection and try again — after the first load they stay available offline for a week.</div>`; return; }
+    if(!rules){ body.innerHTML = `<div class="empty-note" style="padding:14px;">${appLang() === 'nl' ? 'De regels konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw \u2014 na de eerste keer blijven ze een week offline beschikbaar.' : 'The rules service could not be reached. Check your connection and try again — after the first load they stay available offline for a week.'}</div>`; return; }
     showToc(rules);
     q.focus();
   });
@@ -16247,8 +16294,10 @@ async function openSaltiestOverlay(){
     main.innerHTML = `<div class="error-note">Couldn't reach EDHREC's salt list. Check your connection and try again.</div>`;
     return;
   }
-  // Rank 1 (saltiest) renders LAST so it lands at the page foot.
-  const ordered = rows.slice().reverse();
+  // Bottom-up: rank 1 is written FIRST into a wrap-reverse grid, so it sits
+  // bottom-left, by the thumb; the list climbs upward from there.
+  const ordered = rows.slice();
+  const fetched = {};
   main.innerHTML = `<div class="salt-grid">${ordered.map(r=>{
     const entry = ix && ix.byName ? ix.byName.get(String(r.name).toLowerCase()) : null;
     const img = entry ? `<img src="${cardImage(bulkToCardish(entry))}" alt="${escapeHtml(r.name)}" loading="lazy">`
@@ -16261,12 +16310,40 @@ async function openSaltiestOverlay(){
     const name = b.dataset.saltn;
     const entry = ix && ix.byName ? ix.byName.get(String(name).toLowerCase()) : null;
     if(entry){ openCardInfo(bulkToCardish(entry)); return; }
+    if(fetched[name]){ openCardInfo(fetched[name]); return; }
     try{
       const r = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(name));
       if(r.ok) openCardInfo(await r.json());
     }catch(e){}
   }));
-  main.scrollTop = main.scrollHeight;   // the story starts at the salt mine's floor
+  // The story starts at the salt mine's floor -- and stays there while the
+  // images arrive, until the reader scrolls.
+  let touched = false;
+  main.addEventListener('touchstart', ()=>{ touched = true; }, { passive:true, once:true });
+  main.addEventListener('wheel', ()=>{ touched = true; }, { passive:true, once:true });
+  const toFoot = ()=>{ if(!touched && main.isConnected) main.scrollTop = main.scrollHeight; };
+  toFoot(); requestAnimationFrame(toFoot);
+  main.querySelectorAll('img').forEach(im=>im.addEventListener('load', toFoot, { once:true }));
+  // Cards the phone's card file does not know (banned or very old ones):
+  // one lookup each on the quiet lane, and their picture drops in.
+  for(const r of ordered){
+    const hold = main.querySelector(`[data-saltn="${CSS.escape(r.name)}"] .salt-noimg`);
+    if(!hold) continue;
+    try{
+      const res = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(r.name), 0, true);
+      if(!res.ok) continue;
+      const card = await res.json();
+      fetched[r.name] = card;
+      const src = cardImage(card);
+      if(src && hold.isConnected){
+        const im = document.createElement('img');
+        im.src = src; im.alt = r.name; im.loading = 'lazy';
+        im.addEventListener('load', toFoot, { once:true });
+        hold.replaceWith(im);
+      }
+    }catch(e){}
+    if(!document.getElementById('saltOverlay')) break;
+  }
 }
 async function edhrecSaltFor(card){
   if(card._salt !== undefined) return card._salt;
@@ -17503,9 +17580,7 @@ function dataSourcesHtml(){
     { id:'sets',  n:'Scryfall sets & spoilers', t: autoSets.lastCheck||0 },
     { id:'tags',  n:'EDHREC themes & Kindred',  t: tagsT },
     { id:'dprices', n:'Card prices', t: Date.parse(_dPricesBuilt) || 0, noBtn: true },
-    { id:'types', n:'Creature types',           t: ctT },
-    { id:'ban',   n:'Bans & Game Changers',     t: null, note: trS('live, per card') },
-    { id:'price', n:'Price lookups',             t: null, note: trS('new cards only') },
+
     { id:'bulk',  n:'Local card database',      t: null,
       note: state._bulkMetaCache
         ? (state._bulkMetaCache.cards + ' cards' + (state._bulkMetaCache.tagCards ? ' · tags' : '')
@@ -17518,8 +17593,8 @@ function dataSourcesHtml(){
   return rows.map(r=>`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;">
     <span style="flex:1;">${escapeHtml(trS(r.n))}</span>
     <span style="color:var(--sub-text-2);${r.id==='lsrch' ? 'text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;' : ''}"${r.id==='lsrch' ? ' data-lsinfo="1"' : ''}>${r.note ? r.note : _srcAge(r.t)}</span>
-    ${(r.id==='sets'||r.id==='tags'||r.id==='types') ? `<button class="icon-btn" data-srcrefresh="${r.id}" style="flex:none;width:28px;height:28px;font-size:13px;">↻</button>` : ''}
-  </div>`).join('') + `<button class="ghost-btn" id="bulkDlNow" style="width:100%;margin-top:8px;padding:7px 12px;font-size:13px;">⬇ ${trS('Download card database now')}</button><button class="ghost-btn" id="sfDiagCopy" style="width:100%;margin-top:8px;padding:7px 12px;font-size:13px;">📋 ${trS('Copy diagnostics')}</button>`;
+    ${(r.id==='sets'||r.id==='tags') ? `<button class="icon-btn" data-srcrefresh="${r.id}" style="flex:none;width:28px;height:28px;font-size:13px;">↻</button>` : ''}
+  </div>`).join('') + `<button class="ghost-btn" id="bulkDlNow" style="width:100%;margin-top:8px;padding:7px 12px;font-size:13px;">⬇ ${trS('Download card database now')}</button><button class="ghost-btn" id="sfDiagCopy" hidden>📋 ${trS('Copy diagnostics')}</button>`;
 }
 function wireDataSources(){
   // The Local card database row reads IndexedDB (async) — fill it once
@@ -21029,7 +21104,7 @@ function settingsPageHtml(){
   return `
   <main class="settings-main">
     <div class="settings-section"><div class="settings-row" id="lifeRow"><div class="l1">Life Counter</div><div class="l2">Multiplayer life tracker</div></div></div>
-            <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">Comprehensive Rules</div><div class="l2">Read, search, or ask a rules question</div></div></div>
+    <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">${appLang()==='nl' ? 'Officiële regels' : 'Comprehensive Rules'}</div><div class="l2">${appLang()==='nl' ? 'Comprehensive Rules — lees, zoek of stel een regelvraag' : 'Read, search, or ask a rules question'}</div></div></div>
     <div class="settings-section">
       <div id="fmtRulesBody" class="acc-up" hidden style="padding:10px 12px 0;"></div>
       <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Deckbuilding and play, per format</div></div><span class="l2">▴</span></div>
@@ -21054,24 +21129,18 @@ function settingsPageHtml(){
       </div>
     </div>
     <div class="settings-section">
-      <div id="guildBody" class="guild-list">${GUILDS.map(g=>`<button type="button" class="guild-opt ${g.k===state.guild?'sel':''}" data-guild="${g.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[g.main][0]};--gs:${GUILD_SWATCH[g.side][1]};"></span>${manaIconSvg(g.main,16)}${manaIconSvg(g.side,16)}<span>${g.n}</span></button>`).join('')}</div>
+      <div id="guildBody" class="guild-list" hidden>${GUILDS.map(g=>`<button type="button" class="guild-opt ${g.k===state.guild?'sel':''}" data-guild="${g.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[g.main][0]};--gs:${GUILD_SWATCH[g.side][1]};"></span>${manaIconSvg(g.main,16)}${manaIconSvg(g.side,16)}<span>${g.n}</span></button>`).join('')}</div>
+      <div class="settings-row" id="guildRow" style="cursor:pointer;"><div class="l1">${trS('Color scheme')}</div>${(()=>{ const g = GUILDS.find(x=>x.k===state.guild) || GUILDS[0]; return `<span class="l2 guild-cur" id="guildCur">${manaIconSvg(g.main,16)}${manaIconSvg(g.side,16)} ${g.n} ▴</span>`; })()}</div>
     </div>
+    ${(()=>{ const _pp = pushPrefs(); const _nl = appLang()==='nl'; if(!nativeNotify()) return `
     <div class="settings-section">
-      <div class="settings-row" id="dataSourcesRow"><div style="width:100%;"><div class="l1">Data Sources</div><div class="l2" id="dataSourcesBody">${dataSourcesHtml()}</div></div></div>
-    </div>
-    ${(window.matchMedia('(display-mode: standalone)').matches || inAndroidApp()) ? '' : `<div class="settings-section">
-      ${/Android/i.test(navigator.userAgent) ? `<div class="settings-row" id="apkRow"><div style="flex:1;min-width:0;"><div class="l1">\u2693 ${appLang()==='nl' ? 'Download de Android-app' : 'Download the Android app'}</div><div class="l2">${appLang()==='nl' ? 'Buiten de Play Store om, ook zonder Google. Updates komen vanzelf.' : 'No Play Store, Google-free phones too. Updates arrive on their own.'}</div><div class="l2" id="apkNote" style="margin-top:4px;"></div></div><button type="button" class="ghost-btn" id="apkBtn" style="flex:0 0 auto;margin-left:auto;padding:7px 12px;font-size:13px;">\u2b07 APK</button></div>` : ''}
-      <div class="settings-row" id="installAppRow"><div><div class="l1">📲 Install as an app</div><div class="l2">Home-screen icon, full screen, offline</div></div></div>
-    </div>`}
+      <div class="settings-row" id="notifRow"><div><div class="l1">🔔 ${_nl ? 'Meldingen' : 'Notifications'}</div><div class="l2">${_nl ? 'Meldingen komen via de Android-app, tussen 09:00 en 21:00.' : 'Notifications come through the Android app, between 09:00 and 21:00.'}</div></div></div>
+    </div>`; return `
     <div class="settings-section">
-      <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} ${trS('Share this app with a friend')}</div><div class="l2">Sends the app link</div></div></div>
-    </div>
-    ${state._inspoDiag ? `<div class="settings-card" style="margin-top:14px;">
-      <h4 style="margin:0 0 6px;">🩺 Diagnostics</h4>
-      <p class="hint" style="margin:0 0 8px;">The last theme list that couldn't place every card. Copy this and send it to the developer.</p>
-      <pre id="diagText" style="white-space:pre-wrap;word-break:break-all;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;padding:8px;font-size:12px;line-height:1.5;max-height:220px;overflow:auto;">${escapeHtml(JSON.stringify(state._inspoDiag, null, 1))}</pre>
-      <button class="ghost-btn" id="diagCopy" style="width:100%;">📋 ${trS('Copy diagnostics')}</button>
-    </div>` : ''}
+      <div class="settings-row"><div class="l1">🔮 ${_nl ? 'Spoilers' : 'Spoilers'}</div><div class="otag-wrap" id="pushSpoilWrap"><button type="button" id="pushSpoilBtn" class="col-filter-input">${escapeHtml(spoilEveryLabel(_pp.spoilerEvery))} <span style="float:right;opacity:0.6;">▾</span></button><div id="pushSpoilPop" class="otag-pop" hidden>${SPOIL_EVERY_CHOICES.map(v=>`<button type="button" data-spoilevery="${v}">${escapeHtml(spoilEveryLabel(v))}</button>`).join('')}</div></div></div>
+      <div class="settings-row" style="border-top:2px solid var(--line);"><div class="l1">🔔 ${_nl ? 'App-updates' : 'App updates'}</div><label class="toggle-switch"><input type="checkbox" id="pushUpdToggle" ${_pp.updates?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
+      <div class="settings-body" style="padding-top:10px;"><div style="font-size:12px;color:var(--sub-text);">${_nl ? 'Meldingen komen tussen 09:00 en 21:00.' : 'Notifications arrive between 09:00 and 21:00.'}</div><div style="font-size:12px;color:var(--sub-text);margin-top:4px;" id="pushStatus"></div></div>
+    </div>`; })()}
     <div class="settings-section">
       <div class="settings-row" style="flex-wrap:wrap;"><div style="flex:1 1 100%;min-width:0;"><div class="l1">Backup &amp; Restore</div><div class="l2">Decks, collection and settings in one file</div><div class="l2" style="margin-top:5px;">${state._persisted === true
         ? (appLang()==='nl' ? '🛡 Opslag beschermd' : '🛡 Storage protected')
@@ -21085,17 +21154,18 @@ function settingsPageHtml(){
         <input type="file" id="restoreFile" accept="application/json,.json" style="display:none;">
       </div>
     </div>
-    <div class="settings-section"><div class="settings-row" id="tourRow"><div class="l1">🧭 ${appLang()==='nl' ? 'Rondleiding' : 'App tour'}</div><div class="l2">${appLang()==='nl' ? 'Een korte ronde langs alle pagina\u2019s' : 'A short walk through every page'}</div></div></div>
-    ${(()=>{ const _pp = pushPrefs(); const _nl = appLang()==='nl'; if(!nativeNotify()) return `
     <div class="settings-section">
-      <div class="settings-row"><div><div class="l1">🔔 ${_nl ? 'Meldingen' : 'Notifications'}</div><div class="l2">${_nl ? 'Spoilers en app-updates komen alleen via de Android-app. Download hem hierboven; in de browser krijg je geen meldingen.' : 'Spoilers and app updates come through the Android app only. Download it above; the browser sends none.'}</div></div></div>
-    </div>`; return `
+      <div id="dataSourcesBody" class="l2 acc-up" hidden style="padding:10px 12px 0;">${dataSourcesHtml()}</div>
+      <div class="settings-row" id="dataSourcesRow" style="cursor:pointer;"><div><div class="l1">${trS('Data Sources')}</div><div class="l2">${appLang()==='nl' ? 'Kaarten, prijzen en thema\u2019s \u2014 verversen vanzelf' : 'Cards, prices and themes \u2014 refresh on their own'}</div></div><span class="l2">▴</span></div>
+    </div>
+    ${(window.matchMedia('(display-mode: standalone)').matches || inAndroidApp()) ? '' : `<div class="settings-section">
+      ${/Android/i.test(navigator.userAgent) ? `<div class="settings-row" id="apkRow"><div style="flex:1;min-width:0;"><div class="l1">\u2693 ${appLang()==='nl' ? 'Download de Android-app' : 'Download the Android app'}</div><div class="l2">${appLang()==='nl' ? 'Buiten de Play Store om, ook zonder Google. Updates komen vanzelf.' : 'No Play Store, Google-free phones too. Updates arrive on their own.'}</div><div class="l2" id="apkNote" style="margin-top:4px;"></div></div><button type="button" class="ghost-btn" id="apkBtn" style="flex:0 0 auto;margin-left:auto;padding:7px 12px;font-size:13px;">\u2b07 APK</button></div>` : ''}
+      <div class="settings-row" id="installAppRow"><div><div class="l1">📲 Install as an app</div><div class="l2">Home-screen icon, full screen, offline</div></div></div>
+    </div>`}
     <div class="settings-section">
-      <div class="settings-row"><div><div class="l1">🔮 ${_nl ? 'Spoilermeldingen' : 'Spoiler alerts'}</div><div class="l2">${_nl ? 'Hoe vaak je nieuwe kaarten hoort' : 'How often you hear about new cards'}</div></div><div class="otag-wrap" id="pushSpoilWrap"><button type="button" id="pushSpoilBtn" class="col-filter-input">${escapeHtml(spoilEveryLabel(_pp.spoilerEvery))} <span style="float:right;opacity:0.6;">▾</span></button><div id="pushSpoilPop" class="otag-pop" hidden>${SPOIL_EVERY_CHOICES.map(v=>`<button type="button" data-spoilevery="${v}">${escapeHtml(spoilEveryLabel(v))}</button>`).join('')}</div></div></div>
-      <div class="settings-row" style="border-top:2px solid var(--line);"><div><div class="l1">🔔 ${_nl ? 'App-updates' : 'App updates'}</div><div class="l2">${_nl ? 'Nieuwe versie, met wat er veranderd is' : 'A new version, with what changed'}</div></div><label class="toggle-switch"><input type="checkbox" id="pushUpdToggle" ${_pp.updates?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
-      <div class="settings-body" style="padding-top:10px;"><div style="font-size:12px;color:var(--sub-text);">${_nl ? 'Alleen tussen 09:00 en 21:00, ook met de app dicht.' : 'Only between 09:00 and 21:00, app closed or not.'}</div><div style="font-size:12px;color:var(--sub-text);margin-top:4px;" id="pushStatus"></div></div>
-    </div>`; })()}
-    <p class="hint" style="text-align:center;margin:14px 8px 4px;line-height:1.5;font-size:11.5px;">Deckhand v${APP_VERSION} · ${appLang()==='nl' ? 'kaarten' : 'cards'} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${appLang()==='nl' ? 'thema\u2019s' : 'themes'} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${appLang()==='nl' ? 'prijzen' : 'prices'} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
+      <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} ${trS('Share this app with a friend')}</div><div class="l2">Sends the app link</div></div></div>
+    </div>
+    <p class="hint" id="appFootNote" style="text-align:center;margin:14px 8px 4px;line-height:1.5;font-size:11.5px;">Deckhand v${APP_VERSION} · ${appLang()==='nl' ? 'kaarten' : 'cards'} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${appLang()==='nl' ? 'thema\u2019s' : 'themes'} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${appLang()==='nl' ? 'prijzen' : 'prices'} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
   </main>`;
 }
 function commanderQuickRulesHtml(){
@@ -21332,6 +21402,9 @@ async function restoreFromFile(file){
 }
 function wireSettingsPage(){
   wireDataSources();
+  // A long press on the credits copies the diagnostics (no button needed).
+  { const fn = document.getElementById('appFootNote');
+    if(fn) wireTapHold(fn, ()=>{}, ()=>{ document.getElementById('sfDiagCopy')?.click(); }, 900); }
   document.getElementById('diagCopy')?.addEventListener('click', async ()=>{
     try{
       await navigator.clipboard.writeText(
@@ -22791,6 +22864,7 @@ function nativeNotify(){
   }catch(e){ return null; }
 }
 function _nativeOnMsg(){
+  return '';
   return appLang() === 'nl'
     ? '\u2713 Aan \u2014 de app kijkt \u00e9\u00e9n keer per dag zelf naar nieuwe sets en updates.'
     : '\u2713 On \u2014 the app checks once a day for new sets and updates.';
