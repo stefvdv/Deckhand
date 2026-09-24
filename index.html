@@ -5315,13 +5315,13 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.633';
+const APP_VERSION = '2.51.634';
 const CHANGELOG_NOTES = {
   en: [
-    'Android app 3.5: the screen stays on at 75% brightness while the life counter is open.'
+    'Android app 3.6: life counter brightness 65%, adjustable in its settings or with the phone\u2019s own slider.'
   ],
   nl: [
-    'Android-app 3.5: het scherm blijft aan op 75% helderheid zolang de life counter open is.'
+    'Android-app 3.6: life counter op 65% helderheid, aan te passen in de instellingen of met de schuif van je telefoon.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -21828,7 +21828,22 @@ function releaseWakeLock(){
    brightness -- auto-brightness left out -- only while the life counter is
    open. An older app simply lacks the call. */
 function nativeTableMode(on){
-  try{ const n = window.DeckhandNotify; if(n && typeof n.setTableMode === 'function') n.setTableMode(!!on); }catch(e){}
+  try{
+    const n = window.DeckhandNotify;
+    if(!n || typeof n.setTableMode !== 'function') return;
+    if(on && typeof n.setTableBrightness === 'function') n.setTableBrightness(lifeBrightPct());
+    n.setTableMode(!!on);
+  }catch(e){}
+}
+/* The counter's brightness: a position on the phone's own brightness slider,
+   65% unless you chose otherwise (APK 3.6). */
+function lifeBrightPct(){
+  let v = 65;
+  try{ const x = parseInt(localStorage.getItem(LS_PREFIX + 'lifeBright'), 10); if(x >= 5 && x <= 100) v = x; }catch(e){}
+  return v;
+}
+function canSetLifeBright(){
+  try{ const n = window.DeckhandNotify; return !!(n && typeof n.setTableBrightness === 'function'); }catch(e){ return false; }
 }
 // A page (re)loaded with the counter closed never inherits the table mode.
 try{ nativeTableMode(false); }catch(e){}
@@ -22072,6 +22087,7 @@ function renderSettingsPanel(){
   box.innerHTML = `<div class="life-panel"><h4>Settings</h4>
     ${rows.map(r=>`<div class="toggle-row"><div><div>${r.label}</div><div style="color:var(--sub-text);font-size:11.5px;margin-top:2px;">${r.sub}</div></div><label class="toggle-switch"><input type="checkbox" data-lset="${r.key}" ${S[r.key]?'checked':''}><span class="track"></span><span class="knob"></span></label></div>`).join('')}
     <div class="toggle-row"><div><div>Rotate for Pass-and-Play</div><div style="color:var(--sub-text);font-size:11.5px;margin-top:2px;">Flip cards to face each seat around the table</div></div><label class="toggle-switch"><input type="checkbox" id="rotateToggle" ${state.life.rotate?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
+    ${canSetLifeBright() ? `<div class="toggle-row life-bright"><div style="flex:1;min-width:0;"><div>${_lnl ? 'Helderheid' : 'Brightness'} <b id="lifeBrightVal">${lifeBrightPct()}%</b></div><div style="color:var(--sub-text);font-size:11.5px;margin-top:2px;">${_lnl ? 'Zolang de life counter open is. De schuif van je telefoon werkt ook.' : 'While the life counter is open. Your phone\u2019s own slider works too.'}</div><input type="range" id="lifeBrightRange" min="5" max="100" step="5" value="${lifeBrightPct()}" style="width:100%;margin-top:8px;accent-color:var(--brass);"></div></div>` : ''}
     <button class="ghost-btn" id="restartLifeBtn" style="width:100%;margin-top:12px;color:var(--danger);border-color:var(--danger);">↺ Restart Game</button>
   </div>`;
   document.querySelectorAll('[data-lset]').forEach(chk=>{
@@ -22079,6 +22095,13 @@ function renderSettingsPanel(){
   });
   document.getElementById('rotateToggle').addEventListener('change', e=>{ state.life.rotate = e.target.checked; renderLifeGrid(); });
   document.getElementById('restartLifeBtn').addEventListener('click', restartLife);
+  const br = document.getElementById('lifeBrightRange');
+  br?.addEventListener('input', ()=>{
+    const v = Math.max(5, Math.min(100, parseInt(br.value, 10) || 65));
+    try{ localStorage.setItem(LS_PREFIX + 'lifeBright', String(v)); }catch(e){}
+    const lab = document.getElementById('lifeBrightVal'); if(lab) lab.textContent = v + '%';
+    try{ window.DeckhandNotify.setTableBrightness(v); }catch(e){}
+  });
 }
 /* Poison is the Phyrexian symbol; commander damage the swords (Admiral: the
    anchor) -- line art in the house style, coloured by currentColor. */
