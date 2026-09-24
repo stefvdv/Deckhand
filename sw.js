@@ -8,7 +8,7 @@
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v2.51.625';
+const VERSION = 'admiral-v2.51.626';
 // Card images and fonts survive app updates: this cache is deliberately
 // NOT version-named, so activating a new version never wipes it.
 const ASSETS = 'admiral-assets-v1';
@@ -29,7 +29,7 @@ self.addEventListener('push', (e) => {
   e.waitUntil(self.registration.showNotification(d.title || '\ud83d\udd2e Deckhand', {
     body: d.body || 'New spoilers are up.',
     icon: './icon-192.png',
-    badge: './badge-96.png',
+    badge: './badge-d.png',
     data: { url: d.url || './?go=spoilers' }
   }));
 });
