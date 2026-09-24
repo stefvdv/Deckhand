@@ -1395,7 +1395,29 @@ img.art-missing::after{
 .overlay-inner{max-width:900px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;min-height:0;}
 .overlay main{flex:1;overflow-y:auto;padding-bottom:24px;}
 #recoOverlay main, #similarOverlay main, #printOverlay main, #colAddSheet main,
-#addCollOverlay main, #budgetOverlay main, #cardRecoOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
+#addCollOverlay main, #budgetOverlay main, #cardRecoOverlay main, #metaDeckOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
+/* Meta-deck tiles: the key card's art, the deck's name, its colours, its
+   share of the metagame and its style. */
+.meta-tile{display:flex;flex-direction:column;align-items:stretch;padding:0;overflow:hidden;background:var(--panel);border:2px solid var(--line);border-radius:10px;cursor:pointer;text-align:left;font-family:'Inter';color:var(--panel-text);}
+.meta-tile:active{transform:scale(0.98);}
+.meta-tile .mt-art{display:block;aspect-ratio:626/457;background:rgba(0,0,0,0.35) center/cover no-repeat;}
+.meta-tile .mt-body{display:block;padding:7px 9px 9px;}
+.meta-tile .mt-nm{display:block;font-weight:700;font-size:14px;line-height:1.2;color:var(--panel-text);}
+.meta-tile .mt-sub{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:12px;color:var(--panel-sub);margin-top:4px;}
+.meta-tile .mt-share{font-family:'JetBrains Mono',monospace;color:var(--panel-brass);}
+.meta-tile .mt-extra{display:block;font-size:11.5px;color:var(--panel-sub);margin-top:3px;}
+#mdBody{display:flex;flex-direction:column-reverse;gap:12px;}
+#mdBody .md-sec .section-label{margin:0 0 6px;}
+.md-hero .md-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
+.md-hero .md-actions .add-btn, .md-hero .md-actions .ghost-btn{width:auto;padding:9px 14px;font-size:13.5px;text-decoration:none;}
+.md-missing{display:flex;flex-wrap:wrap;gap:6px;}
+.md-missing span{font-size:12.5px;padding:4px 8px;border:1.5px solid var(--line);border-radius:6px;color:var(--sub-text);}
+.dl-fmt-seat{line-height:1.5;font-size:13px;}
+.acc-up:not([hidden]){display:flex;flex-direction:column-reverse;}
+.acc-up [data-fmtrule] > div, .acc-up [data-banfmt] > div{display:flex;flex-direction:column-reverse;}
+.acc-up [data-fmtruletxt]:not([hidden]), .acc-up [data-banbox]:not([hidden]){display:flex;flex-direction:column-reverse;gap:6px;margin:0 0 6px;}
+.acc-up .ban-sub{font-size:12px;color:var(--sub-text);margin:8px 0 2px;text-transform:uppercase;letter-spacing:0.5px;}
+.dl-fmt-seat b{font-family:'Cinzel',serif;font-size:15px;color:var(--head-ink);}
 .overlay .topbar{position:relative;justify-content:center;padding-left:54px;padding-right:54px;box-sizing:border-box;min-height:50px;}
 .overlay .topbar > .icon-btn:first-child{position:absolute;left:10px;top:50%;transform:translateY(-50%);}
 .overlay .topbar > button:not(:first-child){position:absolute;right:10px;top:50%;transform:translateY(-50%);}
@@ -2042,6 +2064,7 @@ function appMode(){ return 'commander'; }
 function isCmdrMode(){ return appMode() === 'commander'; }
 function fmtName(d){
   const f = d && d.format ? d.format : appMode();
+  if(isConstructedFmt(f)) return fmtLabelOf(f);
   return f === 'commander' ? 'Commander' : 'Admiral';
 }
 /* Colour scheme: the ten two-colour guilds. main = the INK role (the page,
@@ -2066,11 +2089,22 @@ function currentGuild(){ return GUILDS.find(g=>g.k===state.guild) || GUILDS.find
 /* Format catalog — the buildable formats, in the order their auto folders
    appear on My Decks. Labels live here (not in FORMAT_RULES, declared much
    later) so early renders never trip a temporal dead zone. */
-const FMT_ORDER = ['commander', 'admiral', 'paupercommander', 'predh', 'duel'];
-const FMT_LABELS = { commander:'Commander', admiral:'Admiral', paupercommander:'Pauper Commander', predh:'PreDH', duel:'Duel Commander' };
+const FMT_ORDER = ['commander', 'admiral', 'paupercommander', 'predh', 'duel', 'standard', 'pauper', 'modern', 'legacy', 'vintage'];
+const FMT_LABELS = { commander:'Commander', admiral:'Admiral', paupercommander:'Pauper Commander', predh:'PreDH', duel:'Duel Commander',
+  standard:'Standard', pauper:'Pauper', modern:'Modern', legacy:'Legacy', vintage:'Vintage' };
+/* The 60-card formats: no leader, up to four copies of a card (Vintage's
+   restricted list: one), a sideboard of up to fifteen, 20 life. */
+const CONSTRUCTED_FMTS = ['standard', 'pauper', 'modern', 'legacy', 'vintage'];
+function isConstructedFmt(f){ return CONSTRUCTED_FMTS.indexOf(f) >= 0; }
+/* Three families of deck: the commander family (100 cards, a leader, lands),
+   Admiral (60, a leader, no lands) and the constructed formats. */
+function fmtKind(f){ return isConstructedFmt(f) ? 'constructed' : f === 'admiral' ? 'admiral' : 'cmdr'; }
+function deckKind(d){ return fmtKind(deckFormat(d)); }
+function deckIsConstructed(d){ return !!d && isConstructedFmt(deckFormat(d)); }
+function sideName(d){ return deckIsConstructed(d) ? 'Sideboard' : 'Maybeboard'; }
 /* Every format the search filter knows: the five buildable ones, then the
    reference formats Scryfall can judge with legal:<id>. */
-const SEARCH_FORMATS = [['commander','Commander'],['admiral','Admiral'],['paupercommander','Pauper Commander'],['predh','PreDH'],['duel','Duel Commander'],['standard','Standard'],['modern','Modern'],['legacy','Legacy'],['vintage','Vintage'],['pauper','Pauper'],['premodern','Premodern']];
+const SEARCH_FORMATS = [['commander','Commander'],['admiral','Admiral'],['paupercommander','Pauper Commander'],['predh','PreDH'],['duel','Duel Commander'],['standard','Standard'],['pauper','Pauper'],['modern','Modern'],['legacy','Legacy'],['vintage','Vintage'],['premodern','Premodern']];
 function fmtLabelOf(id){ return FMT_LABELS[id] || (id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Commander'); }
 /* Welke formats een aanvoerder kennen, en met welk woord die daar heet.
    Staat een format hier niet in (Standard, mocht het ooit komen), dan
@@ -2094,9 +2128,15 @@ function fmtAncestorOf(folderId){
   }
   return null;
 }
-function fmtFolderGlyph(fmt, sz){ return fmt === 'admiral' ? anchorSvg(sz||40) : '⚔'; }
+function fmtFolderGlyph(fmt, sz){ return fmt === 'admiral' ? anchorSvg(sz||40) : isConstructedFmt(fmt) ? cardsSvg(sz||40) : '⚔'; }
+/* Two cards fanned: the house line-art glyph for the 60-card formats. */
+function cardsSvg(sz){
+  return `<svg viewBox="0 0 24 24" style="width:${sz||16}px;height:${sz||16}px;vertical-align:-2px;" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="10" height="14" rx="1.6" transform="rotate(-10 9 12)"/><rect x="10" y="5" width="10" height="14" rx="1.6" transform="rotate(8 15 12)"/></svg>`;
+}
 function leaderLineLabel(d){ return deckFormat(d)==='commander' ? 'COMMANDER' : 'ADMIRAL'; }
-function deckTotal(d){ return deckFormat(d) === 'commander' ? 100 : DECK_TOTAL; }
+/* The commander family counts to 100; Admiral and the constructed formats
+   to 60 -- for the latter that is the minimum, not an exact number. */
+function deckTotal(d){ return deckKind(d) === 'cmdr' ? 100 : DECK_TOTAL; }
 function brandTitle(){ return 'Deckhand'; }
 function modeGlyph(){ return isCmdrMode() ? '⚔' : '⚓'; }
 function anchorSvg(sz){
@@ -2104,7 +2144,9 @@ function anchorSvg(sz){
   // colored emoji ⚓ is retired from all rendered HTML.
   return `<svg viewBox="0 0 24 24" style="width:${sz||16}px;height:${sz||16}px;vertical-align:-2px;" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><line x1="12" y1="7.2" x2="12" y2="19"/><line x1="8" y1="10" x2="16" y2="10"/><path d="M5 14c0 4 3.5 6 7 6s7-2 7-6"/><path d="M5 14l-1.8 1.4M5 14l2.2.6M19 14l1.8 1.4M19 14l-2.2.6"/></svg>`;
 }
-function lifeStart(){ return isCmdrMode() ? 40 : START_LIFE; }
+/* One on one starts at 20 -- Duel Commander and every constructed format
+   do; four at a table start at 40 as Commander always has. */
+function lifeStart(count){ return count === 2 ? 20 : (isCmdrMode() ? 40 : START_LIFE); }
 function lethalDmg(){ return isCmdrMode() ? 21 : 18; }
 const PLAYER_COLORS = [
   { base:'#8A6A2E', dark:'#4A3814' }, // amber
@@ -2137,7 +2179,7 @@ const SALTY_MESSAGES = [
 const START_LIFE = 30;
 const CATS = ['Creatures','Planeswalkers','Battles','Instants','Sorceries','Artifacts','Enchantments','Other'];
 const CATS_CMDR = ['Creatures','Planeswalkers','Battles','Instants','Sorceries','Artifacts','Enchantments','Lands','Other'];
-function catsFor(d){ return deckFormat(d) === 'commander' ? CATS_CMDR : CATS; }
+function catsFor(d){ return deckKind(d) === 'admiral' ? CATS : CATS_CMDR; }
 const SORT_MODES = [
   {key:'type-cmc-name', label:'Type → Mana Value → Name'},
   {key:'type-name', label:'Type → Name'},
@@ -2582,45 +2624,49 @@ document.addEventListener('click', (e)=>{
     return;
   }
   const frRow = e.target.closest && e.target.closest('#fmtRulesRow');
+  // Every fold here opens UPWARD: the row you tapped stays under your
+  // thumb and whatever unfolds grows above it (keepAnchored).
+  const _up = (el, fn)=>keepAnchored(el, fn, ()=>el.isConnected ? el : null);
   if(frRow){
     const b = document.getElementById('fmtRulesBody');
-    if(b){ if(!b.innerHTML) b.innerHTML = fmtRulesBodyHtml(); toggleAccordionBody(b, 'fmtRules'); }
+    if(b) _up(frRow, ()=>{ if(!b.innerHTML) b.innerHTML = fmtRulesBodyHtml(); toggleAccordionBody(b, 'fmtRules'); });
     return;
   }
   const ff = e.target.closest && e.target.closest('[data-fmtfull]');
   if(ff){
     const fbox = ff.parentElement.querySelector('[data-fmtfullbox="' + ff.dataset.fmtfull + '"]');
-    if(fbox){
+    if(fbox) _up(ff, ()=>{
       fbox.hidden = !fbox.hidden;
       if(!fbox.hidden && !fbox.innerHTML) fbox.innerHTML = fmtFullRulesHtml(ff.dataset.fmtfull);
-      ff.textContent = (fbox.hidden ? '▸ ' : '▾ ') + trS('Complete rules');
-    }
+      ff.textContent = (fbox.hidden ? '▴ ' : '▾ ') + trS('Complete rules');
+    });
     return;
   }
   const fr = e.target.closest && e.target.closest('[data-fmtrule]');
   if(fr){
     if(e.target.closest('[data-fmtfullbox]')) return;   // reading the full rules, not a toggle
     const t = fr.querySelector('[data-fmtruletxt]');
-    if(t) t.hidden = !t.hidden;
+    const lab = fr.querySelector('.l1') || fr;
+    if(t) _up(lab, ()=>{ t.hidden = !t.hidden; });
     return;
   }
   const blRow = e.target.closest && e.target.closest('#banListsRow');
   if(blRow){
     const b = document.getElementById('banListsBody');
-    if(b){
+    if(b) _up(blRow, ()=>{
       if(!b.innerHTML) b.innerHTML = FORMAT_RULES.filter(f=>f[0] !== 'admiral' && f[0] !== 'premodern').map(([id, label])=>`<div class="settings-row" data-banfmt="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-banbox="${id}" hidden></div></div></div>`).join('') + `<div class="settings-row" data-banfmt="admiral" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">Admiral</div><div class="l2" data-banbox="admiral" hidden></div></div></div>`;
       toggleAccordionBody(b, 'banLists');
-    }
+    });
     return;
   }
   const bw = e.target.closest && e.target.closest('[data-banwhy]');
   if(bw){
     const wbox = bw.parentElement.querySelector('[data-banwhybox]');
-    if(wbox){
+    if(wbox) _up(bw, ()=>{
       wbox.hidden = !wbox.hidden;
       if(!wbox.hidden && !wbox.innerHTML) wbox.innerHTML = bw.dataset.banwhy === 'admiral' ? banPillarsHtml() : banInfoHtml(bw.dataset.banwhy);
-      bw.textContent = (wbox.hidden ? '▸ ' : '▾ ') + trS('About this ban list');
-    }
+      bw.textContent = (wbox.hidden ? '▴ ' : '▾ ') + trS('About this ban list');
+    });
     return;
   }
   const bi = e.target.closest && e.target.closest('.ban-item');
@@ -2629,10 +2675,11 @@ document.addEventListener('click', (e)=>{
   if(bf){
     if(e.target.closest('[data-banwhybox]')) return;   // reading the ban notes, not a toggle
     const box = bf.querySelector('[data-banbox]');
-    if(box){
+    const lab = bf.querySelector('.l1') || bf;
+    if(box) _up(lab, ()=>{
       box.hidden = !box.hidden;
       if(!box.hidden && !box.dataset.loaded){ box.dataset.loaded = '1'; fillBanList(bf.dataset.banfmt, box); }
-    }
+    });
     return;
   }
   if(e.target && e.target.id === 'capNoteBtn' && state.screen === 'collection'){
@@ -2690,16 +2737,56 @@ function fitTitleText(el){
   }catch(e){}
 }
 let _fitQueued = false;
+/* The title sits centred between whatever rides the cap's corners (a card
+   count on the left, the collection's value on the right). A fixed CSS
+   allowance guessed that room -- and on the phone, with the real title
+   font, "MY COLLECTION" did not fit and was cut off although there was
+   space enough. Measure it: twice the distance from the centre to the
+   nearer corner item. */
+function fitCapRoom(cap){
+  try{
+    const t = cap.querySelector(':scope > .brand-txt');
+    if(!t) return;
+    const cr = cap.getBoundingClientRect();
+    if(!cr.width) return;
+    const mid = (cr.left + cr.right) / 2;
+    let L = cr.left + 8, Rr = cr.right - 8;
+    Array.from(cap.children).forEach(k=>{
+      if(k === t) return;
+      const cs = getComputedStyle(k);
+      if(cs.position !== 'absolute' || cs.display === 'none' || cs.visibility === 'hidden') return;
+      const r = k.getBoundingClientRect();
+      if(!r.width) return;
+      if(r.right <= mid) L = Math.max(L, r.right + 8);
+      else if(r.left >= mid) Rr = Math.min(Rr, r.left - 8);
+    });
+    const room = Math.max(80, Math.floor(2 * Math.min(mid - L, Rr - mid)));
+    if(t.style.maxWidth !== room + 'px'){ t.style.maxWidth = room + 'px'; delete t.dataset.fitKey; }
+  }catch(e){}
+}
 function fitTitleBars(){
   if(_fitQueued) return; _fitQueued = true;
   requestAnimationFrame(()=>{
     _fitQueued = false;
+    document.querySelectorAll('.page-cap').forEach(fitCapRoom);
     document.querySelectorAll('.page-cap .brand-txt, .ov-cap .brand-txt, .overlay .topbar .brand-txt, .tb-titles .t1').forEach(fitTitleText);
   });
 }
+/* A title measured in the fallback font is measured wrong: the display
+   font arrives a moment later and is wider. Forget every settled size the
+   moment it lands, and fit again. */
+function refitAllTitles(){
+  _fitCache.clear();
+  document.querySelectorAll('[data-fit-key]').forEach(el=>{ delete el.dataset.fitKey; });
+  fitTitleBars();
+}
 try{
   new MutationObserver(fitTitleBars).observe(document.body, {childList:true, subtree:true});
-  window.addEventListener('resize', ()=>{ _fitCache.clear(); fitTitleBars(); });
+  window.addEventListener('resize', refitAllTitles);
+  if(document.fonts){
+    if(document.fonts.ready) document.fonts.ready.then(refitAllTitles).catch(()=>{});
+    document.fonts.addEventListener && document.fonts.addEventListener('loadingdone', refitAllTitles);
+  }
   fitTitleBars();
 }catch(e){}
 document.addEventListener('click', (e)=>{
@@ -2838,6 +2925,7 @@ function _cmdrBansTouchUi(){
   // A refreshed banlist re-judges whatever is on screen: the settings
   // list, or the open deck's legality box, cap count and red rims.
   if(state.screen === 'settings'){ render(); return; }
+  if(state.screen === 'collection' && colLegalFmt(state.colFilter)){ try{ csRerender(); }catch(e){} return; }
   if(state.screen === 'decklist'){
     try{
       const d = getDeck(state.activeDeckId);
@@ -3241,6 +3329,200 @@ function commanderVerdict(card){
   if(!bans.size && card.legalities && card.legalities.commander === 'not_legal') return 'not_legal';
   return 'legal';
 }
+/* ================= CONSTRUCTED LEGALITY =================
+   The same shape as Commander's: bans by NAME from a list that stays
+   current by itself (seeded, then refreshed from Scryfall once a day per
+   format), and the per-card facts -- legal or not in this format at all
+   (rotation, rarity, card pool) -- from the weekly card file (lx), a fresh
+   Scryfall object, or a small live cache for whatever neither knows yet. */
+const LX_FORMATS = ['standard', 'pauper', 'modern', 'legacy', 'vintage', 'paupercommander', 'duel', 'predh', 'premodern'];
+const LX_WORD = { l:'legal', b:'banned', r:'restricted', n:'not_legal' };
+/* Seed lists as announced on 10 August 2026 (next announcement 12 October
+   2026). They only speak until the first daily refresh lands. */
+const FMT_BAN_SEED_T = Date.parse('2026-08-10T00:00:00Z');
+const FMT_BAN_SEED = {
+  standard: ["Abuelo's Awakening","Badgermole Cub","Cori-Steel Cutter","Gran-Gran","Heartfire Hero","Hopeless Nightmare","Monstrous Rage","Proft's Eidetic Memory","Screaming Nemesis","Stormchaser's Talent","This Town Ain't Big Enough","Up the Beanstalk","Vivi Ornitier"],
+  modern: ["Amped Raptor","Ancient Den","Arcum's Astrolabe","Birthing Pod","Blazing Shoal","Bridge from Below","Chrome Mox","Cloudpost","Dark Depths","Deathrite Shaman","Dig Through Time","Dread Return","Eye of Ugin","Field of the Dead","Fury","Gitaxian Probe","Glimpse of Nature","Golgari Grave-Troll","Great Furnace","Grief","Hogaak, Arisen Necropolis","Hypergenesis","Jegantha, the Wellspring","Krark-Clan Ironworks","Lotus Field","Lurrus of the Dream-Den","Mental Misstep","Mycosynth Lattice","Mystic Sanctuary","Nadu, Winged Wisdom","Oko, Thief of Crowns","Once Upon a Time","Phlage, Titan of Fire's Fury","Ponder","Punishing Fire","Rite of Flame","Seat of the Synod","Second Sunrise","Seething Song","Sensei's Divining Top","Simian Spirit Guide","Skullclamp","Summer Bloom","The One Ring","Tibalt's Trickery","Treasure Cruise","Tree of Tales","Underworld Breach","Up the Beanstalk","Uro, Titan of Critical Acclaim","Vault of Whispers","Yorion, Sky Nomad"],
+  pauper: ["Aarakocra Sneak","All That Glitters","Arcum's Astrolabe","Atog","Basking Broodscale","Chatterstorm","Cloud of Faeries","Cloudpost","Cranial Plating","Cranial Ram","Daze","Deadly Dispute","Disciple of the Vault","Empty the Warrens","Fall from Favor","Frantic Search","Galvanic Relay","Gitaxian Probe","Grapeshot","Gush","High Tide","Hymn to Tourach","Invigorate","Kuldotha Rebirth","Monastery Swiftspear","Mystic Sanctuary","Narcomoeba","Peregrine Drake","Price of Progress","Seeker of Skybreak","Sinkhole","Sojourner's Companion","Stirring Bard","Temporal Fissure","Treasure Cruise","Underdark Explorer","Vicious Battlerager"],
+  legacy: ["Ancestral Recall","Arcum's Astrolabe","Balance","Bazaar of Baghdad","Black Lotus","Candelabra of Tawnos","Channel","Chaos Orb","Deathrite Shaman","Demonic Consultation","Demonic Tutor","Dig Through Time","Dreadhorde Arcanist","Earthcraft","Entomb","Expressive Iteration","Falling Star","Fastbond","Flash","Frantic Search","Gitaxian Probe","Goblin Recruiter","Grief","Gush","Hermit Druid","Imperial Seal","Library of Alexandria","Lurrus of the Dream-Den","Mana Crypt","Mana Drain","Mana Vault","Memory Jar","Mental Misstep","Mind Twist","Mishra's Workshop","Mox Emerald","Mox Jet","Mox Pearl","Mox Ruby","Mox Sapphire","Mystical Tutor","Nadu, Winged Wisdom","Necropotence","Oath of Druids","Oko, Thief of Crowns","Psychic Frog","Ragavan, Nimble Pilferer","Sensei's Divining Top","Shahrazad","Skullclamp","Sol Ring","Sowing Mycospawn","Strip Mine","Survival of the Fittest","The Fantasticar","Time Vault","Time Walk","Timetwister","Tinker","Tolarian Academy","Treasure Cruise","Troll of Khazad-dûm","Undercity Informer","Underworld Breach","Vampiric Tutor","Vexing Bauble","Wheel of Fortune","White Plume Adventurer","Windfall","Wrenn and Six","Yawgmoth's Bargain","Yawgmoth's Will","Zirda, the Dawnwaker"],
+  vintage: ["Chaos Orb","Falling Star","Shahrazad"],
+  vintageRestricted: ["Ancestral Recall","Balance","Black Lotus","Brainstorm","Chalice of the Void","Channel","Demonic Consultation","Demonic Tutor","Dig Through Time","Flash","Gitaxian Probe","Golgari Grave-Troll","Gush","Imperial Seal","Karn, the Great Creator","Library of Alexandria","Lion's Eye Diamond","Lodestone Golem","Lotus Petal","Mana Crypt","Mana Vault","Memory Jar","Mental Misstep","Merchant Scroll","Mind's Desire","Monastery Mentor","Mox Emerald","Mox Jet","Mox Pearl","Mox Ruby","Mox Sapphire","Mystic Forge","Mystical Tutor","Narset, Parter of Veils","Necropotence","Sol Ring","Strip Mine","The Fantasticar","Thorn of Amethyst","Time Vault","Time Walk","Timetwister","Tinker","Tolarian Academy","Treasure Cruise","Trinisphere","Urza's Saga","Vampiric Tutor","Vexing Bauble","Wheel of Fortune","Windfall","Yawgmoth's Will"]
+};
+const FMT_BAN_TTL = 24*60*60*1000;
+let _fmtBansLoading = {};
+const _fmtBanSetCache = {};
+function _fmtBansStore(){
+  if(!state.fmtBans){
+    try{ state.fmtBans = JSON.parse(localStorage.getItem(LS_PREFIX+'fmtBans')||'null') || {}; }catch(e){ state.fmtBans = {}; }
+  }
+  return state.fmtBans;
+}
+/* {banned, restricted, t, live} for a constructed format, as lookup sets. */
+function fmtBanSets(fmt){
+  const st = _fmtBansStore();
+  const rec = st[fmt];
+  const t = rec ? (rec.t || 0) : -1;
+  const c = _fmtBanSetCache[fmt];
+  if(c && c.t === t) return c;
+  const names = (rec && Array.isArray(rec.names)) ? rec.names : (FMT_BAN_SEED[fmt] || []);
+  const restr = fmt === 'vintage' ? ((rec && Array.isArray(rec.restricted)) ? rec.restricted : FMT_BAN_SEED.vintageRestricted) : [];
+  const out = { t, live: !!rec, banned: new Set(names.map(norm)), restricted: new Set(restr.map(norm)),
+                names: names.slice().sort((a,b)=>a.localeCompare(b)), restrictedNames: restr.slice().sort((a,b)=>a.localeCompare(b)) };
+  _fmtBanSetCache[fmt] = out;
+  return out;
+}
+/* Once a day per format: the official list, straight from Scryfall. */
+async function ensureFmtBans(fmt, force){
+  if(!isConstructedFmt(fmt)) return;
+  const st = _fmtBansStore();
+  const rec = st[fmt];
+  if(rec && !force && Date.now() - (rec.t||0) < FMT_BAN_TTL) return;
+  if(_fmtBansLoading[fmt]) return;
+  _fmtBansLoading[fmt] = true;
+  try{
+    const pull = async (q)=>{
+      const names = new Set();
+      let next = `${SF_BASE}/cards/search?order=name&q=${encodeURIComponent(q)}`, guard = 0;
+      while(next && guard < 6){
+        guard++;
+        const r = await sfFetch(next, 0, !force);
+        if(!r.ok){ if(r.status === 404) break; return null; }
+        const d = await r.json();
+        (d.data||[]).forEach(c=>{ if(c && c.name) names.add(c.name.split(' // ')[0]); });
+        next = d.has_more ? d.next_page : null;
+      }
+      return Array.from(names);
+    };
+    const banned = await pull('banned:' + fmt);
+    const restricted = fmt === 'vintage' ? await pull('restricted:vintage') : [];
+    // Vintage bans next to nothing, so an empty answer is fine there; for
+    // the others an empty list means the request failed, not a clean slate.
+    if(banned && restricted && (banned.length || fmt === 'vintage')){
+      st[fmt] = { t: Date.now(), names: banned, restricted };
+      try{ localStorage.setItem(LS_PREFIX+'fmtBans', JSON.stringify(st)); }catch(e){}
+      _cmdrBansTouchUi();
+    }
+  }catch(e){}
+  finally{ _fmtBansLoading[fmt] = false; }
+}
+/* A card's standing in any format the weekly file carries (lx). */
+function bulkLegality(name, fmt){
+  const i = LX_FORMATS.indexOf(fmt);
+  if(i < 0) return null;
+  let ix = null;
+  try{ ix = _bulkIdx; }catch(e){}
+  if(!ix || !ix.byName || !ix.hasLx) return null;
+  const bc = ix.byName.get(String(name||'').toLowerCase()) || ix.byName.get(String(name||'').split(' // ')[0].toLowerCase());
+  if(!bc) return null;
+  return LX_WORD[(bc.lx || '')[i]] || 'not_legal';
+}
+/* Live cache for cards the weekly file does not know yet (a set newer than
+   the build): one batched POST per 75 names, kept for a week. */
+const FMT_LEG_TTL = 7*24*60*60*1000;
+let _fmtLegMem = null, _fmtLegQueue = new Set(), _fmtLegTimer = null;
+function _fmtLegStore(){
+  if(!_fmtLegMem){
+    try{ _fmtLegMem = JSON.parse(localStorage.getItem(LS_PREFIX+'fmtLeg')||'null') || {}; }catch(e){ _fmtLegMem = {}; }
+  }
+  return _fmtLegMem;
+}
+function liveLegality(name, fmt){
+  const i = LX_FORMATS.indexOf(fmt);
+  if(i < 0) return null;
+  const rec = _fmtLegStore()[String(name||'')];
+  if(!rec || Date.now() - (rec[0]||0) > FMT_LEG_TTL) return null;
+  return LX_WORD[(rec[1] || '')[i]] || 'not_legal';
+}
+function lxLetters(leg){
+  return LX_FORMATS.map(f=>({ legal:'l', banned:'b', restricted:'r', not_legal:'n' })[leg && leg[f]] || 'n').join('');
+}
+function queueFmtLegality(names){
+  (names||[]).forEach(n=>{ if(n) _fmtLegQueue.add(n); });
+  if(!_fmtLegQueue.size || _fmtLegTimer) return;
+  _fmtLegTimer = setTimeout(async ()=>{
+    _fmtLegTimer = null;
+    const all = Array.from(_fmtLegQueue); _fmtLegQueue.clear();
+    const store = _fmtLegStore();
+    let got = 0;
+    for(let i = 0; i < all.length; i += 75){
+      const chunk = all.slice(i, i + 75);
+      try{
+        const r = await postWithTimeout(`${SF_BASE}/cards/collection`, { identifiers: chunk.map(n=>({ name: n.split(' // ')[0] })) }, 6000);
+        if(!r || !r.ok) continue;
+        const j = await r.json();
+        (j.data||[]).forEach(c=>{
+          if(!c || !c.name || !c.legalities) return;
+          const rec = [Date.now(), lxLetters(c.legalities)];
+          store[c.name] = rec;
+          const cut = c.name.indexOf(' // ');
+          if(cut > 0) store[c.name.slice(0, cut)] = rec;
+          got++;
+        });
+      }catch(e){}
+    }
+    if(got){
+      try{ localStorage.setItem(LS_PREFIX+'fmtLeg', JSON.stringify(store)); }catch(e){}
+      _cmdrBansTouchUi();
+    }
+  }, 900);
+}
+/* The verdict for one card in one format: 'legal' | 'restricted' |
+   'banned' | 'not_legal' | 'preview' | 'unknown'. Bans come from the list
+   by name (a stale snapshot never outvotes an unban); legal-or-not comes
+   from the card's own facts. */
+function fmtVerdict(card, fmt){
+  if(!card) return 'legal';
+  if(fmt === 'commander') return commanderVerdict(card);
+  if(fmt === 'admiral') return isBanned(card) ? 'banned' : 'legal';
+  if(isPreviewCard(card)) return 'preview';
+  const nm = norm(String(card.name||'').split(' // ')[0]);
+  if(isConstructedFmt(fmt)){
+    const B = fmtBanSets(fmt);
+    if(B.banned.has(nm)) return 'banned';
+    if(fmt === 'vintage' && B.restricted.has(nm)) return 'restricted';
+  }
+  if(['funny','memorabilia','token','minigame','alchemy'].includes(card.set_type)
+     || ['token','art_series','emblem','planar','scheme','vanguard','double_faced_token'].includes(card.layout)
+     || card.digital === true) return 'not_legal';
+  let v = (card.legalities && card.legalities[fmt]) || bulkLegality(card.name, fmt) || liveLegality(card.name, fmt);
+  if(!v) return 'unknown';
+  // Bans and restrictions are the list's call: a snapshot saying 'banned'
+  // for a card the current list no longer carries means it came off.
+  if(isConstructedFmt(fmt) && (v === 'banned' || v === 'restricted')) v = 'legal';
+  return v;
+}
+/* May this card go into this deck at all? '' when yes, else the reason. */
+function deckBlockReason(card, d){
+  if(!d || !card) return '';
+  if(deckIsConstructed(d)){
+    const v = fmtVerdict(card, deckFormat(d));
+    if(v === 'banned') return 'Banned';
+    if(v === 'not_legal') return 'Not legal in ' + fmtLabelOf(deckFormat(d));
+    if(v === 'unknown') queueFmtLegality([card.name]);
+    return '';
+  }
+  return isBanned(card) ? 'Banned' : '';
+}
+/* How many copies a deck may hold: basics and "any number" cards are free,
+   the commander family and Admiral are singleton, the 60s take four --
+   Vintage's restricted cards one. */
+function copyLimit(card, d){
+  if(!card || allowsDuplicates(card)) return Infinity;
+  if(deckIsConstructed(d)){
+    if(deckFormat(d) === 'vintage' && fmtVerdict(card, 'vintage') === 'restricted') return 1;
+    return 4;
+  }
+  return 1;
+}
+function copiesIn(list, name){ let n = 0; (list||[]).forEach(c=>{ if(c && c.name === name) n++; }); return n; }
+/* Copy limits count main deck and sideboard together, as the rules do. */
+function atCopyLimit(d, card, list){
+  if(!d || !card) return false;
+  const lim = copyLimit(card, d);
+  if(lim === Infinity) return false;
+  const pool = list || (deckIsConstructed(d) ? (d.cards||[]).concat(ensureMaybeboard(d)) : d.cards);
+  return copiesIn(pool, card.name) >= lim;
+}
 function isBanned(card){
   if(isCmdrMode()){
     // The live name list is the truth; a per-card snapshot (when a card
@@ -3255,7 +3537,7 @@ function isNonlandFront(card){ const f=frontFace(card); return f.type_line && !f
 /* Commander plays lands; Admiral doesn't. Every client-side land filter goes
    through this so the rule lives in one place. Pass the deck when there is
    one; otherwise the current app mode decides. */
-function landOk(card, d){ return (d ? deckFormat(d)==='commander' : isCmdrMode()) || isNonlandFront(card); }
+function landOk(card, d){ return (d ? deckKind(d) !== 'admiral' : isCmdrMode()) || isNonlandFront(card); }
 function hasPowerToughness(card){ const f=frontFace(card); return f.power !== undefined && f.power !== null; }
 function isLegendary(card){ return (card.type_line||'').includes('Legendary'); }
 function allowsDuplicates(card){
@@ -3515,7 +3797,7 @@ function manaSymbolCounts(cards){
   return { counts, total };
 }
 function categoryOf(card, d){
-  if(d && deckFormat(d) === 'commander' && ((card.type_line||'').split('//')[0]).includes('Land')) return 'Lands';
+  if(d && deckKind(d) !== 'admiral' && ((card.type_line||'').split('//')[0]).includes('Land')) return 'Lands';
   const t = frontFace(card).type_line || '';
   if(t.includes('Creature')) return 'Creatures';
   if(t.includes('Planeswalker')) return 'Planeswalkers';
@@ -3695,9 +3977,9 @@ function applyHistAction(d, entryId){
     case 'addMain': {
       const c = e.card;
       if(!c){ msg = 'Nothing stored to re-add.'; break; }
-      if(d.cards.some(x=>x.name===e.name) && !allowsDuplicates(c)){ msg = `${e.name} is already in the deck.`; break; }
+      if(atCopyLimit(d, c)){ msg = `${e.name} is already in the deck.`; break; }
       if(d.admiral && !colorIdentityOkDeck(c, d)){ msg = `${e.name} is off-color for the current leaders.`; break; }
-      if(isBanned(c)){ msg = `${e.name} is banned.`; break; }
+      if(deckBlockReason(c, d)){ msg = `${e.name}: ${deckBlockReason(c, d).toLowerCase()}.`; break; }
       d.cards.push(c); logDeckChange(d, {type:'add', name:e.name, card:c}); ok = true; msg = `${e.name} added.`; break;
     }
     case 'removeMaybe': { const i = inMaybe(); if(i >= 0){ const [c] = d.maybeboard.splice(i,1); logDeckChange(d, {type:'removeMaybe', name:e.name, card:c}); ok = true; msg = `${e.name} removed from Maybeboard.`; } else msg = `${e.name} is not in the Maybeboard.`; break; }
@@ -3720,9 +4002,9 @@ function undoDeckChange(d, entryId){
     case 'addMaybe': { const i=inMaybe(); if(i>=0){ d.maybeboard.splice(i,1); ok=true; msg=`${e.name} removed from Maybeboard (undo).`; } else msg=`${e.name} is no longer in the Maybeboard.`; break; }
     case 'remove': {
       if(!e.card){ msg='Nothing stored to restore.'; break; }
-      if(d.cards.some(x=>x.name===e.name) && !allowsDuplicates(e.card)){ msg=`${e.name} is already back in the deck.`; break; }
+      if(atCopyLimit(d, e.card)){ msg=`${e.name} is already back in the deck.`; break; }
       if(d.admiral && !colorIdentityOkDeck(e.card, d)){ msg=`${e.name} is off-color for the current leaders.`; break; }
-      if(isBanned(e.card)){ msg=`${e.name} is banned.`; break; }
+      if(deckBlockReason(e.card, d)){ msg=`${e.name}: ${deckBlockReason(e.card, d).toLowerCase()}.`; break; }
       d.cards.push(e.card); ok=true; msg=`${e.name} restored (undo).`; break;
     }
     case 'removeMaybe': {
@@ -4029,7 +4311,7 @@ async function _netConfirmDown(){
 /* The offline notice lives in the page-name bar: one short chip on the left,
    rebuilt by every render and kept in sync the moment the network flips. */
 function netChipHtml(){
-  return _netDown ? `<span class="net-chip" id="netChip" title="${appLang()==='nl' ? 'Geen verbinding \u2014 cache wordt getoond, herstelt vanzelf' : 'No connection \u2014 showing cached data, recovers by itself'}">\u26a1 Offline</span>` : '';
+  return _netDown ? `<span class="net-chip" id="netChip" title="${appLang()==='nl' ? 'Geen verbinding \u2014 je ziet de opgeslagen versie, dit herstelt vanzelf' : 'No connection \u2014 showing cached data, recovers by itself'}">\u26a1 Offline</span>` : '';
 }
 function _netChipSync(){
   try{
@@ -4813,23 +5095,25 @@ const LS_PREFIX = 'admiral_app:';
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.626';
+const APP_VERSION = '2.51.627';
 const CHANGELOG_NOTES = {
   en: [
-    'The spoiler page stays put at the bottom while cards load.',
-    'An open Inspiration menu moves to the bottom slot.',
-    'Search buttons are gone: use the keyboard\u2019s search key.',
-    'Budget and Played with have the normal bottom bar.',
-    'Tap the price chart to read a day.',
-    'The notification icon shows the D.'
+    'New formats: Standard, Pauper, Modern, Legacy and Vintage.',
+    'Up to 4 copies, 60 cards, a sideboard of 15, live ban lists.',
+    'Inspiration shows the meta decks of these formats.',
+    'One on one starts at 20 life.',
+    'Collection and Search filter by format.',
+    'Budget slider sits above the bar; Extras folds open upward.',
+    'Dutch texts checked; game terms stay English.'
   ],
   nl: [
-    'De spoilerpagina blijft onderaan staan tijdens het laden.',
-    'Een open Inspiration-menu schuift naar de onderste plek.',
-    'Search-knoppen zijn weg: gebruik de zoektoets van je toetsenbord.',
-    'Budget en Played with hebben de gewone balk onderaan.',
-    'Tik op de prijsgrafiek om een dag af te lezen.',
-    'Het meldingsicoon toont de D.'
+    'Nieuwe formats: Standard, Pauper, Modern, Legacy en Vintage.',
+    'Tot 4 exemplaren, 60 kaarten, een sideboard van 15, live banlijsten.',
+    'Inspiratie toont de meta-decks van deze formats.',
+    'E\u00e9n tegen \u00e9\u00e9n begint op 20 life.',
+    'Collectie en Zoeken filteren op format.',
+    'Budgetschuif staat boven de balk; Extra\u2019s klapt naar boven open.',
+    'Nederlandse teksten nagelopen; speltermen blijven Engels.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -4848,58 +5132,60 @@ function tourSteps(){
       t: NL ? '⚓ Welkom aan boord' : '⚓ Welcome aboard',
       b: NL
         ? `<p style="margin:4px 0;">Deckhand is <strong>voor je telefoon</strong> gemaakt: alles is <strong>van onder naar boven</strong> gebouwd — knoppen, menu\u2019s en de beste content zitten onderin, binnen <strong>duimbereik</strong>.</p>
-           <p style="margin:4px 0;">Bouw decks in <strong>Commander, Admiral, Pauper Commander, PreDH en Duel Commander</strong>; alles werkt offline. Dit is <strong>Home</strong>, met onderin het laatste Magic-<strong>nieuws</strong>.</p>
+           <p style="margin:4px 0;">Bouw decks in <strong>Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern, Legacy en Vintage</strong>; alles werkt offline. Dit is <strong>Home</strong>, met onderin het laatste Magic-<strong>nieuws</strong>.</p>
            <p style="margin:4px 0;color:var(--sub-text);">📲 Tip: installeer Deckhand als app — Chrome ⋮ → <em>App installeren</em>. We lopen nu alle pagina\u2019s langs.</p>`
         : `<p style="margin:4px 0;">Deckhand is built <strong>for your phone</strong>: everything runs <strong>bottom-up</strong> — buttons, menus and the best content sit at the foot, within <strong>thumb reach</strong>.</p>
-           <p style="margin:4px 0;">Build decks in <strong>Commander, Admiral, Pauper Commander, PreDH and Duel Commander</strong>; everything works offline. This is <strong>Home</strong>, with the latest Magic <strong>news</strong> at the foot.</p>
+           <p style="margin:4px 0;">Build decks in <strong>Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern, Legacy and Vintage</strong>; everything works offline. This is <strong>Home</strong>, with the latest Magic <strong>news</strong> at the foot.</p>
            <p style="margin:4px 0;color:var(--sub-text);">📲 Tip: install Deckhand as an app — Chrome ⋮ → <em>Install app</em>. Let\u2019s walk every page together.</p>` },
     { k:'decks', go:()=>switchPage('decks'),
       t: NL ? '⚔ My Stuff — je decks' : '⚔ My Stuff — your decks',
       b: NL
-        ? `<p style="margin:6px 0;">Al je decks op één plek. Ze sorteren zichzelf in <strong>automatische format-mappen</strong> — Commander bij Commander, Admiral bij Admiral; de andere vloot wacht in haar eigen map.</p>
+        ? `<p style="margin:6px 0;">Al je decks op één plek. Ze sorteren zichzelf in <strong>automatische format-mappen</strong>: elk format krijgt zijn eigen map.</p>
            <p style="margin:6px 0;">Met de <strong>＋</strong>-knop start je een nieuw deck; eigen mappen en ★ favorieten kunnen ook.</p>`
-        : `<p style="margin:6px 0;">All your decks in one place. They sort themselves into <strong>automatic format folders</strong> — Commander with Commander, Admiral with Admiral; the other fleet waits in its own folder.</p>
+        : `<p style="margin:6px 0;">All your decks in one place. They sort themselves into <strong>automatic format folders</strong>: every format gets its own.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> button starts a new deck; your own folders and ★ favorites work too.</p>` },
     { k:'decklist', go:()=>{ const d = d0(); if(d){ state.activeDeckId = d.id; state.builderTab = 'list'; switchPage('decklist'); } },
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om er meerdere te selecteren — verplaatsen, verwijderen of naar het maybeboard.</p>
-           <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (manacurve, kleurverdeling, duurste kaarten), <strong>Deck Log</strong> (primer, potjes loggen, hand-tester). Via de werkbalk vind je o.a. <strong>Budget-alternatieven</strong> voor dure kaarten.</p>`
+           <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, duurste kaarten) en <strong>Deck Log</strong> (primer, potjes noteren, handtester). In de werkbalk vind je onder meer <strong>budgetalternatieven</strong> voor dure kaarten.</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select several at once — move, remove, or send them to the maybeboard.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, most expensive cards), <strong>Deck Log</strong> (primer, game log, hand tester). The toolbar holds <strong>Budget alternatives</strong> for pricey cards, and more.</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
       t: NL ? '🃏 De kaart-detailpagina' : '🃏 The card detail view',
       b: soon + (NL
-        ? `<p style="margin:6px 0;">Tik op een kaart en je krijgt alles: oracle-tekst, prijs (tik erop voor de <strong>prijsgeschiedenis</strong>) en de 🧂 <strong>salt score</strong>.</p>
+        ? `<p style="margin:6px 0;">Tik op een kaart en je ziet alles: Oracle text, prijs (tik erop voor de <strong>prijsgeschiedenis</strong>) en de 🧂 <strong>salt score</strong>.</p>
            <p style="margin:6px 0;"><strong>Recommendations</strong> toont wat het meest met deze kaart gespeeld wordt, <strong>Similar cards</strong> kaarten met dezelfde rol, en via <strong>Change printing</strong> kies je een andere versie/art.</p>`
         : `<p style="margin:6px 0;">Tap any card and everything is here: oracle text, price (tap it for the <strong>price history</strong>) and the 🧂 <strong>salt score</strong>.</p>
            <p style="margin:6px 0;"><strong>Recommendations</strong> shows what people play alongside it, <strong>Similar cards</strong> finds cards with the same job, and <strong>Change printing</strong> picks another version/art.</p>`) },
     { k:'collection', go:()=>switchPage('collection'),
       t: NL ? '📒 Je collectie' : '📒 Your collection',
       b: NL
-        ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Wants</strong> (verlanglijst). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen (binders) maken kan ook.</p>
+        ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong>. Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
       t: NL ? '🔍 Zoeken' : '🔍 Search',
       b: NL
-        ? `<p style="margin:6px 0;">Zoek op naam, of open het <strong>Advanced filter</strong>: kleuren, tags (wat een kaart <em>doet</em>), type, oracle-tekst, set, format en meer.</p>
+        ? `<p style="margin:6px 0;">Zoek op naam of open het <strong>geavanceerde filter</strong>: kleuren, tags (wat een kaart <em>doet</em>), type, Oracle text, set, format en meer. De zoektoets van je toetsenbord start de zoekopdracht.</p>
            <p style="margin:6px 0;">De 🔮-knop opent de <strong>Spoilers</strong>-pagina — de nieuwste kaarten per set, dag voor dag.</p>`
-        : `<p style="margin:6px 0;">Search by name, or open the <strong>Advanced filter</strong>: colors, tags (what a card <em>does</em>), type, oracle text, set, format and more.</p>
+        : `<p style="margin:6px 0;">Search by name, or open the <strong>Advanced filter</strong>: colors, tags (what a card <em>does</em>), type, Oracle text, set, format and more. Your keyboard's search key runs it.</p>
            <p style="margin:6px 0;">The 🔮 button opens the <strong>Spoilers</strong> page — the newest cards per set, day by day.</p>` },
     { k:'inspiration', go:()=>switchPage('browse'),
       t: NL ? '✦ Inspiration' : '✦ Inspiration',
       b: NL
         ? `<p style="margin:6px 0;">Bovenaan de <strong>Top Commanders</strong> van de week/maand/jaar. De menu\u2019s onderin doen de rest — van onder naar boven:</p>
-           <p style="margin:6px 0;"><strong>Format</strong> (welke leader-pool), <strong>Commanders — kleuren</strong> en de exacte <strong>combinatie</strong>, <strong>Theme</strong> en <strong>Kindred</strong> (stammen) — allemaal tegels met kaartart, meest gespeeld onderaan. Tik op een leader voor zijn aanbevolen kaarten; de zoekbalk vindt een leader op naam.</p>`
+           <p style="margin:6px 0;"><strong>Format</strong> (welke leader-pool), <strong>Commanders — kleuren</strong> en de exacte <strong>combinatie</strong>, <strong>Theme</strong> en <strong>Kindred</strong> — allemaal tegels met kaartafbeeldingen, meest gespeeld onderaan. Tik op een leader voor de aanbevolen kaarten; de zoekbalk vindt een leader op naam.</p>
+           <p style="margin:6px 0;">Kies je <strong>Standard, Pauper, Modern, Legacy of Vintage</strong>, dan zie je de <strong>meta-decks</strong> van de afgelopen vier weken, met een menu voor het archetype (aggro, tempo, control …). Tik op een deck om de lijst te zien en hem naar je eigen decks te kopiëren.</p>`
         : `<p style="margin:6px 0;">Up top: the <strong>Top Commanders</strong> of the week/month/year. The drop-ups at the foot do the rest — bottom to top:</p>
-           <p style="margin:6px 0;"><strong>Format</strong> (which leader pool), <strong>Commanders — colors</strong> and the exact <strong>combination</strong>, <strong>Theme</strong> and <strong>Kindred</strong> (tribes) — all card-art tiles, most played at the foot. Tap a leader for its recommended cards; the search bar finds a leader by name.</p>` },
+           <p style="margin:6px 0;"><strong>Format</strong> (which leader pool), <strong>Commanders — colors</strong> and the exact <strong>combination</strong>, <strong>Theme</strong> and <strong>Kindred</strong> (tribes) — all card-art tiles, most played at the foot. Tap a leader for its recommended cards; the search bar finds a leader by name.</p>
+           <p style="margin:6px 0;">Pick <strong>Standard, Pauper, Modern, Legacy or Vintage</strong> and you get the <strong>meta decks</strong> of the last four weeks, with an archetype menu (aggro, tempo, control …). Tap a deck to see the list and copy it to your own decks.</p>` },
     { k:'extras', go:()=>switchPage('settings'),
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
-        ? `<p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel, <strong>Format rules</strong> en <strong>ban-lijsten</strong> van elf formaten, de complete <strong>Comprehensive Rules</strong>, <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong> — kies een gilde en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Backup &amp; Restore</strong> — alles in één bestand. Deze rondleiding staat hier ook, mocht je hem terug willen zien.</p>`
+        ? `<p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel, <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, de complete <strong>Comprehensive Rules</strong>, <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; herstel</strong>, alles in één bestand. Deze rondleiding staat hier ook, voor als je hem nog eens wilt zien.</p>`
         : `<p style="margin:6px 0;">The table-side <strong>Life Counter</strong>, <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
            <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. This tour lives here too, whenever you want it back.</p>` }
   ];
@@ -7033,13 +7319,31 @@ function colMatch(it, codes){
   }
   if(f.eurMin > 0 && (it.eur||0) < f.eurMin) return false;
   if(f.eurMax != null && (it.eur||0) > f.eurMax) return false;
-  if(f.legal){
+  const lf = colLegalFmt(f);
+  if(lf){
     codes = codes || new Set((activeLegalSetCodes()||[]).map(c=>String(c).toLowerCase()));
-    const s = collectionCardStatus(it, codes);              // null = legal in current format
-    if(f.legal === 'legal' && s !== null) return false;
-    if(f.legal === 'illegal' && s === null) return false;
+    if(!colItemLegalIn(it, lf, codes)) return false;
   }
   return true;
+}
+/* The collection's format filter speaks the Search page's language: pick a
+   format, see what is legal in it. Old saved choices ('legal' / 'illegal',
+   Commander-only) map onto it. */
+function colLegalFmt(f){
+  const v = (f && f.legal) || '';
+  if(v === 'legal') return 'commander';
+  if(v === 'illegal') return '';
+  return v;
+}
+function colItemLegalIn(it, fmt, codes){
+  if(fmt === 'commander') return collectionCardStatus(it, codes) === null;
+  if(fmt === 'admiral'){
+    if(bannedSet.has(norm(it.name||''))) return false;
+    return it.legal_adm !== false;
+  }
+  const v = fmtVerdict({ name: it.name, set: it.set, set_type: it.set_type, layout: it.layout }, fmt);
+  if(v === 'unknown'){ queueFmtLegality([it.name]); return true; }   // judged as soon as the answer lands
+  return v === 'legal' || v === 'restricted' || v === 'preview';
 }
 function colFilteredItems(){
   const f = state.colFilter;
@@ -7129,7 +7433,7 @@ function collectionPageHtml(){
         <div class="adv-row"><label>Rarity</label><div class="rarity-row">
           ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-colrarity="${v}" ${f.rarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
         </div></div>
-        <div class="adv-row"><label>Legality</label>${cselectHtml('colLegal', [{v:'',l:'All cards'},{v:'legal',l:`${fmtName()}-legal only`},{v:'illegal',l:'Illegal / banned only'}], f.legal, 'All cards')}</div>
+        <div class="adv-row"><label>${trS('Format')}</label>${cselectHtml('colLegal', [{v:'',l:trS('All cards')}].concat(SEARCH_FORMATS.map(([v,l])=>({v, l}))), colLegalFmt(f), trS('All cards'))}</div>
         <div class="adv-row"><label>Price</label>${priceSliderHtml('colPr', f.eurMin, f.eurMax)}</div>
       </div>`;
     })()}</div>
@@ -7182,7 +7486,7 @@ function artCropFrom(img){
       cards — the surrounding interface translates, the game speaks as their
       tables do. */
 const I18N = {
-nl:{"Trade":"Ruilen","Multiplayer life tracker":"Multiplayer-levensteller","Read, search, or ask a rules question":"Lees, zoek, of stel een regelvraag","Deckbuilding and play, per format":"Deckbouw en spel, per format","Banned cards per format":"Verboden kaarten per format","Interface and card images":"Interface en kaartafbeeldingen","A guild's two colors dress the app":"De twee kleuren van een gilde kleden de app","Decks, collection and settings in one file":"Decks, collectie en instellingen in \u00e9\u00e9n bestand","Home-screen icon, full screen, offline":"Icoon op je beginscherm, volledig scherm, offline","Sends the app link":"Stuurt de app-link","Crossover sets \u2014 pick what your table plays":"Crossover-sets \u2014 kies wat jullie spelen","Price not listed yet":"Prijs nog niet bekend","Deck is legal \u2014 ready to sail.":"Deck is legaal \u2014 klaar om uit te varen.","and":"en","more issues\u2026":"problemen meer\u2026","Color scheme":"Kleurenschema","Pick a guild — its two colors dress the whole app.":"Kies een gilde \u2014 zijn twee kleuren kleden de hele app.","MY DECKS":"MIJN DECKS","History":"Historie","Combo data arrives with a coming weekly update.":"Combodata komt mee met een aanstaande wekelijkse update.","No known combos in this deck.":"Geen bekende combo\u2019s in dit deck.","No cards at":"Geen kaarten van","or more in this deck":"of meer in dit deck","it\u2019s already built thrifty.":"het is al zuinig gebouwd.","this crew is already sailing cheap.":"deze bemanning vaart al goedkoop.","No 2, 3 or 4 card combos for this card.":"Geen 2-, 3- of 4-kaartscombo\u2019s voor deze kaart.","Mine to receive":"Ik ontvang","Yours to receive":"Jij ontvangt","Search your wants…":"Zoek in je wants…","No wants match that name.":"Geen wants met die naam.","Paste a list":"Plak een lijst","One card per line, e.g. 1 Sol Ring":"Één kaart per regel, bijv. 1 Sol Ring","Cancel":"Annuleren","Rename this deck":"Hernoem dit deck","Deck name":"Decknaam","Binder name":"Mapnaam","Name your new deck":"Geef je nieuwe deck een naam","Name this binder":"Geef deze map een naam","Leave blank for your whole collection":"Laat leeg voor je hele collectie","Delete this game from the log?":"Dit potje uit het log verwijderen?","Reset all life totals, poison, Admiral damage, and medals?":"Alle levens, poison, Admiral damage en medailles resetten?","Restore":"Herstellen","Replace all":"Alles vervangen","Add alongside":"Naast bestaande toevoegen","Exit":"Afsluiten","Load a .txt file":"Laad een .txt-bestand","loaded — press Replace Deck when ready.":"geladen — druk op Vervang deck wanneer je klaar bent.","Could not read that file.":"Kon dat bestand niet lezen.","loaded — press Create deck when ready.":"geladen — druk op Deck aanmaken wanneer je klaar bent.","Move to binder…":"Verplaats naar map…","Remove from collection":"Verwijder uit collectie","Deselect all":"Deselecteer alles","Select all":"Alles selecteren","All cards":"Alle kaarten","Automatic folders":"Automatische mappen","Every card is tucked into a binder — open All cards below to see the whole collection at once.":"Elke kaart zit in een map — open Alle kaarten hieronder om de hele collectie in één keer te zien.","Moved.":"Verplaatst.","Move":"Verplaatsen","I add":"Ik leg","Confirm trade":"Ruil bevestigen","Trade confirmed. Enjoy the new cards.":"Ruil bevestigd. Veel plezier met de nieuwe kaarten.","Add to my collection":"Aan mijn collectie toevoegen","Remove from Wants":"Verwijder van Gezocht","TRADE":"RUILEN","Add to trade":"Aan ruil toevoegen","Add card":"Kaart toevoegen","Search collection…":"Zoek in collectie…","Search this binder…":"Zoek in deze map…","Search Scryfall and file it into a binder":"Zoek op Scryfall en stop hem in een map","A fresh empty binder":"Een verse lege map","A collection or binder from Moxfield / Archidekt":"Een collectie of map uit Moxfield / Archidekt","You give":"Jij geeft","You get":"Jij krijgt","Even trade.":"Gelijke ruil.","They add":"Zij leggen","You add":"Jij legt","to balance the trade":"bij om de ruil gelijk te maken","Cardmarket trend prices — pick the exact printing when adding a card.":"Cardmarket-trendprijzen — kies de exacte versie bij het toevoegen van een kaart.","Some cards have no listed price and count as €0.00.":"Sommige kaarten hebben geen bekende prijs en tellen als €0,00.","No cards on this side yet.":"Nog geen kaarten aan deze kant.","Clear trade":"Ruil wissen","Clear the whole trade?":"De hele ruil wissen?","Added to trade.":"Toegevoegd aan de ruil.","Copied.":"Gekopieerd.","Explore":"Verkennen","Scryfall recommended":"Scryfall aanbevolen","Your tags":"Jouw tags","All Scryfall tags":"Alle Scryfall-tags","Copy diagnostics":"Kopieer diagnostiek","New":"Nieuwe","Top":"Top","New Cards":"Nieuwe kaarten","High Synergy Cards":"Hoge-synergie kaarten","Top Cards":"Topkaarten","synergy":"synergie","Clear filters":"Filters wissen","Show all":"Toon alles","Jump to section":"Spring naar sectie","theme recommendations":"thema-aanbevelingen","Creatures":"Wezens","Lands":"Landen","Mana Artifacts":"Mana-artefacten","Utility Artifacts":"Nutsartefacten","Utility Lands":"Nutslanden","Could not copy — select the text above instead.":"Kopiëren mislukt — selecteer de tekst hierboven.","Search any card — every printing of it can join the trade.":"Zoek een kaart — elke versie ervan kan de ruil in.","Exit this app?":"Deze app afsluiten?","Include off-color cards":"Toon ook off-color kaarten","Off — only cards legal in this deck. On — every format-legal card, off-color included.":"Uit — alleen kaarten die legaal zijn in dit deck. Aan — elke format-legale kaart, ook off-color.","Every match is off-color for this deck — tick “Include off-color cards” under Advanced filters to see them.":"Elke treffer is off-color voor dit deck — vink “Toon ook off-color kaarten” aan onder Geavanceerde filters om ze te zien.","No legal cards found for that search.":"Geen legale kaarten gevonden voor die zoekopdracht.","Press back once more to close.":"Druk nog een keer op terug om af te sluiten.","Date to be announced":"Datum nog onbekend","EDHREC play data didn't load — showing the app's own synergy picks.":"EDHREC-speeldata laadde niet — dit zijn de synergiekeuzes van de app zelf.","Try EDHREC again":"Probeer EDHREC opnieuw","Try again":"Probeer opnieuw","A newer version is ready \u2014 close the app and open it again.":"Er staat een nieuwere versie klaar \u2014 sluit de app en open hem opnieuw.","No connection \u2014 these picks come from the card database on your phone.":"Geen verbinding \u2014 deze keuzes komen uit de kaartendatabase op je telefoon.","Couldn't reach Scryfall. Check your connection and try again.":"Scryfall niet bereikbaar. Controleer je verbinding en probeer het opnieuw.","Charting themed recommendations…":"Thema-aanbevelingen uitstippelen…","Tap to see what this combo does":"Tik om te zien wat deze combo doet","No description yet \u2014 write one on the Deck Log page.":"Nog geen beschrijving \u2014 schrijf er een op de Decklog-pagina.","A few lines about this deck \u2014 shown on the Decklist page.":"Een paar regels over dit deck \u2014 te zien op de Decklist-pagina.","Similar cards":"Vergelijkbare kaarten","Cards that do the same job as":"Kaarten met dezelfde rol als","most played first.":"meest gespeeld eerst.","No similar cards found.":"Geen vergelijkbare kaarten gevonden.","Function unknown — showing its closest kin by type.":"Functie onbekend — dit is de naaste verwantschap op type.","cards that do the same job":"kaarten met dezelfde rol","Share":"Delen","Share image":"Deel afbeelding","Share link":"Deel link","Sharing failed.":"Delen mislukt.","Link copied.":"Link gekopieerd.","No image to share.":"Geen afbeelding om te delen.","Recommendations":"Aanbevelingen","Add one":"Voeg \u00e9\u00e9n toe","Remove one":"Verwijder \u00e9\u00e9n","To maybeboard":"Naar maybeboard","To main deck":"Naar hoofddeck","Manage copy":"Beheer exemplaar","Save":"Opslaan","Add to collection":"Aan collectie toevoegen","Tags":"Tags","Data Sources":"Databronnen","just now":"zonet","Most played overall":"Meest gespeeld algemeen","Still checking\u2026":"Nog aan het controleren\u2026","The set list hasn\u2019t loaded yet, so searches still run online in full.":"De setlijst is nog niet geladen, dus zoekopdrachten gaan nog volledig online.","Nothing is newer than your database \u2014 searching runs entirely on your phone.":"Niets is nieuwer dan je database \u2014 zoeken gebeurt volledig op je telefoon.","Newer than your database":"Nieuwer dan je database","built":"gebouwd","fully offline":"volledig offline","live (set list unknown)":"live (setlijst onbekend)","new set live":"nieuwe set live","new sets live":"nieuwe sets live","Offline search":"Offline zoeken","Local card database":"Lokale kaartendatabase","live, per card":"live, per kaart","24h per card":"24u per kaart","Refreshed.":"Ververst.","Scryfall sets & spoilers":"Scryfall-sets & spoilers","EDHREC themes & Kindred":"EDHREC-thema's & Kindred","Creature types":"Wezentypes","Bans & Game Changers":"Bans & Game Changers","Complete rules":"Volledige regels","About this ban list":"Over deze ban-lijst","Prices":"Prijzen","Search by card name":"Zoek op kaartnaam","Search a Commander by name…":"Zoek een Commander op naam…","Search an Admiral by name…":"Zoek een Admiral op naam…","How did it end?":"Hoe eindigde het?","My Stuff":"Mijn Stuff","My Collection":"Mijn Collectie","Search":"Zoeken","Import":"Importeren","Export":"Exporteren","Budget":"Budget","Add Cards":"Kaarten toevoegen","Search deck":"Zoek in deck","The list below narrows live as you type.":"De lijst hieronder versmalt live terwijl je typt.","these filters":"deze filters","Bulk Edit":"Bulk bewerken","Folders":"Folders","Binders":"Mappen","Wants":"Gezocht","Decks":"Decks","New binder":"Nieuwe map","‹ All binders":"‹ Alle mappen","🖼 Choose cover art":"🖼 Kies omslagkunst","✎ Rename":"✎ Hernoemen","🗑 Delete binder":"🗑 Verwijder map","Choose Cover Art":"Omslagkunst kiezen","+ Add to a deck":"+ Aan een deck toevoegen","Played with this":"Hiermee gespeeld","Collection":"Collectie","ORACLE TEXT":"ORACLE-TEKST","Oracle text":"Oracle-tekst","Checking price…":"Prijs controleren…","No Cardmarket price listed":"Geen Cardmarket-prijs bekend","Advanced filter":"Geavanceerd filter","Use filters":"Filters toepassen","Reset filters":"Filters wissen","Check for new spoilers":"Zoek nieuwe spoilers","Appearance":"Weergave","Dark":"Donker","Light":"Licht","Game format":"Spelformaat","Language":"Taal","Life Counter":"Levens teller","Open the multiplayer life tracker":"Open de multiplayer-levensteller","Sort by":"Sorteren op","Add to folder":"Aan map toevoegen","Duplicate":"Dupliceren","Share":"Delen","Delete":"Verwijderen","Add cards to collection…":"Kaarten aan collectie toevoegen…","Filter collection…":"Collectie filteren…","Nothing matches these filters.":"Niets komt overeen met deze filters.","missing from your decks":"ontbreekt in je decks","Budget Alternatives":"Budgetalternatieven","Set sail":"Hijs de zeilen","A legendary creature leads your 100-card singleton deck":"Een legendarisch wezen leidt je singleton deck van 100 kaarten","Brew from every set ever printed":"Brouw uit elke set ooit gedrukt","Politics, alliances and comebacks at a four-player table":"Politiek, allianties en comebacks aan een tafel met vier spelers","Your Commander returns from the command zone, again and again":"Je Commander keert keer op keer terug uit de command zone","Official banned list, always current":"Officiële ban-lijst, altijd actueel","A legendary creature leads your 60-card singleton deck":"Een legendarisch wezen leidt je singleton deck van 60 kaarten","No lands to buy — a shared Landing Zone provides the mana":"Geen lands om te kopen — een gedeelde Landing Zone levert het mana","Every card that was ever Standard-legal":"Elke kaart die ooit Standard-legal was","Fast four-player games with real strategic depth":"Snelle potten met vier spelers en echte strategische diepgang","Magic's own universes only — story over power creep":"Alleen Magic's eigen universums — verhaal boven power creep","— thin bar: cards producing that color":"— dunne balk: kaarten die die kleur produceren","Mana Production":"Mana productie","— cards that can produce each color":"— kaarten die elke kleur kunnen produceren","⟳ Check for new spoilers":"⟳ Zoek nieuwe spoilers","Card Name":"Kaartnaam","Any words in the name":"Woorden uit de naam","Set / Expansion":"Set / Expansie","Any Set":"Elke set","Oracle Text":"Oracle-tekst","Any text, e.g. draw a card":"Willekeurige tekst, bijv. draw a card","For exact phrases, put quotes (\") around your search query.":"Zet aanhalingstekens (\") om je zoekopdracht voor exacte zinnen.","Card Type":"Kaarttype","e.g. Dragon, Equipment":"bijv. Dragon, Equipment","Color Identity":"Kleuridentiteit","Must have all selected":"Moet alle geselecteerde hebben","At most these colors":"Hoogstens deze kleuren","Mana Value":"Mana value","Mana Cost":"Manakosten","Power":"Power","Toughness":"Toughness","Loyalty":"Loyalty","Rarity":"Zeldzaamheid","Keyword":"Keyword","e.g. flying, lifelink":"bijv. flying, lifelink","Flavor Text":"Flavor-tekst","e.g. dragon":"bijv. dragon","Artist":"Artiest","e.g. Rebecca Guay":"bijv. Rebecca Guay","Sort Order":"Sorteervolgorde","Sort Direction":"Sorteerrichting","Ascending":"Oplopend","Descending":"Aflopend","Any":"Elke","Name":"Naam","🔍 Use filters":"🔍 Filters toepassen","Monocolored":"Eenkleurig","2 colors":"2 kleuren","3 colors":"3 kleuren","4 & 5 colors":"4 & 5 kleuren","Mana Curve":"Mana curve","— tap a bar to see those cards":"— tik op een balk om die kaarten te zien","Color Distribution":"Kleurverdeling","Most Expensive Cards":"Duurste kaarten","Cardmarket trend price, cheapest printing of each card.":"Cardmarket trendprijs, goedkoopste versie van elke kaart.","Pricing…":"Prijzen ophalen…","Budget alternatives":"Budgetalternatieven","Recent Changes":"Recente wijzigingen","View full history →":"Bekijk de volledige geschiedenis →","Undo":"Ongedaan maken","Add":"Voeg toe","Remove":"Verwijder","Edit":"Bewerken","Preview":"Voorbeeld","# headers, **bold**, *italics*, - lists":"# koppen, **vet**, *cursief*, - lijsten","MY STUFF":"MIJN STUFF","SEARCH":"ZOEKEN","INSPIRATION":"INSPIRATIE","EXTRAS":"EXTRA'S","MY COLLECTION":"MIJN COLLECTIE","Admiral fleet":"Admiral vloot","Commander fleet":"Commander leger","empty":"leeg","Magic's grandest multiplayer battlefield":"Magic's grootste multiplayer slagveld","Choose your":"Kies je","— a legendary creature whose color identity defines your deck — then assemble a 100-card singleton army from":"— een legendarisch wezen wiens kleuridentiteit je deck bepaalt — en stel dan een singleton leger van 100 kaarten samen uit","every set ever printed":"elke set ooit gedrukt",". Cast your Commander from the command zone again and again as the table's politics unfold.":". Speel je Commander keer op keer vanuit de command zone terwijl de politiek aan tafel zich ontvouwt.","A four-player free-for-all. Official legality and a live banned list, always current.":"Een free-for-all voor vier spelers. Officiële legality en een live ban-lijst, altijd actueel.","Read the rules →":"Lees de regels →","Your Commander awaits.":"Je Commander wacht.","Take Command":"Neem het commando","Explore Commanders & deck inspiration":"Ontdek Commanders & deck-inspiratie","Crossing fleets: tap the crest above to sail to the Admiral side — or long-press the compass in the top-left from anywhere in the app.":"Van vloot wisselen: tik op het embleem hierboven om naar de Admiral-kant te varen — of houd het kompas linksboven overal in de app ingedrukt.","Set sail on a bold new Magic adventure":"Hijs de zeilen voor een gedurfd nieuw Magic-avontuur","Admiral is a":"Admiral is een","four-player":"vierspeler","format — an immersive challenge where the legends of Magic's":"format — een meeslepende uitdaging waarin de legendes van Magic's","own universes":"eigen universums","take center stage. Choose your Admiral — a legendary character whose colors define your deck — then chart a 60-card course with":"in de hoofdrol staan. Kies je Admiral — een legendarisch personage wiens kleuren je deck bepalen — en zet dan een koers uit van 60 kaarten met","no expensive lands":"geen dure lands",", drawing instead from a shared Landing Zone stocked with basics.":", puttend uit een gedeelde Landing Zone vol basics.","Faster games, strategic depth, and far less prone to":"Snellere potten, strategische diepgang en veel minder vatbaar voor","power creep":"power creep","— steeped in the story of Magic itself.":"— doordrenkt van het verhaal van Magic zelf.","Read the full rules →":"Lees alle regels →","Your Admiral awaits.":"Je Admiral wacht.","White production":"Witte productie","Blue production":"Blauwe productie","Black production":"Zwarte productie","Red production":"Rode productie","Green production":"Groene productie","Colorless production":"Kleurloze productie","Generic production":"Generieke productie","Deck Log":"Decklog","Play Log":"Speellog","⊕ Log a game":"⊕ Noteer een potje","Log a game":"Noteer een potje","Result":"Resultaat","Won":"Gewonnen","Lost":"Verloren","Ended by":"Beslist door","Pod size":"Aantal spelers","Turns":"Beurten","Mulligans":"Mulligans","Mana":"Mana","Smooth":"Soepel","Screwed":"Tekort","Flooded":"Overvloed","Dead turns":"Dode beurten","MVP card":"MVP-kaart","Weakest card":"Zwakste kaart","Save game":"Potje opslaan","Games":"Potjes","Avg turns":"Gem. beurten","Avg dead turns":"Gem. dode beurten","Mana trouble":"Mana-problemen","Top performers":"Toppers","Cut candidates":"Snijkandidaten","Primer — strategy notes":"Primer — strategienotities","Winrate":"Winrate","No games logged yet.":"Nog geen potjes genoteerd.","No games logged yet — every logged game sharpens the picture: winrate, dead turns, which cards earn their slot and which don't.":"Nog geen potjes genoteerd — elk genoteerd potje scherpt het beeld aan: winrate, dode beurten, welke kaarten hun plek verdienen en welke niet.","Notes — what decided this game?":"Notities — wat besliste dit potje?","Victory logged. ⚔":"Overwinning genoteerd. ⚔","Logged — every loss is data.":"Genoteerd — elk verlies is data.","Combat":"Combat","Commander damage":"Commander damage","Combo":"Combo","Combos":"Combo's","More combos":"Meer combo's","More":"Meer","Filter combos by card…":"Filter combo's op kaart…","No combos match that name.":"Geen combo's met die naam.","Download card database now":"Download kaartendatabase nu","Downloading card database…":"Kaartendatabase downloaden…","Database already current":"Database is al actueel","Database ready":"Database gereed","Download failed":"Download mislukt","Already downloading…":"Al aan het downloaden…","This browser cannot unpack the database file.":"Deze browser kan het databasebestand niet uitpakken.","Database file not published on the server.":"Databasebestand niet gepubliceerd op de server.","Couldn\u2019t reach the server.":"Kon de server niet bereiken.","Poison":"Poison","Mill":"Mill","Attrition":"Uitputting","Concession":"Opgave","Other":"Anders","Weigh Anchor":"Anker lichten","Explore Admirals & deck inspiration":"Ontdek Admirals & deck-inspiratie","Crossing fleets: tap the crest above to sail to the Commander side — or long-press the compass in the top-left from anywhere in the app.":"Van vloot wisselen: tik op het embleem hierboven om naar de Commander-kant te varen — of houd het kompas linksboven overal in de app ingedrukt.","cards":"kaarten","starting life":"start levens","multiplayer classic":"multiplayer klassieker","faster games":"snellere potten","commander damage":"commander damage","Admiral damage":"Admiral damage","wins outright":"wint direct","singleton":"singleton","Advanced filters":"Geavanceerde filters","Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.":"Zoek op naam, of open Geavanceerde filters voor kleuren, mana value, type en Oracle-tekst.","Random Card":"Willekeurige kaart","↻ New card":"↻ Nieuwe kaart","↻ Random Card":"↻ Willekeurige kaart","🔮 New cards have been spoiled":"🔮 Nieuwe kaarten zijn gespoild","Comprehensive Rules":"Comprehensive Rules","The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back":"De volledige officiële Magic-regels — lees, zoek, of stel een vraag en krijg de exacte regel terug geciteerd","Find Your Commander":"Vind je Commander","Chart Your Course":"Bepaal je koers","Pick colors and a theme to find Admirals for that style. Tap an Admiral's":"Kies kleuren en een thema om Admirals voor die stijl te vinden. Tik op de","card art":"kaart-art","to see its recommended cards and build a deck around it.":"om de aanbevolen kaarten te zien en er een deck omheen te bouwen.","Pick colors and a theme to find Commanders for that style. Tap a Commander's":"Kies kleuren en een thema om Commanders voor die stijl te vinden. Tik op de kaart-art van een Commander","Theme — none":"Thema — geen","Kindred — none":"Kindred — geen","Colors":"Kleuren","Choose a combination…":"Kies een combinatie…","Colors — any combination":"Kleuren — elke combinatie","Backup & Restore":"Back-up & herstel","Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.":"Alles in één bestand — decks, collectie, instellingen. Je ticket naar een nieuw adres of een nieuw toestel.","⬇ Back Up":"⬇ Back-up","⬆ Restore":"⬆ Herstel","Format Rules":"Format regels","Deckbuilding & play rules for Commander":"Deckbouw- & speelregels voor Commander","Deckbuilding & play rules for Admiral":"Deckbouw- & speelregels voor Admiral","Banned List":"Ban-lijst","📲 Install as an app":"📲 Installeer als app","Home-screen icon, full screen, works offline":"Icoon op je beginscherm, volledig scherm, werkt offline","Share this app with a friend":"Deel deze app met een vriend","Sends the app link with a short intro":"Stuurt de app-link met een korte intro","Regular Commander: 100 cards, official legality, 40 life, 21 cmdr damage. Admiral decks wait in their own folder.":"Regular Commander: 100 kaarten, officiële legality, 40 levens, 21 commander damage. Admiral-decks wachten in hun eigen folder.","Admiral — or switch the whole app to regular Commander. Decks of the other format wait in their own folder.":"Admiral — of zet de hele app om naar regular Commander. Decks van het andere format wachten in hun eigen folder.","Life Totals":"Levens totaal","New Game":"Nieuwe pot","↺ New Game":"↺ Nieuwe pot","How many players are at the table?":"Hoeveel spelers aan de tafel?","Pick the table layout — every panel turns to face its seat.":"Kies de tafelindeling — elk paneel draait naar zijn stoel.","Start & Spin for First Player":"Start en draai voor start speler","🎡 Spin for First Player":"🎡 Draai voor start speler","🎲 Roll d6":"🎲 Rol een d6","🎲 Roll d20":"🎲 Rol een d20","History":"Geschiedenis","Settings":"Instellingen","✓ Done":"✓ Klaar","No events yet.":"Nog geen gebeurtenissen.","New binder name":"Nieuwe map naam","Rename binder":"Hernoem map","Cover card name":"Afbeelding kaart naam","Add a copy":"Voeg een toe","Move to Maybeboard":"Verplaats naar maybeboard","Move to Main":"Verplaats naar deck","Change printing":"Verander versie","Use your own image…":"Gebruik je eigen afbeelding…","Camera or any image file — it becomes this card's picture everywhere in the app. Picking a real printing below puts things back.":"Camera of een afbeeldingsbestand — het wordt overal in de app het plaatje van deze kaart. Een echte versie hieronder kiezen zet alles terug.","Custom image set for this card.":"Eigen afbeelding ingesteld voor deze kaart.","Could not read that image.":"Kon die afbeelding niet lezen.","Image too large even after shrinking.":"Afbeelding te groot, zelfs na verkleinen.","Not enough storage space for this image.":"Niet genoeg opslagruimte voor deze afbeelding.","Remove from deck":"Verwijder uit deck","Rulings":"Regels","Add to Deck":"Aan deck toevoegen","Add to…":"Toevoegen aan…","Set as Commander":"Stel in als Commander","Set as Admiral":"Stel in als Admiral","Favorites":"Favorieten","★ Favorites":"★ Favorieten","Rename folder":"Hernoem folder","Delete folder":"Verwijder folder","New folder":"Nieuwe folder","New deck":"Nieuw deck","Pick Admiral first":"Kies eerst een Admiral","Filter by folder or Admiral…":"Filter op folder of Admiral…","Filter by folder or Commander…":"Filter op folder of Commander…","Card name…":"Kaart naam…","Find in deck…":"Zoek in deck…","No cards match":"Geen kaarten voor","Color breakdown":"Kleur overzicht","Details":"Details","Most played with this Commander, sorted on popularity.":"Meest gespeeld met deze Commander, gesorteerd op populariteit.","Most played with this Admiral, sorted on popularity.":"Meest gespeeld met deze Admiral, gesorteerd op populariteit.","tap cards to select":"tik op kaarten om te selecteren","Inspiration":"Inspiratie","Extras":"Extra's","Any color":"Elke kleur","All sets":"Alle sets","All types":"Alle typen","White":"Wit","Blue":"Blauw","Black":"Zwart","Red":"Rood","Green":"Groen","Colorless":"Kleurloos","Multicolor":"Meerkleurig","Language saved.":"Taal opgeslagen.","Card images and the interface follow your language where possible.":"Kaartafbeeldingen en de interface volgen waar mogelijk je taal.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Je collectie is leeg. Zoek hierboven, of gebruik \"Aan collectie toevoegen\" bij een kaart in de app."},
+nl:{"Trade":"Ruilen","Multiplayer life tracker":"Life counter voor meerdere spelers","Read, search, or ask a rules question":"Lees, zoek of stel een regelvraag","Deckbuilding and play, per format":"Deckbouw en spel, per format","Banned cards per format":"Gebannen kaarten per format","Interface and card images":"Interface en kaartafbeeldingen","A guild's two colors dress the app":"De twee kleuren van een guild kleden de app","Decks, collection and settings in one file":"Decks, collectie en instellingen in één bestand","Home-screen icon, full screen, offline":"Icoon op je beginscherm, volledig scherm, offline","Sends the app link":"Stuurt de app-link","Crossover sets — pick what your table plays":"Crossover-sets — kies wat jullie spelen","Price not listed yet":"Prijs nog niet bekend","Deck is legal — ready to sail.":"Deck is legaal — klaar om uit te varen.","and":"en","more issues…":"andere problemen…","Color scheme":"Kleurenschema","Pick a guild — its two colors dress the whole app.":"Kies een guild — de twee kleuren ervan kleden de hele app.","MY DECKS":"MIJN DECKS","History":"Geschiedenis","Combo data arrives with a coming weekly update.":"Combodata komt met de volgende wekelijkse update.","No known combos in this deck.":"Geen bekende combo’s in dit deck.","No cards at":"Geen kaarten van","or more in this deck":"of meer in dit deck","it’s already built thrifty.":"het is al zuinig gebouwd.","this crew is already sailing cheap.":"deze bemanning vaart al goedkoop.","No 2, 3 or 4 card combos for this card.":"Geen 2-, 3- of 4-kaartscombo’s voor deze kaart.","Mine to receive":"Ik ontvang","Yours to receive":"Jij ontvangt","Search your wants…":"Zoek in Gezocht…","No wants match that name.":"Geen gezochte kaart met die naam.","Paste a list":"Plak een lijst","One card per line, e.g. 1 Sol Ring":"Één kaart per regel, bijv. 1 Sol Ring","Cancel":"Annuleren","Rename this deck":"Hernoem dit deck","Deck name":"Decknaam","Binder name":"Mapnaam","Name your new deck":"Geef je nieuwe deck een naam","Name this binder":"Geef deze map een naam","Leave blank for your whole collection":"Laat leeg voor je hele collectie","Delete this game from the log?":"Dit potje uit het log verwijderen?","Reset all life totals, poison, Admiral damage, and medals?":"Alle life totals, poison, Admiral damage en medailles resetten?","Restore":"Herstellen","Replace all":"Alles vervangen","Add alongside":"Naast bestaande toevoegen","Exit":"Afsluiten","Load a .txt file":"Laad een .txt-bestand","loaded — press Replace Deck when ready.":"geladen — druk op Vervang deck wanneer je klaar bent.","Could not read that file.":"Kon dat bestand niet lezen.","loaded — press Create deck when ready.":"geladen — druk op Deck aanmaken wanneer je klaar bent.","Move to binder…":"Verplaats naar map…","Remove from collection":"Verwijder uit collectie","Deselect all":"Alles deselecteren","Select all":"Alles selecteren","All cards":"Alle kaarten","Automatic folders":"Automatische mappen","Every card is tucked into a binder — open All cards below to see the whole collection at once.":"Elke kaart zit in een map — open Alle kaarten hieronder om de hele collectie in één keer te zien.","Moved.":"Verplaatst.","Move":"Verplaatsen","I add":"Ik leg","Confirm trade":"Ruil bevestigen","Trade confirmed. Enjoy the new cards.":"Ruil bevestigd. Veel plezier met de nieuwe kaarten.","Add to my collection":"Aan mijn collectie toevoegen","Remove from Wants":"Verwijder uit Gezocht","TRADE":"RUILEN","Add to trade":"Aan ruil toevoegen","Add card":"Kaart toevoegen","Search collection…":"Zoek in collectie…","Search this binder…":"Zoek in deze map…","Search Scryfall and file it into a binder":"Zoek op Scryfall en stop hem in een map","A fresh empty binder":"Een nieuwe, lege map","A collection or binder from Moxfield / Archidekt":"Een collectie of map uit Moxfield / Archidekt","You give":"Jij geeft","You get":"Jij krijgt","Even trade.":"Gelijke ruil.","They add":"Zij leggen","You add":"Jij legt","to balance the trade":"bij om de ruil gelijk te maken","Cardmarket trend prices — pick the exact printing when adding a card.":"Cardmarket-trendprijzen — kies de exacte versie bij het toevoegen van een kaart.","Some cards have no listed price and count as €0.00.":"Sommige kaarten hebben geen bekende prijs en tellen als €0,00.","No cards on this side yet.":"Nog geen kaarten aan deze kant.","Clear trade":"Ruil wissen","Clear the whole trade?":"De hele ruil wissen?","Added to trade.":"Toegevoegd aan de ruil.","Copied.":"Gekopieerd.","Explore":"Verkennen","Scryfall recommended":"Aanbevolen door Scryfall","Your tags":"Jouw tags","All Scryfall tags":"Alle Scryfall-tags","Copy diagnostics":"Diagnose kopiëren","New":"Nieuw","Top":"Top","New Cards":"Nieuwe kaarten","High Synergy Cards":"Kaarten met hoge synergie","Top Cards":"Topkaarten","synergy":"synergie","Clear filters":"Filters wissen","Show all":"Toon alles","Jump to section":"Spring naar sectie","theme recommendations":"thema-aanbevelingen","Creatures":"Creatures","Lands":"Lands","Mana Artifacts":"Mana artifacts","Utility Artifacts":"Utility artifacts","Utility Lands":"Utility lands","Could not copy — select the text above instead.":"Kopiëren mislukt — selecteer de tekst hierboven.","Search any card — every printing of it can join the trade.":"Zoek een kaart — elke versie ervan kan de ruil in.","Exit this app?":"Deze app afsluiten?","Include off-color cards":"Toon ook off-color kaarten","Off — only cards legal in this deck. On — every format-legal card, off-color included.":"Uit — alleen kaarten die legaal zijn in dit deck. Aan — elke format-legale kaart, ook off-color.","Every match is off-color for this deck — tick “Include off-color cards” under Advanced filters to see them.":"Elke treffer is off-color voor dit deck — vink “Toon ook off-color kaarten” aan onder Geavanceerde filters om ze te zien.","No legal cards found for that search.":"Geen legale kaarten gevonden voor die zoekopdracht.","Press back once more to close.":"Druk nog een keer op terug om af te sluiten.","Date to be announced":"Datum nog onbekend","EDHREC play data didn't load — showing the app's own synergy picks.":"De speeldata van EDHREC is niet geladen — dit zijn de synergiekeuzes van de app zelf.","Try EDHREC again":"Probeer EDHREC opnieuw","Try again":"Probeer opnieuw","A newer version is ready — close the app and open it again.":"Er staat een nieuwere versie klaar — sluit de app en open hem opnieuw.","No connection — these picks come from the card database on your phone.":"Geen verbinding — deze keuzes komen uit de kaartendatabase op je telefoon.","Couldn't reach Scryfall. Check your connection and try again.":"Scryfall niet bereikbaar. Controleer je verbinding en probeer het opnieuw.","Charting themed recommendations…":"Thema-aanbevelingen uitstippelen…","Tap to see what this combo does":"Tik om te zien wat deze combo doet","No description yet — write one on the Deck Log page.":"Nog geen beschrijving — schrijf er een op de Decklog-pagina.","A few lines about this deck — shown on the Decklist page.":"Een paar regels over dit deck — te zien op de Decklist-pagina.","Similar cards":"Vergelijkbare kaarten","Cards that do the same job as":"Kaarten met dezelfde rol als","most played first.":"meest gespeeld eerst.","No similar cards found.":"Geen vergelijkbare kaarten gevonden.","Function unknown — showing its closest kin by type.":"Functie onbekend — dit zijn de kaarten die qua type het dichtst in de buurt komen.","cards that do the same job":"kaarten met dezelfde rol","Share":"Delen","Share image":"Afbeelding delen","Share link":"Link delen","Sharing failed.":"Delen mislukt.","Link copied.":"Link gekopieerd.","No image to share.":"Geen afbeelding om te delen.","Recommendations":"Aanbevelingen","Add one":"Voeg één toe","Remove one":"Verwijder één","To maybeboard":"Naar maybeboard","To main deck":"Naar main deck","Manage copy":"Beheer exemplaar","Save":"Opslaan","Add to collection":"Aan collectie toevoegen","Tags":"Tags","Data Sources":"Databronnen","just now":"zonet","Most played overall":"Meest gespeeld in het algemeen","Still checking…":"Nog aan het controleren…","The set list hasn’t loaded yet, so searches still run online in full.":"De setlijst is nog niet geladen, dus zoekopdrachten gaan nog volledig online.","Nothing is newer than your database — searching runs entirely on your phone.":"Niets is nieuwer dan je database — zoeken gebeurt volledig op je telefoon.","Newer than your database":"Nieuwer dan je database","built":"gebouwd","fully offline":"volledig offline","live (set list unknown)":"live (setlijst onbekend)","new set live":"nieuwe set live","new sets live":"nieuwe sets live","Offline search":"Offline zoeken","Local card database":"Lokale kaartendatabase","live, per card":"live, per kaart","24h per card":"24u per kaart","Refreshed.":"Ververst.","Scryfall sets & spoilers":"Scryfall-sets & spoilers","EDHREC themes & Kindred":"EDHREC-thema's & Kindred","Creature types":"Creature types","Bans & Game Changers":"Bans & Game Changers","Complete rules":"Volledige regels","About this ban list":"Over deze banlijst","Prices":"Prijzen","Search by card name":"Zoek op kaartnaam","Search a Commander by name…":"Zoek een Commander op naam…","Search an Admiral by name…":"Zoek een Admiral op naam…","How did it end?":"Hoe eindigde het?","My Stuff":"Mijn spullen","My Collection":"Mijn collectie","Search":"Zoeken","Import":"Importeren","Export":"Exporteren","Budget":"Budget","Add Cards":"Kaarten toevoegen","Search deck":"Zoek in deck","The list below narrows live as you type.":"De lijst hieronder versmalt live terwijl je typt.","these filters":"deze filters","Bulk Edit":"Bulk bewerken","Folders":"Folders","Binders":"Mappen","Wants":"Gezocht","Decks":"Decks","New binder":"Nieuwe map","‹ All binders":"‹ Alle mappen","🖼 Choose cover art":"🖼 Kies een omslagafbeelding","✎ Rename":"✎ Hernoemen","🗑 Delete binder":"🗑 Verwijder map","Choose Cover Art":"Omslagafbeelding kiezen","+ Add to a deck":"+ Aan een deck toevoegen","Played with this":"Hiermee gespeeld","Collection":"Collectie","ORACLE TEXT":"ORACLE TEXT","Oracle text":"Oracle text","Checking price…":"Prijs ophalen…","No Cardmarket price listed":"Geen Cardmarket-prijs bekend","Advanced filter":"Geavanceerd filter","Use filters":"Filters toepassen","Reset filters":"Filters wissen","Check for new spoilers":"Zoek nieuwe spoilers","Appearance":"Weergave","Dark":"Donker","Light":"Licht","Game format":"Format","Language":"Taal","Life Counter":"Life Counter","Open the multiplayer life tracker":"Open de life counter voor meerdere spelers","Sort by":"Sorteren op","Add to folder":"Aan map toevoegen","Duplicate":"Dupliceren","Delete":"Verwijderen","Add cards to collection…":"Kaarten aan collectie toevoegen…","Filter collection…":"Collectie filteren…","Nothing matches these filters.":"Niets voldoet aan deze filters.","missing from your decks":"ontbreekt in je decks","Budget Alternatives":"Budgetalternatieven","Set sail":"Hijs de zeilen","A legendary creature leads your 100-card singleton deck":"Een legendary creature leidt je singleton-deck van 100 kaarten","Brew from every set ever printed":"Bouw met elke set die ooit verscheen","Politics, alliances and comebacks at a four-player table":"Politiek, allianties en comebacks aan een tafel met vier spelers","Your Commander returns from the command zone, again and again":"Je Commander keert keer op keer terug uit de command zone","Official banned list, always current":"Officiële banlijst, altijd actueel","A legendary creature leads your 60-card singleton deck":"Een legendary creature leidt je singleton-deck van 60 kaarten","No lands to buy — a shared Landing Zone provides the mana":"Geen lands om te kopen — een gedeelde Landing Zone levert het mana","Every card that was ever Standard-legal":"Elke kaart die ooit Standard-legal was","Fast four-player games with real strategic depth":"Snelle potten met vier spelers en echte strategische diepgang","Magic's own universes only — story over power creep":"Alleen Magics eigen universums — verhaal boven power creep","— thin bar: cards producing that color":"— dunne balk: kaarten die die kleur produceren","Mana Production":"Mana-productie","— cards that can produce each color":"— kaarten die elke kleur kunnen produceren","⟳ Check for new spoilers":"⟳ Zoek nieuwe spoilers","Card Name":"Kaartnaam","Any words in the name":"Woorden uit de naam","Set / Expansion":"Set / Expansie","Any Set":"Elke set","Oracle Text":"Oracle text","Any text, e.g. draw a card":"Elke tekst, bijv. draw a card","For exact phrases, put quotes (\") around your search query.":"Zet aanhalingstekens (\") om je zoekterm om op een exacte zin te zoeken.","Card Type":"Kaarttype","e.g. Dragon, Equipment":"bijv. Dragon, Equipment","Color Identity":"Color identity","Must have all selected":"Moet alle gekozen kleuren hebben","At most these colors":"Hooguit deze kleuren","Mana Value":"Mana value","Mana Cost":"Mana cost","Power":"Power","Toughness":"Toughness","Loyalty":"Loyalty","Rarity":"Rarity","Keyword":"Keyword","e.g. flying, lifelink":"bijv. flying, lifelink","Flavor Text":"Flavor text","e.g. dragon":"bijv. dragon","Artist":"Artiest","e.g. Rebecca Guay":"bijv. Rebecca Guay","Sort Order":"Sorteervolgorde","Sort Direction":"Sorteerrichting","Ascending":"Oplopend","Descending":"Aflopend","Any":"Elke","Name":"Naam","🔍 Use filters":"🔍 Filters toepassen","Monocolored":"Eenkleurig","2 colors":"2 kleuren","3 colors":"3 kleuren","4 & 5 colors":"4 & 5 kleuren","Mana Curve":"Mana curve","— tap a bar to see those cards":"— tik op een balk om die kaarten te zien","Color Distribution":"Kleurverdeling","Most Expensive Cards":"Duurste kaarten","Cardmarket trend price, cheapest printing of each card.":"Cardmarket-trendprijs, goedkoopste versie van elke kaart.","Pricing…":"Prijzen ophalen…","Budget alternatives":"Budgetalternatieven","Recent Changes":"Recente wijzigingen","View full history →":"Bekijk de volledige geschiedenis →","Undo":"Ongedaan maken","Add":"Voeg toe","Remove":"Verwijder","Edit":"Bewerken","Preview":"Voorbeeld","# headers, **bold**, *italics*, - lists":"# koppen, **vet**, *cursief*, - lijsten","MY STUFF":"MIJN SPULLEN","SEARCH":"ZOEKEN","INSPIRATION":"INSPIRATIE","EXTRAS":"EXTRA'S","MY COLLECTION":"MIJN COLLECTIE","Admiral fleet":"Admiral-vloot","Commander fleet":"Commander-leger","empty":"leeg","Magic's grandest multiplayer battlefield":"Magics grootste multiplayer-slagveld","Choose your":"Kies je","— a legendary creature whose color identity defines your deck — then assemble a 100-card singleton army from":"— een legendary creature waarvan de color identity je deck bepaalt — en stel dan een singleton-leger van 100 kaarten samen uit","every set ever printed":"elke set ooit gedrukt",". Cast your Commander from the command zone again and again as the table's politics unfold.":". Cast je Commander keer op keer vanuit de command zone, terwijl de politiek aan tafel zich ontvouwt.","A four-player free-for-all. Official legality and a live banned list, always current.":"Een free-for-all voor vier spelers. Officiële legaliteit en een live banlijst, altijd actueel.","Read the rules →":"Lees de regels →","Your Commander awaits.":"Je Commander wacht.","Take Command":"Neem het commando","Explore Commanders & deck inspiration":"Ontdek Commanders & deck-inspiratie","Crossing fleets: tap the crest above to sail to the Admiral side — or long-press the compass in the top-left from anywhere in the app.":"Van vloot wisselen: tik op het embleem hierboven om naar de Admiral-kant te varen — of houd het kompas linksboven overal in de app ingedrukt.","Set sail on a bold new Magic adventure":"Hijs de zeilen voor een gedurfd nieuw Magic-avontuur","Admiral is a":"Admiral is een","four-player":"vierspelers","format — an immersive challenge where the legends of Magic's":"format — een meeslepende uitdaging waarin de legendes van Magics","own universes":"eigen universums","take center stage. Choose your Admiral — a legendary character whose colors define your deck — then chart a 60-card course with":"in de hoofdrol staan. Kies je Admiral — een legendarisch personage waarvan de kleuren je deck bepalen — en zet dan een koers uit van 60 kaarten, met","no expensive lands":"geen dure lands",", drawing instead from a shared Landing Zone stocked with basics.":", puttend uit een gedeelde Landing Zone vol basics.","Faster games, strategic depth, and far less prone to":"Snellere potten, strategische diepgang en veel minder vatbaar voor","power creep":"power creep","— steeped in the story of Magic itself.":"— doordrenkt van het verhaal van Magic zelf.","Read the full rules →":"Lees alle regels →","Your Admiral awaits.":"Je Admiral wacht.","White production":"Witte productie","Blue production":"Blauwe productie","Black production":"Zwarte productie","Red production":"Rode productie","Green production":"Groene productie","Colorless production":"Kleurloze productie","Generic production":"Generieke productie","Deck Log":"Decklog","Play Log":"Speellog","⊕ Log a game":"⊕ Noteer een potje","Log a game":"Noteer een potje","Result":"Resultaat","Won":"Gewonnen","Lost":"Verloren","Ended by":"Beslist door","Pod size":"Aantal spelers","Turns":"Beurten","Mulligans":"Mulligans","Mana":"Mana","Smooth":"Soepel","Screwed":"Screwed","Flooded":"Flooded","Dead turns":"Dode beurten","MVP card":"MVP-kaart","Weakest card":"Zwakste kaart","Save game":"Potje opslaan","Games":"Potjes","Avg turns":"Gem. beurten","Avg dead turns":"Gem. dode beurten","Mana trouble":"Mana-problemen","Top performers":"Toppers","Cut candidates":"Schrapkandidaten","Primer — strategy notes":"Primer — strategienotities","Winrate":"Winrate","No games logged yet.":"Nog geen potjes genoteerd.","No games logged yet — every logged game sharpens the picture: winrate, dead turns, which cards earn their slot and which don't.":"Nog geen potjes genoteerd — elk genoteerd potje scherpt het beeld aan: winrate, dode beurten, welke kaarten hun plek verdienen en welke niet.","Notes — what decided this game?":"Notities — wat besliste dit potje?","Victory logged. ⚔":"Overwinning genoteerd. ⚔","Logged — every loss is data.":"Genoteerd — elk verlies is data.","Combat":"Combat","Commander damage":"Commander damage","Combo":"Combo","Combos":"Combo's","More combos":"Meer combo's","More":"Meer","Filter combos by card…":"Filter combo's op kaart…","No combos match that name.":"Geen combo's met die naam.","Download card database now":"Download de kaartendatabase nu","Downloading card database…":"Kaartendatabase downloaden…","Database already current":"Database is al actueel","Database ready":"Database klaar","Download failed":"Download mislukt","Already downloading…":"Al aan het downloaden…","This browser cannot unpack the database file.":"Deze browser kan het databasebestand niet uitpakken.","Database file not published on the server.":"Databasebestand niet gepubliceerd op de server.","Couldn’t reach the server.":"Kon de server niet bereiken.","Poison":"Poison","Mill":"Mill","Attrition":"Uitputting","Concession":"Opgave","Other":"Anders","Weigh Anchor":"Anker lichten","Explore Admirals & deck inspiration":"Ontdek Admirals & deck-inspiratie","Crossing fleets: tap the crest above to sail to the Commander side — or long-press the compass in the top-left from anywhere in the app.":"Van vloot wisselen: tik op het embleem hierboven om naar de Commander-kant te varen — of houd het kompas linksboven overal in de app ingedrukt.","cards":"kaarten","starting life":"life bij de start","multiplayer classic":"multiplayer klassieker","faster games":"snellere potten","commander damage":"commander damage","Admiral damage":"Admiral damage","wins outright":"wint direct","singleton":"singleton","Advanced filters":"Geavanceerde filters","Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.":"Zoek op naam, of open Geavanceerde filters voor kleuren, mana value, type en Oracle-tekst.","Random Card":"Willekeurige kaart","↻ New card":"↻ Nieuwe kaart","↻ Random Card":"↻ Willekeurige kaart","🔮 New cards have been spoiled":"🔮 Nieuwe kaarten zijn gespoild","Comprehensive Rules":"Comprehensive Rules","The complete official Magic rules — read, search, or ask a question and get the exact rule quoted back":"De volledige officiële Magic-regels — lees, zoek, of stel een vraag en krijg de exacte regel terug geciteerd","Find Your Commander":"Vind je Commander","Chart Your Course":"Bepaal je koers","Pick colors and a theme to find Admirals for that style. Tap an Admiral's":"Kies kleuren en een thema om Admirals voor die stijl te vinden. Tik op de","card art":"kaartafbeelding","to see its recommended cards and build a deck around it.":"om de aanbevolen kaarten te zien en er een deck omheen te bouwen.","Pick colors and a theme to find Commanders for that style. Tap a Commander's":"Kies kleuren en een thema om Commanders voor die stijl te vinden. Tik op de kaartafbeelding van een Commander","Theme — none":"Thema — geen","Kindred — none":"Kindred — geen","Colors":"Kleuren","Choose a combination…":"Kies een combinatie…","Colors — any combination":"Kleuren — elke combinatie","Backup & Restore":"Back-up & herstel","Everything in one file — decks, collection, settings. Your ticket to a new address or a new device.":"Alles in één bestand — decks, collectie, instellingen. Je ticket naar een nieuw adres of een nieuw toestel.","⬇ Back Up":"⬇ Back-up maken","⬆ Restore":"⬆ Herstellen","Format Rules":"Formatregels","Deckbuilding & play rules for Commander":"Deckbouw- & speelregels voor Commander","Deckbuilding & play rules for Admiral":"Deckbouw- & speelregels voor Admiral","Banned List":"Banlijst","📲 Install as an app":"📲 Installeer als app","Home-screen icon, full screen, works offline":"Icoon op je beginscherm, volledig scherm, werkt offline","Share this app with a friend":"Deel deze app met een vriend","Sends the app link with a short intro":"Stuurt de app-link met een korte intro","Regular Commander: 100 cards, official legality, 40 life, 21 cmdr damage. Admiral decks wait in their own folder.":"Gewone Commander: 100 kaarten, officiële legaliteit, 40 life, 21 commander damage. Admiral-decks wachten in hun eigen folder.","Admiral — or switch the whole app to regular Commander. Decks of the other format wait in their own folder.":"Admiral — of zet de hele app om naar gewone Commander. Decks van het andere format wachten in hun eigen folder.","Life Totals":"Life totals","New Game":"Nieuw potje","↺ New Game":"↺ Nieuw potje","How many players are at the table?":"Hoeveel spelers zitten er aan tafel?","Pick the table layout — every panel turns to face its seat.":"Kies de tafelindeling — elk paneel draait naar zijn stoel.","Start & Spin for First Player":"Start en draai wie begint","🎡 Spin for First Player":"🎡 Draai wie begint","🎲 Roll d6":"🎲 Gooi een d6","🎲 Roll d20":"🎲 Gooi een d20","Settings":"Instellingen","✓ Done":"✓ Klaar","No events yet.":"Nog geen gebeurtenissen.","New binder name":"Naam van de nieuwe map","Rename binder":"Hernoem map","Cover card name":"Naam van de omslagkaart","Add a copy":"Voeg er één toe","Move to Maybeboard":"Verplaats naar maybeboard","Move to Main":"Naar main deck","Change printing":"Andere versie kiezen","Use your own image…":"Gebruik je eigen afbeelding…","Camera or any image file — it becomes this card's picture everywhere in the app. Picking a real printing below puts things back.":"Camera of een afbeeldingsbestand — het wordt overal in de app het plaatje van deze kaart. Een echte versie hieronder kiezen zet alles terug.","Custom image set for this card.":"Eigen afbeelding ingesteld voor deze kaart.","Could not read that image.":"Kon die afbeelding niet lezen.","Image too large even after shrinking.":"Afbeelding te groot, zelfs na verkleinen.","Not enough storage space for this image.":"Niet genoeg opslagruimte voor deze afbeelding.","Remove from deck":"Verwijder uit deck","Rulings":"Rulings","Add to Deck":"Aan deck toevoegen","Add to…":"Toevoegen aan…","Set as Commander":"Stel in als Commander","Set as Admiral":"Stel in als Admiral","Favorites":"Favorieten","★ Favorites":"★ Favorieten","Rename folder":"Hernoem folder","Delete folder":"Verwijder folder","New folder":"Nieuwe folder","New deck":"Nieuw deck","Pick Admiral first":"Kies eerst een Admiral","Filter by folder or Admiral…":"Filter op folder of Admiral…","Filter by folder or Commander…":"Filter op folder of Commander…","Card name…":"Kaartnaam…","Find in deck…":"Zoek in deck…","No cards match":"Geen kaarten voor","Color breakdown":"Kleuroverzicht","Details":"Details","Most played with this Commander, sorted on popularity.":"Meest gespeeld met deze Commander, gesorteerd op populariteit.","Most played with this Admiral, sorted on popularity.":"Meest gespeeld met deze Admiral, gesorteerd op populariteit.","tap cards to select":"tik op kaarten om te selecteren","Inspiration":"Inspiratie","Extras":"Extra's","Any color":"Elke kleur","All sets":"Alle sets","All types":"Alle typen","White":"Wit","Blue":"Blauw","Black":"Zwart","Red":"Rood","Green":"Groen","Colorless":"Kleurloos","Multicolor":"Meerkleurig","Language saved.":"Taal opgeslagen.","Card images and the interface follow your language where possible.":"Kaartafbeeldingen en de interface volgen waar mogelijk je taal.","Your collection is empty. Search above, or use \"Add to collection\" on any card in the app.":"Je collectie is leeg. Zoek hierboven of gebruik \"Aan collectie toevoegen\" bij een kaart in de app.","Sideboard":"Sideboard","Format":"Format","Main deck":"Main deck","Every archetype":"Elk archetype","Aggro":"Aggro","Tempo":"Tempo","Midrange":"Midrange","Control":"Control","Ramp":"Ramp","Find a deck by name or card":"Zoek een deck op naam of kaart","The metagame for this format arrives with the weekly update.":"De meta van dit format komt met de wekelijkse update.","decks":"decks","most played at the bottom":"meest gespeeld onderaan","No meta decks match.":"Geen meta-decks gevonden.","Copy to my decks":"Kopieer naar mijn decks","Source":"Bron","Not found":"Niet gevonden","metagame":"meta","Copied from the metagame":"Gekopieerd uit de meta","cards copied":"kaarten gekopieerd","not found":"niet gevonden","Meta decks closest to":"Meta-decks die het meest lijken op","cards in common":"kaarten gedeeld","No cards yet. Add them from Search, copy a meta deck from Inspiration, or paste a list with Bulk Edit / Import.":"Nog geen kaarten. Voeg ze toe via Zoeken, kopieer een meta-deck uit Inspiratie of plak een lijst via Bulk bewerken / Importeren.","Tap a name for the card.":"Tik op een naam voor de kaart.","Banned":"Banned","Nothing banned beyond ante, Conspiracy and sticker cards.":"Niets gebannen behalve ante-, Conspiracy- en stickerkaarten.","Restricted — 1 copy":"Restricted — 1 exemplaar"},
 };
 const I18N_RX = {
 nl:[[/^(\d+) cards? owned$/g,'$1 kaarten in bezit'],[/What's new — v/g,'Wat is nieuw — v'],[/^Avg MV /g,'Gem. MV '],[/^(\d+)d ago · undone$/g,'$1d geleden · ongedaan'],[/^(\d+)d ago$/g,'$1d geleden'],[/^(\d+)h ago$/g,'$1u geleden'],[/^(\d+)m ago$/g,'$1m geleden'],[/^just now$/g,'zojuist'],[/^Bulk edit: (\d+) added, (\d+) removed$/g,'Bulk bewerken: $1 toegevoegd, $2 verwijderd'],[/^Deck total: /g,'Decktotaal: '],[/(\d+) decks? · waiting for the flag to change/g,'$1 decks · wachten op de vlagwissel'],[/Commanders — any colors/g,'Commanders — alle kleuren'],[/Admirals — any colors/g,'Admirals — alle kleuren'],[/^(\d+) cards — the official Commander list, live from Scryfall$/g,'$1 kaarten — de officiële Commander-lijst, live van Scryfall'],[/^(\d+) cards — tap a name to see it/g,'$1 kaarten — tik op een naam om hem te zien'],[/^Player (\d+)$/g,'Speler $1'],[/\bMain (\d+)\//g,'Deck $1/'],[/(\d+) cards\b/g,'$1 kaarten'],[/(\d+) card\b/g,'$1 kaart']],
@@ -7527,7 +7831,7 @@ function wireCollectionPage(){
   });
   _csHandlers['colSet'] = v=>{ state.colFilter.set = v; csRerender(); };
   _csHandlers['colCM'] = v=>{ state.colFilter.colorMode = v; csRerender(); };
-  _csHandlers['colLegal'] = v=>{ state.colFilter.legal = v; csRerender(); };
+  _csHandlers['colLegal'] = v=>{ state.colFilter.legal = v; if(isConstructedFmt(v)){ try{ ensureFmtBans(v); }catch(e){} } csRerender(); };
   wireCSelects();
   if(!isCmdrMode()) checkCollectionLegality();   // confirm per-card Admiral legality in the background
   document.querySelectorAll('[data-colcolor]').forEach(chk=>chk.addEventListener('change', ()=>{
@@ -8301,8 +8605,41 @@ function checkCommanderLegality(d){
   });
   return issues;
 }
+/* The 60-card check: at least 60 in the main deck, at most 15 in the
+   sideboard, four copies (restricted: one) across both, and every card
+   legal in the format -- judged by name against the live ban list, and by
+   the card's own facts for rotation, rarity and card pool. */
+function checkConstructedLegality(d){
+  const fmt = deckFormat(d), label = fmtLabelOf(fmt);
+  const issues = [];
+  const add = (level, text, cards) => issues.push({ level, label: text, cards: cards||[] });
+  const main = d.cards || [], side = ensureMaybeboard(d);
+  const n = main.length;
+  if(n < DECK_TOTAL) add('warn', `${n}/${DECK_TOTAL} cards — ${DECK_TOTAL-n} to add`);
+  if(side.length > 15) add('error', `Sideboard ${side.length}/15 — ${side.length-15} too many`);
+  const both = main.concat(side);
+  const counts = new Map();
+  both.forEach(c=>counts.set(c.name, (counts.get(c.name)||0) + 1));
+  const over = [], restr = [], banned = [], notLegal = [], unknown = [];
+  counts.forEach((q, nm)=>{
+    const card = both.find(c=>c.name === nm);
+    const lim = copyLimit(card, d);
+    if(q > lim) (lim === 1 ? restr : over).push(nm);
+    const v = fmtVerdict(card, fmt);
+    if(v === 'banned') banned.push(nm);
+    else if(v === 'not_legal') notLegal.push(nm);
+    else if(v === 'unknown') unknown.push(nm);
+  });
+  if(over.length) add('error', `More than 4 copies`, over);
+  if(restr.length) add('error', `Restricted — one copy only`, restr);
+  if(banned.length) add('error', `Banned in ${label}`, banned);
+  if(notLegal.length) add('error', `Not legal in ${label}`, notLegal);
+  if(unknown.length) queueFmtLegality(unknown);
+  return issues;
+}
 function checkDeckLegality(d){
-  if(deckFormat(d) === 'commander') return checkCommanderLegality(d);
+  if(deckIsConstructed(d)) return checkConstructedLegality(d);
+  if(deckKind(d) === 'cmdr') return checkCommanderLegality(d);
   const issues = [];
   const add = (level, label, cards) => issues.push({ level, label, cards: cards||[] });
 
@@ -9188,7 +9525,7 @@ async function shareDeck(d){
   // link to point at, so share the decklist as text instead of a dead link.
   const hosted = /^https?:/i.test(location.href);
   if(!hosted){
-    const lines = [`${d.name} — ${deckFormat(d)==='commander'?'Commander':'Admiral'} deck`];
+    const lines = [`${d.name} — ${fmtLabelOf(deckFormat(d))} deck`];
     if(d.admiral) lines.push(`${fmtName(d)}: ${d.admiral.name}`);
     if(d.partner) lines.push(`Partner: ${d.partner.name}`);
     {
@@ -9218,7 +9555,7 @@ async function shareDeck(d){
   try{ url = await buildShareUrl(d); }
   catch(e){ console.error('share encode failed', e); toast('Could not build a share link for this deck.'); return; }
   const isLocalFile = location.protocol === 'file:' || location.protocol === 'content:';
-  const text = `${d.name} — ${deckFormat(d)==='commander'?'Commander':'Admiral'} format decklist`;
+  const text = `${d.name} — ${fmtLabelOf(deckFormat(d))} format decklist`;
   if(navigator.share){
     try{ await navigator.share({ title: d.name, text, url }); return; }
     catch(e){ if(e && e.name==='AbortError') return; /* fall through to clipboard */ }
@@ -9980,6 +10317,7 @@ function wireDecklistPage(){
   }
   const d = getDeck(state.activeDeckId);
   if(!d) { wireNeedDeck(); return; }
+  if(deckIsConstructed(d)){ try{ ensureFmtBans(deckFormat(d)); }catch(e){} }
   document.querySelectorAll('.b-tab').forEach(b=>b.addEventListener('click', ()=>{ state.builderTab=b.dataset.btab; state.dlPanel=null; state.dockSet = 0; renderBuilderBody(d); updateDeckMeter(d); syncTabsUI(); scrollToPageFoot(); }));
   wireMeterRow(d);
   refreshLegality(d);
@@ -10025,9 +10363,9 @@ function renderBuilderBody(d){
 }
 function listTabHtml(d){
   return `<div class="dl-bridge">
-      <div class="dl-bridge-adm">${leaderZoneHtml(d)}<div class="dl-leader-cat">${isCmdrMode() ? (deckLeaders(d).length > 1 ? 'Commanders' : 'Commander') : (deckLeaders(d).length > 1 ? 'Admirals' : 'Admiral')}</div></div>
+      <div class="dl-bridge-adm">${leaderZoneHtml(d)}<div class="dl-leader-cat">${deckIsConstructed(d) ? trS('Format') : isCmdrMode() ? (deckLeaders(d).length > 1 ? 'Commanders' : 'Commander') : (deckLeaders(d).length > 1 ? 'Admirals' : 'Admiral')}</div></div>
       <div class="dl-bridge-desc">
-        ${isCmdrMode() ? `<div class="dl-bracket" id="dlBracket" title="Estimate from Game Changers and 2-card combos">⚔ Bracket ~${bracketEstimate(d, null).b} · ${bracketEstimate(d, null).gc} GC</div>` : ''}
+        ${(isCmdrMode() && deckKind(d) === 'cmdr') ? `<div class="dl-bracket" id="dlBracket" title="Estimate from Game Changers and 2-card combos">⚔ Bracket ~${bracketEstimate(d, null).b} · ${bracketEstimate(d, null).gc} GC</div>` : ''}
         <div class="dl-desc-text">${d.description
           ? escapeHtml(d.description).replace(/\n/g, '<br>')
           : `<span class="hint" style="margin:0;">${trS('No description yet — write one on the Deck Log page.')}</span><button class="icon-btn dl-mini-add" id="descAddBtn" title="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">${ICONS.plus}</button>`}</div>
@@ -10096,7 +10434,7 @@ function _deckFilterPredicate(d, f){
 function dlPanelHtml(d){
   if(state.dlPanel==='bulk'){
     const lines=[]; if(d.admiral) lines.push(leaderLineLabel(d)+': '+d.admiral.name); if(d.partner) lines.push('PARTNER: '+d.partner.name); { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); }
-    { const mb = ensureMaybeboard(d); if(mb.length){ lines.push('', 'MAYBEBOARD:'); const mm=new Map(); mb.forEach(c=>mm.set(c.name,(mm.get(c.name)||0)+1)); mm.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); } }
+    { const mb = ensureMaybeboard(d); if(mb.length){ lines.push('', deckIsConstructed(d) ? 'SIDEBOARD:' : 'MAYBEBOARD:'); const mm=new Map(); mb.forEach(c=>mm.set(c.name,(mm.get(c.name)||0)+1)); mm.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); } }
     return `<div class="panel-card">
       <div class="panel-h" style="display:flex;align-items:center;"><span>Bulk Edit</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
       <textarea id="bulkText" class="bulk-textarea">${lines.join('\n')}</textarea>
@@ -10193,17 +10531,26 @@ function buildExport(d, fmt){
     rows.push('</cockatrice_deck>');
     return rows.join('\n');
   }
+  // The 60s travel with their sideboard, the way MTGO and Arena write it:
+  // a blank line, then "Sideboard", then the fifteen.
+  const sideLines = (lines)=>{
+    if(!deckIsConstructed(d) || !mb.length) return;
+    const m = new Map(); mb.forEach(c=>m.set(c.name, (m.get(c.name)||0) + 1));
+    lines.push('', 'Sideboard'); m.forEach((q,n)=>lines.push(q + ' ' + n));
+  };
   if(fmt === 'plain'){
     const lines = [];
     if(d.admiral) lines.push(d.admiral.name);
     if(d.partner) lines.push(d.partner.name);
-    { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); }
+    { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1||deckIsConstructed(d)?q+' ':'')+n)); }
+    sideLines(lines);
     return lines.join('\n');
   }
   const lines = [];
   if(d.admiral) lines.push(leaderLineLabel(d)+': ' + d.admiral.name);
   if(d.partner) lines.push('PARTNER: ' + d.partner.name);
-  { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1?q+' ':'')+n)); }
+  { const m=new Map(); d.cards.forEach(c=>m.set(c.name,(m.get(c.name)||0)+1)); m.forEach((q,n)=>lines.push((q>1||deckIsConstructed(d)?q+' ':'')+n)); }
+  sideLines(lines);
   return lines.join('\n');
 }
 function exportExt(fmt){ return fmt==='cockatrice' ? 'cod' : 'txt'; }
@@ -10242,7 +10589,9 @@ function categorizedListHtml(d){
     if(_fPred && !_fPred(c)) return false;
     return true;
   });
-  if(!d.cards.length && !d.admiral && !d.maybeboard.length) return `<div class="empty-note">No crew mustered yet. Go to Search to find an Admiral and add cards, or use Bulk Edit / Import above to paste a whole list.</div>`;
+  if(!d.cards.length && !d.admiral && !d.maybeboard.length) return deckIsConstructed(d)
+    ? `<div class="empty-note">${trS('No cards yet. Add them from Search, copy a meta deck from Inspiration, or paste a list with Bulk Edit / Import.')}</div>`
+    : `<div class="empty-note">No crew mustered yet. Go to Search to find an Admiral and add cards, or use Bulk Edit / Import above to paste a whole list.</div>`;
   let html='';
 
   const grouped = state.sortMode==='type-cmc-name' || state.sortMode==='type-name' || !state.sortMode;
@@ -10308,9 +10657,10 @@ function categorizedListHtml(d){
     if(_dlq) mIdxs = mIdxs.filter(i=>d.maybeboard[i].name.toLowerCase().includes(_dlq));
     if(mIdxs.length){
       if(!('Maybeboard' in state.collapsed)) state.collapsed['Maybeboard'] = true;   // closed until opened
-      const collapsed = _dlq ? false : !!state.collapsed['Maybeboard'];
+      // A sideboard is part of the deck, not a pile of maybes: it starts open.
+      const collapsed = _dlq ? false : (deckIsConstructed(d) ? !!state.collapsed['Sideboard'] : !!state.collapsed['Maybeboard']);
       html += `<div class="cat-group">
-        <div class="cat-head ${collapsed?'collapsed':''}" data-cat="Maybeboard"><span class="t">Maybeboard</span><span class="cat-price">${groupPriceLabel(mIdxs.map(i=>d.maybeboard[i]))}</span><span class="n">${mIdxs.length}</span><span class="car">▾</span></div>
+        <div class="cat-head ${collapsed?'collapsed':''}" data-cat="${deckIsConstructed(d) ? 'Sideboard' : 'Maybeboard'}"><span class="t">${trS(sideName(d))}</span><span class="cat-price">${groupPriceLabel(mIdxs.map(i=>d.maybeboard[i]))}</span><span class="n">${mIdxs.length}</span><span class="car">▾</span></div>
         <div class="cat-body ${collapsed?'collapsed':''}"><div class="visual-grid">${dedupeIdxs(mIdxs, d.maybeboard).map(g=>cardTileHtml(d.maybeboard[g.i],g.i,'maybe',g.qty)).join('')}</div></div>
       </div>`;
     }
@@ -10373,7 +10723,8 @@ function cardTileHtml(card, idx, loc, qty){
   // A card the format check would flag (banned, or not legal and not a
   // preview) trades its gold rim for a clearly red one.
   const _rd = getDeck(state.activeDeckId);
-  const _v = (_rd && deckFormat(_rd) === 'commander') ? commanderVerdict(card) : 'legal';
+  const _v = !_rd ? 'legal' : deckFormat(_rd) === 'commander' ? commanderVerdict(card)
+    : deckIsConstructed(_rd) ? fmtVerdict(card, deckFormat(_rd)) : 'legal';
   const _ill = _v === 'banned' || _v === 'not_legal';
   return `<div class="vg-card${_ill?' vg-illegal':''}" data-idx="${idx}" data-loc="${loc}"><img class="${wbClass(card)}" src="${cardImageMed(card)}" alt="${escapeHtml(card.name)}">${(qty&&qty>1)?`<span class="vg-qty">×${qty}</span>`:''}${cardBadgesHtml(card)}${gcMarkHtml(card)}</div>`;
 }
@@ -11243,6 +11594,11 @@ function refreshDecklistBox(d){
    leader or — when the first one's ability allows a pairing — a big + that
    opens the partner picker. */
 function leaderZoneHtml(d){
+  // The 60s have no leader: the seat shows the format and its numbers.
+  if(deckIsConstructed(d)){
+    const side = ensureMaybeboard(d).length;
+    return `<div class="dl-adm-empty dl-fmt-seat"><span style="color:var(--brass);">${cardsSvg(30)}</span><br><b>${fmtLabelOf(deckFormat(d))}</b><br>${(d.cards||[]).length}/60 · ${trS('Sideboard')} ${side}/15</div>`;
+  }
   if(!d.admiral) return `<div class="dl-adm-empty" id="findAdmiralBtn">${deckFormat(d)==="commander"?"⚔":anchorSvg(26)}<br>No ${fmtName(d)} appointed.<br>Tap to find one.</div>`;
   const A = pairAbility(d.admiral);
   let inner = cardTileHtml(d.admiral,-1,'admiral');
@@ -11679,9 +12035,11 @@ function renderCardSheet(d, card, loc, idx){
     closeTopOverlay(); refreshDecklistBox(d);
   });
   document.getElementById('csToMain')?.addEventListener('click', ()=>{
-    if(isBanned(card)){ toast('This card is banned.'); return; }
+    if(deckBlockReason(card, d)){ toast(deckBlockReason(card, d) + '.'); return; }
     if(d.admiral && !colorIdentityOkDeck(card, d)){ toast("Off-color for your leaders."); return; }
-    if(d.cards.some(x=>x.name===card.name) && !allowsDuplicates(card)){ toast('Already in main deck (singleton).'); return; }
+    // Moving within one deck never changes the total count, so for the 60s
+    // only the main-deck count matters here; singleton formats keep one.
+    if(deckIsConstructed(d) ? false : (d.cards.some(x=>x.name===card.name) && !allowsDuplicates(card))){ toast('Already in main deck (singleton).'); return; }
     d.maybeboard.splice(idx,1);
     d.cards.push(card);
     logDeckChange(d, {type:'toMain', name:card.name, card});
@@ -11690,8 +12048,17 @@ function renderCardSheet(d, card, loc, idx){
   });
   document.getElementById('csCollSheet')?.addEventListener('click', ()=>openAddToCollection(card));
   document.getElementById('csAddOne')?.addEventListener('click', ()=>{
-    if(loc==='maybe'){ toast('The Maybeboard keeps one of each — move it into the deck first.'); return; }
-    if(!allowsDuplicates(card)){ toast('Singleton rules: only basic lands (and cards that say otherwise) may repeat.'); return; }
+    if(loc==='maybe' && !deckIsConstructed(d)){ toast('The Maybeboard keeps one of each — move it into the deck first.'); return; }
+    if(deckIsConstructed(d)){
+      if(atCopyLimit(d, card)){ toast(copyLimit(card, d) === 1 ? 'Restricted in Vintage — one copy only.' : 'Four copies is the most a deck may run.'); return; }
+      if(loc==='maybe'){
+        ensureMaybeboard(d).push(JSON.parse(JSON.stringify(card)));
+        logDeckChange(d, {type:'addMaybe', name:card.name, card});
+        scheduleSave(d); toast(`Another ${card.name} in the sideboard.`);
+        refreshDecklistBox(d);
+        return;
+      }
+    } else if(!allowsDuplicates(card)){ toast('Singleton rules: only basic lands (and cards that say otherwise) may repeat.'); return; }
     d.cards.push(JSON.parse(JSON.stringify(card)));
     logDeckChange(d, {type:'add', name:card.name, card});
     scheduleSave(d); toast(`Another ${card.name} added.`);
@@ -12326,6 +12693,11 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   const _bt = { t0: Date.now(), q: _sfQ.hi.length + '/' + _sfQ.lo.length };
   await resolveLegalSets();
   _bt.sets = Date.now();
+  if(deckIsConstructed(d)){
+    if(partnerName) cardNames.unshift(partnerName);
+    if(admiralName) cardNames.unshift(admiralName);
+    admiralName = null; partnerName = null;
+  }
   let newAdmiral = isImport ? null : d.admiral;
   let newPartner;   // undefined = leave d.partner untouched
   const report=[];
@@ -12384,10 +12756,10 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     if(r.verifyFailed){ report.push({name:c.name,status:'notfound',msg:"Couldn't verify legality — try again"}); return; }
     if(!r.legalPrint){ report.push({name:c.name,status:'bad',msg:'Never in a legal set'}); return; }
     if(!landOk(c, d)){ report.push({name:c.name,status:'bad',msg:'Land front side'}); return; }
-    if(isBanned(c)){ report.push({name:c.name,status:'bad',msg:'Banned'}); return; }
+    { const why = deckBlockReason(c, d); if(why){ report.push({name:c.name,status:'bad',msg:why}); return; } }
     if(leaderNames.has(c.name)){ report.push({name:c.name,status:'ok',msg:'Kept as '+fmtName(d)}); return; }
     if(effLead.admiral && !colorIdentityOkDeck(c, effLead)){ report.push({name:c.name,status:'bad',msg:'Off-color'}); return; }
-    if(newDeck.some(x=>x.name===c.name) && !allowsDuplicates(c)){ report.push({name:c.name,status:'bad',msg:'Duplicate'}); return; }
+    if(copiesIn(newDeck, c.name) >= copyLimit(c, d)){ report.push({name:c.name,status:'bad',msg: deckIsConstructed(d) ? 'Over the copy limit' : 'Duplicate'}); return; }
     newDeck.push(c); report.push({name:c.name,status:'ok',msg:'Added'});
   });
   // Log the diff so the construction history reflects bulk edits too.
@@ -12413,8 +12785,8 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
     const collected = [];
     mres.forEach(r=>{
       if(r && r.found && r.card){
-        if(!collected.some(x=>x.name===r.card.name) || allowsDuplicates(r.card)) collected.push(r.card);
-        report.push({name:r.card.name,status:'ok',msg:'To Maybeboard'});
+        if(copiesIn(collected, r.card.name) < (deckIsConstructed(d) ? copyLimit(r.card, d) : (allowsDuplicates(r.card) ? Infinity : 1))) collected.push(r.card);
+        report.push({name:r.card.name,status:'ok',msg:'To ' + sideName(d)});
       } else {
         report.push({name:(r && r.input) ? r.input : '?', status:'notfound', msg:'Maybeboard: not found'});
       }
@@ -12462,10 +12834,10 @@ async function retryFailedCards(d, names, reportElId, admiralForColorCheck){
     if(r.verifyFailed){ report.push({name:c.name,status:'notfound',msg:"Still couldn't verify — try again later"}); return; }
     if(!r.legalPrint){ report.push({name:c.name,status:'bad',msg:'Never in a legal set'}); return; }
     if(!landOk(c, d)){ report.push({name:c.name,status:'bad',msg:'Land front side'}); return; }
-    if(isBanned(c)){ report.push({name:c.name,status:'bad',msg:'Banned'}); return; }
+    { const why = deckBlockReason(c, d); if(why){ report.push({name:c.name,status:'bad',msg:why}); return; } }
     if(d.admiral && !colorIdentityOkDeck(c, d)){ report.push({name:c.name,status:'bad',msg:'Off-color'}); return; }
     if(deckLeaders(d).some(L=>L.name===c.name)){ report.push({name:c.name,status:'ok',msg:'Kept as '+fmtName(d)}); return; }
-    if(d.cards.some(x=>x.name===c.name) && !allowsDuplicates(c)){ report.push({name:c.name,status:'bad',msg:'Duplicate'}); return; }
+    if(atCopyLimit(d, c)){ report.push({name:c.name,status:'bad',msg: deckIsConstructed(d) ? 'Over the copy limit' : 'Duplicate'}); return; }
     d.cards.push(c); logDeckChange(d, {type:'add', name:c.name, card:c}); report.push({name:c.name,status:'ok',msg:'Added'});
   });
   scheduleSave(d);
@@ -12728,7 +13100,7 @@ function wireAdvancedPanel(){
   _csHandlers.touOp = v=>{ state.searchTouOp=v; render(); };
   _csHandlers.loyOp = v=>{ state.searchLoyOp=v; render(); };
   _csHandlers.setSel = v=>{ state.searchSetCode=v; render(); };
-  _csHandlers.fmtSel = v=>{ state.searchFormat=v; render(); };
+  _csHandlers.fmtSel = v=>{ state.searchFormat=v; if(isConstructedFmt(v)){ try{ ensureFmtBans(v); }catch(e){} } render(); };
   wireCSelects();
   document.querySelectorAll('[data-rarity]').forEach(chk=>chk.addEventListener('change', ()=>{ state.searchRarity[chk.dataset.rarity] = chk.checked; }));
   wirePriceSlider('srchPr', (mn, mx)=>{ state.searchEurMin = mn; state.searchEurMax = mx; });
@@ -12918,8 +13290,11 @@ function localSearchable(){
   if(st.searchLoyOp && st.searchLoyVal !== '') return false;
   if((st.searchSetCode || '').trim()) return false;
   const f = st.searchFormat || 'any';
-  if(f !== 'any' && f !== 'commander') return false;
-  return true;
+  if(f === 'any' || f === 'commander') return true;
+  // The other formats are local too once the weekly file carries their
+  // legality (lx) -- until then they go to Scryfall as before.
+  let ix = null; try{ ix = _bulkIdx; }catch(e){}
+  return LX_FORMATS.indexOf(f) >= 0 && !!(ix && ix.hasLx);
 }
 async function localSearch(limit){
   let ix = null;
@@ -12947,6 +13322,8 @@ async function localSearch(limit){
   const rars = Object.keys(st.searchRarity || {}).filter(r=>st.searchRarity[r]);
   const fmt = st.searchFormat || 'any';
   const cmdrBans = fmt === 'commander' ? cmdrBanSet() : null;
+  const lxI = LX_FORMATS.indexOf(fmt);
+  const fmtBans = isConstructedFmt(fmt) ? fmtBanSets(fmt) : null;
 
   const out = [];
   for(const c of ix.cards){
@@ -12987,6 +13364,14 @@ async function localSearch(limit){
       if(cmdrBans && cmdrBans.size){
         if(cmdrBans.has(norm(String(c.n).split(' // ')[0]))) continue;
       } else if(c.lg === 'banned') continue;
+    }
+    if(lxI >= 0){
+      // Legal or restricted in the file, and not on today's ban list. A
+      // 'b' the live list no longer carries is an unban the file missed.
+      const L = (c.lx || '')[lxI] || 'n';
+      const nm = norm(String(c.n).split(' // ')[0]);
+      if(fmtBans && fmtBans.banned.has(nm)) continue;
+      if(!(L === 'l' || L === 'r' || (L === 'b' && fmtBans && fmtBans.live))) continue;
     }
     out.push(c);
     if(out.length > 4000) break;               // a runaway query cannot hog the frame
@@ -13066,6 +13451,9 @@ async function searchNewSets(baseClause, codes, limit){
       if(bans && bans.size && bans.has(norm(String(c.name).split(' // ')[0]))) return false;
       return true;
     });
+  } else if(isConstructedFmt(fmt)){
+    const B = fmtBanSets(fmt);
+    data = data.filter(c=>!B.banned.has(norm(String(c.name).split(' // ')[0])));
   }
   return data;
 }
@@ -13275,14 +13663,14 @@ function loadTilePrices(cards){
 }
 function searchRowHtml(c, d, opts){
   opts = opts || {};
-  const banned = isBanned(c);
+  const banned = d ? !!deckBlockReason(c, d) : isBanned(c);
   let tag='ok', tagTxt='', disabled = banned;
   if(d){
     const colorOk = colorIdentityOkDeck(c, d);
-    const alreadyIn = d.cards.some(x=>x.name===c.name) && !allowsDuplicates(c);
-    const noAdmiral = !d.admiral;
+    const alreadyIn = atCopyLimit(d, c);
+    const noAdmiral = !d.admiral && !deckIsConstructed(d);
     disabled = banned || !colorOk || alreadyIn || noAdmiral;
-    if(banned){tag='banned';tagTxt='Banned';}
+    if(banned){tag='banned';tagTxt=deckBlockReason(c, d) || 'Banned';}
     else if(noAdmiral){tag='dupe';tagTxt='Pick Admiral first';}
     else if(!colorOk){tag='banned';tagTxt='Off-color';}
     else if(alreadyIn){tag='dupe';tagTxt='In deck';}
@@ -13306,11 +13694,11 @@ function searchRowHtml(c, d, opts){
 
 /* ---- validated add/assign helpers (shared by pinned mode, popup mode, browse, card of the day) ---- */
 function addCardToDeckValidated(d, c, refreshFn){
-  if(isBanned(c)){ toast(`${c.name} is banned.`); return false; }
-  if(!d.admiral){ toast(`Appoint an Admiral for ${d.name} first.`); return false; }
+  { const why = deckBlockReason(c, d); if(why){ toast(`${c.name}: ${why.toLowerCase()}.`); return false; } }
+  if(!d.admiral && !deckIsConstructed(d)){ toast(`Appoint an Admiral for ${d.name} first.`); return false; }
   if(deckLeaders(d).some(L=>L.name===c.name) && !allowsDuplicates(c)){ toast(`${c.name} is already in command of this deck.`); return false; }
   if(!colorIdentityOkDeck(c, d)){ toast(`${c.name} is off-color for your leader${d.partner?'s':''}.`); return false; }
-  if(d.cards.some(x=>x.name===c.name) && !allowsDuplicates(c)){ toast(`${c.name} is already in ${d.name}.`); return false; }
+  if(atCopyLimit(d, c)){ toast(deckIsConstructed(d) ? (copyLimit(c, d) === 1 ? `${c.name} is restricted — one copy only.` : `${d.name} already runs four ${c.name}.`) : `${c.name} is already in ${d.name}.`); return false; }
   d.cards.push(c);
   logDeckChange(d, {type:'add', name:c.name, card:c});
   toast(`${c.name} added to ${d.name}.`);
@@ -13319,10 +13707,11 @@ function addCardToDeckValidated(d, c, refreshFn){
   return true;
 }
 function addToMaybeValidated(d, c, refreshFn){
-  if(isBanned(c)){ toast(`${c.name} is banned.`); return false; }
+  { const why = deckBlockReason(c, d); if(why){ toast(`${c.name}: ${why.toLowerCase()}.`); return false; } }
+  if(deckIsConstructed(d) && atCopyLimit(d, c)){ toast(`${c.name}: the copy limit counts the sideboard too.`); return false; }
   ensureMaybeboard(d).push(c);
   logDeckChange(d, {type:'addMaybe', name:c.name, card:c});
-  toast(`${c.name} added to ${d.name}'s Maybeboard.`);
+  toast(`${c.name} added to ${d.name}'s ${sideName(d)}.`);
   scheduleSave(d);
   if(refreshFn) refreshFn(c);
   return true;
@@ -13843,7 +14232,7 @@ function openCardInfo(card, opts){
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
   // cards (basics etc.) stay on the Add side — only a removable main-deck
   // copy flips the button to Remove.
-  const pinnedHasCard = ()=> !!(pinned && pinned.cards.some(x=>x.name===card.name) && !allowsDuplicates(card));
+  const pinnedHasCard = ()=> !!(pinned && (deckIsConstructed(pinned) ? atCopyLimit(pinned, card) : (pinned.cards.some(x=>x.name===card.name) && !allowsDuplicates(card))));
   el.innerHTML = `<div class="overlay-inner">
     <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><div class="card-price" id="csPrice" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;">Checking price…</div></div>
     <main class="card-detail">
@@ -15097,11 +15486,11 @@ async function _legBlockRefresh(gid, card){
 }
 /* ── Format reference ─ rules digests for the accordion in Extras. ── */
 const FORMAT_RULES = [
-  ['standard', 'Standard', '60-card minimum, 4 copies max, only the last couple of years of sets. Rotates yearly.'],
-  ['modern', 'Modern', '60-card minimum, 4 copies max, every set from Eighth Edition (2003) forward.'],
-  ['legacy', 'Legacy', '60-card minimum, 4 copies max, all of Magic with a substantial ban list.'],
-  ['vintage', 'Vintage', 'All of Magic; almost nothing banned, the most powerful cards restricted to 1 copy.'],
-  ['pauper', 'Pauper', '60-card minimum, 4 copies max, only cards ever printed at common rarity.'],
+  ['standard', 'Standard', '60+ cards, sideboard up to 15, max 4 copies, 20 life. The newest sets only: about three years. No rotation in 2026; from 2027 the oldest sets leave with the year\u2019s first set.'],
+  ['pauper', 'Pauper', '60+ cards, sideboard up to 15, max 4 copies, 20 life. Only cards ever printed at common.'],
+  ['modern', 'Modern', '60+ cards, sideboard up to 15, max 4 copies, 20 life. Every set from Eighth Edition and Mirrodin (2003) on. Never rotates.'],
+  ['legacy', 'Legacy', '60+ cards, sideboard up to 15, max 4 copies, 20 life. All of Magic, with a long ban list.'],
+  ['vintage', 'Vintage', '60+ cards, sideboard up to 15, max 4 copies, 20 life. All of Magic; the strongest cards are restricted to 1 copy.'],
   ['premodern', 'Premodern', '60-card minimum, 4 copies max, sets from Fourth Edition through Scourge (1995–2003).'],
   ['commander', 'Commander', '100-card singleton led by a legendary commander, 40 life, colour identity rules, official ban list.'],
   ['paupercommander', 'Pauper Commander', 'Commander, but the 99 are commons and the commander is any uncommon creature. 30 life.'],
@@ -15110,7 +15499,9 @@ const FORMAT_RULES = [
   ['admiral', 'Admiral', 'This app\u2019s own format: 60-card singleton led by a legendary Admiral, no lands in the deck — mana comes from a shared Landing Zone of basics — with a card pool of everything that was ever Standard-legal and a custom ban list built on gameplay pillars.']
 ];
 function fmtRulesBodyHtml(){
-  return FORMAT_RULES.map(([id, label, txt])=>`<div class="settings-row" data-fmtrule="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-fmtruletxt="${id}" hidden>${txt}<button type="button" class="ghost-btn" data-fmtfull="${id}" style="display:block;width:100%;margin:10px 0 2px;">▸ ${trS('Complete rules')}</button><div data-fmtfullbox="${id}" hidden style="margin-top:6px;"></div></div></div></div>`).join('');
+  // Bottom-up (.acc-up): the digest sits right above the format's name, the
+  // Complete rules button above that, the full text above the button.
+  return FORMAT_RULES.map(([id, label, txt])=>`<div class="settings-row" data-fmtrule="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-fmtruletxt="${id}" hidden><span>${txt}</span><button type="button" class="ghost-btn" data-fmtfull="${id}" style="display:block;width:100%;margin:2px 0;">▴ ${trS('Complete rules')}</button><div data-fmtfullbox="${id}" hidden></div></div></div></div>`).join('');
 }
 /* Complete rulebooks for the second unfold in the Extras format accordion.
    Admiral and Commander reuse the app's own full texts; the other formats
@@ -15119,11 +15510,11 @@ function fmtFullRulesHtml(id){
   if(id === 'admiral') return admiralFullRulesHtml();
   if(id === 'commander') return commanderFullRulesHtml();
   const F = {
-    standard: `<div class="rules-text"><h4>Deck construction</h4><p>A deck contains at least 60 cards (no maximum) with an optional sideboard of up to 15. No more than 4 copies of any card by name, except basic lands and cards whose text says otherwise.</p><h4>Card pool</h4><p>Only the most recent premier sets are legal. The pool rotates once a year when the fall set arrives, dropping the oldest sets — a set stays Standard-legal for roughly three years.</p><h4>Playing</h4><p>Players start at 20 life with a 7-card hand and the London mulligan. Tournament play is best-of-three with sideboarding between games.</p><h4>Bans</h4><p>Wizards of the Coast maintains the banned list through official announcements — see the Banned List section below.</p></div>`,
-    modern: `<div class="rules-text"><h4>Deck construction</h4><p>At least 60 cards, optional 15-card sideboard, maximum 4 copies of any card by name (basic lands excepted).</p><h4>Card pool</h4><p>Every Standard-legal set from Eighth Edition and Mirrodin (2003) forward, in modern card frames. The format never rotates — it only grows.</p><h4>Playing</h4><p>20 life, London mulligan, best-of-three matches with sideboarding.</p><h4>Bans</h4><p>An actively managed banned list keeps the format's speed and diversity in check — see the Banned List section.</p></div>`,
-    legacy: `<div class="rules-text"><h4>Deck construction</h4><p>At least 60 cards, optional 15-card sideboard, maximum 4 copies of any card by name (basic lands excepted).</p><h4>Card pool</h4><p>Every set in Magic's history — the whole game is the card pool.</p><h4>Playing</h4><p>20 life, London mulligan, best-of-three matches.</p><h4>Bans</h4><p>A substantial banned list — the format embraces Magic's most powerful fair cards while banning what would end games on turn one — see the Banned List section.</p></div>`,
-    vintage: `<div class="rules-text"><h4>Deck construction</h4><p>At least 60 cards, optional 15-card sideboard, maximum 4 copies of any card by name — but cards on the <em>restricted</em> list are limited to a single copy.</p><h4>Card pool</h4><p>All of Magic, back to Alpha. The Power Nine live here.</p><h4>Playing</h4><p>20 life, London mulligan, best-of-three matches.</p><h4>Bans</h4><p>Almost nothing is banned — only cards that are impractical in tournament play (ante, manual dexterity, Conspiracy-type cards). The most powerful cards are restricted to one copy instead; see the Banned List section.</p></div>`,
-    pauper: `<div class="rules-text"><h4>Deck construction</h4><p>At least 60 cards, optional 15-card sideboard, maximum 4 copies of any card by name (basic lands excepted).</p><h4>Card pool</h4><p>Any card that has ever been printed at common rarity in a Magic set or product — whatever rarity other printings carry.</p><h4>Playing</h4><p>20 life, London mulligan, best-of-three matches.</p><h4>Bans</h4><p>The format keeps its own banned list, tended by the Pauper Format Panel — see the Banned List section.</p></div>`,
+    standard: `<div class="rules-text"><h4>Deck construction</h4><p>A main deck of at least 60 cards — no maximum — and a sideboard of up to 15. No more than four copies of any card by English name, counting main deck and sideboard together. Basic lands, and cards whose own text says so, are unlimited.</p><h4>Card pool</h4><p>The newest premier sets — about three years of them. There is no rotation in 2026. From 2027 the oldest sets rotate out once a year, when the year's first set comes out. Foundations stays legal until at least 2029. A card is legal if any printing of it is in one of those sets.</p><h4>Playing</h4><p>Two players, 20 life each, a 7-card hand and the London mulligan. Tournaments play best-of-three; between games you may swap cards with your sideboard, one for one.</p><h4>Bans</h4><p>Wizards of the Coast announces changes on a fixed schedule. This app fetches the official list once a day — see Ban lists above.</p></div>`,
+    modern: `<div class="rules-text"><h4>Deck construction</h4><p>A main deck of at least 60 cards — no maximum — and a sideboard of up to 15. No more than four copies of any card by English name, counting main deck and sideboard together. Basic lands, and cards whose own text says so, are unlimited.</p><h4>Card pool</h4><p>Every card printed in Eighth Edition, Mirrodin and every Standard set after them, plus sets made straight for Modern (Modern Horizons). It never rotates — it only grows.</p><h4>Playing</h4><p>Two players, 20 life each, a 7-card hand and the London mulligan. Tournaments play best-of-three; between games you may swap cards with your sideboard, one for one.</p><h4>Bans</h4><p>Wizards of the Coast announces changes on a fixed schedule. This app fetches the official list once a day — see Ban lists above.</p></div>`,
+    legacy: `<div class="rules-text"><h4>Deck construction</h4><p>A main deck of at least 60 cards — no maximum — and a sideboard of up to 15. No more than four copies of any card by English name, counting main deck and sideboard together. Basic lands, and cards whose own text says so, are unlimited.</p><h4>Card pool</h4><p>Every set in Magic's history. Conspiracy cards, ante cards and cards with stickers or Attractions are banned by type.</p><h4>Playing</h4><p>Two players, 20 life each, a 7-card hand and the London mulligan. Tournaments play best-of-three; between games you may swap cards with your sideboard, one for one.</p><h4>Bans</h4><p>A long list: the cards that would end games before they start, or lock the other player out. Wizards announces changes on a fixed schedule; the app fetches the list daily — see Ban lists above.</p></div>`,
+    vintage: `<div class="rules-text"><h4>Deck construction</h4><p>A main deck of at least 60 cards and a sideboard of up to 15. Up to four copies of any card — but a card on the <em>restricted</em> list may appear only once, main deck and sideboard together. Basic lands are unlimited.</p><h4>Card pool</h4><p>All of Magic, back to Alpha — the Power Nine included. Conspiracy cards, ante cards and cards with stickers or Attractions are banned by type.</p><h4>Playing</h4><p>Two players, 20 life each, a 7-card hand and the London mulligan. Tournaments play best-of-three; between games you may swap cards with your sideboard, one for one.</p><h4>Bans and restrictions</h4><p>Almost nothing is banned; the most powerful cards are restricted to one copy instead. Both lists are fetched daily — see Ban lists above.</p></div>`,
+    pauper: `<div class="rules-text"><h4>Deck construction</h4><p>A main deck of at least 60 cards — no maximum — and a sideboard of up to 15. No more than four copies of any card by English name, counting main deck and sideboard together. Basic lands, and cards whose own text says so, are unlimited.</p><h4>Card pool</h4><p>Any card that has ever been printed at common, in paper or on Magic Online — whatever rarity its other printings carry.</p><h4>Playing</h4><p>Two players, 20 life each, a 7-card hand and the London mulligan. Tournaments play best-of-three; between games you may swap cards with your sideboard, one for one.</p><h4>Bans</h4><p>The Pauper Format Panel works with Wizards of the Coast on the list. The app fetches it daily — see Ban lists above.</p></div>`,
     premodern: `<div class="rules-text"><h4>Deck construction</h4><p>At least 60 cards, optional 15-card sideboard, maximum 4 copies of any card by name (basic lands excepted).</p><h4>Card pool</h4><p>Sets from Fourth Edition through Scourge (1995–2003) — the era between Magic's oldest cards and the modern frame.</p><h4>Playing</h4><p>20 life, London mulligan, best-of-three matches.</p><h4>Bans</h4><p>A community-maintained banned list tuned for a diverse old-school metagame — see the Banned List section.</p></div>`,
     paupercommander: `<div class="rules-text"><h4>Your commander</h4><p>Any creature that has been printed at <em>uncommon</em> rarity may lead the deck. Its color identity sets the deck's colors, exactly as in Commander.</p><h4>Deck construction</h4><p>The commander plus 99 other cards, every one of them printed at <em>common</em> somewhere in Magic's history. Singleton: no two cards share a name (basic lands excepted). No card's color identity may leave the commander's.</p><h4>Playing</h4><p>Multiplayer, players start at 30 life. The commander works as in Commander — command zone, tax of {2} per recast — but the 21-commander-damage rule is not used.</p><h4>Bans</h4><p>A very short community list — common rarity does most of the policing — see the Banned List section.</p></div>`,
     duel: `<div class="rules-text"><h4>Deck construction</h4><p>A 100-card singleton deck led by a legendary commander, built within its color identity — the Commander skeleton, tuned for one-on-one play.</p><h4>Playing</h4><p>Two players, 20 life each, first player skips their first draw. Commander damage of 21 or more from the same commander still eliminates a player.</p><h4>Bans</h4><p>An independent rules committee maintains a stricter banned list of its own, including cards <em>banned as commander</em> only — see the Banned List section.</p></div>`,
@@ -15230,6 +15621,11 @@ async function fillBanList(fmt, box){
     if(!window._banCache) window._banCache = {};
     if(fmt === 'admiral'){
       window._banCache.admiral = { names: BANNED_NAMES.slice().sort((a,b)=>a.localeCompare(b)), more: false, total: BANNED_NAMES.length };
+    } else if(isConstructedFmt(fmt)){
+      // The same list the deck checks use: seeded, then refreshed daily.
+      await ensureFmtBans(fmt, !(_fmtBansStore()[fmt]));
+      const B = fmtBanSets(fmt);
+      window._banCache[fmt] = { names: B.names, more: false, total: B.names.length, restricted: B.restrictedNames };
     } else if(!window._banCache[fmt]){
       const r = await sfFetch(`${SF_BASE}/cards/search?order=name&q=${encodeURIComponent('banned:' + fmt)}`);
       if(!r.ok) throw new Error('HTTP ' + r.status);
@@ -15238,7 +15634,14 @@ async function fillBanList(fmt, box){
     }
     const b = window._banCache[fmt];
     // Two columns of tappable names — tap one for the card image.
-    box.innerHTML = `${fmt === 'admiral' ? '<div class="l2" style="margin-bottom:4px;">Custom list, enforced by every Admiral deck check. Tap a name for the card.</div>' : '<div class="l2" style="margin-bottom:4px;">Tap a name for the card.</div>'}<div class="banlist-grid">${b.names.map(n=>`<button type="button" class="ban-item" data-name="${encodeURIComponent(n)}">${escapeHtml(n)}</button>`).join('')}</div>${b.more ? `<div class="l2" style="margin-top:6px;">… ${b.total} total — full list on Scryfall.</div>` : ''}<button type="button" class="ghost-btn" data-banwhy="${fmt}" style="display:block;width:100%;margin:10px 0 2px;">▸ ${trS('About this ban list')}</button><div data-banwhybox hidden style="margin-top:6px;"></div>`;
+    // Bottom-up (.acc-up): the hint sits right above the format's name,
+    // the list above it, the restricted list (Vintage) and the notes on top.
+    const grid = (names)=>`<div class="banlist-grid">${names.map(n=>`<button type="button" class="ban-item" data-name="${encodeURIComponent(n)}">${escapeHtml(n)}</button>`).join('')}</div>`;
+    box.innerHTML = `${fmt === 'admiral' ? '<div class="l2">Custom list, enforced by every Admiral deck check. Tap a name for the card.</div>' : `<div class="l2">${trS('Tap a name for the card.')}</div>`}`
+      + `<div>${isConstructedFmt(fmt) ? `<div class="ban-sub">${trS('Banned')} · ${b.names.length}</div>` : ''}${b.names.length ? grid(b.names) : `<div class="l2">${trS('Nothing banned beyond ante, Conspiracy and sticker cards.')}</div>`}</div>`
+      + (b.more ? `<div class="l2">… ${b.total} total — full list on Scryfall.</div>` : '')
+      + (b.restricted && b.restricted.length ? `<div><div class="ban-sub">${trS('Restricted — 1 copy')} · ${b.restricted.length}</div>${grid(b.restricted)}</div>` : '')
+      + `<button type="button" class="ghost-btn" data-banwhy="${fmt}" style="display:block;width:100%;margin:2px 0;">▴ ${trS('About this ban list')}</button><div data-banwhybox hidden></div>`;
   }catch(e){ box.innerHTML = '<span class="l2">Couldn\u2019t load this ban list right now.</span>'; }
 }
 async function openBanCardPreview(btn){
@@ -15439,7 +15842,7 @@ function bulkToCardish(c){
     collector_number: c.cn, rarity: c.r, edhrec_rank: c.rk,
     power: c.pw, toughness: c.tg,
     prices: { eur: c.eur != null ? String(c.eur) : null, eur_foil: c.eurf != null ? String(c.eurf) : null },
-    legalities: { commander: c.lg || 'legal' },
+    legalities: Object.assign({ commander: c.lg || 'legal' }, c.lx ? LX_FORMATS.reduce((o, f, i)=>{ o[f] = LX_WORD[c.lx[i]] || 'not_legal'; return o; }, {}) : {}),
     image_uris: { small: img('small'), normal: img('normal'), large: img('large') },
     card_faces: (c.f && c.f.length) ? c.f.map(fc=>({ name: fc.name, mana_cost: fc.mc || '', type_line: fc.tl || '',
       oracle_text: fc.ot || '', colors: (fc.c || '').split('').filter(Boolean), power: fc.pw, toughness: fc.tg })) : undefined
@@ -15758,6 +16161,7 @@ function inspirationPageHtml(){
   if(!state.decksIndex.length) return `<main>${needDeckHtml('Create a deck first to see recommendations for it.')}</main>`;
   if(!state.inspireDeckId || !getDeck(state.inspireDeckId)) state.inspireDeckId = state.activeDeckId || state.decksIndex[0].id;
   const d = getDeck(state.inspireDeckId);
+  if(d && deckIsConstructed(d)) return deckMetaPageHtml(d);
   // Each deck's recommendations start clean: type and theme selections never
   // carry over from the previous deck's session.
   if(d && state._inspireSelFor !== d.id){
@@ -15812,6 +16216,7 @@ function wireInspirationPage(){
   const d = getDeck(state.inspireDeckId);
   if(!d){ wireNeedDeck(); return; }
   document.getElementById('goDecklistBtn')?.addEventListener('click', ()=>{ state.activeDeckId = d.id; switchPage('decklist'); });
+  if(deckIsConstructed(d)){ loadDeckMeta(d); return; }
   if(!d.admiral) return;
   // Drop-up tiles: pull every stored art into the sync ready-map before a
   // panel can open; the FIRST hydration repaints an already-open panel once
@@ -17338,7 +17743,12 @@ const FMT_ICON_CARDS = {
   admiral: 'Admiral Beckett Brass',
   paupercommander: 'Tatyova, Benthic Druid',
   predh: 'Nicol Bolas',
-  duel: 'Force of Will'
+  duel: 'Force of Will',
+  standard: 'Sheoldred, the Apocalypse',
+  pauper: 'Ninja of the Deep Hours',
+  modern: 'Tarmogoyf',
+  legacy: 'Brainstorm',
+  vintage: 'Black Lotus'
 };
 function leaderArtClause(f){
   return f === 'paupercommander' ? 't:creature r:uncommon'
@@ -17377,7 +17787,281 @@ function bsThemeArt(v){
   try{ const cl = themeQueryClause(v, browseAdmiralMode()); if(cl) return bsArtSf((cl + ' ' + browseColorClause()).trim()); }catch(e){}
   return '';
 }
+/* ================= METAGAME: the 60-card formats =================
+   meta.json is built weekly on GitHub from open tournament data
+   (MTGODecklistCache: MTGO and Melee events) named with the community's own
+   archetype rules (MTGOFormatData) -- see scripts/build-meta.mjs. The app
+   reads it from its own site: no scraping, nothing cross-site. */
+const META_STYLES = [['aggro','Aggro'],['tempo','Tempo'],['midrange','Midrange'],['control','Control'],['combo','Combo'],['ramp','Ramp']];
+function metaStyleLabel(k){ const x = META_STYLES.find(m=>m[0] === k); return x ? trS(x[1]) : ''; }
+let _metaData = null, _metaP = null;
+async function loadMetaData(force){
+  if(_metaData && !force) return _metaData;
+  if(_metaP) return _metaP;
+  _metaP = (async ()=>{
+    let disk = null;
+    try{ disk = await qdbGet('meta.json'); }catch(e){}
+    if(disk && disk.v && disk.v.formats) _metaData = disk.v;
+    // A week between builds; look for a newer file a few times a day.
+    if(force || !_metaData || (Date.now() - ((disk && disk.t) || 0)) > 6*60*60*1000){
+      try{
+        const r = await fetch('./meta.json', { cache: 'no-cache' });
+        if(r.ok){
+          const j = await r.json();
+          if(j && j.formats){ _metaData = j; qdbSet('meta.json', j); }
+        }
+      }catch(e){}
+    }
+    return _metaData;
+  })();
+  try{ return await _metaP; } finally { _metaP = null; }
+}
+function metaFormat(fmt){ return (_metaData && _metaData.formats && _metaData.formats[fmt]) || null; }
+/* The key card's art: straight from the phone's card file when it knows
+   the card (no request at all), else the shared tile-art resolver. */
+function metaKeyArt(name){
+  try{
+    const bc = _bulkIdx && _bulkIdx.byName && _bulkIdx.byName.get(String(name||'').toLowerCase());
+    if(bc){ const c = bulkToCardish(bc); if(c) return artCropFrom(cardImageMed(c)); }
+  }catch(e){}
+  const r = _tileArtReady['nm|' + name];
+  return (r && r.a) || '';
+}
+function hydrateMetaArt(root){
+  (root || document).querySelectorAll('.mt-art[data-mtkey]').forEach(el=>{
+    if(el.style.backgroundImage) return;
+    tileArtResolve('nm|' + el.dataset.mtkey).then(v=>{
+      if(v && v.a && el.isConnected) el.style.backgroundImage = `url("${v.a}")`;
+    }).catch(()=>{});
+  });
+}
+function metaDateShort(iso){
+  try{ return new Date(iso + 'T00:00:00').toLocaleDateString(appLang()==='nl' ? 'nl-NL' : 'en-GB', { day:'numeric', month:'short' }); }catch(e){ return iso || ''; }
+}
+function metaTileHtml(a, i, extra){
+  const art = metaKeyArt(a.key);
+  return `<button type="button" class="sr-tile meta-tile" data-meta="${i}" title="${escapeHtml(a.name)}">
+    <span class="mt-art" data-mtkey="${escapeHtml(a.key || '')}"${art ? ` style="background-image:url('${art}')"` : ''}></span>
+    <span class="mt-body"><span class="mt-nm">${escapeHtml(a.name)}</span>
+      <span class="mt-sub">${a.colors ? manaRowSvg(a.colors, 13) : manaIconSvg('C', 13)}<span class="mt-share">${Number(a.share || 0).toFixed(1)}%</span><span>· ${metaStyleLabel(a.style)}</span></span>
+      ${extra ? `<span class="mt-extra">${extra}</span>` : ''}</span>
+  </button>`;
+}
+function browseIsMeta(){ return isConstructedFmt(browseFmt()); }
+function metaStyleOptions(fmt){
+  const F = metaFormat(fmt);
+  return [{v:'', l:trS('Every archetype'), gen:cardsSvg(22)}].concat(META_STYLES.map(([k, l])=>{
+    const top = F ? F.archetypes.find(a=>a.style === k) : null;
+    return top ? {v:k, l:trS(l), art:'nm|' + top.key} : {v:k, l:trS(l), gen:cardsSvg(22)};
+  }));
+}
+function metaBrowseHtml(){
+  const fmt = browseFmt();
+  return `
+  <main>
+    <div class="searchbar" style="margin:0 0 10px;">
+      <input id="bsName" enterkeyhint="search" placeholder="${trS('Find a deck by name or card')}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${escapeHtml(state.browseNameQ||'')}">
+    </div>
+    <div class="browse-selects">
+      <div class="bs-row">${cselectHtml('bsFmt', FMT_ORDER.map(f=>({v:f, l:fmtFolderGlyph(f, 14)+' '+fmtLabelOf(f), art:(FMT_ICON_CARDS[f] ? 'nm|'+FMT_ICON_CARDS[f] : 'sf|'+artFmtParam(f)+'|'+leaderArtClause(f))})), fmt, 'Format', {tiles:true})}</div>
+      <div class="bs-row">${cselectHtml('bsStyle', metaStyleOptions(fmt), state.browseSel.style || '', trS('Every archetype'), {tiles:true})}</div>
+    </div>
+    <div id="browseResults"></div>
+  </main>`;
+}
+function metaFilteredList(fmt){
+  const F = metaFormat(fmt);
+  if(!F) return null;
+  let list = F.archetypes.slice();
+  const st = state.browseSel.style || '';
+  if(st) list = list.filter(a=>a.style === st);
+  const q = (state.browseNameQ || '').trim().toLowerCase();
+  if(q) list = list.filter(a=>a.name.toLowerCase().includes(q)
+    || (a.main || []).concat(a.side || []).some(([, n])=>String(n).toLowerCase().includes(q)));
+  return list;
+}
+function renderMetaBrowse(keepScroll){
+  const box = document.getElementById('browseResults');
+  if(!box) return;
+  const fmt = browseFmt();
+  const F = metaFormat(fmt);
+  if(!F){
+    box.innerHTML = `<div class="empty-note">${trS('The metagame for this format arrives with the weekly update.')}</div>`;
+    return;
+  }
+  const list = metaFilteredList(fmt);
+  const all = F.archetypes;
+  const foot = `<p class="hint" style="margin:8px 0 0;">${fmtLabelOf(fmt)} · ${F.decks} ${trS('decks')} · ${metaDateShort(_metaData.from)}–${metaDateShort(_metaData.to)} · ${trS('most played at the bottom')}</p>`;
+  if(!list.length){
+    box.innerHTML = `<div class="empty-note">${trS('No meta decks match.')}</div>` + foot;
+    return;
+  }
+  // Array order is most played first; the grid is wrap-reverse, so the most
+  // played deck lands at the FOOT, next to the menus and the thumb.
+  box.innerHTML = `<div class="sr-grid">${list.map(a=>metaTileHtml(a, all.indexOf(a))).join('')}</div>` + foot;
+  box.querySelectorAll('.meta-tile').forEach(t=>t.addEventListener('click', ()=>{
+    const a = all[+t.dataset.meta];
+    if(a) openMetaDeck(fmt, a);
+  }));
+  hydrateMetaArt(box);
+  if(!keepScroll) scrollToPageFoot();
+}
+function wireMetaBrowse(){
+  hydrateTileArtReady().then((did)=>{ try{ if(did && state.screen === 'browse' && state.openCSelect) csRerender(); }catch(e){} });
+  const fmt = browseFmt();
+  try{ ensureFmtBans(fmt); }catch(e){}
+  const inp = document.getElementById('bsName');
+  let t = null;
+  inp?.addEventListener('input', ()=>{
+    clearTimeout(t);
+    t = setTimeout(()=>{ state.browseNameQ = inp.value; renderMetaBrowse(true); }, 200);
+  });
+  inp?.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); clearTimeout(t); state.browseNameQ = inp.value; renderMetaBrowse(); try{ inp.blur(); }catch(err){} } });
+  _csHandlers.bsFmt = v=>{
+    sfDropQueuedFor('browse');
+    state.browseFormat = v || 'commander';
+    state.browseCache = {};
+    render();
+  };
+  _csHandlers.bsStyle = v=>{ state.browseSel.style = v; render(); };
+  wireCSelects();
+  const box = document.getElementById('browseResults');
+  if(!metaFormat(fmt) && box) box.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
+  const hadData = !!_metaData;
+  loadMetaData().then(()=>{
+    if(state.screen !== 'browse' || browseFmt() !== fmt) return;
+    // First arrival: the archetype menu's tiles need the data too.
+    if(!hadData && _metaData){ render(); return; }
+    renderMetaBrowse();
+  });
+}
+/* One archetype, as a deck page: the key card at the foot with the facts
+   and the copy button, the main deck by type above it, the sideboard at
+   the top. */
+async function openMetaDeck(fmt, a){
+  let el = document.getElementById('metaDeckOverlay');
+  if(!el){ el = document.createElement('div'); el.className = 'overlay'; el.id = 'metaDeckOverlay'; }
+  document.body.appendChild(el);
+  pushOverlay('metaDeck', ()=>{ document.getElementById('metaDeckOverlay')?.remove(); });
+  const ev = a.event || {};
+  const mainN = (a.main || []).reduce((t, [q])=>t + q, 0);
+  const sideN = (a.side || []).reduce((t, [q])=>t + q, 0);
+  el.innerHTML = `<div class="overlay-inner">
+    ${overlayCapHtml(a.name)}
+    <main>
+      <div class="reco-admiral md-hero">
+        <div id="mdKey"></div>
+        <div class="ra-nm">${escapeHtml(a.name)}</div>
+        <div class="ra-sub">${fmtLabelOf(fmt)} · ${metaStyleLabel(a.style)} · ${Number(a.share || 0).toFixed(1)}% · ${a.n} ${trS('decks')}</div>
+        <div class="ra-sub" style="font-size:12.5px;opacity:0.85;">${escapeHtml(ev.result || '')}${ev.name ? ' — ' + escapeHtml(ev.name) : ''}${ev.player ? ' · ' + escapeHtml(ev.player) : ''}${ev.date ? ' · ' + metaDateShort(ev.date) : ''}</div>
+        <div class="md-actions">
+          <button type="button" class="primary-btn" id="mdCopy" style="width:auto;margin:0;padding:10px 16px;">+ ${trS('Copy to my decks')}</button>
+          ${/^https:\/\//.test(ev.url || '') ? `<a class="ghost-btn" href="${escapeHtml(ev.url)}" target="_blank" rel="noopener" style="width:auto;margin:0;padding:10px 16px;">${trS('Source')} ↗</a>` : ''}
+        </div>
+        <div class="ra-sub" style="font-size:12px;margin-top:8px;">${trS('Main deck')} ${mainN} · ${trS('Sideboard')} ${sideN}</div>
+      </div>
+      <div id="mdBody"><div class="status"><div class="spinner"></div></div></div>
+    </main>
+    ${overlayNavHtml()}
+  </div>`;
+  wireOverlayNav(el);
+  const names = Array.from(new Set((a.main || []).concat(a.side || []).map(([, n])=>n)));
+  let cards = [];
+  try{ cards = await namesToLegalCards(names); }catch(e){}
+  if(!document.getElementById('metaDeckOverlay')) return;
+  const byName = new Map();
+  cards.forEach(c=>{ byName.set(c.name, c); const cut = c.name.indexOf(' // '); if(cut > 0) byName.set(c.name.slice(0, cut), c); });
+  const find = (n)=>byName.get(n) || byName.get(String(n).split(' // ')[0]) || null;
+  const key = find(a.key);
+  const kb = document.getElementById('mdKey');
+  if(kb && key){
+    kb.innerHTML = `<img class="${wbClass(key)}" src="${cardImageLarge(key)}" alt="${escapeHtml(key.name)}">`;
+    kb.querySelector('img').addEventListener('click', ()=>openCardInfo(key));
+  }
+  const fake = { format: fmt };
+  const groups = {};
+  CATS_CMDR.forEach(c=>{ groups[c] = []; });
+  const missing = [];
+  (a.main || []).forEach(([q, n])=>{
+    const c = find(n);
+    if(!c){ missing.push(q + ' ' + n); return; }
+    groups[categoryOf(c, fake)].push([q, c]);
+  });
+  const side = [];
+  (a.side || []).forEach(([q, n])=>{ const c = find(n); if(c) side.push([q, c]); else missing.push('SB ' + q + ' ' + n); });
+  const tile = ([q, c])=>`<div class="vg-card md-card" data-mdn="${encodeURIComponent(c.name)}"><img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${q > 1 ? `<span class="vg-qty">×${q}</span>` : ''}</div>`;
+  const sec = (label, rows)=>rows.length ? `<div class="md-sec"><div class="section-label">${escapeHtml(trS(label))} · ${rows.reduce((t, [q])=>t + q, 0)}</div><div class="visual-grid">${rows.map(tile).join('')}</div></div>` : '';
+  // #mdBody is column-reverse: DOM-first sits at the FOOT, right above the
+  // key card -- creatures first, lands above them, the sideboard on top.
+  const body = document.getElementById('mdBody');
+  if(!body) return;
+  body.innerHTML = CATS_CMDR.map(cat=>sec(cat, groups[cat])).join('')
+    + sec('Sideboard', side)
+    + (missing.length ? `<div class="md-sec"><div class="section-label">${trS('Not found')}</div><div class="md-missing">${missing.map(m=>`<span>${escapeHtml(m)}</span>`).join('')}</div></div>` : '');
+  body.querySelectorAll('.md-card').forEach(t=>t.addEventListener('click', ()=>{
+    const c = find(decodeURIComponent(t.dataset.mdn));
+    if(c) openCardInfo(c);
+  }));
+  document.getElementById('mdCopy')?.addEventListener('click', ()=>copyMetaDeck(fmt, a, find));
+}
+function copyMetaDeck(fmt, a, find){
+  openInAppPrompt(trS('Name your new deck'), trS('Deck name'), a.name, (name)=>{
+    if(name === null) return;
+    const ev = a.event || {};
+    const d = { id: uid(), name: (name.trim() || a.name), admiral: null, partner: null, cards: [], maybeboard: [], tags: {}, primer: '',
+      format: fmt, createdAt: Date.now(), updatedAt: Date.now(),
+      description: `${a.name} — ${fmtLabelOf(fmt)} ${trS('metagame')}${ev.name ? ', ' + ev.result + ' ' + ev.name : ''}${ev.date ? ' (' + ev.date + ')' : ''}.` };
+    let miss = 0;
+    const put = (list, into)=>(list || []).forEach(([q, n])=>{
+      const c = find(n);
+      if(!c){ miss += q; return; }
+      for(let i = 0; i < q; i++) into.push(JSON.parse(JSON.stringify(c)));
+    });
+    put(a.main, d.cards);
+    put(a.side, d.maybeboard);
+    state.decksIndex.unshift(d);
+    logDeckChange(d, {type:'bulk', name:`${trS('Copied from the metagame')}: ${a.name}`});
+    persistDeck(d);
+    toast(miss ? `${d.name}: ${d.cards.length + d.maybeboard.length} ${trS('cards copied')}, ${miss} ${trS('not found')}.` : `${d.name}: ${d.cards.length}+${d.maybeboard.length} ${trS('cards copied')}.`);
+    dismissAllOverlays();
+    openDeck(d.id);
+  });
+}
+/* A 60-card deck's own Inspiration: the meta decks of its format that share
+   the most cards with it -- what it is closest to, and what those lists
+   play that it does not. */
+function deckMetaPageHtml(d){
+  return `<main>
+    <p class="hint">${trS('Meta decks closest to')} <strong>${escapeHtml(d.name)}</strong> — ${fmtLabelOf(deckFormat(d))}.</p>
+    <div id="inspireResults"></div>
+  </main>`;
+}
+async function loadDeckMeta(d){
+  const box = document.getElementById('inspireResults');
+  if(!box) return;
+  const fmt = deckFormat(d);
+  if(!metaFormat(fmt)) box.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
+  await loadMetaData();
+  const live = document.getElementById('inspireResults');
+  if(!live || state.screen !== 'inspiration') return;
+  const F = metaFormat(fmt);
+  if(!F){ live.innerHTML = `<div class="empty-note">${trS('The metagame for this format arrives with the weekly update.')}</div>`; return; }
+  const mine = new Set((d.cards || []).concat(ensureMaybeboard(d)).map(c=>c.name));
+  const scored = F.archetypes.map((a, i)=>{
+    const theirs = new Set((a.main || []).concat(a.side || []).map(([, n])=>n));
+    let shared = 0; theirs.forEach(n=>{ if(mine.has(n)) shared++; });
+    return { a, i, shared, total: theirs.size };
+  }).sort((x, y)=>y.shared - x.shared || y.a.n - x.a.n);
+  live.innerHTML = `<div class="sr-grid">${scored.map(x=>metaTileHtml(x.a, x.i, `${x.shared}/${x.total} ${trS('cards in common')}`)).join('')}</div>`;
+  live.querySelectorAll('.meta-tile').forEach(t=>t.addEventListener('click', ()=>{
+    const a = F.archetypes[+t.dataset.meta];
+    if(a) openMetaDeck(fmt, a);
+  }));
+  hydrateMetaArt(live);
+  scrollToPageFoot();
+}
 function browsePageHtml(){
+  if(browseIsMeta()) return metaBrowseHtml();
   const sel = state.browseSel;
   const combos = COLOR_COMBOS[sel.count] || null;
   const swd = state.switchSeat ? getDeck(state.switchSeat) : null;
@@ -17582,7 +18266,7 @@ async function loadInspFeed(){
   grid.innerHTML = _got
     ? out.cards.map((c,i)=>tile(c, bf, key, i)).join('')
     : `<div class="empty-note" data-ifretry="1" style="flex:1 1 100%;cursor:pointer;">${_retrying
-        ? (_NL ? 'Even geen antwoord van Scryfall \u2014 ik probeer het zo opnieuw. Tik om meteen te proberen.'
+        ? (_NL ? 'Scryfall antwoordt even niet \u2014 ik probeer het zo opnieuw. Tik om het nu te proberen.'
                : 'No answer from Scryfall just now \u2014 trying again shortly. Tap to retry now.')
         : (_NL ? 'Het lukt niet om deze op te halen. Tik om opnieuw te proberen.'
                : 'Could not load these. Tap to retry.')}</div>`;
@@ -17602,6 +18286,7 @@ function maybePairThenReco(c){
   openPartnerSearch(standin, (partner)=>openAdmiralReco(c, partner), { skippable: true, onSkip: ()=>openAdmiralReco(c) });
 }
 function wireBrowsePage(){
+  if(browseIsMeta()){ wireMetaBrowse(); return; }
   ensureEdhrecTags();
   hydrateTileArtReady().then((did)=>{ try{ if(did && state.screen === 'browse' && state.openCSelect) csRerender(); }catch(e){} });
   preloadBrowseTileArt();
@@ -18586,6 +19271,9 @@ async function loadBudgetAlternatives(d){
   // never resolved -- that is the page that "kept hanging". A run that is no
   // longer the newest stops at its next checkpoint.
   const mySeq = (state._bgSeq = (state._bgSeq || 0) + 1);
+  // One gate for every suggestion: banned in Commander for the commander
+  // family, banned OR not legal in the deck's own format for the 60s.
+  const _bgBad = (x)=> deckIsConstructed(d) ? !!deckBlockReason(x, d) : isBanned(x);
   const alive = ()=> mySeq === state._bgSeq && !!document.getElementById('bgBody');
   const all = deckLeaders(d).concat(d.cards||[]);
   if(!all.length){ const b=document.getElementById('bgBody'); if(b) b.innerHTML=`<div class="empty-note">No cards in this deck yet.</div>`; return; }
@@ -18617,8 +19305,12 @@ async function loadBudgetAlternatives(d){
     if(!row){
       row = document.createElement('div');
       row.id = 'bgFloorRow';
-      row.style.cssText = 'flex:0 0 auto;background:var(--ink);border-top:2px solid var(--line);padding:10px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;';
-      host.appendChild(row);
+      // Since the page carries the real navigation bar, the slider sits
+      // between the cards and that bar -- above it, never beneath it. The
+      // bar keeps the safe-area padding at the very bottom.
+      row.style.cssText = 'flex:0 0 auto;background:var(--ink);border-top:2px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px;';
+      const nav = host.querySelector(':scope > .ov-nav');
+      host.insertBefore(row, nav || null);
     }
     row.innerHTML = `<span style="font-size:13.5px;color:var(--sub-text);white-space:nowrap;">${appLang()==='nl'?'Budgetgrens':'Budget line'}</span>
       <input type="range" id="bgFloor" min="0.1" max="10" step="0.1" value="${BUDGET_FLOOR}" style="flex:1;accent-color:var(--brass);">
@@ -18672,13 +19364,13 @@ async function loadBudgetAlternatives(d){
     const [bn, st] = await Promise.all([budgetNamesP, staplesP]);
     let bCards = [];
     if(bn.length){
-      bCards = await resolveEdhrecNames(bn, (x)=> isNonlandFront(x) && !isBanned(x));
+      bCards = await resolveEdhrecNames(bn, (x)=> isNonlandFront(x) && !_bgBad(x));
     }
     const seen = new Set();
     bCards.concat((st && st.results) || []).forEach(x=>{
       if(!underLine(x)) return;   // the hard budget gate, on the merged stream too
       if(seen.has(x.name)) return; seen.add(x.name);
-      if(!isNonlandFront(x) || isBanned(x) || inDeck.has(x.name)) return;
+      if(!isNonlandFront(x) || _bgBad(x) || inDeck.has(x.name)) return;
       pool.push(x);
     });
   }catch(e){}
@@ -18715,7 +19407,7 @@ async function loadBudgetAlternatives(d){
     if(poolCache[ck]){ tagPools[tag] = poolCache[ck]; return; }
     try{
       const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' otag:' + tag).trim(), 'edhrec', 60);
-      tagPools[tag] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !isBanned(x) && underLine(x));
+      tagPools[tag] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !_bgBad(x) && underLine(x));
       poolCache[ck] = tagPools[tag];
     }catch(e){ tagPools[tag] = []; }
   }, 4);
@@ -18726,7 +19418,7 @@ async function loadBudgetAlternatives(d){
     if(poolCache[ck]) landPool = poolCache[ck];
     else try{
       const r = await searchAndVerifyLegal((idClause + ' t:land eur<=' + BUDGET_FLOOR).trim(), 'edhrec', 120);
-      landPool = ((r && r.results) || []).filter(x=>!isBanned(x) && underLine(x));
+      landPool = ((r && r.results) || []).filter(x=>!_bgBad(x) && underLine(x));
       poolCache[ck] = landPool;
     }catch(e){}
   }
@@ -18779,7 +19471,7 @@ async function loadBudgetAlternatives(d){
         if(!poolCache[ck]){
           try{
             const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' ' + f.q).trim(), 'edhrec', 40);
-            poolCache[ck] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !isBanned(x) && underLine(x));
+            poolCache[ck] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !_bgBad(x) && underLine(x));
           }catch(e){ poolCache[ck] = []; }
         }
         featPools.push(poolCache[ck]);
@@ -18821,7 +19513,7 @@ async function loadBudgetAlternatives(d){
           const ix = await bulkIndexReady();
           const ciSet = new Set((deckColorIdentity(d) || []).map(x=>String(x).toUpperCase()));
           _bulkSweep(ix, c, srcWordsB, ciSet, ceiling, c.name).forEach(bc=>{
-            if(cand.has(bc.n) || inDeck.has(bc.n) || isBanned({name: bc.n})) return;
+            if(cand.has(bc.n) || inDeck.has(bc.n) || _bgBad({name: bc.n})) return;
             const x = bulkToCardish(bc);
             if(x) cand.set(bc.n, { x, best: 500, tags: new Set() });
           });
@@ -19778,12 +20470,12 @@ function settingsPageHtml(){
     <div class="settings-section"><div class="settings-row" id="lifeRow"><div class="l1">Life Counter</div><div class="l2">Multiplayer life tracker</div></div></div>
             <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">Comprehensive Rules</div><div class="l2">Read, search, or ask a rules question</div></div></div>
     <div class="settings-section">
-      <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Deckbuilding and play, per format</div></div><span class="l2">▾</span></div>
-      <div id="fmtRulesBody" hidden style="padding:0 12px 10px;"></div>
+      <div id="fmtRulesBody" class="acc-up" hidden style="padding:10px 12px 0;"></div>
+      <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Deckbuilding and play, per format</div></div><span class="l2">▴</span></div>
     </div>
     <div class="settings-section">
-      <div class="settings-row" id="banListsRow" style="cursor:pointer;"><div><div class="l1">Ban lists</div><div class="l2">Banned cards per format</div></div><span class="l2">▾</span></div>
-      <div id="banListsBody" hidden style="padding:0 12px 10px;"></div>
+      <div id="banListsBody" class="acc-up" hidden style="padding:10px 12px 0;"></div>
+      <div class="settings-row" id="banListsRow" style="cursor:pointer;"><div><div class="l1">Ban lists</div><div class="l2">Banned cards per format</div></div><span class="l2">▴</span></div>
     </div>
 
     ${isCmdrMode()?'':`<div class="settings-section">
@@ -19801,8 +20493,7 @@ function settingsPageHtml(){
       </div>
     </div>
     <div class="settings-section">
-      <div id="guildBody" class="guild-list" hidden>${GUILDS.map(g=>`<button type="button" class="guild-opt ${g.k===state.guild?'sel':''}" data-guild="${g.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[g.main][0]};--gs:${GUILD_SWATCH[g.side][1]};"></span>${manaIconSvg(g.main,16)}${manaIconSvg(g.side,16)}<span>${g.n}</span></button>`).join('')}</div>
-      <div class="settings-row" id="guildRow"><div><div class="l1">Color scheme</div><div class="l2">A guild's two colors dress the app</div></div><span class="guild-cur" id="guildCur">${manaIconSvg(currentGuild().main,16)}${manaIconSvg(currentGuild().side,16)} ${currentGuild().n} ▴</span></div>
+      <div id="guildBody" class="guild-list">${GUILDS.map(g=>`<button type="button" class="guild-opt ${g.k===state.guild?'sel':''}" data-guild="${g.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[g.main][0]};--gs:${GUILD_SWATCH[g.side][1]};"></span>${manaIconSvg(g.main,16)}${manaIconSvg(g.side,16)}<span>${g.n}</span></button>`).join('')}</div>
     </div>
     <div class="settings-section">
       <div class="settings-row" id="dataSourcesRow"><div style="width:100%;"><div class="l1">Data Sources</div><div class="l2" id="dataSourcesBody">${dataSourcesHtml()}</div></div></div>
@@ -20241,7 +20932,7 @@ function wireSettingsPage(){
 function ensureLifePlayers(){
   const L = state.life;
   if(!L.players) L.players = [];
-  while(L.players.length < L.count) L.players.push({ name:(L._keepNames && L._keepNames[L.players.length]) || 'Player '+(L.players.length+1), life:lifeStart(), poison:0, dmg:[], defeated:false, defeatMsg:'', medal:false });
+  while(L.players.length < L.count) L.players.push({ name:(L._keepNames && L._keepNames[L.players.length]) || 'Player '+(L.players.length+1), life:lifeStart(L.count), poison:0, dmg:[], defeated:false, defeatMsg:'', medal:false });
   L.players.length = L.count;
   L.players.forEach((p,i)=>{
     if(!p.name) p.name = 'Player '+(i+1);
@@ -20971,7 +21662,7 @@ function renderModal(){
       const gtA = lay.areas.map(r=>`&quot;${r}&quot;`).join(' ');
       return `<button class="llay ${state.life.layout===lay.id?'on':''}" data-setup-lay="${lay.id}">
         <span class="llay-grid" style="grid-template-columns:repeat(${tcols},1fr);grid-template-rows:repeat(${trows},1fr);height:${th}px;grid-template-areas:${gtA};">
-          ${lay.rot.map((r,i)=>`<i style="grid-area:${'abcdefgh'[i]};"><b style="transform:rotate(${r}deg);">${lifeStart()}</b></i>`).join('')}
+          ${lay.rot.map((r,i)=>`<i style="grid-area:${'abcdefgh'[i]};"><b style="transform:rotate(${r}deg);">${lifeStart(lay.count)}</b></i>`).join('')}
         </span>
         <span class="llay-n">${lay.count}p</span>
       </button>`;
@@ -21016,11 +21707,7 @@ function renderModal(){
   } else if(m.type==='newdeck'){
     el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet nd-sheet"><h3>${isCmdrMode()?'New Deck':'New Fleet'}</h3><input id="newDeckName" placeholder="Deck name" autofocus>${isCmdrMode() ? `<div class="otag-wrap" style="margin-bottom:10px;"><button type="button" id="newDeckFmtBtn" class="col-filter-input" style="width:100%;text-align:left;">Commander <span style="float:right;opacity:0.6;">▾</span></button>
 <div id="newDeckFmtPop" class="otag-pop" hidden>
-<button type="button" data-ndfmt="commander">Commander</button>
-<button type="button" data-ndfmt="admiral">Admiral</button>
-<button type="button" data-ndfmt="paupercommander">Pauper Commander</button>
-<button type="button" data-ndfmt="predh">PreDH</button>
-<button type="button" data-ndfmt="duel">Duel Commander</button>
+${FMT_ORDER.map(f=>`<button type="button" data-ndfmt="${f}">${FMT_LABELS[f]}</button>`).join('')}
 </div></div>
 <div class="otag-wrap" id="ndCmdWrap" style="margin-bottom:10px;"><input id="ndCmd" class="col-filter-input" placeholder="Who is your commander? (optional)" autocomplete="off" style="width:100%;"><div id="ndCmdPop" class="otag-pop" hidden></div></div>
 <div class="otag-wrap" id="ndP2Wrap" hidden style="margin-bottom:10px;"><input id="ndCmd2" class="col-filter-input" placeholder="Partner…" autocomplete="off" style="width:100%;"><div id="ndCmd2Pop" class="otag-pop" hidden></div></div>` : ''}<div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
@@ -21551,7 +22238,7 @@ async function syncPushPrefs(p){
     if(!('serviceWorker' in navigator) || !('PushManager' in window)){ _pushStatus(_pushUnavailableMsg()); paintPushAvailability(); return; }
     const perm = await Notification.requestPermission();
     if(perm !== 'granted'){
-      _pushStatus(NL ? 'Toestemming geweigerd \u2014 zet meldingen aan in Android-instellingen.' : 'Permission denied \u2014 allow notifications in Android settings.');
+      _pushStatus(NL ? 'Toestemming geweigerd \u2014 zet meldingen aan in de Android-instellingen.' : 'Permission denied \u2014 allow notifications in Android settings.');
       savePushPrefs({ spoilers:false, updates:false, spoilerEvery:0 }); paintPushAvailability(); return;
     }
     const reg = await navigator.serviceWorker.ready;
@@ -22196,10 +22883,12 @@ function bulkIndexReady(){
     const meta = await bulkKvGet('meta');
     if(!meta || !meta.cardChunks){ _bulkLoadP = null; return null; }
     const byName = new Map(), rulByOid = new Map(), cardsArr = [];
+    let hasLx = false;
     for(let i = 0; i < meta.cardChunks; i++){
       const arr = await bulkKvGet('cards:' + i);
       if(Array.isArray(arr)) arr.forEach(c=>{
         if(!c || !c.n) return;
+        if(c.lx) hasLx = true;
         cardsArr.push(c);
         const full = String(c.n).toLowerCase();
         if(!byName.has(full)) byName.set(full, c);
@@ -22221,7 +22910,7 @@ function bulkIndexReady(){
         await _bulkYield();
       }
     }
-    _bulkIdx = { built: meta.built, byName, rulByOid, cards: cardsArr, tagByOid };
+    _bulkIdx = { built: meta.built, byName, rulByOid, cards: cardsArr, tagByOid, hasLx };
     return _bulkIdx;
   })();
   return _bulkLoadP;
