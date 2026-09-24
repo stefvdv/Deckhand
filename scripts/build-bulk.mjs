@@ -147,6 +147,28 @@ export async function* bulkLines(url, fetchImpl){
   }
 }
 
+/* ---- digital stand-ins ----
+   Oracle Cards shows each card through ONE printing, and for some old
+   cards that printing is an MTGO-only reprint (Vintage Masters and the
+   like) -- Yavimaya Hollow, for one. Dropping it as "digital" dropped the
+   whole CARD: the phone's search could not find it at all. Such cards are
+   remembered, and a paper printing is found for them in Default Cards
+   (every printing); only a card with no paper printing at all stays out. */
+export function isPaperPrint(c){
+  return !!c && !c.digital && !SKIP_LAYOUTS.has(c.layout) && (!Array.isArray(c.games) || c.games.includes('paper'));
+}
+export async function pickPaperPrints(wanted, prints){
+  // wanted: Set of oracle_ids; prints: iterable of printing objects.
+  // The newest paper printing wins -- the look the card has today.
+  const best = new Map();
+  for await (const c of prints){
+    if(!c || !wanted.has(c.oracle_id) || !isPaperPrint(c)) continue;
+    const cur = best.get(c.oracle_id);
+    if(!cur || String(c.released_at || '') > String(cur.released_at || '')) best.set(c.oracle_id, c);
+  }
+  return best;
+}
+
 /* ---- trimming ---- */
 const SKIP_LAYOUTS = new Set(['art_series', 'token', 'double_faced_token', 'emblem']);
 
@@ -439,11 +461,29 @@ async function main(){
   // Oracle Cards — stream, trim, count, write
   let oracleCount = 0, skipped = 0;
   const oracleOut = [];
+  const digitalOnly = new Set();     // oracle_ids shown through a digital printing
   for await (const card of bulkLines(oracleUrl)){
     const t = trimCard(card);
-    if(!t){ skipped++; continue; }
+    if(!t){
+      if(card && card.digital && card.oracle_id && !SKIP_LAYOUTS.has(card.layout)) digitalOnly.add(card.oracle_id);
+      skipped++; continue;
+    }
     oracleOut.push(JSON.stringify(t) + '\n');
     oracleCount++;
+  }
+  // Their paper printings, from Default Cards. A failure here only costs
+  // these few cards this week; the file itself is still complete.
+  if(digitalOnly.size){
+    try{
+      const dEntry = idx.default_cards || idx['default-cards'];
+      if(!dEntry) throw new Error('no default_cards entry');
+      const got = await pickPaperPrints(digitalOnly, bulkLines(requireDownloadUrl(dEntry, 'Default Cards')));
+      for(const c of got.values()){
+        const t = trimCard(c);
+        if(t){ oracleOut.push(JSON.stringify(t) + '\n'); oracleCount++; skipped--; }
+      }
+      console.log(`Digital stand-ins: ${digitalOnly.size} cards, ${got.size} given their paper printing.`);
+    }catch(e){ console.log('Digital stand-ins: skipped this week (' + e.message + ').'); }
   }
   if(oracleCount < 25000) throw new Error(`Sanity check failed: only ${oracleCount} oracle cards — refusing to publish a broken file.`);
   const oracleSha = await writeJsonlGz(`${OUT_DIR}/oracle-slim.jsonl.gz`, oracleOut);
