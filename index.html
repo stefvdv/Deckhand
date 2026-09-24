@@ -5445,17 +5445,18 @@ const LS_PREFIX = 'admiral_app:';
    PUBLISHER: when you upload a new version, bump APP_VERSION and put the
    changes in CHANGELOG_NOTES below ({en:[…], nl:[…]}, one string per bullet,
    BOTH languages every release). Every
-   player sees the popup exactly once after the update lands. Also bump the
+   player sees the popup exactly once after the update lands.
+   SHORT, Stef's rule: at most 3 bullets, each one line of at most 90
+   characters, about what the player notices -- no explanations, no causes,
+   no technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.639';
+const APP_VERSION = '2.51.640';
 const CHANGELOG_NOTES = {
   en: [
-    'Search: a card the phone\'s card file does not know (like Yavimaya Hollow) is now looked up on Scryfall. The weekly card file also keeps cards that Scryfall shows through an MTGO-only printing, with their paper printing.',
-    'The typing cursor wears your colour scheme\'s secondary colour. Android app 3.8: its grab handle too.'
+    'Collection prices refresh every 6 hours and follow the card sheet.'
   ],
   nl: [
-    'Zoeken: een kaart die het kaartbestand op je telefoon niet kent (zoals Yavimaya Hollow) wordt nu bij Scryfall opgezocht. Het wekelijkse kaartbestand houdt voortaan ook kaarten die Scryfall via een MTGO-versie toont, met hun papieren versie.',
-    'De typcursor heeft de secundaire kleur van je kleurenschema. Android-app 3.8: het sleepbolletje ook.'
+    'Collectieprijzen verversen elke 6 uur en volgen de kaartpagina.'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -9122,9 +9123,14 @@ function loadCollection(){
    graphs finally track the market instead of the import date. */
 async function repriceCollectionDaily(){
   try{
-    const KEY = LS_PREFIX + 'colRepriceDay';
-    const today = new Date().toISOString().slice(0, 10);
-    if(localStorage.getItem(KEY) === today) return;
+    // Every six hours rather than once per calendar day: Scryfall syncs
+    // Cardmarket once a day at its own hour, and a reprice that ran just
+    // before that sync kept yesterday's value until tomorrow -- while the
+    // card sheet, which asks fresh, already showed today's.
+    const KEY = LS_PREFIX + 'colRepriceAt';
+    const last = parseInt(localStorage.getItem(KEY) || '0', 10) || 0;
+    if(Date.now() - last < 6 * 3600 * 1000) return;
+    const today = String(Date.now());
     const items = state.collection && state.collection.items;
     if(!items || !items.length) return;
     if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
@@ -12780,6 +12786,26 @@ function renderCardSheet(d, card, loc, idx){
    queue, several stale answers used to land one after another, each rewriting
    the CURRENT card's sections (flicker, and worse: another card's rulings). */
 let _cardSheetGen = 0;
+/* One printing, one price: when the card sheet has this printing's fresh
+   price, the owned copies of that same printing take it too -- the tile and
+   the sheet never disagree about the same card. */
+function syncCollectionPrice(card, eur){
+  try{
+    const items = state.collection && state.collection.items;
+    if(!items || !card || !card.name) return;
+    const set = String(card.set || '').toLowerCase(), cn = String(card.collector_number || '');
+    let changed = false;
+    items.forEach(it=>{
+      if(it.name !== card.name || String(it.set || '').toLowerCase() !== set) return;
+      if(it.cn && cn && String(it.cn) !== cn) return;
+      if(it.eur !== eur){ it.eur = eur; changed = true; }
+    });
+    if(changed){
+      saveCollection();
+      if(state.screen === 'collection') setTimeout(()=>{ try{ render(); }catch(e){} }, 0);
+    }
+  }catch(e){}
+}
 async function loadCardPrice(card){
   const gen = _cardSheetGen;
   const el = document.getElementById('csPrice');
@@ -12792,6 +12818,7 @@ async function loadCardPrice(card){
   // to overrule everything: pick the €60 printing, sheet insists €56.88.)
   const own = printEur(card);
   const specific = (own != null && !isNaN(own));
+  if(specific) syncCollectionPrice(card, own);
   const v = specific ? own : await cheapestEur(card, true, true);
   if(gen !== _cardSheetGen) return;   // a different card owns the sheet now
   const live = document.getElementById('csPrice');
