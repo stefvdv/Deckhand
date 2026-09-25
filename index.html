@@ -5511,15 +5511,17 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.645';
+const APP_VERSION = '2.51.646';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck count red until the deck is legal',
-    'Lighter red for better contrast'
+    'Update push reopens the changelog',
+    'Spoiler push: only the newest cards',
+    'Spoilers page waits for its sets'
   ],
   nl: [
-    'Teller rood tot het deck legaal is',
-    'Lichtere rode kleur, meer contrast'
+    'Update-melding toont de changelog',
+    'Spoilermelding: alleen nieuwste kaarten',
+    'Spoilerpagina wacht op de sets'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5783,11 +5785,17 @@ function maybeShowFormatChanges(){
     el.addEventListener('click', e=>{ if(e.target===el) done(); });
   }catch(e){}
 }
+/* Set when the app was opened by tapping the update push (…/?go=changelog):
+   then the newest changelog shows again, even if it was seen before. Any
+   other start still shows it only once. */
+let _forceChangelog = false;
 function maybeShowChangelog(){
   try{
+    if(document.getElementById('changelogScrim')) return;   // already on screen
+    const force = _forceChangelog; _forceChangelog = false;
     const seen = localStorage.getItem(LS_PREFIX+'seenVersion');
-    if(seen === APP_VERSION) return;
-    if(!seen){ localStorage.setItem(LS_PREFIX+'seenVersion', APP_VERSION); return; }   // brand-new user: the welcome note covers them, no popup
+    if(seen === APP_VERSION && !force) return;
+    if(!seen && !force){ localStorage.setItem(LS_PREFIX+'seenVersion', APP_VERSION); return; }   // brand-new user: the welcome note covers them, no popup
     // The same plain sheet as the About popup: rises from the foot, closes
     // with its button, a tap beside it, or the back button.
     const NL = appLang() === 'nl';
@@ -10256,6 +10264,12 @@ function spFilterActive(){
   return !!(f.q || f.type
     || Object.values(f.colors||{}).some(Boolean) || Object.values(f.rarity||{}).some(Boolean));
 }
+/* True while the page still has to fetch the fresh set list. Until then
+   "no sets are previewing" would be a guess, not a fact -- opening the page
+   from a push showed exactly that wrong message for a moment. */
+function spSetsPending(){
+  return !!state._spSetsLoading || !state._spoilerAutoFresh || Date.now() - state._spoilerAutoFresh > 3*3600*1000;
+}
 function spoilersPageHtml(){
   const sets = currentPreviewSets();
   const active = state.spoilerSetFilter && sets.some(x=>x.code===state.spoilerSetFilter) ? state.spoilerSetFilter : null;
@@ -10269,6 +10283,7 @@ function spoilersPageHtml(){
 
     ${jumpRow}
     ${sets.length ? `<div id="spBody"><div class="status"><div class="spinner"></div></div></div>`
+      : spSetsPending() ? `<div class="status" style="margin-top:24px;"><div class="spinner"></div></div>`
       : `<div class="empty-note" style="margin-top:24px;">No sets are previewing right now.<br>Spoiler season returns in the weeks before each release.</div>`}
     ${sets.length ? (()=>{
       const sf = state.spFilter;
@@ -10512,8 +10527,11 @@ async function wireSpoilersPage(){
   if(!state._spoilerAutoFresh || Date.now() - state._spoilerAutoFresh > 3*3600*1000){
     state._spoilerAutoFresh = Date.now();
     state._spoilerCache = {};
+    state._spSetsLoading = true;
     (async ()=>{
       try{ await resolveLegalSets(true); }catch(e){}   // fresh /sets → allSetsRaw (Commander sees every new set)
+      state._spSetsLoading = false;                     // the set list is what the page needs; draw it now
+      if(state.screen==='spoilers') render();
       try{ await checkForNewSets(true); }catch(e){}     // refresh curated previewMeta (Admiral's Standard list)
       if(state.screen==='spoilers') render();
     })();
@@ -23398,11 +23416,14 @@ try{
    is stripped at once, so a refresh lands on the normal home page. */
 try{
   const _goParam = new URLSearchParams(location.search).get('go');
+  // From the update push: the boot's changelog check will show it, seen or not.
+  if(_goParam === 'changelog') _forceChangelog = true;
   if(_goParam){
     try{ history.replaceState(history.state, '', location.pathname + location.hash); }catch(e){}
     setTimeout(()=>{
       try{
         if(_goParam === 'life'){ openLifeOverlay(); return; }
+        if(_goParam === 'changelog') return;
         // ?go=spoilers komt ook uit de pushmelding over nieuwe kaarten: die
         // hoort de spoilerpagina te openen, niet stilletjes thuis te landen.
         const pages = { decks:'decks', search:'search', browse:'browse', collection:'collection',
