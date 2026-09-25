@@ -1452,6 +1452,11 @@ img.art-missing::after{
 .acc-up [data-fmtrule] > div, .acc-up [data-banfmt] > div{display:flex;flex-direction:column-reverse;}
 input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .ub-wrap{display:flex;flex-direction:column-reverse;}
+/* Cover-art picker: first card at the foot-left, the rest climbing (wrap-reverse). */
+.cover-grid{display:flex;flex-wrap:wrap-reverse;gap:8px;max-height:52vh;overflow-y:auto;padding:2px;}
+.cover-opt{flex:0 0 calc(33.333% - 6px);padding:0;border:2.5px solid transparent;border-radius:9px;background:none;cursor:pointer;overflow:hidden;}
+.cover-opt img{width:100%;display:block;border-radius:6px;}
+.cover-opt.on{border-color:var(--head-ink);}
 .life-fmt-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 0 12px;}
 .life-fmt-row .chip small{display:block;font-size:10.5px;opacity:0.75;line-height:1.1;}
 .ub-switches{display:flex;flex-direction:column-reverse;margin:4px 0 8px;}
@@ -2320,11 +2325,21 @@ function deckCountLabel(d){
 }
 /* 'bad' (an error in the deck check), 'ok' (the minimum is reached) or
    'short'. 'ok' wears the theme's own light tint, the colour of the price. */
+/* Red whenever the deck breaks its format's numbers (Magic Tournament
+   Rules 100.2a / Commander 903.5a / the format table): more than the
+   maximum -- 100 in the commander family, 60 in Admiral -- a sideboard over
+   15, or a 60-card-format main deck UNDER 60 (the minimum is a hard rule
+   there, not a to-do). A commander deck still growing toward 100 is not an
+   error, only unfinished. Any error in the deck check is red too. */
 function deckCountState(d, issues){
   issues = issues || checkDeckLegality(d);
+  const SP = deckSpec(d), con = deckIsConstructed(d);
+  const n = (d.cards||[]).length + (con ? 0 : deckLeaders(d).length);
+  if(n > SP.max) return 'bad';
+  if(SP.side && ensureMaybeboard(d).length > SP.side) return 'bad';
+  if(con && n < SP.min) return 'bad';
   if(issues.some(i=>i.level==='error')) return 'bad';
-  const n = (d.cards||[]).length + (deckIsConstructed(d) ? 0 : deckLeaders(d).length);
-  return n >= deckTotal(d) ? 'ok' : 'short';
+  return n >= SP.min ? 'ok' : 'short';
 }
 function deckCountColor(st){ return st === 'bad' ? 'var(--danger)' : st === 'ok' ? 'var(--head-ink)' : 'var(--brass)'; }
 function brandTitle(){ return 'Deckhand'; }
@@ -5494,17 +5509,19 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below ({en:[…], nl:[…]}, one string per bullet,
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands.
-   SHORT, Stef's rule: as many bullets as needed, each at most 20 characters,
+   SHORT, Stef's rule: as many bullets as needed, each at most 40 characters,
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.643';
+const APP_VERSION = '2.51.644';
 const CHANGELOG_NOTES = {
   en: [
-    'Folder sets format'
+    'Deck count turns red on broken rules',
+    'Every deck tile shows a card'
   ],
   nl: [
-    'Map bepaalt format'
+    'Rode teller bij foute aantallen',
+    'Elke decktegel toont een kaart'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -7107,8 +7124,55 @@ function paintDeckPrice(d){
   const el = document.querySelector(`[data-deckprice="${d.id}"]`);
   if(el) el.innerHTML = deckPriceLabel(d);
 }
+/* The card whose art fronts a deck's tile: the one picked by hand (long
+   press on the tile -> Cover art), else the leader, else the deck's
+   signature card -- the most copies, a creature before a spell, the
+   higher mana value on a tie. Basic lands never front a deck. */
+function deckCoverCard(d){
+  if(!d) return null;
+  const all = deckLeaders(d).concat(d.cards || [], d.maybeboard || []);
+  if(d.cover){ const c = all.find(x=>x && x.name === d.cover); if(c) return c; }
+  if(d.admiral) return d.admiral;
+  const cnt = new Map();
+  (d.cards || []).forEach(c=>{ if(c && c.name && !/Basic Land/.test(c.type_line || '')) cnt.set(c.name, (cnt.get(c.name) || 0) + 1); });
+  let best = null, score = -1;
+  cnt.forEach((n, name)=>{
+    const c = d.cards.find(x=>x && x.name === name);
+    const sc = n * 100 + (/Creature/.test(c.type_line || '') ? 50 : 0) + (c.cmc || 0);
+    if(sc > score){ score = sc; best = c; }
+  });
+  return best;
+}
+function openCoverPicker(d){
+  document.getElementById('coverPicker')?.remove();
+  const seen = new Set(), pool = [];
+  deckLeaders(d).concat(d.cards || [], d.maybeboard || []).forEach(c=>{
+    if(!c || !c.name || seen.has(c.name) || /Basic Land/.test(c.type_line || '')) return;
+    seen.add(c.name); pool.push(c);
+  });
+  const nl = appLang() === 'nl';
+  const el = document.createElement('div'); el.className = 'deckpick-scrim'; el.id = 'coverPicker';
+  el.style.alignItems = 'center';
+  // Bottom-up: "Automatic" sits at the foot, the cards climb above it.
+  el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:420px;display:flex;flex-direction:column;">
+    <h4>${nl ? 'Deckplaatje' : 'Cover art'}</h4>
+    <div class="cover-grid">${pool.map((c, i)=>`<button type="button" class="cover-opt ${d.cover === c.name ? 'on' : ''}" data-cover="${i}"><img loading="lazy" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}"></button>`).join('')}</div>
+    <button class="ghost-btn" id="coverAuto" style="width:100%;margin-top:8px;">${nl ? 'Automatisch' : 'Automatic'}</button>
+    <button class="dp-cancel" id="coverCancel" style="margin-top:8px;">${nl ? 'Annuleren' : 'Cancel'}</button>
+  </div>`;
+  document.body.appendChild(el);
+  const close = ()=>{ el.remove(); const st = state.overlayStack; if(st.length && st[st.length - 1].id === 'coverPicker') st.pop(); };
+  pushOverlay('coverPicker', ()=>{ document.getElementById('coverPicker')?.remove(); }, true);
+  const set = (name)=>{ if(name) d.cover = name; else delete d.cover; persistDeck(d); close(); render(); };
+  el.querySelectorAll('[data-cover]').forEach(b=>b.addEventListener('click', ()=>set(pool[+b.dataset.cover].name)));
+  document.getElementById('coverAuto').addEventListener('click', ()=>set(null));
+  document.getElementById('coverCancel').addEventListener('click', close);
+  el.addEventListener('click', ev=>{ if(ev.target === el) close(); });
+  const g = el.querySelector('.cover-grid'); if(g) g.scrollTop = g.scrollHeight;
+}
 function deckTileHtml(d){
-  const art = d.admiral ? cardImageLarge(d.admiral) : '';
+  const _cv = deckCoverCard(d);
+  const art = _cv ? cardImageLarge(_cv) : '';
   const isActive = state.activeDeckId===d.id;
   const price = deckPriceFromCache(d);
   return `<div class="deck-tile ${isActive?'active-marker':''}" data-id="${d.id}">
@@ -7118,7 +7182,7 @@ function deckTileHtml(d){
       <div class="id-strip" style="background:${identityStripCss(d.admiral&&deckColorIdentity(d))}"></div>
       <div class="body">
         <div class="nm">${escapeHtml(d.name||'Untitled deck')}</div>
-        <div class="meta"><span>${deckCountLabel(d)}${d.primer&&d.primer.trim()?' · ✎':''}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span>${deckKind(d) === 'cmdr' ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span>` : ''}</span></div>
+        <div class="meta"><span${deckCountState(d) === 'bad' ? ' style="color:var(--danger);"' : ''}>${deckCountLabel(d)}${d.primer&&d.primer.trim()?' · ✎':''}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span>${deckKind(d) === 'cmdr' ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span>` : ''}</span></div>
         <div class="edited"><span data-deckprice="${d.id}">${deckPriceLabel(d)}</span></div>
       </div>
     </div>`;
@@ -7403,6 +7467,7 @@ function openDeckTileMenu(id, anchorEl){
   openTileMenu(anchorEl, [
     {label:'📁 Move to…', fn:()=>openFolderPicker(d)},
     {label:'⚔ Set format…', fn:()=>openFormatPicker(d)},
+    {label:(appLang() === 'nl' ? '🖼 Deckplaatje…' : '🖼 Cover art…'), fn:()=>openCoverPicker(d)},
     {label:'⧉ Duplicate deck', fn:()=>{ duplicateDeck(d); }},
     {label:'↗ Share deck', fn:()=>shareDeck(d)},
     {label:'🗑 Delete deck', danger:true, fn:()=>{ state.activeDeckId=d.id; openModal('delete'); }}
@@ -9058,7 +9123,7 @@ function checkConstructedLegality(d){
   const add = (level, text, cards) => issues.push({ level, label: text, cards: cards||[] });
   const main = d.cards || [], side = ensureMaybeboard(d);
   const n = main.length, SP = fmtSpec(fmt);
-  if(n < SP.min) add('warn', `${n}/${SP.min} cards — ${SP.min-n} to add`);
+  if(n < SP.min) add('error', `${n}/${SP.min} cards — ${SP.min-n} to add`);
   if(side.length > SP.side) add('error', `Sideboard ${side.length}/${SP.side} — ${side.length-SP.side} too many`);
   const both = main.concat(side);
   const counts = new Map();
