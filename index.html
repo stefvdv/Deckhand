@@ -2323,25 +2323,23 @@ function deckCountLabel(d){
   if(deckIsConstructed(d)) return (d.cards||[]).length + ' + ' + ensureMaybeboard(d).length;
   return ((d.cards||[]).length + deckLeaders(d).length) + '/' + deckTotal(d);
 }
-/* 'bad' (an error in the deck check), 'ok' (the minimum is reached) or
-   'short'. 'ok' wears the theme's own light tint, the colour of the price. */
-/* Red whenever the deck breaks its format's numbers (Magic Tournament
-   Rules 100.2a / Commander 903.5a / the format table): more than the
-   maximum -- 100 in the commander family, 60 in Admiral -- a sideboard over
-   15, or a 60-card-format main deck UNDER 60 (the minimum is a hard rule
-   there, not a to-do). A commander deck still growing toward 100 is not an
-   error, only unfinished. Any error in the deck check is red too. */
+/* Red whenever the deck is not a legal deck of its format YET or ANY MORE
+   (Magic Tournament Rules 100.2a / Commander 903.5a / the format table):
+   under the minimum or over the maximum -- exactly 100 in the commander
+   family, exactly 60 in Admiral, at least 60 in the 60-card formats -- a
+   sideboard over 15, or any error in the deck check. Only a deck that is
+   ready to play wears the theme's light ink. The red is the LIGHT tint
+   (var --count-bad), set per colour scheme for contrast. */
 function deckCountState(d, issues){
   issues = issues || checkDeckLegality(d);
   const SP = deckSpec(d), con = deckIsConstructed(d);
   const n = (d.cards||[]).length + (con ? 0 : deckLeaders(d).length);
-  if(n > SP.max) return 'bad';
+  if(n > SP.max || n < SP.min) return 'bad';
   if(SP.side && ensureMaybeboard(d).length > SP.side) return 'bad';
-  if(con && n < SP.min) return 'bad';
   if(issues.some(i=>i.level==='error')) return 'bad';
-  return n >= SP.min ? 'ok' : 'short';
+  return 'ok';
 }
-function deckCountColor(st){ return st === 'bad' ? 'var(--danger)' : st === 'ok' ? 'var(--head-ink)' : 'var(--brass)'; }
+function deckCountColor(st){ return st === 'bad' ? 'var(--count-bad)' : 'var(--head-ink)'; }
 function brandTitle(){ return 'Deckhand'; }
 function modeGlyph(){ return '⚔'; }
 function anchorSvg(sz){
@@ -5513,15 +5511,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.644';
+const APP_VERSION = '2.51.645';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck count turns red on broken rules',
-    'Every deck tile shows a card'
+    'Deck count red until the deck is legal',
+    'Lighter red for better contrast'
   ],
   nl: [
-    'Rode teller bij foute aantallen',
-    'Elke decktegel toont een kaart'
+    'Teller rood tot het deck legaal is',
+    'Lichtere rode kleur, meer contrast'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6020,6 +6018,11 @@ function applyTheme(){
   // that stands out on the fields (which are that colour's surface).
   const caret = CARET_BY_SIDE[g.side] || CARET_BY_SIDE.U;
   document.documentElement.style.setProperty('--caret', caret);
+  // The count's red: the LIGHT red tint where it sits on a dark surface,
+  // the deep red on a light one (a white main colour = a light page; a
+  // white second colour = light tiles).
+  document.documentElement.style.setProperty('--count-bad', g.main === 'W' ? '#B5484D' : '#F4B6A2');
+  document.documentElement.style.setProperty('--count-bad-tile', g.side === 'W' ? '#B5484D' : '#F4B6A2');
   // The Android app draws the cursor's grab handle itself: tell it too.
   try{ if(window.DeckhandNotify && typeof DeckhandNotify.setAccent === 'function') DeckhandNotify.setAccent(caret); }catch(e){}
   document.title = brandTitle();
@@ -7182,7 +7185,7 @@ function deckTileHtml(d){
       <div class="id-strip" style="background:${identityStripCss(d.admiral&&deckColorIdentity(d))}"></div>
       <div class="body">
         <div class="nm">${escapeHtml(d.name||'Untitled deck')}</div>
-        <div class="meta"><span${deckCountState(d) === 'bad' ? ' style="color:var(--danger);"' : ''}>${deckCountLabel(d)}${d.primer&&d.primer.trim()?' · ✎':''}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span>${deckKind(d) === 'cmdr' ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span>` : ''}</span></div>
+        <div class="meta"><span${deckCountState(d) === 'bad' ? ' style="color:var(--count-bad-tile);"' : ''}>${deckCountLabel(d)}${d.primer&&d.primer.trim()?' · ✎':''}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span>${deckKind(d) === 'cmdr' ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span>` : ''}</span></div>
         <div class="edited"><span data-deckprice="${d.id}">${deckPriceLabel(d)}</span></div>
       </div>
     </div>`;
