@@ -1029,6 +1029,10 @@ main.has-dock{padding-bottom:84px;}
    Pseudo-elements only render on a FAILED image, which is precisely when
    this is wanted, and the ::after covers whatever the browser drew. */
 img.art-pending{background:var(--sk) center/cover no-repeat;}
+/* Before a picture arrives (or fails, offline) it already has a card's shape:
+   an image without size collapsed to nothing for a frame, then jumped to
+   full height -- the flash when opening a card offline. */
+#ciImg, #dcImg, #cotdImg, #ciSheetImg, .pp-imghold img, main.card-detail img{aspect-ratio:auto 488/680;}
 img.art-missing{
   position:relative;color:transparent;font-size:0;aspect-ratio:488/680;
   background:transparent;
@@ -5446,17 +5450,23 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below ({en:[…], nl:[…]}, one string per bullet,
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands.
-   SHORT, Stef's rule: at most 3 bullets, each one line of at most 90
-   characters, about what the player notices -- no explanations, no causes,
-   no technical words. A test enforces it. Also bump the
+   SHORT, Stef's rule: at most 4 bullets, each at most 20 characters,
+   about what the player notices -- no explanations, no causes, no
+   technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.640';
+const APP_VERSION = '2.51.641';
 const CHANGELOG_NOTES = {
   en: [
-    'Collection prices refresh every 6 hours and follow the card sheet.'
+    'Live trade prices',
+    'Tap risers & fallers',
+    'Simpler import text',
+    'No flash offline'
   ],
   nl: [
-    'Collectieprijzen verversen elke 6 uur en volgen de kaartpagina.'
+    'Live ruilprijzen',
+    'Tik stijgers/dalers',
+    'Kortere importtekst',
+    'Geen flits offline'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -9406,23 +9416,23 @@ function openCollectionImport(presetBinder){
   const el=document.createElement('div'); el.id='colImportOverlay';
   el.innerHTML = `
     <div class="appoint-sheet" style="max-width:460px;">
-      <div class="appoint-head"><span>⇅ Import / Export collection</span><button class="icon-btn" id="ciClose">${ICONS.close||'✕'}</button></div>
+      <div class="appoint-head"><span>${appLang()==='nl' ? 'Importeren / exporteren' : 'Import / export'}</span><button class="icon-btn" id="ciClose">${ICONS.close||'✕'}</button></div>
       <p class="hint" style="margin:0 0 10px;">${appLang() === 'nl'
-        ? `Werkt met <strong>CSV</strong>-exports van Moxfield &amp; Archidekt (Collection → ⋯ → <em>Export</em> → CSV). Heet het bestand naar een map, dan gaat het daar vanzelf in; bij een algemene <em>moxfield_haves</em>-export vraagt de app om een mapnaam — laat die leeg om aan je hele collectie toe te voegen.`
-        : `Works with Moxfield &amp; Archidekt <strong>CSV</strong> exports (Collection → ⋯ → <em>Export</em> → CSV). If the file is named after a binder it's used automatically; a generic <em>moxfield_haves</em> export will ask you for a binder name — leave that blank to add to your whole collection.`}</p>
+        ? 'Kies een CSV-bestand uit Moxfield, Archidekt, ManaBox of Delver Lens. Kies eerst waar de kaarten heen gaan.'
+        : 'Pick a CSV file from Moxfield, Archidekt, ManaBox or Delver Lens. First choose where the cards go.'}</p>
       <input type="file" id="ciFile" accept=".csv,text/csv" style="display:none;">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-        <label class="hint" style="flex:none;">Import into:</label>
+        <label class="hint" style="flex:none;">${appLang()==='nl' ? 'Naar:' : 'Into:'}</label>
         <select id="ciBinder" class="deck-select" style="flex:1;"></select>
       </div>
-      <button class="ghost-btn" id="ciPick" style="width:100%;margin-bottom:8px;">📄 Choose a CSV file to import</button>
+      <button class="ghost-btn" id="ciPick" style="width:100%;margin-bottom:8px;">${appLang()==='nl' ? 'Kies bestand' : 'Choose file'}</button>
       <div id="ciReport" class="hint" style="margin:4px 0;min-height:18px;"></div>
-      <div class="hint" style="margin:6px 0 8px;text-align:center;">No CSV yet? These free apps scan your paper cards with the camera and export one this importer understands:</div>
+      <div class="hint" style="margin:6px 0 8px;text-align:center;">${appLang()==='nl' ? 'Nog geen bestand? Scan je kaarten met een gratis app:' : 'No file yet? Scan your cards with a free app:'}</div>
       <a class="ghost-btn" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;margin-bottom:8px;" target="_blank" rel="noopener"
-         href="${/iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'https://apps.apple.com/app/manabox-mtg/id1460407674' : 'https://play.google.com/store/apps/details?id=skilldevs.com.manabox'}">📷 ManaBox — scan cards, export CSV</a>
-      ${/iPhone|iPad|iPod/i.test(navigator.userAgent) ? '' : `<a class="ghost-btn" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;" target="_blank" rel="noopener" href="https://play.google.com/store/apps/details?id=delverlab.delverlens">🔍 Delver Lens — power scanner (Android)</a>`}
+         href="${/iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'https://apps.apple.com/app/manabox-mtg/id1460407674' : 'https://play.google.com/store/apps/details?id=skilldevs.com.manabox'}">ManaBox</a>
+      ${/iPhone|iPad|iPod/i.test(navigator.userAgent) ? '' : `<a class="ghost-btn" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;" target="_blank" rel="noopener" href="https://play.google.com/store/apps/details?id=delverlab.delverlens">Delver Lens</a>`}
       <hr style="border:none;border-top:2px solid var(--line);margin:12px 0;">
-      <button class="ghost-btn" id="ciExport" style="width:100%;">⬇ Export my collection as CSV</button>
+      <button class="ghost-btn" id="ciExport" style="width:100%;">${appLang()==='nl' ? 'Exporteer collectie' : 'Export collection'}</button>
     </div>`;
   document.body.appendChild(el);
   pushOverlay('colImport', ()=>{ document.getElementById('colImportOverlay')?.remove(); });
@@ -15270,6 +15280,50 @@ function loadTrade(){
   return state.trade;
 }
 function saveTrade(){ try{ localStorage.setItem(LS_PREFIX+'trade', JSON.stringify(state.trade)); }catch(e){} }
+/* Trade prices are always LIVE: each time the trade page shows, every card
+   on the table is priced afresh (one batched request, through
+   postWithTimeout). A price younger than ten minutes counts as live. Without
+   a line -- or when Scryfall does not answer -- the stored price stays: that
+   is the fallback, never the first choice. */
+let _tradeFailAt = 0;
+async function refreshTradePrices(){
+  try{
+    loadTrade();
+    const all = state.trade.a.concat(state.trade.b);
+    const stale = all.filter(it=>!(it.pt && Date.now() - it.pt < 10 * 60 * 1000));
+    if(!stale.length) return;
+    if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    if(Date.now() - _tradeFailAt < 30 * 1000) return;           // just failed: no retry storm
+    const idOf = (it)=> (it.set && it.cn) ? { set: String(it.set).toLowerCase(), collector_number: String(it.cn) }
+                      : it.set ? { name: it.name, set: String(it.set).toLowerCase() } : { name: it.name };
+    const uniq = new Map();
+    stale.forEach(it=>{ const id = idOf(it); uniq.set(JSON.stringify(id), id); });
+    const ids = Array.from(uniq.values());
+    let changed = false, answered = false;
+    for(let i = 0; i < ids.length; i += 75){
+      const r = await postWithTimeout(`${SF_BASE}/cards/collection`, { identifiers: ids.slice(i, i + 75) }, 6000);
+      if(!r || !r.ok) continue;
+      answered = true;
+      const data = await r.json();
+      (data.data || []).forEach(f=>{
+        stale.forEach(it=>{
+          const hit = (it.set && it.cn)
+            ? (String(f.set) === String(it.set).toLowerCase() && String(f.collector_number) === String(it.cn))
+            : (f.name === it.name || String(f.name).split(' // ')[0] === it.name) && (!it.set || String(f.set) === String(it.set).toLowerCase());
+          if(!hit) return;
+          const p = f.prices || {};
+          const raw = it.foil ? (p.eur_foil || p.eur) : (p.eur || p.eur_foil);
+          const e = raw ? parseFloat(raw) : NaN;
+          it.pt = Date.now();
+          if(isFinite(e) && e !== it.eur){ it.eur = e; changed = true; }
+        });
+      });
+    }
+    if(!answered){ _tradeFailAt = Date.now(); return; }
+    saveTrade();
+    if(changed && state.screen === 'trade') render();
+  }catch(e){ _tradeFailAt = Date.now(); }
+}
 function tradeSideTotal(side){ return side.reduce((t,it)=> t + (it.eur!=null ? it.eur*it.qty : 0), 0); }
 function tradeRowsHtml(key){
   const rows = state.trade[key];
@@ -15314,6 +15368,7 @@ function tradePageHtml(){
 }
 function wireTradePage(){
   loadTrade();
+  refreshTradePrices();
   const nlW = appLang()==='nl';
   const twQ = document.getElementById('twQ');
   const twBox = document.getElementById('twResults');
@@ -16073,7 +16128,7 @@ function openPriceHistory(card, key){
       deltas.sort((a2, z2)=>z2[1] - a2[1]);
       const up = deltas.filter(x=>x[1] > 0).slice(0, 5);
       const down = deltas.filter(x=>x[1] < 0).slice(-5).reverse();
-      const row = (nm, dv)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:13.5px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(nm)}</span><span style="font-family:'JetBrains Mono',monospace;color:${dv > 0 ? 'var(--brass)' : 'var(--danger)'};">${dv > 0 ? '+' : ''}€${dv.toFixed(2)}</span></div>`;
+      const row = (nm, dv)=>`<div data-phcard="${encodeURIComponent(nm)}" role="button" style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:13.5px;cursor:pointer;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(nm)}</span><span style="font-family:'JetBrains Mono',monospace;color:${dv > 0 ? 'var(--brass)' : 'var(--danger)'};">${dv > 0 ? '+' : ''}€${dv.toFixed(2)}</span></div>`;
       movers = (up.length || down.length)
         ? `<div style="max-width:520px;margin:14px auto 0;">
             ${up.length ? `<div class="panel-h" style="margin:0 0 4px;">Biggest risers</div>${up.map(x=>row(x[0], x[1])).join('')}` : ''}
@@ -16086,6 +16141,13 @@ function openPriceHistory(card, key){
   document.body.appendChild(el);
   wireOverlayNav(el);
   pushOverlay('pricehist', ()=>{ document.getElementById('phOverlay')?.remove(); });
+  // A riser or faller opens its card, the owned copy first (its printing).
+  el.querySelectorAll('[data-phcard]').forEach(r=>r.addEventListener('click', ()=>{
+    let nm = ''; try{ nm = decodeURIComponent(r.dataset.phcard); }catch(e){ nm = r.dataset.phcard; }
+    const idx = state.collection.items.findIndex(it=>it && it.name === nm);
+    if(idx >= 0) openCollectionCard(idx);
+    else sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(nm)}`).then(x=>x.ok ? x.json() : null).then(c=>{ if(c) openCardInfo(c); }).catch(()=>{});
+  }));
   // Tap or slide along the line: the nearest day lights up with its date
   // and price, Cardmarket-style. The last pick stays up after you let go.
   const box = chart && el.querySelector('#phChart');
@@ -16917,7 +16979,7 @@ function openTradeAdd(side){
 function openTradePrints(side, card){
   openPrintingGrid(card, (chosen)=>{
     loadTrade();
-    state.trade[side].push({ name: chosen.name, set: chosen.set, set_name: chosen.set_name||'', cn: chosen.collector_number||'', img: cardImage(chosen), wb: chosen.border_color==='white'?1:0, eur: printEur(chosen), qty: 1, type_line: chosen.type_line||'', colors: chosen.colors || chosen.color_identity || [], rarity: chosen.rarity||'' });
+    state.trade[side].push({ name: chosen.name, set: chosen.set, set_name: chosen.set_name||'', cn: chosen.collector_number||'', img: cardImage(chosen), wb: chosen.border_color==='white'?1:0, eur: printEur(chosen), foil: !!chosen._foilPick, pt: Date.now(), qty: 1, type_line: chosen.type_line||'', colors: chosen.colors || chosen.color_identity || [], rarity: chosen.rarity||'' });
     saveTrade();
     toast(trS('Added to trade.'));
     // The chooser already closed itself; closing the search overlay beneath
