@@ -1452,6 +1452,8 @@ img.art-missing::after{
 .acc-up [data-fmtrule] > div, .acc-up [data-banfmt] > div{display:flex;flex-direction:column-reverse;}
 input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .ub-wrap{display:flex;flex-direction:column-reverse;}
+.life-fmt-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 0 12px;}
+.life-fmt-row .chip small{display:block;font-size:10.5px;opacity:0.75;line-height:1.1;}
 .ub-switches{display:flex;flex-direction:column-reverse;margin:4px 0 8px;}
 .ub-switches[hidden]{display:none;}   /* bottom-up: its heading at the foot, the first set right above it */
 .acc-up [data-fmtruletxt]:not([hidden]), .acc-up [data-banbox]:not([hidden]){display:flex;flex-direction:column-reverse;gap:6px;margin:0 0 6px;}
@@ -2185,8 +2187,14 @@ function leaderNoun(fmt, plural){
 function leaderSearchClause(fmt){
   if(fmt === 'paupercommander') return 't:creature r:uncommon';
   if(fmt === 'admiral') return 't:legendary';
+  if(fmt === 'duel') return 'is:duelcommander';   // Scryfall knows Duel's banned-as-commander list
   return 'is:commander';
 }
+/* The format a leader SEARCH may filter by. Pauper Commander's leaders are
+   uncommon creatures, which Scryfall (since the PDH framework of Nov 2024)
+   marks not_legal -- they are only legal in the command zone -- so that
+   search must not demand legal:paupercommander. */
+function leaderSearchFmt(fmt){ return fmt === 'paupercommander' ? 'any' : fmt; }
 function leaderFitsFormat(c, fmt){
   if(!c || !isNonlandFront(c)) return false;
   if(fmt === 'paupercommander') return (frontFace(c).type_line || '').includes('Creature');
@@ -2279,7 +2287,31 @@ function cardsSvg(sz){
 function leaderLineLabel(d){ return deckFormat(d)==='commander' ? 'COMMANDER' : 'ADMIRAL'; }
 /* The commander family counts to 100; Admiral and the constructed formats
    to 60 -- for the latter that is the minimum, not an exact number. */
-function deckTotal(d){ return deckKind(d) === 'cmdr' ? 100 : DECK_TOTAL; }
+/* THE format table: every number a format's rules turn on, in one place.
+   min/max = cards in the deck INCLUDING its leaders (Infinity: no maximum);
+   side = sideboard size (0: none -- the Maybeboard is only a notepad);
+   copies = copies of one card; life = starting life; cmdDmg = combat damage
+   from one leader that eliminates a player (0: the format has no such rule).
+   Sources: Commander (mtgcommander.net), Pauper Commander (PDH Home Base,
+   30 life / 16 damage, framework of 26 Nov 2024), Duel Commander
+   (duelcommander.org: 20 life, no commander damage, no sideboard), PreDH
+   (Commander rules, pool up to New Phyrexia), the 60-card formats (Magic
+   Tournament Rules), and Admiral (this app's own format: exactly 60). */
+const FMT_SPEC = {
+  commander:       { min:100, max:100, side:0,  copies:1, life:40, cmdDmg:21, lands:true  },
+  paupercommander: { min:100, max:100, side:0,  copies:1, life:30, cmdDmg:16, lands:true  },
+  predh:           { min:100, max:100, side:0,  copies:1, life:40, cmdDmg:21, lands:true  },
+  duel:            { min:100, max:100, side:0,  copies:1, life:20, cmdDmg:0,  lands:true  },
+  admiral:         { min:60,  max:60,  side:0,  copies:1, life:30, cmdDmg:18, lands:false },
+  standard:        { min:60,  max:Infinity, side:15, copies:4, life:20, cmdDmg:0, lands:true },
+  pauper:          { min:60,  max:Infinity, side:15, copies:4, life:20, cmdDmg:0, lands:true },
+  modern:          { min:60,  max:Infinity, side:15, copies:4, life:20, cmdDmg:0, lands:true },
+  legacy:          { min:60,  max:Infinity, side:15, copies:4, life:20, cmdDmg:0, lands:true },
+  vintage:         { min:60,  max:Infinity, side:15, copies:4, life:20, cmdDmg:0, lands:true }
+};
+function fmtSpec(f){ return FMT_SPEC[f] || FMT_SPEC.commander; }
+function deckSpec(d){ return fmtSpec(deckFormat(d)); }
+function deckTotal(d){ return deckSpec(d).min; }
 /* The deck's count: a 60-card format with a sideboard has no maximum to
    count toward, so it reads "main + sideboard"; the rest "have/need". */
 function deckCountLabel(d){
@@ -2304,8 +2336,20 @@ function anchorSvg(sz){
 }
 /* One on one starts at 20 -- Duel Commander and every constructed format
    do; four at a table start at 40 as Commander always has. */
-function lifeStart(count){ return count === 2 ? 20 : 40; }
-function lethalDmg(){ return 21; }
+/* The life counter plays ONE format at a time, chosen at New Game and
+   remembered: it sets the starting life and the leader damage that knocks a
+   player out (none in Duel Commander and the 60-card formats). */
+const LIFE_FMTS = ['commander', 'paupercommander', 'duel', 'admiral', 'constructed'];
+function lifeFmt(){
+  let f = null;
+  try{ f = localStorage.getItem(LS_PREFIX + 'lifeFmt'); }catch(e){}
+  return LIFE_FMTS.indexOf(f) >= 0 ? f : 'commander';
+}
+function lifeSpec(){ const f = lifeFmt(); return fmtSpec(f === 'constructed' ? 'standard' : f); }
+function lifeFmtLabel(f){ return f === 'constructed' ? (appLang() === 'nl' ? '60 kaarten' : '60 cards') : fmtLabelOf(f); }
+function lifeStart(count){ return lifeSpec().life; }
+function lethalDmg(){ return lifeSpec().cmdDmg || 0; }
+function lifeLeaderWord(){ return lifeFmt() === 'admiral' ? 'Admiral' : 'Commander'; }
 const PLAYER_COLORS = [
   { base:'#8A6A2E', dark:'#4A3814' }, // amber
   { base:'#7A3B44', dark:'#3E1D22' }, // crimson
@@ -5450,23 +5494,17 @@ const LS_PREFIX = 'admiral_app:';
    changes in CHANGELOG_NOTES below ({en:[…], nl:[…]}, one string per bullet,
    BOTH languages every release). Every
    player sees the popup exactly once after the update lands.
-   SHORT, Stef's rule: at most 4 bullets, each at most 20 characters,
+   SHORT, Stef's rule: as many bullets as needed, each at most 20 characters,
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.641';
+const APP_VERSION = '2.51.643';
 const CHANGELOG_NOTES = {
   en: [
-    'Live trade prices',
-    'Tap risers & fallers',
-    'Simpler import text',
-    'No flash offline'
+    'Folder sets format'
   ],
   nl: [
-    'Live ruilprijzen',
-    'Tik stijgers/dalers',
-    'Kortere importtekst',
-    'Geen flits offline'
+    'Map bepaalt format'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5846,6 +5884,8 @@ async function loadDecksIndex(){
   state.folders = loadFolders();
   if(state.folderNav===undefined) state.folderNav = null;   // which folder we're viewing (null = top)
   migrateTagsToGlobal();
+  // The stored format field follows the folder a deck lives in.
+  try{ (state.decksIndex || []).forEach(d=>{ const was = d.format; if(deckFormat(d) !== was) persistDeck(d); }); }catch(e){}
   state.homeLoaded = true;
 }
 /* ---- Storage slimming ----
@@ -7403,6 +7443,9 @@ function openFolderIconPicker(f){
    user-placed; an unfiled deck simply re-files under the new format. */
 function setDeckFormat(d, fmt){
   if(!FMT_LABELS[fmt] || deckFormat(d) === fmt) return;
+  // The folder decides the rules, so a new format means a new home: out of
+  // the old format's folder, into the new format's own folder.
+  if(d.folderId && fmtAncestorOf(d.folderId)) d.folderId = null;
   d.format = fmt;
   d.updatedAt = Date.now();
   persistDeck(d);
@@ -7482,6 +7525,7 @@ function renderFolderPicker(){
     if(mvFolder){
       d.parentId = dest;   // a format folder id is a legal parent for a FOLDER
       saveFolders();
+      (state.decksIndex || []).forEach(x=>{ const was = x.format; if(deckFormat(x) !== was) persistDeck(x); });
       close();
       toast(`Moved to ${curName}.`);
       render();
@@ -7495,9 +7539,12 @@ function renderFolderPicker(){
       if(deckFormat(d) !== fmt) setDeckFormat(d, fmt); else { persistDeck(d); toast(`Moved to ${fmtLabelOf(fmt)}.`); render(); }
       return;
     }
+    const _was = deckFormat(d);
     d.folderId = dest;
+    const _now = deckFormat(d);            // the folder's format takes over
     persistDeck(d);
     close();
+    if(_now !== _was) setTimeout(()=>{ try{ toast(`${d.name}: ${fmtLabelOf(_now)}`); }catch(e){} }, 1200);
     const where = state._fpNav ? folderPath(state._fpNav).slice(-1)[0].name : fmtLabelOf(deckFormat(d)) + ' (auto folder)';
     toast(`Moved to ${where}.`);
     render();
@@ -8956,9 +9003,9 @@ function checkCommanderLegality(d){
   const pdh = fmt === 'paupercommander';
   const issues = [];
   const all = deckLeaders(d).concat(d.cards||[]);
-  const total = all.length;
-  if(total > 100) issues.push({ level:'error', text:`Deck has ${total} cards — ${L} decks are exactly 100 including the commander.` });
-  else if(total < 100) issues.push({ level:'warn', text:`${100-total} more card${100-total===1?'':'s'} to reach 100.` });
+  const total = all.length, SP = fmtSpec(fmt);
+  if(total > SP.max) issues.push({ level:'error', text:`Deck has ${total} cards — ${L} decks are exactly ${SP.max} including the commander.` });
+  else if(total < SP.min) issues.push({ level:'warn', text:`${SP.min-total} more card${SP.min-total===1?'':'s'} to reach ${SP.min}.` });
   const leaderBad = (c)=> pdh ? !(c.type_line||'').includes('Creature')
                               : (!isLegendary(c) || !(c.type_line||'').includes('Creature'));
   if(!d.admiral) issues.push({ level:'warn', text:'No Commander appointed yet.' });
@@ -9010,9 +9057,9 @@ function checkConstructedLegality(d){
   const issues = [];
   const add = (level, text, cards) => issues.push({ level, label: text, cards: cards||[] });
   const main = d.cards || [], side = ensureMaybeboard(d);
-  const n = main.length;
-  if(n < DECK_TOTAL) add('warn', `${n}/${DECK_TOTAL} cards — ${DECK_TOTAL-n} to add`);
-  if(side.length > 15) add('error', `Sideboard ${side.length}/15 — ${side.length-15} too many`);
+  const n = main.length, SP = fmtSpec(fmt);
+  if(n < SP.min) add('warn', `${n}/${SP.min} cards — ${SP.min-n} to add`);
+  if(side.length > SP.side) add('error', `Sideboard ${side.length}/${SP.side} — ${side.length-SP.side} too many`);
   const both = main.concat(side);
   const counts = new Map();
   both.forEach(c=>counts.set(c.name, (counts.get(c.name)||0) + 1));
@@ -9052,9 +9099,9 @@ function checkDeckLegality(d){
     if(isBanned(d.partner, d)) add('error', `${d.partner.name} is banned`);
   }
 
-  const total = d.cards.length + deckLeaders(d).length;
-  if(total > DECK_TOTAL) add('error', `${total}/${DECK_TOTAL} cards — ${total-DECK_TOTAL} to cut`);
-  else if(total < DECK_TOTAL) add('warn', `${total}/${DECK_TOTAL} cards — ${DECK_TOTAL-total} to add`);
+  const total = d.cards.length + deckLeaders(d).length, SP = fmtSpec('admiral');
+  if(total > SP.max) add('error', `${total}/${SP.max} cards — ${total-SP.max} to cut`);
+  else if(total < SP.min) add('warn', `${total}/${SP.min} cards — ${SP.min-total} to add`);
 
   // Singleton, ignoring cards whose own text lets you run duplicates
   const counts = {};
@@ -9859,7 +9906,8 @@ async function buildShareUrl(d){
     p: d.primer || '',
     ds: d.description || '',
     wr: (()=>{ const st = logStatsFor(d); return st ? { w: st.wins, l: st.losses } : null; })(),
-    by: d.author || ''
+    by: d.author || '',
+    f: deckFormat(d)          // the deck travels with its format
   };
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
   let token;
@@ -10033,7 +10081,7 @@ function openAppointSearch(d, onPick){
     const fmt = deckFormat(d);
     const clause = leaderSearchClause(fmt) + ' ' + q;
     let results = [];
-    try{ const r = await searchAndVerifyLegal(clause, 'name', 40, { format: fmt }); results = r.results || []; }catch(e){}
+    try{ const r = await searchAndVerifyLegal(clause, 'name', 40, { format: leaderSearchFmt(fmt) }); results = r.results || []; }catch(e){}
     if(mySeq !== seq) return;   // superseded by a newer keystroke
     results = results.filter(c => leaderFitsFormat(c, fmt) && !isBanned(c, d));
     if(!box()) return;
@@ -10516,7 +10564,7 @@ async function openShowcase(payload, opts){
       <button class="icon-btn" id="scBack">${ICONS.back}</button>
       <div class="tb-titles"><div class="t1" style="font-size:19px;">${escapeHtml(payload.n||'Shared Deck')}</div><div class="t2" style="font-size:15px;color:var(--ink-text);">${payload.by?`Created by <strong style="color:var(--head-ink);">${escapeHtml(payload.by)}</strong>`:`${count} cards`}</div></div>
     </div>
-    <main><div id="scBody"><div class="status"><div class="spinner"></div>Unfurling the charts…</div></div></main>
+    <main><div id="scBody"><div class="status"><div class="spinner"></div>Loading the deck…</div></div></main>
   </div>`;
   document.getElementById('scBack').addEventListener('click', closeTopOverlay);
   // Resolve the admiral for the hero art, then the rest of the list lazily
@@ -10571,7 +10619,7 @@ async function openShowcase(payload, opts){
       partner: partnerCard || null,
       cards: (res && res.main) || [], maybeboard: (res && res.maybe) || [],
       tags: {}, primer: payload.p || '', description: payload.ds || '', playLog: (payload.wr ? Array.from({length: payload.wr.w}, ()=>({res:'W'})).concat(Array.from({length: payload.wr.l}, ()=>({res:'L'}))) : []), author: payload.by || '',
-      collected: true, folderId: null,
+      collected: true, folderId: null, format: (payload.f && FMT_SPEC[payload.f]) ? payload.f : 'commander',
       createdAt: Date.now(), updatedAt: Date.now()
     };
     state.decksIndex.unshift(d);
@@ -10679,7 +10727,7 @@ async function renderShowcaseCards(payload, admiralCard){
   const avg = mvN ? (mvSum/mvN).toFixed(2) : '—';
   statsBox.innerHTML = `
     <div class="panel-card" style="margin:0;">
-      <div class="panel-h">${out.main.length + (admiralCard?1:0)}/${DECK_TOTAL} Mana Curve <span style="text-transform:none;color:var(--brass);font-weight:700;float:right;">avg mv ${avg}</span></div>
+      <div class="panel-h">${out.main.length + (admiralCard?1:0)}/${fmtSpec(payload && payload.f || (admiralCard ? 'commander' : 'standard')).min} Mana Curve <span style="text-transform:none;color:var(--brass);font-weight:700;float:right;">avg mv ${avg}</span></div>
       <div class="curve-panel">${curve.map((n,i)=>`<div class="curve-col"><div class="curve-bar" style="height:${n?(14+(n/maxB)*54):2}px"></div><div class="curve-n">${n||''}</div><div class="curve-lbl">${i===6?'6+':i}</div></div>`).join('')}</div>
     </div>`;
   return out;
@@ -16051,9 +16099,18 @@ function comboEndsGames(c){
   if(/win(s)? the game|lose(s)? the game/.test(r)) return true;
   return /(near-)?infinite/.test(r) && /(mana|damage|draw|life)/.test(r);
 }
+/* WHERE a deck is stored decides which rules it plays by: a deck inside a
+   format folder -- directly or in any folder beneath it -- IS that format,
+   whatever its stored field says (the field is brought in line). Only a
+   deck outside every format folder falls back on its own field. */
 function deckFormat(d){
-  if(d && !d.format) d.format = 'commander';
-  return (d && d.format) || 'commander';
+  if(!d) return 'commander';
+  if(d.folderId){
+    const anc = fmtAncestorOf(d.folderId);
+    if(anc && FMT_SPEC[anc]){ if(d.format !== anc) d.format = anc; return anc; }
+  }
+  if(!d.format) d.format = 'commander';
+  return d.format;
 }
 function bracketEstimate(d, combos2){
   let gc = 0;
@@ -16226,8 +16283,8 @@ const FORMAT_RULES = [
   ['vintage', 'Vintage', '60+ cards, sideboard up to 15, max 4 copies, 20 life. All of Magic; the strongest cards are restricted to 1 copy.'],
   ['premodern', 'Premodern', '60-card minimum, 4 copies max, sets from Fourth Edition through Scourge (1995–2003).'],
   ['commander', 'Commander', '100-card singleton led by a legendary commander, 40 life, colour identity rules, official ban list.'],
-  ['paupercommander', 'Pauper Commander', 'Commander, but the 99 are commons and the commander is any uncommon creature. 30 life.'],
-  ['duel', 'Duel Commander', 'Competitive 1v1 Commander: 20 life, its own stricter ban list.'],
+  ['paupercommander', 'Pauper Commander', 'Commander, but the 99 are commons and the commander is any uncommon creature. 30 life, 16 commander damage.'],
+  ['duel', 'Duel Commander', 'Competitive 1v1 Commander: 20 life, no commander damage, no sideboard, its own stricter ban list.'],
   ['predh', 'PreDH', 'Commander frozen in time: only cards printed before New Phyrexia (2011), no cards or rules from after.'],
   ['admiral', 'Admiral', 'This app\u2019s own format: 60-card singleton led by a legendary Admiral, no lands in the deck — mana comes from a shared Landing Zone of basics — with a card pool of everything that was ever Standard-legal and a custom ban list built on gameplay pillars.']
 ];
@@ -16239,8 +16296,8 @@ const FORMAT_RULES_NL = {
   vintage: '60+ kaarten, sideboard tot 15, max. 4 exemplaren, 20 life. Heel Magic; de sterkste kaarten zijn restricted tot 1 exemplaar.',
   premodern: 'Minstens 60 kaarten, max. 4 exemplaren, sets van Fourth Edition tot en met Scourge (1995\u20132003).',
   commander: 'Singleton-deck van 100 kaarten onder leiding van een legendary commander, 40 life, color identity-regels, offici\u00eble banlijst.',
-  paupercommander: 'Commander, maar de 99 zijn commons en de commander is een uncommon creature naar keuze. 30 life.',
-  duel: 'Competitieve Commander voor twee: 20 life en een eigen, strengere banlijst.',
+  paupercommander: 'Commander, maar de 99 zijn commons en de commander is een uncommon creature naar keuze. 30 life, 16 commander damage.',
+  duel: 'Competitieve Commander voor twee: 20 life, geen commander damage, geen sideboard en een eigen, strengere banlijst.',
   predh: 'Commander bevroren in de tijd: alleen kaarten van v\u00f3\u00f3r New Phyrexia (2011), geen kaarten of regels van daarna.',
   admiral: 'Het eigen format van deze app: een singleton-deck van 60 kaarten onder leiding van een legendary Admiral, zonder lands in het deck \u2014 het mana komt uit een gedeelde Landing Zone vol basics \u2014 met als kaartpool alles wat ooit Standard-legal was en een eigen banlijst, gebouwd op speelpijlers.'
 };
@@ -16260,8 +16317,8 @@ const FMT_FULL_NL = {
   vintage: "<div class=\"rules-text\"><h4>Deckbouw</h4><p>Een main deck van minstens 60 kaarten en een sideboard van hooguit 15. Tot vier exemplaren van een kaart — maar een kaart op de <em>restricted</em>-lijst mag maar één keer voorkomen, main deck en sideboard samen. Basic lands zijn onbeperkt.</p><h4>Kaartpool</h4><p>Heel Magic, terug tot Alpha — de Power Nine incluis. Conspiracy-kaarten, ante-kaarten en kaarten met stickers of Attractions zijn gebannen op hun type.</p><h4>Spelen</h4><p>Twee spelers, elk 20 life, een starthand van 7 kaarten en de London mulligan. Toernooien spelen best-of-three; tussen de potjes mag je kaarten één-op-één wisselen met je sideboard.</p><h4>Bans en restricties</h4><p>Bijna niets is gebannen; de sterkste kaarten zijn in plaats daarvan restricted tot één exemplaar. Beide lijsten worden dagelijks opgehaald — zie Banlijsten hierboven.</p></div>",
   pauper: "<div class=\"rules-text\"><h4>Deckbouw</h4><p>Een main deck van minstens 60 kaarten — zonder maximum — en een sideboard van hooguit 15. Niet meer dan vier exemplaren van een kaart met dezelfde Engelse naam, main deck en sideboard samen. Basic lands, en kaarten waarvan de eigen tekst het toestaat, zijn onbeperkt.</p><h4>Kaartpool</h4><p>Elke kaart die ooit als common is uitgebracht, op papier of op Magic Online — welke rarity zijn andere prints ook hebben.</p><h4>Spelen</h4><p>Twee spelers, elk 20 life, een starthand van 7 kaarten en de London mulligan. Toernooien spelen best-of-three; tussen de potjes mag je kaarten één-op-één wisselen met je sideboard.</p><h4>Bans</h4><p>Het Pauper Format Panel stelt de lijst op samen met Wizards of the Coast. De app haalt hem dagelijks op — zie Banlijsten hierboven.</p></div>",
   premodern: "<div class=\"rules-text\"><h4>Deckbouw</h4><p>Minstens 60 kaarten, een sideboard van 15 als je wilt, maximaal 4 exemplaren per kaartnaam (basic lands uitgezonderd).</p><h4>Kaartpool</h4><p>Sets van Fourth Edition tot en met Scourge (1995–2003) — het tijdperk tussen de oudste kaarten van Magic en het moderne kaartframe.</p><h4>Spelen</h4><p>20 life, London mulligan, matches in best-of-three.</p><h4>Bans</h4><p>Een banlijst die de community zelf bijhoudt, afgestemd op een gevarieerde old-school meta — zie Banlijsten hierboven.</p></div>",
-  paupercommander: "<div class=\"rules-text\"><h4>Je commander</h4><p>Elke creature die ooit als <em>uncommon</em> is uitgebracht, mag het deck leiden. Zijn color identity bepaalt de kleuren van het deck, precies zoals in Commander.</p><h4>Deckbouw</h4><p>De commander plus 99 andere kaarten, die elk ooit ergens als <em>common</em> zijn uitgebracht. Singleton: geen twee kaarten met dezelfde naam (basic lands uitgezonderd). Geen enkele kaart mag buiten de color identity van de commander vallen.</p><h4>Spelen</h4><p>Multiplayer; spelers beginnen met 30 life. De commander werkt zoals in Commander — command zone, {2} extra voor elke keer dat je hem opnieuw cast — maar de regel van 21 commander damage geldt niet.</p><h4>Bans</h4><p>Een heel korte communitylijst — de common-rarity doet het meeste werk — zie Banlijsten hierboven.</p></div>",
-  duel: "<div class=\"rules-text\"><h4>Deckbouw</h4><p>Een singleton-deck van 100 kaarten onder leiding van een legendary commander, gebouwd binnen zijn color identity — het Commander-skelet, afgestemd op één tegen één.</p><h4>Spelen</h4><p>Twee spelers, elk 20 life; wie begint, slaat zijn eerste draw over. 21 of meer commander damage van dezelfde commander schakelt een speler nog steeds uit.</p><h4>Bans</h4><p>Een onafhankelijk regelcomité houdt een eigen, strengere banlijst bij, met ook kaarten die alleen <em>als commander</em> gebannen zijn — zie Banlijsten hierboven.</p></div>",
+  paupercommander: "<div class=\"rules-text\"><h4>Je commander</h4><p>Elke creature die ooit als <em>uncommon</em> is uitgebracht, mag het deck leiden. Zijn color identity bepaalt de kleuren van het deck, precies zoals in Commander.</p><h4>Deckbouw</h4><p>De commander plus 99 andere kaarten, die elk ooit ergens als <em>common</em> zijn uitgebracht. Singleton: geen twee kaarten met dezelfde naam (basic lands uitgezonderd). Geen enkele kaart mag buiten de color identity van de commander vallen.</p><h4>Spelen</h4><p>Multiplayer; spelers beginnen met 30 life. De commander werkt zoals in Commander — command zone, {2} extra voor elke keer dat je hem opnieuw cast — en 16 combat damage van dezelfde commander schakelt een speler uit.</p><p>Sinds november 2024 telt alleen een uncommon-druk uit een gewone set (core, expansion, Masters, draft innovation, precons); Secret Lair, promo\u2019s en dergelijke tellen niet mee.</p><h4>Bans</h4><p>Een heel korte communitylijst — de common-rarity doet het meeste werk — zie Banlijsten hierboven.</p></div>",
+  duel: "<div class=\"rules-text\"><h4>Deckbouw</h4><p>Een singleton-deck van 100 kaarten onder leiding van een legendary commander, gebouwd binnen zijn color identity — het Commander-skelet, afgestemd op één tegen één.</p><h4>Spelen</h4><p>Twee spelers, elk 20 life; wie begint, slaat zijn eerste draw over. Commander damage bestaat niet: je wint op life, poison en de gewone manieren. Er wordt zonder sideboard gespeeld.</p><h4>Bans</h4><p>Een onafhankelijk regelcomité houdt een eigen, strengere banlijst bij, met ook kaarten die alleen <em>als commander</em> gebannen zijn — zie Banlijsten hierboven.</p></div>",
   predh: "<div class=\"rules-text\"><h4>Het idee</h4><p>Commander zoals het er in het voorjaar van 2011 uitzag: alleen kaarten van vóór New Phyrexia zijn legaal, en niets wat later kwam — geen planeswalker-commanders, geen partners, geen kaarten die voor Commander-producten zijn ontworpen.</p><h4>Deckbouw</h4><p>Een singleton-deck van 100 kaarten onder leiding van een legendary creature, gebouwd binnen zijn color identity, alleen met prints van vóór 2011.</p><h4>Spelen</h4><p>Multiplayer, 40 life; 21 commander damage van dezelfde commander schakelt een speler uit — de klassieke regels van toen.</p><h4>Bans</h4><p>De banlijst staat stil op de Commander-lijst van 2011 en wordt bewaard door de PreDH-community — zie Banlijsten hierboven.</p></div>"
 };
 function fmtFullRulesHtml(id){
@@ -16275,8 +16332,8 @@ function fmtFullRulesHtml(id){
     vintage: `<div class="rules-text"><h4>Deck construction</h4><p>A main deck of at least 60 cards and a sideboard of up to 15. Up to four copies of any card — but a card on the <em>restricted</em> list may appear only once, main deck and sideboard together. Basic lands are unlimited.</p><h4>Card pool</h4><p>All of Magic, back to Alpha — the Power Nine included. Conspiracy cards, ante cards and cards with stickers or Attractions are banned by type.</p><h4>Playing</h4><p>Two players, 20 life each, a 7-card hand and the London mulligan. Tournaments play best-of-three; between games you may swap cards with your sideboard, one for one.</p><h4>Bans and restrictions</h4><p>Almost nothing is banned; the most powerful cards are restricted to one copy instead. Both lists are fetched daily — see Ban lists above.</p></div>`,
     pauper: `<div class="rules-text"><h4>Deck construction</h4><p>A main deck of at least 60 cards — no maximum — and a sideboard of up to 15. No more than four copies of any card by English name, counting main deck and sideboard together. Basic lands, and cards whose own text says so, are unlimited.</p><h4>Card pool</h4><p>Any card that has ever been printed at common, in paper or on Magic Online — whatever rarity its other printings carry.</p><h4>Playing</h4><p>Two players, 20 life each, a 7-card hand and the London mulligan. Tournaments play best-of-three; between games you may swap cards with your sideboard, one for one.</p><h4>Bans</h4><p>The Pauper Format Panel works with Wizards of the Coast on the list. The app fetches it daily — see Ban lists above.</p></div>`,
     premodern: `<div class="rules-text"><h4>Deck construction</h4><p>At least 60 cards, optional 15-card sideboard, maximum 4 copies of any card by name (basic lands excepted).</p><h4>Card pool</h4><p>Sets from Fourth Edition through Scourge (1995–2003) — the era between Magic's oldest cards and the modern frame.</p><h4>Playing</h4><p>20 life, London mulligan, best-of-three matches.</p><h4>Bans</h4><p>A community-maintained banned list tuned for a diverse old-school metagame — see the Banned List section.</p></div>`,
-    paupercommander: `<div class="rules-text"><h4>Your commander</h4><p>Any creature that has been printed at <em>uncommon</em> rarity may lead the deck. Its color identity sets the deck's colors, exactly as in Commander.</p><h4>Deck construction</h4><p>The commander plus 99 other cards, every one of them printed at <em>common</em> somewhere in Magic's history. Singleton: no two cards share a name (basic lands excepted). No card's color identity may leave the commander's.</p><h4>Playing</h4><p>Multiplayer, players start at 30 life. The commander works as in Commander — command zone, tax of {2} per recast — but the 21-commander-damage rule is not used.</p><h4>Bans</h4><p>A very short community list — common rarity does most of the policing — see the Banned List section.</p></div>`,
-    duel: `<div class="rules-text"><h4>Deck construction</h4><p>A 100-card singleton deck led by a legendary commander, built within its color identity — the Commander skeleton, tuned for one-on-one play.</p><h4>Playing</h4><p>Two players, 20 life each, first player skips their first draw. Commander damage of 21 or more from the same commander still eliminates a player.</p><h4>Bans</h4><p>An independent rules committee maintains a stricter banned list of its own, including cards <em>banned as commander</em> only — see the Banned List section.</p></div>`,
+    paupercommander: `<div class="rules-text"><h4>Your commander</h4><p>Any creature that has been printed at <em>uncommon</em> rarity may lead the deck. Its color identity sets the deck's colors, exactly as in Commander.</p><h4>Deck construction</h4><p>The commander plus 99 other cards, every one of them printed at <em>common</em> somewhere in Magic's history. Singleton: no two cards share a name (basic lands excepted). No card's color identity may leave the commander's.</p><h4>Playing</h4><p>Multiplayer, players start at 30 life. The commander works as in Commander — command zone, tax of {2} per recast — and 16 combat damage from the same commander eliminates a player.</p><p>Since November 2024 only an uncommon printing from a regular product counts (core, expansion, Masters, draft innovation, precons); Secret Lair, promos and the like do not.</p><h4>Bans</h4><p>A very short community list — common rarity does most of the policing — see the Banned List section.</p></div>`,
+    duel: `<div class="rules-text"><h4>Deck construction</h4><p>A 100-card singleton deck led by a legendary commander, built within its color identity — the Commander skeleton, tuned for one-on-one play.</p><h4>Playing</h4><p>Two players, 20 life each, first player skips their first draw. There is no commander damage rule: games are won on life, poison and the usual ways. No sideboards.</p><h4>Bans</h4><p>An independent rules committee maintains a stricter banned list of its own, including cards <em>banned as commander</em> only — see the Banned List section.</p></div>`,
     predh: `<div class="rules-text"><h4>The idea</h4><p>Commander as it stood in spring 2011: only cards printed before New Phyrexia are legal, and nothing that arrived later — no planeswalker commanders, no partners, no cards designed for Commander products.</p><h4>Deck construction</h4><p>A 100-card singleton deck led by a legendary creature, built within its color identity, from pre-2011 printings only.</p><h4>Playing</h4><p>Multiplayer, 40 life, 21 commander damage from the same commander eliminates a player — the classic rules of the era.</p><h4>Bans</h4><p>The banned list is frozen to the Commander list as it stood in 2011, kept by the PreDH community — see the Banned List section.</p></div>`
   };
   return F[id] || `<div class="rules-text"><p>No further rules recorded for this format.</p></div>`;
@@ -17410,7 +17467,7 @@ function themeQueryClause(themeKey, admiralMode){
 /* Inspiration's chosen format drives every leader query on the page. */
 function browseFmt(){ return state.browseFormat || 'commander'; }
 function browseKey(){ return JSON.stringify(state.browseSel) + '|' + browseFmt(); }
-function browseLeaderBase(){ return browseFmt() === 'paupercommander' ? 't:creature r:uncommon' : 't:legendary t:creature'; }
+function browseLeaderBase(){ return browseFmt() === 'paupercommander' ? 't:creature r:uncommon' : browseFmt() === 'duel' ? 'is:duelcommander' : 't:legendary t:creature'; }
 function browseSfOpts(){ return { format: browseFmt() === 'paupercommander' ? 'any' : browseFmt() }; }
 /* Pauper Commander leaders are uncommon creatures, legendary or not. */
 function leaderTypeOk(c){ return isLegendary(c) || (state.screen === 'browse' && browseFmt() === 'paupercommander'); }
@@ -18588,6 +18645,7 @@ const FMT_ICON_CARDS = {
 function leaderArtClause(f){
   return f === 'paupercommander' ? 't:creature r:uncommon'
        : f === 'admiral' ? 't:legendary t:creature'
+       : f === 'duel' ? 'is:duelcommander'
        : 'is:commander';
 }
 function artFmtParam(f){ return (f === 'paupercommander' || f === 'admiral') ? 'any' : f; }
@@ -18948,7 +19006,7 @@ async function _inspFeedWinNames(win){
   }catch(e){ return null; }
 }
 async function _inspFeedFetch(f, win, bg){
-  const q = f === 'paupercommander' ? 't:creature r:uncommon' : f === 'admiral' ? 't:legendary t:creature' : 'is:commander';
+  const q = f === 'paupercommander' ? 't:creature r:uncommon' : f === 'admiral' ? 't:legendary t:creature' : f === 'duel' ? 'is:duelcommander' : 'is:commander';
   const opts = { format: f === 'paupercommander' ? 'any' : f, bg: !!bg };
   const winNames = await _inspFeedWinNames(win);
   const alias = (map, c)=>{ if(!map.has(c.name)) map.set(c.name, c); const cut = c.name.indexOf(' // '); if(cut > 0 && !map.has(c.name.slice(0, cut))) map.set(c.name.slice(0, cut), c); };
@@ -18983,7 +19041,10 @@ async function _inspFeedFetch(f, win, bg){
       }
       const ok = (c)=>{
         const L = c.legalities || {};
-        if(f === 'paupercommander') return L.paupercommander === 'restricted' || L.paupercommander === 'legal';
+        // Since the PDH framework of Nov 2024 an uncommon commander reads
+        // not_legal on Scryfall (legal only in the command zone): any creature
+        // that is not banned may lead.
+        if(f === 'paupercommander') return L.paupercommander !== 'banned' && /Creature/.test(String(c.type_line || ''));
         return L[f] === 'legal';
       };
       const byName = new Map(); cards.filter(ok).forEach(c=>alias(byName, c));
@@ -21799,11 +21860,11 @@ function checkDefeat(p){
   let cause = null;
   if(p.life <= 0) cause = 'life';
   else if(L.settings.poison && p.poison >= 10) cause = 'poison';
-  else if(L.settings.admiralDamage && p.dmg.some(d=>d>=lethalDmg())) cause = 'admiral';
+  else if(L.settings.admiralDamage && lethalDmg() > 0 && p.dmg.some(d=>d>=lethalDmg())) cause = 'admiral';
   if(cause){
     p.defeated = true;
     p.defeatMsg = L.settings.salty ? SALTY_MESSAGES[Math.floor(Math.random()*SALTY_MESSAGES.length)] : 'Defeated.';
-    lifeLog(`⚔ ${p.name} was defeated (${cause==='life'?'0 life':cause==='poison'?'10 poison':lethalDmg()+' '+fmtName()+' damage'}).`);
+    lifeLog(`⚔ ${p.name} was defeated (${cause==='life'?'0 life':cause==='poison'?'10 poison':lethalDmg()+' '+lifeLeaderWord()+' damage'}).`);
   }
 }
 /* Table layouts for the life counter, phone flat in the middle. Per seat:
@@ -22249,8 +22310,10 @@ function renderSettingsPanel(){
   const S = state.life.settings;
   const _lnl = appLang() === 'nl';
   const rows = [
-    {key:'autoKill', label:'Auto-Kill', sub: _lnl ? `Een speler ligt eruit bij 0 life, 10 poison of ${lethalDmg()} ${fmtName()} damage` : `Mark a player defeated at 0 life, 10 poison, or ${lethalDmg()} ${fmtName()} damage`},
-    {key:'admiralDamage', label: _lnl ? `${fmtName()} damage bijhouden` : `Track ${fmtName()} Damage`, sub: _lnl ? `${lethalDmg()} van \u00e9\u00e9n ${fmtName()} is lethal` : `${lethalDmg()} from one ${fmtName()} is lethal`},
+    {key:'autoKill', label:'Auto-Kill', sub: lethalDmg()
+      ? (_lnl ? `Een speler ligt eruit bij 0 life, 10 poison of ${lethalDmg()} ${lifeLeaderWord()} damage` : `Mark a player defeated at 0 life, 10 poison, or ${lethalDmg()} ${lifeLeaderWord()} damage`)
+      : (_lnl ? 'Een speler ligt eruit bij 0 life of 10 poison' : 'Mark a player defeated at 0 life or 10 poison')},
+    ...(lethalDmg() ? [{key:'admiralDamage', label: _lnl ? `${lifeLeaderWord()} damage bijhouden` : `Track ${lifeLeaderWord()} Damage`, sub: _lnl ? `${lethalDmg()} van \u00e9\u00e9n ${lifeLeaderWord()} is lethal` : `${lethalDmg()} from one ${lifeLeaderWord()} is lethal`}] : []),
     {key:'poison', label:'Track Poison', sub: _lnl ? '10 poison counters zijn lethal' : '10 poison counters is lethal'},
     {key:'salty', label:'Salty Defeat Messages', sub:'Show a flavor message on defeat'}
   ];
@@ -22291,7 +22354,7 @@ function lifeBadgeHtml(p, idx){
   const col = from >= 0 ? PLAYER_COLORS[from % PLAYER_COLORS.length].base : '';
   const poison = S.poison !== false
     ? `<span class="lb-grp pz ${p.poison >= 10 ? 'danger' : ''}">${phyrexianSvg(19)}<b>${p.poison}</b></span>` : '';
-  const cmd = S.admiralDamage !== false
+  const cmd = (S.admiralDamage !== false && lethalDmg() > 0)
     ? `<span class="lb-grp cd ${hi ? 'hit' : ''} ${hi >= lethalDmg() ? 'danger' : ''}"${col ? ` style="--lbc:${col}"` : ''}>${cmdrDmgSvg(19)}<b>${hi}</b></span>` : '';
   return (poison + cmd) || '\u2620';
 }
@@ -22312,7 +22375,7 @@ function lifeCardHtml(p, idx, count){
       <div class="life-face front">
         <div class="lval2 ghosted">${p.life}</div>
       </div>
-      <div class="dmg-overlay ${taken>=lethalDmg()?'lethal':''}" data-dmgfrom="${idx}">
+      <div class="dmg-overlay ${lethalDmg() && taken>=lethalDmg()?'lethal':''}" data-dmgfrom="${idx}">
         <div class="tap-zone left" data-dmgside="minus"><span class="tap-glyph">−</span></div>
         <div class="tap-zone right" data-dmgside="plus"><span class="tap-glyph">+</span></div>
         <div class="dmg-ov-val">${taken}</div>
@@ -22351,7 +22414,7 @@ function lifeCardHtml(p, idx, count){
         <div class="lval2" data-setlife="${idx}" title="Tap to set life">${p.life}</div>
         <span class="ldelta plus ${p._delta>0?'show':''} ${p._delta>0&&p._deltaFresh?'pop':''}">${p._delta>0?'+'+p._delta:''}</span>
       </div>
-      <button class="submenu-toggle lbadge" data-idx="${idx}" title="${escapeHtml(appLang() === 'nl' ? 'Poison & ' + fmtName() + ' damage' : 'Poison & ' + fmtName() + ' damage')}">${lifeBadgeHtml(p, idx)}</button>
+      <button class="submenu-toggle lbadge" data-idx="${idx}" title="${escapeHtml('Poison & ' + lifeLeaderWord() + ' damage')}">${lifeBadgeHtml(p, idx)}</button>
       ${p.defeated ? `<div class="defeat-banner"><div class="dtxt">${escapeHtml(p.defeatMsg)}</div><button class="revive-btn" data-idx="${idx}">Revive</button></div>` : ''}
     </div>
   </div></div>`;
@@ -22606,8 +22669,15 @@ function renderModal(){
       <h3>New Game</h3>
       <p style="font-size:13.5px;color:var(--sub-text);margin:-4px 0 12px;">${trS('Pick the table layout — every panel turns to face its seat.')}</p>
       <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;max-height:52vh;overflow-y:auto;">${LIFE_LAYOUTS.map(thumb).join('')}</div>
+      <div class="life-fmt-row">${LIFE_FMTS.map(f=>`<button type="button" class="chip ${lifeFmt()===f?'active':''}" data-lifefmt="${f}">${escapeHtml(lifeFmtLabel(f))}<small>${fmtSpec(f==='constructed'?'standard':f).life}</small></button>`).join('')}</div>
       <div class="modal-actions"><button class="confirm" id="startGameBtn" style="width:100%;">Start &amp; Spin for First Player</button></div>
     </div></div>`;
+    document.querySelectorAll('[data-lifefmt]').forEach(b=>b.addEventListener('click', ()=>{
+      try{ localStorage.setItem(LS_PREFIX + 'lifeFmt', b.dataset.lifefmt); }catch(e){}
+      document.querySelectorAll('[data-lifefmt]').forEach(x=>x.classList.toggle('active', x===b));
+      // every seat preview shows the new starting life at once
+      document.querySelectorAll('.llay-grid b').forEach(x=>{ x.textContent = String(lifeStart()); });
+    }));
     let picked = (LIFE_LAYOUTS.find(x=>x.id===state.life.layout) ? state.life.layout : '4q');
     document.querySelectorAll('[data-setup-lay]').forEach(b=>{
       b.addEventListener('click', ()=>{
@@ -22622,6 +22692,9 @@ function renderModal(){
       state.life.expandedIdx = null;
       state.life.setupDone = true;
       state.life.rotate = true;   // a chosen arrangement means facing seats is the point
+      // The format may have changed since the seats were filled: every
+      // player starts at this format's life.
+      (state.life.players || []).forEach(p=>{ p.life = lifeStart(state.life.count); p.poison = 0; p.dmg = []; p.defeated = false; p.defeatMsg = ''; });
       closeModal();
       renderLifeOverlay();
       animatedHighRoll();
@@ -22701,7 +22774,7 @@ ${FMT_ORDER.map(f=>`<button type="button" data-ndfmt="${f}">${FMT_LABELS[f]}</bu
         if(q.length < 2){ pop.hidden = true; return; }
         const fmt2 = window._ndFmt || 'commander';
         try{
-          const r = await sfFetch(`${SF_BASE}/cards/search?q=${encodeURIComponent(leaderSearchClause(fmt2) + (fmt2 === 'admiral' ? ' ' : ' legal:' + fmt2 + ' ') + q)}`);
+          const r = await sfFetch(`${SF_BASE}/cards/search?q=${encodeURIComponent(leaderSearchClause(fmt2) + (leaderSearchFmt(fmt2) === 'any' || fmt2 === 'admiral' ? ' ' : ' legal:' + fmt2 + ' ') + q)}`);
           if(!r.ok) throw 0;
           const j = await r.json();
           const hits = (j.data || []).slice(0, 24);
