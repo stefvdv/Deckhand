@@ -1311,7 +1311,18 @@ img.art-missing::after{
    container anchors its view at the bottom on open (10a). */
 .cselect.cs-foot .cselect-panel{display:flex;flex-direction:column-reverse;}
 .cselect.cs-foot .cselect-panel > *{flex:0 0 auto;}
+:is(.cselect.cs-up, .browse-selects .cselect, #recoOverlay .cselect, .overlay .reco-themes .cselect, .df-compact .cselect, #logGameOverlay .cselect:not(.cs-cardgrid)) > .cselect-panel:not(.cs-artgrid){display:flex;flex-direction:column-reverse;justify-content:flex-start;}
+:is(.cselect.cs-up, .browse-selects .cselect, #recoOverlay .cselect, .overlay .reco-themes .cselect, .df-compact .cselect, #logGameOverlay .cselect:not(.cs-cardgrid)) > .cselect-panel:not(.cs-artgrid) > *{flex:0 0 auto;}
+:is(.cselect.cs-up, .browse-selects .cselect, #recoOverlay .cselect, .overlay .reco-themes .cselect, .df-compact .cselect, #logGameOverlay .cselect:not(.cs-cardgrid)) > .cselect-panel:not(.cs-artgrid) > .cselect-search,
+.cselect.cs-foot .cselect-panel > .cselect-search{top:auto;bottom:0;border-bottom:none;border-top:1.5px solid var(--pop-line);}
+:is(.cselect.cs-up, .browse-selects .cselect, #recoOverlay .cselect, .overlay .reco-themes .cselect, .df-compact .cselect, #logGameOverlay .cselect:not(.cs-cardgrid)) > .cselect-panel:not(.cs-artgrid) > .cselect-opt:last-child{border-bottom:2px solid var(--line);}
 .ci-nav-wrap{position:relative;display:inline-block;}
+/* Card detail: the card is exactly as wide as the button grid below it. */
+.cd-hero{max-width:330px;}
+/* ...and that grid is always a full 330px: centred with auto margins in the
+   sheet's flex column it used to shrink to its labels (narrower in Dutch). */
+main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
+.cd-hero .ci-nav-wrap{display:block;}
 .ci-nav-arrow{position:absolute;top:63%;transform:translateY(-50%);width:44px;height:64px;border:none;background:none;color:var(--brass);font-size:38px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;z-index:3;text-shadow:0 2px 8px rgba(0,0,0,0.7);}
 .ci-nav-arrow.left{left:-42px;}
 .ci-nav-arrow.right{right:-42px;}
@@ -5511,17 +5522,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.646';
+const APP_VERSION = '2.51.648';
 const CHANGELOG_NOTES = {
   en: [
-    'Update push reopens the changelog',
-    'Spoiler push: only the newest cards',
-    'Spoilers page waits for its sets'
+    'Drop-up lists: filter at the bottom',
+    'First choice sits at the bottom'
   ],
   nl: [
-    'Update-melding toont de changelog',
-    'Spoilermelding: alleen nieuwste kaarten',
-    'Spoilerpagina wacht op de sets'
+    'Uitklaplijst: filter onderaan',
+    'Eerste keuze staat onderaan'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -12773,7 +12782,7 @@ function renderCardSheet(d, card, loc, idx){
     <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><div class="card-price" id="csPrice" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;">Checking price…</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
-        <span style="position:relative;display:block;max-width:270px;width:100%;margin:0 auto;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" alt="${escapeHtml(card.name)}" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
+        <span class="cd-hero" style="position:relative;display:block;width:100%;margin:0 auto;"><img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="dcImg" alt="${escapeHtml(card.name)}" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:13.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${isUBCard(card)?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
         <div style="position:relative;max-width:330px;margin:0 auto;min-height:36px;display:flex;align-items:center;justify-content:center;"><span id="csSaltRow" class="card-price" style="margin:0;font-size:13px;"></span><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
@@ -15049,11 +15058,11 @@ function openCardInfo(card, opts){
     <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><div class="card-price" id="csPrice" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;">Checking price…</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
-        <span style="position:relative;display:block;max-width:270px;width:100%;margin:0 auto;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" alt="${escapeHtml(card.name)}" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
+        <span class="cd-hero" style="position:relative;display:block;width:100%;margin:0 auto;"><img class="${wbClass(card)}" src="${colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)}" id="ciImg" alt="${escapeHtml(card.name)}" style="width:100%;box-shadow:0 12px 30px rgba(0,0,0,0.4);cursor:pointer;">${dfcFlipHtml(card)}</span>
         <div style="color:var(--sub-text);font-size:13.5px;margin:8px 0 4px;">${escapeHtml(card.set_name||'')}${isUBCard(card)?' · 🌌 Universes Beyond':''}${isGameChanger(card)?` · <span class="gc-inline">GC</span> Game Changer`:''}${isPreviewCard(card)?' · 🔮 Spoiler':''} · <a href="${(card.purchase_uris && card.purchase_uris.cardmarket) || ('https://www.cardmarket.com/en/Magic/Products/Search?searchString=' + encodeURIComponent(card.name))}" target="_blank" rel="noopener" style="color:var(--brass);text-decoration:none;">Cardmarket ↗</a></div>
         <div style="position:relative;max-width:330px;margin:0 auto;min-height:36px;display:flex;align-items:center;justify-content:center;"><span id="csSaltRow" class="card-price" style="margin:0;font-size:13px;"></span><button type="button" class="ghost-btn" data-cmbbtn style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:auto;padding:7px 11px;">∞</button></div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px;max-width:330px;margin:0 auto 6px;">
+      <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
           ${colIdx!=null ? `
           <button class="ghost-btn" id="ciAddOne" style="width:100%;color:var(--brass);border-color:var(--brass);">＋ ${trS('Add one')}</button>
