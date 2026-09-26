@@ -5522,15 +5522,17 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.648';
+const APP_VERSION = '2.51.650';
 const CHANGELOG_NOTES = {
   en: [
-    'Drop-up lists: filter at the bottom',
-    'First choice sits at the bottom'
+    'Recommendations: all EDHREC sections',
+    'Enchantments, Lands and more are back',
+    'No more \'Other\' section'
   ],
   nl: [
-    'Uitklaplijst: filter onderaan',
-    'Eerste keuze staat onderaan'
+    'Aanbevelingen: alle EDHREC-secties',
+    'Enchantments, Lands e.d. zijn terug',
+    'Geen \'Other\'-sectie meer'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -14830,27 +14832,19 @@ function attachSwipeNav(el, onNext, onPrev, meta){
      The chevrons run the same glide, minus the finger. One engine for every
      sheet — decklist, search results, spoilers, collection stacks. */
   const paneEl = ()=> el.querySelector('.overlay-inner > main') || el.querySelector('main');
-  // The just-navigated-to card enters from the side the old one left toward.
-  if(el._slideInDir){
-    const dirIn = el._slideInDir; el._slideInDir = 0;
-    const m = paneEl();
-    if(m){
-      const W0 = window.innerWidth || 360;
-      m.style.willChange = 'transform';
-      m.style.transition = 'none';
-      m.style.transform = `translateX(${dirIn * W0 * 0.6}px)`;
-      m.style.opacity = '0.3';
-      requestAnimationFrame(()=>{
-        m.style.transition = 'transform 200ms cubic-bezier(.22,.9,.3,1), opacity 200ms ease-out';
-        m.style.transform = 'translateX(0)';
-        m.style.opacity = '1';
-        setTimeout(()=>{ m.style.transition=''; m.style.transform=''; m.style.opacity=''; m.style.willChange=''; }, 240);
-      });
-    }
-  }
+  /* A carousel, not a cut: on release the leaving sheet keeps sliding out
+     while the NEXT sheet -- the whole sheet, not just its card -- slides in
+     from exactly where its card was under the finger, both on one curve.
+     The incoming card image rides on top until the new sheet's own image
+     has loaded, so the card never blanks or pops in late.
+     Transforms on the sheet are divided by its CSS zoom (0.9), so sheet and
+     card move the same number of pixels as the finger. */
+  const zoomOf = (n)=>{ try{ return parseFloat(getComputedStyle(n).zoom) || 1; }catch(e){ return 1; } };
+  const setX = (n, px)=>{ if(n) n.style.transform = px ? `translateX(${px / zoomOf(n)}px)` : ''; };
   function slideCommit(which){
     const m = paneEl();
     const W0 = window.innerWidth || 360;
+    if(Date.now() < (el._swipeAnimUntil || 0)) return;      // one glide at a time
     if(which && !can(which)){                               // end of the chain: flash, never glide out
       edgeFlash(which === 'next' ? 'right' : 'left');
       which = null;
@@ -14858,33 +14852,78 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     if(!which){                                             // short drag: snap home
       const g0 = el._swipeGhost;
       if(g0){
-        g0.style.transition = 'transform 150ms ease-out, opacity 150ms ease-out';
-        g0.style.opacity = '0';
-        setTimeout(killGhost, 170);
+        g0.style.transition = 'transform 160ms ease-out, opacity 160ms ease-out';
+        g0.style.transform = `translate(${curDx < 0 ? W0 : -W0}px, -50%)`;
+        setTimeout(killGhost, 180);
       }
       if(m){
-        m.style.transition = 'transform 150ms ease-out, opacity 150ms ease-out';
-        m.style.transform = 'translateX(0)'; m.style.opacity = '1';
-        setTimeout(()=>{ if(m){ m.style.transition=''; m.style.transform=''; m.style.opacity=''; m.style.willChange=''; } }, 170);
+        m.style.transition = 'transform 160ms ease-out, opacity 160ms ease-out';
+        setX(m, 0); m.style.opacity = '1';
+        setTimeout(()=>{ if(m){ m.style.transition=''; m.style.transform=''; m.style.opacity=''; m.style.willChange=''; } }, 180);
       }
+      curDx = 0;
       return;
     }
-    const gC = el._swipeGhost;
-    if(gC){
-      gC.style.transition = 'transform 150ms ease-in';
-      gC.style.transform = 'translate(0px, -50%)';
-      setTimeout(killGhost, 200);
+    const out = which === 'next' ? -1 : 1;                  // the side the old sheet leaves toward
+    const dx0 = curDx; curDx = 0;
+    const inX = -out * W0 + dx0;                            // where the incoming card is now
+    // A chevron tap has no ghost yet: the incoming card starts just off-screen.
+    let g = el._swipeGhost;
+    const src = peek(which);
+    if(!g && src){
+      g = ghostEl(); g.src = src; g.style.transition = 'none';
+      g.style.transform = `translate(${inX}px, -50%)`; g.style.opacity = '1';
     }
-    const out = which === 'next' ? -1 : 1;
-    el._slideInDir = -out;
-    if(m){
-      m.style.willChange = 'transform';
-      m.style.transition = 'transform 150ms ease-in, opacity 150ms ease-in';
-      m.style.transform = `translateX(${out * W0 * 0.6}px)`;
-      m.style.opacity = '0.25';
-    }
+    // The leaving sheet, measured before the new one replaces it.
+    const inner = m && m.parentElement;
+    const ir = inner ? inner.getBoundingClientRect() : null;
+    const mr = m ? m.getBoundingClientRect() : null;
+    const scrollTop = m ? m.scrollTop : 0, oldOp = m ? (m.style.opacity || '1') : '1';
+    const dur = Math.round(Math.max(180, Math.min(300, (W0 - Math.abs(dx0)) / W0 * 320)));
+    const ease = 'cubic-bezier(.2,.75,.25,1)';
+    el._swipeAnimUntil = Date.now() + dur + 60;
     try{ navigator.vibrate && navigator.vibrate(6); }catch(err){}
-    setTimeout(()=>{ which === 'next' ? onNext() : onPrev(); }, 110);
+    which === 'next' ? onNext() : onPrev();                 // renders the new sheet in place, synchronously
+    const nm = paneEl();
+    if(g && !g.isConnected) el.appendChild(g);              // the re-render emptied the overlay
+    let wrap = null;
+    if(m && nm && nm !== m && ir && mr){
+      // The old sheet goes back in, frozen, in a twin of its old frame.
+      wrap = document.createElement('div');
+      wrap.className = 'overlay-inner swipe-leaving';
+      wrap.style.cssText = `position:fixed;left:${ir.left}px;top:${mr.top}px;width:${ir.width}px;height:${mr.height}px;max-width:none;margin:0;pointer-events:none;z-index:120;transform:translateX(${dx0}px);`;
+      m.style.transition = 'none'; m.style.transform = ''; m.style.opacity = oldOp;
+      wrap.appendChild(m);
+      el.appendChild(wrap);
+      m.scrollTop = scrollTop;
+      nm.style.willChange = 'transform'; nm.style.transition = 'none';
+      setX(nm, inX);
+    } else if(m && nm === m){
+      // No re-render (yet): the old sheet simply leaves.
+      m.style.transition = `transform ${dur}ms ${ease}, opacity ${dur}ms ${ease}`;
+      setX(m, out * W0); m.style.opacity = '0.4';
+    }
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      if(wrap){
+        wrap.style.transition = `transform ${dur}ms ${ease}`;
+        wrap.style.transform = `translateX(${out * W0}px)`;
+        m.style.transition = `opacity ${dur}ms ${ease}`; m.style.opacity = '0.4';
+      }
+      if(nm && nm !== m){ nm.style.transition = `transform ${dur}ms ${ease}`; setX(nm, 0); }
+      if(g){ g.style.transition = `transform ${dur}ms ${ease}`; g.style.transform = 'translate(0px, -50%)'; }
+    }));
+    setTimeout(()=>{
+      if(wrap) wrap.remove();
+      const cur = paneEl();
+      [nm, cur].forEach(x=>{ if(x){ x.style.transition=''; x.style.transform=''; x.style.opacity=''; x.style.willChange=''; } });
+      // The riding card leaves only once the sheet's own image can take over.
+      const gg = el._swipeGhost;
+      if(!gg) return;
+      const hero = el.querySelector('.card-detail img');
+      const fade = ()=>{ if(el._swipeGhost !== gg) return; gg.style.transition = 'opacity 90ms linear'; gg.style.opacity = '0'; setTimeout(()=>{ if(el._swipeGhost === gg) killGhost(); }, 110); };
+      if(!hero || (hero.complete && hero.naturalWidth)) fade();
+      else { hero.addEventListener('load', fade, {once:true}); hero.addEventListener('error', fade, {once:true}); setTimeout(fade, 1200); }
+    }, dur + 30);
   }
   // Chevrons flank the hero image at its vertical middle — same glide.
   const img = el.querySelector('.card-detail img');
@@ -14922,6 +14961,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
   };
   const tm = (e)=>{
     if(!armed) return;
+    if(Date.now() < (el._swipeAnimUntil || 0)){ armed = false; return; }
     const t = e.touches[0];
     const dx = t.clientX - sx, dy = t.clientY - sy;
     if(!engaged){
@@ -14939,8 +14979,8 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     curDx = useDx;
     const m = paneEl();
     if(m){
-      m.style.transform = `translateX(${useDx}px)`;
-      m.style.opacity = String(Math.max(0.4, 1 - Math.abs(useDx) / W * 0.8));
+      setX(m, useDx);
+      m.style.opacity = String(Math.max(0.55, 1 - Math.abs(useDx) / W * 0.6));
     }
     if(allowed){
       const src = peek(dirW);
@@ -18373,13 +18413,13 @@ async function loadEdhrecSectionedBrowse(box, key, slug, what){
   const topCmd = take(sec.topCmd).filter(leaderOk).filter(c=>!newCmd.includes(c));
   const leaders = newCmd.concat(topCmd);
   // The theme's recommended cards — leaders already shown above are noise here.
-  // Forward dedupe: each card appears once, in the first section EDHREC
-  // lists it under — leaders shown above never repeat below.
+  // Every EDHREC list keeps all its cards, as on EDHREC itself: a saga in
+  // High Synergy Cards is in Enchantments too, so each type list is whole.
   const shown = new Set(leaders);
   const cardSecs = [];
   for(const cs of (sec.cardSections || [])){
-    const list = take(cs.names).filter(cardOk).filter(c=>!shown.has(c));
-    list.forEach(c=>shown.add(c));
+    const seenHere = new Set();
+    const list = take(cs.names).filter(cardOk).filter(c=>!shown.has(c) && !seenHere.has(c) && seenHere.add(c));
     if(list.length) cardSecs.push({ header: cs.header, list });
   }
   if(!leaders.length){
@@ -18387,7 +18427,7 @@ async function loadEdhrecSectionedBrowse(box, key, slug, what){
     return;
   }
   const S = { newCmd, topCmd, cardSecs, meta: sec.meta || {}, rel: sec.rel || [] };
-  const pool = leaders.concat(...cardSecs.map(x=>x.list));
+  const pool = Array.from(new Set(leaders.concat(...cardSecs.map(x=>x.list))));
   pool._complete = true;
   pool._sections = S;
   state.browseCache[key] = pool;
@@ -20044,13 +20084,58 @@ async function loadCardReco(card, themes, forDeck, comboKey){
     (results||[]).filter(c=> landOk(c) && !isBanned(c) && c.name !== card.name && !seen.has(c.name)).forEach(c=>pool.push(c));
   }
   pool = pool.slice(0, 150);
+  // EDHREC's own page for this card: its card lists (not the commander
+  // lists) become the sections, in the colours this page is limited to.
+  let edhSecs = [];
+  try{
+    const data = await edhrecFetchJson('/pages/cards/' + edhrecSlug(card.name) + '.json');
+    edhSecs = edhrecSectionsFrom(data).filter(x=>!/commander/i.test(x.header));
+  }catch(e){}
+  if(edhSecs.length && edhSecs.reduce((n, x)=>n + x.names.length, 0) >= 12){
+    const idSet = comboKey ? new Set(comboKey === 'c' ? [] : comboKey.toUpperCase().split(''))
+      : (forDeck && forDeck.admiral) ? new Set(deckLeaders(forDeck).flatMap(x=>x.color_identity || [])) : null;
+    const keepE = (c)=> landOk(c) && !isBanned(c) && c.name !== card.name && (!idSet || (c.color_identity || []).every(x=>idSet.has(x)));
+    const all = []; const seenN = new Set();
+    edhSecs.forEach(x=>x.names.forEach(n=>{ if(!seenN.has(n)){ seenN.add(n); all.push(n); } }));
+    try{
+      const got = await resolveEdhrecNames(all.slice(0, 300), keepE);
+      if(got.length >= 6) pool = got;
+      else edhSecs = [];
+    }catch(e){ edhSecs = []; }
+  } else edhSecs = [];
   const box = document.getElementById('crBody');
   if(!box) return;   // overlay closed meanwhile
   if(!pool.length){ box.innerHTML = `<div class="empty-note">No recommendations found for this card.</div>`; return; }
   const roleTxt = cardTags.length ? ` — sharing its role${cardTags.length>1?'s':''} (${cardTags.slice(0,3).map(escapeHtml).join(', ')})` : '';
-  box.innerHTML = `<p class="hint" style="margin:0 0 4px;text-align:center;">Cards that play well with ${escapeHtml(card.name)}${roleTxt}, most-played first.</p>`;
-  pagedGrid(box, pool, (c)=>searchRowHtml(c, forDeck, {showAdmiralBtn:true}),
-    (chunk)=>{ wireResultButtons(pool, forDeck, ()=>loadCardReco(card, themes, forDeck)); loadTilePrices(chunk); });
+  box.innerHTML = `<p class="hint" style="margin:0 0 4px;text-align:center;">Cards that play well with ${escapeHtml(card.name)}${edhSecs.length ? '' : roleTxt}, most-played first.</p>`;
+  const groups = edhGroupPool(pool, edhSecs).map(g=>({ title: trS(g.title), cards: g.cards }));
+  const rewire = ()=>loadCardReco(card, themes, forDeck, comboKey);
+  if(groups.length < 2){
+    pagedGrid(box, pool, (c)=>searchRowHtml(c, forDeck, {showAdmiralBtn:true}),
+      (chunk)=>{ wireResultButtons(pool, forDeck, rewire); loadTilePrices(chunk); });
+    return;
+  }
+  // Bottom-up: #crBody sits ABOVE the card in a column-reverse main, so its
+  // DOM-last child is nearest the foot -- EDHREC's first section goes last.
+  // Inside a section the label rides under its cards (.edh-sec order).
+  const CAP = 12;
+  const secHtml = (g, i)=>`<div class="edh-sec" data-csec="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > CAP ? `<button class="ghost-btn edh-more" data-csec="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid" data-csg="${i}">${g.cards.slice(0, CAP).map(c=>searchRowHtml(c, forDeck, {showAdmiralBtn:true})).join('')}</div></div>`;
+  box.insertAdjacentHTML('beforeend', groups.map((g, i)=>({ g, i })).reverse().map(x=>secHtml(x.g, x.i)).join('')
+    + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="crJump" title="${trS('Jump to section')}">☰</button></div>`);
+  wireResultButtons(pool, forDeck, rewire);
+  loadTilePrices(groups.flatMap(g=>g.cards.slice(0, CAP)).slice(0, 36));
+  box.querySelectorAll('.edh-more[data-csec]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const g = groups[+btn.dataset.csec]; const gr = box.querySelector(`.sr-grid[data-csg="${btn.dataset.csec}"]`);
+    if(!g || !gr) return;
+    const have = gr.children.length, next = Math.min(g.cards.length, have + CAP);
+    gr.insertAdjacentHTML('beforeend', g.cards.slice(have, next).map(c=>searchRowHtml(c, forDeck, {showAdmiralBtn:true})).join(''));
+    wireResultButtons(pool, forDeck, rewire); loadTilePrices(g.cards.slice(have, next));
+    if(next >= g.cards.length) btn.remove();
+  }));
+  document.getElementById('crJump')?.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    openTileMenu(e.currentTarget, groups.map((g, i)=>({ label: g.title, fn: ()=>{ box.querySelector(`.edh-sec[data-csec="${i}"]`)?.scrollIntoView({ behavior:'smooth', block:'end' }); } })));
+  });
 }
 
 /* ---------------- BUDGET ALTERNATIVES ----------------
@@ -20754,6 +20839,70 @@ async function edhrecFetchJson(path){
   if(data) qdbSet(key, data);   // failures are never stored — a bad day can't poison a week; qdbSet adds the {t,v} wrap
   return data;
 }
+/* EDHREC's card-type sections, in EDHREC's own page order. (\x7b is '{' --
+   written so for the source-reading tests.) A card that no
+   list of the page names (a stand-in, a fallback pick) joins the section of
+   its own type under EDHREC's name for it -- there is no "Other" pile. */
+const EDH_SECTION_ORDER = ['New Cards','High Synergy Cards','Top Cards','Game Changers','Creatures','Instants','Sorceries','Utility Artifacts','Enchantments','Battles','Planeswalkers','Utility Lands','Mana Artifacts','Lands'];
+function edhNameKey(n){
+  return String(n || '').split(' // ')[0].normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+function edhTypeHeader(c){
+  const f = frontFace(c) || c;
+  const tl = String(f.type_line || c.type_line || '');
+  const ot = String(f.oracle_text || c.oracle_text || '');
+  const makesMana = /add \x7b|add one mana|add two mana|add three mana|mana of any|add an amount of/i.test(ot);
+  if(/Creature/.test(tl)) return 'Creatures';
+  if(/Planeswalker/.test(tl)) return 'Planeswalkers';
+  if(/Battle/.test(tl)) return 'Battles';
+  if(/Instant/.test(tl)) return 'Instants';
+  if(/Sorcery/.test(tl)) return 'Sorceries';
+  if(/Land/.test(tl)){
+    if(/Basic/.test(tl)) return 'Lands';
+    // A land that only makes mana (tapped or not, fetching a basic) is a
+    // Land; anything with a further ability is a Utility Land, as on EDHREC.
+    const lines = ot.replace(/\([^)]*\)/g, '').split('\n').map(x=>x.trim()).filter(Boolean);
+    const plain = lines.every(l=>/add \x7b|add one mana|add two mana|mana of any|enters( the battlefield)? tapped|as .{0,40} enters|you may pay \d+ life|you may reveal|search your library for an? (basic )?[a-z ]*land|sacrifice [^:]*: search|choose a (color|basic land type)/i.test(l));
+    return plain ? 'Lands' : 'Utility Lands';
+  }
+  if(/Enchantment/.test(tl)) return 'Enchantments';
+  if(/Artifact/.test(tl)) return makesMana ? 'Mana Artifacts' : 'Utility Artifacts';
+  const w = tl.split(' — ')[0].trim().split(/\s+/).pop() || 'Card';
+  return /y$/.test(w) ? w.slice(0, -1) + 'ies' : w + 's';
+}
+/* The pool into EDHREC's sections: each list keeps every card of the pool it
+   names (a card can sit in High Synergy AND in its type list, exactly like on
+   EDHREC); what no list names goes to its type section, which is created in
+   EDHREC's order when the page had none. Returns [{title, cards}]. */
+function edhGroupPool(pool, sections){
+  const byKey = new Map();
+  (pool || []).forEach(c=>{ const k = edhNameKey(c.name); if(!byKey.has(k)) byKey.set(k, c); });
+  const named = new Set(), groups = [];
+  (sections || []).forEach(sec=>{
+    const seen = new Set(), cards = [];
+    (sec.names || []).forEach(n=>{ const c = byKey.get(edhNameKey(n)); if(c && !seen.has(c.name)){ seen.add(c.name); named.add(c.name); cards.push(c); } });
+    if(!cards.length) return;
+    const same = groups.find(g=>g.title === sec.header);
+    if(same) cards.forEach(c=>{ if(!same.cards.includes(c)) same.cards.push(c); });
+    else groups.push({ title: sec.header, cards });
+  });
+  const rank = (t)=>{ const i = EDH_SECTION_ORDER.indexOf(t); return i < 0 ? 99 : i; };
+  const added = [];
+  (pool || []).forEach(c=>{
+    if(named.has(c.name)) return;
+    named.add(c.name);
+    const h = edhTypeHeader(c);
+    let g = groups.find(x=>x.title === h) || added.find(x=>x.title === h);
+    if(!g){ g = { title: h, cards: [] }; added.push(g); }
+    g.cards.push(c);
+  });
+  added.sort((a, b)=>rank(a.title) - rank(b.title)).forEach(g=>{
+    let at = groups.length;
+    for(let i = 0; i < groups.length; i++){ const r = rank(groups[i].title); if(r !== 99 && r > rank(g.title)){ at = i; break; } }
+    groups.splice(at, 0, g);
+  });
+  return groups;
+}
 function edhrecSectionsFrom(data){
   // EDHREC's own section headers, in page order: Top Cards, High Synergy
   // Cards, New Cards, Creatures, Instants, … Names only — kept slim so the
@@ -21012,7 +21161,9 @@ async function _loadRecoPoolOnline(){
       R.themes = page.themes || [];
       R.sections = page.sections || [];
       mergeEdhrecTags(R.themes);
-      const names = (page.names || []).slice(0, 90);
+      // Every card EDHREC lists, not the first 90: those ran out halfway
+      // (Instants), so Enchantments, Lands and the rest never showed.
+      const names = (page.names || []).slice(0, 400);
       if(names.length >= 20){
         const rank = new Map(names.map((n,i)=>[n,i]));
         const byRank = (a,b)=>(rank.has(a.name)?rank.get(a.name):999)-(rank.has(b.name)?rank.get(b.name):999);
@@ -21031,16 +21182,16 @@ async function _loadRecoPoolOnline(){
         let pool = got.filter(keep).sort(byRank);
         if(pool.length >= 10){
           R.loading = false; R.edhrecSourced = true;
-          R.pool = pool.slice(0, 180);
+          R.pool = pool.slice(0, 400);
           renderRecoBody();
         }
         (await Promise.all(proms.slice(1))).forEach(absorb);
         if(!state.reco || state.reco !== R) return;
         pool = got.filter(keep).sort(byRank);
-        if(pool.length >= 10) state._recoCache[recoCacheKey(R.admiral, R.partner)] = { pool: pool.slice(0, 180), themes: (R.themes||[]).slice(), sections: (R.sections||[]).slice(), edhrecSourced: true };
+        if(pool.length >= 10) state._recoCache[recoCacheKey(R.admiral, R.partner)] = { pool: pool.slice(0, 400), themes: (R.themes||[]).slice(), sections: (R.sections||[]).slice(), edhrecSourced: true };
         if(pool.length >= 10){
           R.loading = false; R.edhrecSourced = true;
-          R.pool = pool.slice(0, 180);
+          R.pool = pool.slice(0, 400);
           R._mainPool = R.pool;
           renderRecoBody();
           // Arrived here from a play-data theme on the browse page? Follow
@@ -21121,13 +21272,13 @@ async function loadRecoTheme(slug){
   if(box) box.innerHTML = `<div class="status"><div class="spinner"></div>${trS('Charting themed recommendations…')}</div>`;
   try{
     const tp = R.partner ? await edhrecPairThemePage(R.admiral, R.partner, slug) : await edhrecThemePage(R.admiral, slug);
-    const names = (tp.names || []).slice(0, 60);
+    const names = (tp.names || []).slice(0, 400);
     if(!state.reco || state.reco !== R || R.activeThemeSlug !== slug) return;
     const keep = (c)=> (R.format !== 'admiral' || isNonlandFront(c)) && !isBanned(c, R.format) && c.name !== R.admiral.name && (!R.partner || c.name !== R.partner.name);
     const pool = names.length ? await resolveEdhrecNames(names, keep) : [];
     if(!state.reco || state.reco !== R || R.activeThemeSlug !== slug) return;
     if(pool.length >= 8){
-      R.pool = pool.slice(0, 180);
+      R.pool = pool.slice(0, 400);
       R.themeSections = tp.sections || [];   // the theme page's own headers, for the sectioned view
     } else {
       toast('No themed play data for this leader.');
@@ -21248,16 +21399,11 @@ function renderRecoBody(){
   // Theme views carry EDHREC's own section headers too (New Cards, Top
   // Cards, Creatures, …) — same layout and ☰ jump menu as the main list.
   const secSrc = activeTheme ? (R.themeSections || []) : ((R.edhrecSourced && R.sections) || []);
-  if(secSrc.length >= 2){
-    const byName = new Map(pool.map(c=>[c.name, c]));
-    const used = new Set();
-    secSrc.forEach(s=>{
-      const cards = s.names.map(n=>byName.get(n)).filter(c=>c && !used.has(c.name));
-      cards.forEach(c=>used.add(c.name));
-      if(cards.length) groups.push({ title: trS(s.header), cards });
-    });
-    const rest = pool.filter(c=>!used.has(c.name));
-    if(rest.length) groups.push({ title: trS('Other'), cards: rest });
+  // EDHREC's own sections (all of them), and whatever no list names in its
+  // type section -- also for the app's own synergy picks when EDHREC is out.
+  const _eg = edhGroupPool(pool, secSrc);
+  if(_eg.length >= 2){
+    _eg.forEach(g=>groups.push({ title: trS(g.title), cards: g.cards }));
     // Bottom-up, per the charter: EDHREC serves its best sections FIRST
     // (New Cards, High Synergy …) — reversed, they land at the page FOOT
     // where the eye starts, with Other and the type sections climbing away.
