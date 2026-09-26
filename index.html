@@ -370,6 +370,11 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main:has(> #browseResults:not(:empty)) > .browse-hero,
 .app > main:has(> #bsNameResults:not(:empty)) > .browse-hero{display:none;}
 .app > main:has(> .browse-selects){padding-bottom:calc(var(--nav-h) + 6px + env(safe-area-inset-bottom));}
+/* Inspiration: the free room goes ABOVE the results, not between them and
+   the pickers -- one found leader rests right on the selects (bottom-up).
+   The page's pusher spacer moves to the very top for this page. */
+.app > main:has(> .browse-selects)::before{order:-1 !important;}
+.app > main > .browse-selects{margin-top:10px;}
 .browse-selects .cselect-panel{top:auto;bottom:calc(100% + 4px);}
 /* The recommendation page's Theme and Kindred lists are drop-ups too --
    they sit at the foot of the sheet, so a list that opened downward ran
@@ -5528,17 +5533,13 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.651';
+const APP_VERSION = '2.51.652';
 const CHANGELOG_NOTES = {
   en: [
-    'Card view: whole card below the name',
-    'Salt score in the top-left corner',
-    'Combos button next to Tags'
+    'Inspiration: results sit on the filters'
   ],
   nl: [
-    'Kaartweergave: kaart helemaal zichtbaar',
-    'Salt-score linksboven',
-    'Combo-knop naast Tags'
+    'Inspiratie: resultaat direct op filters'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
