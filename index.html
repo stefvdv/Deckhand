@@ -787,7 +787,8 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .dock-search-wrap{flex:1;min-width:0;display:flex;align-items:center;}
 /* Searching the deck: the commander block, description and game log step
    aside -- only the matching cards remain. */
-body.dl-searching .dl-bridge{display:none !important;}
+body.dl-searching .dl-bridge > :not(#dlPanelBox){display:none !important;}
+body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 .dock-search-wrap .dock-search{padding-right:36px;}
 .dock-search{flex:1;min-width:0;background:rgba(10,26,40,0.55);border:1.5px solid var(--field-line);border-radius:10px;color:var(--text);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:14px;-webkit-appearance:none;appearance:none;}
 .dock-search:focus{outline:none;border-color:var(--brass);}
@@ -1319,6 +1320,7 @@ img.art-missing::after{
 .cselect-btn:disabled{opacity:0.45;cursor:default;}
 .cselect-btn .cs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cselect-btn .cs-car{font-size:11px;color:var(--sub-text);flex:0 0 auto;}
+.ph-movers{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
 .col-tile .col-bnd{color:var(--brass);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .name-suggest{position:fixed;z-index:10060;display:flex;flex-direction:column-reverse;overflow-y:auto;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;box-shadow:0 -10px 26px rgba(0,0,0,0.5);}
 .name-suggest .ns-opt{flex:0 0 auto;display:block;width:100%;text-align:left;background:none;border:none;border-top:1.5px solid var(--line);color:var(--ink-text);padding:11px 14px;font-size:15px;font-family:'Inter';cursor:pointer;}
@@ -5554,13 +5556,17 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.655';
+const APP_VERSION = '2.51.656';
 const CHANGELOG_NOTES = {
   en: [
-    'No Jumpstart front cards in search'
+    'Deck filter opens while searching',
+    'Risers and fallers: up to 20 each',
+    'Name suggestions on Search only'
   ],
   nl: [
-    'Geen Jumpstart-themakaarten meer'
+    'Deckfilter opent tijdens zoeken',
+    'Stijgers en dalers: tot 20 elk',
+    'Naamsuggesties alleen bij Zoeken'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -8577,17 +8583,6 @@ function wireCollectionPage(){
       if(el){ el.focus(); const v = el.value; el.value = ''; el.value = v; }
     };
     colQ?.addEventListener('input', ()=>{ clearTimeout(cqT); cqT = setTimeout(applyColQ, 300); });
-    wireNameSuggest(colQ, ()=>{
-      const f = state.colFilter || {};
-      const src = f.binder === '__wants__' ? computeWants()
-        : (f.binder && f.binder !== '__all__') ? state.collection.items.filter(it=>it.binder === f.binder)
-        : state.collection.items;
-      return Array.from(new Set(src.map(it=>it && it.name).filter(Boolean)));
-    }, (name)=>{
-      const el = document.getElementById('colSearchQ');
-      if(el) el.value = name;
-      clearTimeout(cqT); applyColQ();
-    });
     colQ?.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ clearTimeout(cqT); applyColQ(); } });
   }
 
@@ -12866,15 +12861,6 @@ function wireMeterRow(d){
         scrollToPageFoot();
       });
       dsi.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); try{ dsi.blur(); }catch(err){} } });
-      // Suggestions: only the names in THIS deck (main, maybe/side, leaders).
-      wireNameSuggest(dsi, ()=>Array.from(new Set(deckLeaders(d).concat(d.cards || [], ensureMaybeboard(d)).map(c=>c && c.name).filter(Boolean))), (name)=>{
-        const el = document.getElementById('dockSearchInput');
-        if(el) el.value = name;
-        state.dlSearchQ = name;
-        const box = document.getElementById('decklistBox');
-        if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
-        scrollToPageFoot();
-      });
       if(state._dlSearchFocus){
         state._dlSearchFocus = false;
         requestAnimationFrame(()=>{ try{ dsi.focus(); dsi.setSelectionRange(dsi.value.length, dsi.value.length); }catch(e){} });
@@ -16541,13 +16527,13 @@ function openPriceHistory(card, key){
         if(h.length >= 2){ const dlt = h[h.length - 1][1] - h[0][1]; if(Math.abs(dlt) >= 0.01) deltas.push([nm, dlt]); }
       });
       deltas.sort((a2, z2)=>z2[1] - a2[1]);
-      const up = deltas.filter(x=>x[1] > 0).slice(0, 5);
-      const down = deltas.filter(x=>x[1] < 0).slice(-5).reverse();
+      const up = deltas.filter(x=>x[1] > 0).slice(0, 20);
+      const down = deltas.filter(x=>x[1] < 0).slice(-20).reverse();
       const row = (nm, dv)=>`<div data-phcard="${encodeURIComponent(nm)}" role="button" style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:13.5px;cursor:pointer;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(nm)}</span><span style="font-family:'JetBrains Mono',monospace;color:${dv > 0 ? 'var(--brass)' : 'var(--danger)'};">${dv > 0 ? '+' : ''}€${dv.toFixed(2)}</span></div>`;
       movers = (up.length || down.length)
         ? `<div style="max-width:520px;margin:14px auto 0;">
-            ${up.length ? `<div class="panel-h" style="margin:0 0 4px;">Biggest risers</div>${up.map(x=>row(x[0], x[1])).join('')}` : ''}
-            ${down.length ? `<div class="panel-h" style="margin:10px 0 4px;">Biggest fallers</div>${down.map(x=>row(x[0], x[1])).join('')}` : ''}
+            ${up.length ? `<div class="panel-h" style="margin:0 0 4px;">Biggest risers</div><div class="ph-movers">${up.map(x=>row(x[0], x[1])).join('')}</div>` : ''}
+            ${down.length ? `<div class="panel-h" style="margin:10px 0 4px;">Biggest fallers</div><div class="ph-movers">${down.map(x=>row(x[0], x[1])).join('')}</div>` : ''}
           </div>`
         : `<p class="hint" style="text-align:center;margin-top:12px;">No card has two recorded days yet — movers appear as histories grow.</p>`;
     }
@@ -16556,6 +16542,12 @@ function openPriceHistory(card, key){
   document.body.appendChild(el);
   wireOverlayNav(el);
   pushOverlay('pricehist', ()=>{ document.getElementById('phOverlay')?.remove(); });
+  // Five rows in view, like before; the rest (up to 20) scroll inside.
+  el.querySelectorAll('.ph-movers').forEach(box=>{
+    const r0 = box.firstElementChild;
+    const h = r0 ? r0.getBoundingClientRect().height : 0;
+    box.style.maxHeight = (h > 0 ? Math.round(h * 5) : 160) + 'px';
+  });
   // A riser or faller opens its card, the owned copy first (its printing).
   el.querySelectorAll('[data-phcard]').forEach(r=>r.addEventListener('click', ()=>{
     let nm = ''; try{ nm = decodeURIComponent(r.dataset.phcard); }catch(e){ nm = r.dataset.phcard; }
