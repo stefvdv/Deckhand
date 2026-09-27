@@ -5556,17 +5556,13 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.656';
+const APP_VERSION = '2.51.657';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck filter opens while searching',
-    'Risers and fallers: up to 20 each',
-    'Name suggestions on Search only'
+    'Deck search: first cards stay in view'
   ],
   nl: [
-    'Deckfilter opent tijdens zoeken',
-    'Stijgers en dalers: tot 20 elk',
-    'Naamsuggesties alleen bij Zoeken'
+    'Deckzoeken: eerste kaarten zichtbaar'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6391,6 +6387,28 @@ function showNameSuggest(input, list, onPick){
   state._localCsClose = closeNameSuggest;
 }
 window.addEventListener('resize', ()=>{ try{ placeNameSuggest(); }catch(e){} });
+/* The keyboard shrinks the window. A page that sat on its foot stays on its
+   foot -- the cards nearest the search bar stay in view above it instead of
+   sliding under the keyboard. "At the foot" is only measured while the
+   window keeps its size, so the resize's own scroll jolt can't fool it. */
+(function(){
+  let lastH = window.innerHeight, atFoot = true;
+  const gap = ()=>document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+  window.addEventListener('scroll', ()=>{ if(window.innerHeight === lastH) atFoot = gap() < 60; }, {passive:true});
+  const onResize = ()=>{
+    const h = window.innerHeight;
+    if(h === lastH) return;
+    const keep = atFoot;
+    lastH = h;
+    if(keep){
+      const pin = ()=>{ try{ window.scrollTo(0, document.documentElement.scrollHeight); }catch(e){} };
+      pin(); requestAnimationFrame(pin); setTimeout(pin, 180);
+      atFoot = true;
+    }
+  };
+  window.addEventListener('resize', onResize);
+  if(window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+})();
 /* getNames(q) may return an array or a promise of one. */
 function wireNameSuggest(input, getNames, onPick){
   if(!input || input._nsWired) return;
