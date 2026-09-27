@@ -784,6 +784,8 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .pp-foil:active{transform:scale(0.94);}
 .sp-shelf-ico{display:inline-block;margin-right:6px;vertical-align:-3px;}
 .sp-shelf-ico svg,.sp-shelf-ico img{width:15px;height:15px;display:inline-block;}
+.dock-search-wrap{flex:1;min-width:0;display:flex;align-items:center;}
+.dock-search-wrap .dock-search{padding-right:36px;}
 .dock-search{flex:1;min-width:0;background:rgba(10,26,40,0.55);border:1.5px solid var(--field-line);border-radius:10px;color:var(--text);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:14px;-webkit-appearance:none;appearance:none;}
 .dock-search:focus{outline:none;border-color:var(--brass);}
 #dockSearchBtn svg{width:20px;height:20px;display:block;}
@@ -1314,6 +1316,10 @@ img.art-missing::after{
 .cselect-btn:disabled{opacity:0.45;cursor:default;}
 .cselect-btn .cs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cselect-btn .cs-car{font-size:11px;color:var(--sub-text);flex:0 0 auto;}
+.name-suggest{position:fixed;z-index:10060;display:flex;flex-direction:column-reverse;overflow-y:auto;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;box-shadow:0 -10px 26px rgba(0,0,0,0.5);}
+.name-suggest .ns-opt{flex:0 0 auto;display:block;width:100%;text-align:left;background:none;border:none;border-top:1.5px solid var(--line);color:var(--ink-text);padding:11px 14px;font-size:15px;font-family:'Inter';cursor:pointer;}
+.name-suggest .ns-opt:last-child{border-top:none;}
+.name-suggest .ns-opt:active{background:var(--hl);}
 .cselect-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;max-height:280px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,0.5);}
 .cselect-panel.tall{max-height:none;}
 .cselect.cs-up .cselect-panel{top:auto;bottom:calc(100% + 4px);}
@@ -5533,13 +5539,17 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.652';
+const APP_VERSION = '2.51.653';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration: results sit on the filters'
+    'Name suggestions while you type',
+    'Also in collection and deck search',
+    'Deck: loupe opens a search bar'
   ],
   nl: [
-    'Inspiratie: resultaat direct op filters'
+    'Naamsuggesties tijdens het typen',
+    'Ook in collectie- en deckzoeken',
+    'Deck: loep opent een zoekbalk'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6276,6 +6286,133 @@ function pushHistory(screen){
    phone's hardware back button closes the top overlay instead of navigating
    the page underneath it. Always close via closeTopOverlay() so the stack and
    the browser history stay in sync. */
+/* ================= NAME SUGGESTIONS (Moxfield-style) =================
+   From the third letter on, a scrollable drop-up rises right above the
+   search bar with card names. Every typed word must match the START of a
+   word in the name, in the same order ("starnheim me" -> Starnheim
+   Memento); in-order fragments anywhere come after. Bottom-up: the best
+   match sits at the foot, right above the bar, and the list opens there.
+   Back closes it (state._localCsClose), as does Enter or leaving the field. */
+function suggestNorm(x){ return String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\u00e6/g, 'ae').replace(/\u0153/g, 'oe'); }
+const _sugTok = new WeakMap();
+function suggestMatch(names, q, limit){
+  const qn = suggestNorm(q).trim();
+  if(qn.replace(/\s+/g, '').length < 3) return [];
+  const words = qn.split(/\s+/).filter(Boolean);
+  let prep = _sugTok.get(names);
+  if(!prep){
+    prep = names.map(n=>{ const ln = suggestNorm(n); return { n, ln, toks: ln.split(/[^a-z0-9]+/).filter(Boolean) }; });
+    _sugTok.set(names, prep);
+  }
+  const seen = new Set(), hits = [];
+  for(const x of prep){
+    if(seen.has(x.n)) continue;
+    let tier = -1, at = 0;
+    // 1) every word opens a name word, in order
+    let ti = 0, ok = true, first = -1;
+    for(const w of words){
+      const wt = w.replace(/[^a-z0-9]+/g, '');
+      if(!wt) continue;
+      while(ti < x.toks.length && !x.toks[ti].startsWith(wt)) ti++;
+      if(ti >= x.toks.length){ ok = false; break; }
+      if(first < 0) first = ti;
+      ti++;
+    }
+    if(ok){ tier = x.ln.startsWith(qn) ? 0 : 1; at = first; }
+    else {
+      // 2) every word appears somewhere, still in order
+      let pos = 0, ok2 = true;
+      for(const w of words){ const i = x.ln.indexOf(w, pos); if(i < 0){ ok2 = false; break; } if(pos === 0) at = i; pos = i + w.length; }
+      if(ok2) tier = 2;
+    }
+    if(tier < 0) continue;
+    seen.add(x.n);
+    hits.push({ n: x.n, tier, at, len: x.n.length });
+  }
+  hits.sort((a, b)=>a.tier - b.tier || a.at - b.at || a.len - b.len || a.n.localeCompare(b.n));
+  return hits.slice(0, limit || 40).map(h=>h.n);
+}
+const _sug = { el: null, input: null, seq: 0 };
+function closeNameSuggest(){
+  if(_sug.el){ _sug.el.remove(); _sug.el = null; }
+  _sug.input = null;
+  if(state._localCsClose === closeNameSuggest) state._localCsClose = null;
+}
+function placeNameSuggest(){
+  const el = _sug.el, inp = _sug.input;
+  if(!el) return;
+  if(!inp || !inp.isConnected){ closeNameSuggest(); return; }
+  const r = inp.getBoundingClientRect();
+  const vh = window.innerHeight || 700;
+  el.style.left = Math.round(r.left) + 'px';
+  el.style.width = Math.round(r.width) + 'px';
+  el.style.bottom = Math.round(vh - r.top + 6) + 'px';
+  el.style.maxHeight = Math.round(Math.max(110, Math.min(vh * 0.45, r.top - 64))) + 'px';
+}
+function showNameSuggest(input, list, onPick){
+  if(!list.length){ closeNameSuggest(); return; }
+  let el = _sug.el;
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'nameSuggest'; el.className = 'name-suggest';
+    // Tapping a name must not steal the focus (the keyboard stays up).
+    el.addEventListener('pointerdown', e=>e.preventDefault());
+    el.addEventListener('mousedown', e=>e.preventDefault());
+    document.body.appendChild(el);
+    _sug.el = el;
+  }
+  _sug.input = input;
+  // DOM-first = the foot of this column-reverse list: best match lowest.
+  el.innerHTML = list.map((n, i)=>`<button type="button" class="ns-opt" data-i="${i}">${escapeHtml(n)}</button>`).join('');
+  el.querySelectorAll('.ns-opt').forEach(b=>b.addEventListener('click', ()=>{
+    const n = list[+b.dataset.i];
+    closeNameSuggest();
+    try{ onPick(n); }catch(e){}
+  }));
+  placeNameSuggest();
+  el.scrollTop = 0;   // a column-reverse scroller: 0 is the foot
+  state._localCsClose = closeNameSuggest;
+}
+window.addEventListener('resize', ()=>{ try{ placeNameSuggest(); }catch(e){} });
+/* getNames(q) may return an array or a promise of one. */
+function wireNameSuggest(input, getNames, onPick){
+  if(!input || input._nsWired) return;
+  input._nsWired = true;
+  let t = null;
+  const run = async ()=>{
+    const my = ++_sug.seq;
+    const q = input.value;
+    if(suggestNorm(q).replace(/\s+/g, '').length < 3){ if(_sug.input === input) closeNameSuggest(); return; }
+    let names = [];
+    try{ names = (await getNames(q)) || []; }catch(e){ names = []; }
+    if(my !== _sug.seq || !input.isConnected || document.activeElement !== input) return;
+    let list = suggestMatch(names, q, 40);
+    if(list.length === 1 && suggestNorm(list[0]) === suggestNorm(q).trim()) list = [];
+    if(list.length) showNameSuggest(input, list, onPick);
+    else if(_sug.input === input) closeNameSuggest();
+  };
+  input.addEventListener('input', ()=>{ clearTimeout(t); t = setTimeout(run, 110); });
+  input.addEventListener('focus', ()=>{ clearTimeout(t); t = setTimeout(run, 60); });
+  input.addEventListener('blur', ()=>setTimeout(()=>{ if(_sug.input === input && document.activeElement !== input) closeNameSuggest(); }, 180));
+  input.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ clearTimeout(t); _sug.seq++; closeNameSuggest(); } });
+  // A re-render hands a fresh field the old query while it still has focus.
+  if(document.activeElement === input && input.value) run();
+}
+/* Every card name the app knows: the phone's card database when it is
+   there, Scryfall's own autocomplete while it is not. */
+let _allNamesCache = null;
+function allCardNamesFor(q){
+  if(_bulkIdx && _bulkIdx.cards){
+    if(!_allNamesCache || _allNamesCache.src !== _bulkIdx){
+      const set = new Set(); _bulkIdx.cards.forEach(c=>{ if(c && c.n) set.add(c.n); });
+      _allNamesCache = { src: _bulkIdx, names: Array.from(set) };
+    }
+    return _allNamesCache.names;
+  }
+  try{ bulkIndexReady(); }catch(e){}
+  return sfFetch(SF_BASE + '/cards/autocomplete?q=' + encodeURIComponent(q), 0, true)
+    .then(r=>r.ok ? r.json() : null).then(j=>(j && j.data) || []).catch(()=>[]);
+}
 function pushOverlay(id, closeFn, defer){
   // Reopening the overlay that is ALREADY on top must not mint a second
   // stack entry — those zombies made back presses vanish into silent no-op
@@ -6407,6 +6544,13 @@ const stripScreen = (s)=> s === 'trade' ? 'collection' : s;
    outside it closes the menu and NOTHING else happens — the element under the
    finger is not activated. (Capture phase, so it runs before any handler.) */
 document.addEventListener('click', (e)=>{
+  // Name suggestions are not a menu the user opened: a tap on them works,
+  // and a tap anywhere else closes them AND still does what it was for.
+  if(state._localCsClose === closeNameSuggest){
+    const onIt = e.target.closest && (e.target.closest('#nameSuggest') || e.target === _sug.input);
+    if(onIt) return;
+    closeNameSuggest();
+  }
   if(state._localCsClose){
     const inside = e.target.closest && (e.target.closest('.cselect') || e.target.closest('#tradeBarHost'));
     if(!inside){
@@ -8403,6 +8547,17 @@ function wireCollectionPage(){
       if(el){ el.focus(); const v = el.value; el.value = ''; el.value = v; }
     };
     colQ?.addEventListener('input', ()=>{ clearTimeout(cqT); cqT = setTimeout(applyColQ, 300); });
+    wireNameSuggest(colQ, ()=>{
+      const f = state.colFilter || {};
+      const src = f.binder === '__wants__' ? computeWants()
+        : (f.binder && f.binder !== '__all__') ? state.collection.items.filter(it=>it.binder === f.binder)
+        : state.collection.items;
+      return Array.from(new Set(src.map(it=>it && it.name).filter(Boolean)));
+    }, (name)=>{
+      const el = document.getElementById('colSearchQ');
+      if(el) el.value = name;
+      clearTimeout(cqT); applyColQ();
+    });
     colQ?.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ clearTimeout(cqT); applyColQ(); } });
   }
 
@@ -9027,12 +9182,15 @@ function deckMeterHtml(d){
         <button class="dk-tool" id="dlSelDel" title="Delete" style="color:var(--danger);">🗑</button>
         <button class="dk-tool" id="dlSelX" title="Cancel">✕</button>`;
     } else     mid = state.dlSearchOpen
-      ? `<input id="dockSearchInput" class="dock-search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off"><button class="dk-count" id="dockSearchClose" style="flex:none;">✕</button>`
+      // The tools left of the loupe step aside for a search bar; its ▾
+      // opens the full filter, like the Collection's bar.
+      ? `<div class="dock-search-wrap"><input id="dockSearchInput" class="dock-search" enterkeyhint="search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="in-chev" id="dockFilterChev" title="${trS('Advanced filter')}">${state.dlPanel==='dsearch'?'▴':'▾'}</button></div>
+        <button class="dk-tool active" id="dockSearchBtn" title="${trS('Search deck')}">${ICONS.search}</button>`
       : `<button class="dk-tool" id="dockBudget" title="Budget">${ICONS.coins}</button>
         <button class="dk-tool" id="dockInspire" title="Inspiration">${ICONS.spark}</button>
-        <button class="dk-tool ${state.dlPanel==='dsearch'?'active':''}" data-panel="dsearch" title="${trS('Search deck')}">${ICONS.search}</button>
+        <button class="dk-tool" id="dockAddCards" title="Add Cards">${ICONS.plus}</button>
         <button class="dk-tool ${state.dlPanel==='bulk'?'active':''}" data-panel="bulk" title="Bulk Edit">${ICONS.bulk}</button>
-        <button class="dk-tool" id="dockAddCards" title="Add Cards">${ICONS.plus}</button>`;
+        <button class="dk-tool" id="dockSearchBtn" title="${trS('Search deck')}">${ICONS.search}</button>`;
   } else {
     mid = dockTypeCounts(d) || '<span>Empty deck</span>';
   }
@@ -12637,10 +12795,30 @@ function wireMeterRow(d){
     if(hit) hit.scrollIntoView({ behavior:'smooth', block:'center' });
     toast(want);
   }));
-  document.getElementById('dockSearchClose')?.addEventListener('click', ()=>{
-    state.dlSearchOpen = false; state.dlSearchQ = '';
+  // The loupe opens the find bar (cursor in it at once); tapped again it
+  // closes the bar -- and the full filter with it.
+  document.getElementById('dockSearchBtn')?.addEventListener('click', ()=>{
+    if(state.dlSearchOpen){
+      closeNameSuggest();
+      if(state.dlPanel === 'dsearch') toggleDlPanel(d, 'dsearch');
+      state.dlFilter = { ci: [] }; state.dlFilterOn = false;
+      state.dlSearchOpen = false; state.dlSearchQ = '';
+      updateDeckMeter(d);
+      refreshDecklistBox(d);
+      return;
+    }
+    if(state.builderTab !== 'list'){ state.builderTab = 'list'; state.dlPanel = null; try{ renderBuilderBody(d); syncTabsUI(); }catch(err){} }
+    if(state.dlPanel && state.dlPanel !== 'dsearch'){ try{ toggleDlPanel(d, state.dlPanel); }catch(err){} }
+    state.dlSearchOpen = true;
+    state._dlSearchFocus = true;
     updateDeckMeter(d);
-    refreshDecklistBox(d);
+  });
+  document.getElementById('dockFilterChev')?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    closeNameSuggest();
+    toggleDlPanel(d, 'dsearch');
+    const ch = document.getElementById('dockFilterChev');
+    if(ch) ch.textContent = state.dlPanel === 'dsearch' ? '▴' : '▾';
   });
   {
     const dsi = document.getElementById('dockSearchInput');
@@ -12649,6 +12827,15 @@ function wireMeterRow(d){
       // the phone keyboard) stay exactly where they are.
       dsi.addEventListener('input', ()=>{
         state.dlSearchQ = dsi.value;
+        const box = document.getElementById('decklistBox');
+        if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
+      });
+      dsi.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); try{ dsi.blur(); }catch(err){} } });
+      // Suggestions: only the names in THIS deck (main, maybe/side, leaders).
+      wireNameSuggest(dsi, ()=>Array.from(new Set(deckLeaders(d).concat(d.cards || [], ensureMaybeboard(d)).map(c=>c && c.name).filter(Boolean))), (name)=>{
+        const el = document.getElementById('dockSearchInput');
+        if(el) el.value = name;
+        state.dlSearchQ = name;
         const box = document.getElementById('decklistBox');
         if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
       });
@@ -13823,6 +14010,14 @@ function wireSearchPage(){
   document.getElementById('searchName').addEventListener('keydown', e=>{
     if(e.key !== 'Enter') return;
     e.preventDefault();
+    if(state.advOpen){ state.advOpen = false; render(); }
+    runAdvancedSearch();
+  });
+  wireNameSuggest(document.getElementById('searchName'), allCardNamesFor, (name)=>{
+    const inp = document.getElementById('searchName');
+    if(inp) inp.value = name;
+    state.searchName = name;
+    const adv = document.getElementById('advName'); if(adv) adv.value = name;
     if(state.advOpen){ state.advOpen = false; render(); }
     runAdvancedSearch();
   });
@@ -23799,7 +23994,7 @@ function appBackStep(viaHistory){
     return true;
   }
   // The find-in-deck bar consumes the back press: close it, restore the list.
-  if(state.screen === 'decklist' && state.dlSearchOpen){
+  if(state.screen === 'decklist' && state.dlSearchOpen && !state.dlPanel){
     state.dlSearchOpen = false; state.dlSearchQ = '';
     const dd = getDeck(state.activeDeckId);
     try{ updateDeckMeter(dd); if(dd) refreshDecklistBox(dd); }catch(err){}
@@ -23825,6 +24020,7 @@ function appBackStep(viaHistory){
         document.querySelectorAll('[data-panel]').forEach(x=>x.classList.remove('active'));
         // Closing Search deck clears the search whole: the full deck returns.
         if(wasSearch){ state.dlFilter = { ci: [] }; state.dlFilterOn = false; try{ refreshDecklistBox(d); }catch(err){} }
+        const _chv = document.getElementById('dockFilterChev'); if(_chv) _chv.textContent = '▾';
       }
       rearm({screen: state.screen}, '#'+state.screen);
       return true;
