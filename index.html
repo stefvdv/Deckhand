@@ -5590,15 +5590,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.658';
+const APP_VERSION = '2.51.660';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck cards start with recommended tags',
-    'Tag list stays open after picking'
+    'Spoiler push: only unseen cards',
+    'No push for a new set by itself'
   ],
   nl: [
-    'Deckkaarten krijgen meteen tags',
-    'Taglijst blijft open na kiezen'
+    'Spoilermelding: alleen ongeziene kaarten',
+    'Geen melding meer voor alleen een set'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6325,6 +6325,11 @@ function scrollToPageFoot(){
     try{ window.scrollTo(0, Math.max(0, document.documentElement.scrollHeight || 0)); }catch(e){}
   }));
 }
+/* Back is the app's own ladder (overlays, panels, pages) -- the browser must
+   not ALSO put back an old scroll position on every history step. With
+   'auto' it did: closing a card sheet after removing a card restored the
+   pre-removal scrollTop a moment later, and the page jumped a row. */
+try{ if('scrollRestoration' in history) history.scrollRestoration = 'manual'; }catch(e){}
 function pushHistory(screen){
   state._exiting = false;   // navigating again means the exit is off
   const extra = screen==='decks' ? {folder: state.folderNav||null} : {};
@@ -10574,6 +10579,21 @@ function spoilerColorBucket(c){
   if(cols.length > 1) return 6;
   return {W:0,U:1,B:2,R:3,G:4}[cols[0]] ?? 5;
 }
+/* The phone's spoiler push counts only cards you have NOT seen in the app:
+   every card this page shows is reported to the app shell once (APK 4.0+). */
+const _spReported = new Set();
+function reportSpoilersSeen(cards){
+  try{
+    if(!(window.DeckhandNotify && typeof DeckhandNotify.markSpoilersSeen === 'function')) return;
+    const keys = [];
+    (cards || []).forEach(c=>{
+      if(!c || !c.id || !c.set) return;
+      const k = String(c.set).toLowerCase() + ':' + c.id;
+      if(!_spReported.has(k)){ _spReported.add(k); keys.push(k); }
+    });
+    if(keys.length) DeckhandNotify.markSpoilersSeen(keys.join(','));
+  }catch(e){}
+}
 function spoilerDateKey(c){
   // Only a real preview date counts as a spoiler date. released_at is NOT a
   // substitute: for unreleased sets it lies in the future, so undated bulk
@@ -10737,6 +10757,7 @@ function _renderSpoilerBodyCore(loaded, failed){
   // Pin the foot once per visit - streamed repaints rely on the scroll
   // compensation instead of re-jumping, which was the residual flicker.
   if(state.screen === 'spoilers' && !box.dataset.footPinned){ box.dataset.footPinned = '1'; scrollToPageFoot(); }
+  reportSpoilersSeen(cards);
   box.querySelectorAll('.sc-tile').forEach(b=>{
     b.addEventListener('click', ()=>{
       const card = cards.find(c=>c.name===b.dataset.spn && (c.set||'')===b.dataset.spset) || cards.find(c=>c.name===b.dataset.spn);
@@ -12645,7 +12666,16 @@ function keepAnchored(anchorEl, redraw, findAgain){
 }
 function refreshDecklistBox(d){
   const box = document.getElementById('decklistBox');
+  // Bottom-up: the view holds its distance to the FOOT. A removed card's
+  // gap is filled by its neighbour sliding in; nothing below it moves and
+  // the page doesn't jump a row (the page itself has no scroll anchoring).
+  const se = document.scrollingElement || document.documentElement;
+  const fromFoot = se.scrollHeight - se.scrollTop;
   if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
+  if(box && state.screen === 'decklist'){
+    const want = Math.max(0, se.scrollHeight - fromFoot);
+    if(Math.abs(se.scrollTop - want) > 1) se.scrollTop = want;
+  }
   updateDeckMeter(d);   // the dock's Main x/y and Maybe counts follow every refresh
   updateDeckMeter(d);
 }
