@@ -4592,9 +4592,43 @@ function migrateTagsToGlobal(){
 // legacy field, kept for share payloads
 function tagHides(d){ if(!d) return {}; if(!d.tagHide) d.tagHide = {}; return d.tagHide; }
 function getCardTags(d, name){
-  const g = ensureGlobalTags()[name] || [];
+  let g = ensureGlobalTags()[name] || [];
+  // In a deck, a card starts WITH its Scryfall recommended tags. They are not
+  // copied anywhere: removing one simply hides it in this deck, like any tag.
+  if(d){
+    let auto = null;
+    try{ auto = (state._otagCache || loadOtagCache())[name]; }catch(e){}
+    if(auto && auto.length){
+      const have = new Set(g.map(t=>String(t).toLowerCase()));
+      const extra = auto.filter(t=>!have.has(String(t).toLowerCase()));
+      if(extra.length) g = g.concat(extra);
+    }
+  }
   const hidden = (d && d.tagHide && d.tagHide[name]) || [];
   return g.filter(t=>!hidden.some(h=>h.toLowerCase()===t.toLowerCase()));
+}
+/* Every card of a deck gets its recommended tags from the phone's own tag
+   file, once per deck per session -- no network convoy for a whole deck.
+   Cards the file does not know yet get theirs when their tag box opens. */
+const _deckOtagsDone = new Set();
+async function ensureDeckOtags(d){
+  try{
+    if(!d || _deckOtagsDone.has(d.id)) return;
+    _deckOtagsDone.add(d.id);
+    const ix = await bulkIndexReady();
+    if(!ix || !ix.tagByOid) { _deckOtagsDone.delete(d.id); return; }
+    const cache = loadOtagCache();
+    let added = 0;
+    deckLeaders(d).concat(d.cards || [], d.maybeboard || []).forEach(c=>{
+      if(!c || !c.name || cache[c.name]) return;
+      const t = _localTagsDecide(ix, c);
+      if(Array.isArray(t)){ cache[c.name] = t.slice(); added++; }
+    });
+    if(added){
+      saveOtagCache();
+      if(state.screen === 'decklist' && state.activeDeckId === d.id){ try{ refreshDecklistBox(d); }catch(e){} }
+    }
+  }catch(e){}
 }
 function addCardTag(d, name, tag){
   const t = (tag||'').trim();
@@ -5556,13 +5590,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.657';
+const APP_VERSION = '2.51.658';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck search: first cards stay in view'
+    'Deck cards start with recommended tags',
+    'Tag list stays open after picking'
   ],
   nl: [
-    'Deckzoeken: eerste kaarten zichtbaar'
+    'Deckkaarten krijgen meteen tags',
+    'Taglijst blijft open na kiezen'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6605,7 +6641,7 @@ document.addEventListener('click', (e)=>{
     closeNameSuggest();
   }
   if(state._localCsClose){
-    const inside = e.target.closest && (e.target.closest('.cselect') || e.target.closest('#tradeBarHost'));
+    const inside = e.target.closest && (e.target.closest('.cselect') || e.target.closest('#tradeBarHost') || e.target.closest('.tag-add-row'));
     if(!inside){
       e.preventDefault();
       e.stopPropagation();
@@ -7910,6 +7946,7 @@ function openDeck(id){
   state.builderTab='list'; state.dlPanel=null;
   switchPage('decklist');
   try{ const d = getDeck(id); if(d) setTimeout(()=>{ healDeckCardFlags(d); }, 1200); }catch(e){}
+  try{ const d2 = getDeck(id); if(d2) setTimeout(()=>{ ensureDeckOtags(d2); }, 1500); }catch(e){}
 }
 /* Import a whole deck from a CSV (Moxfield/Archidekt deck export) or a plain
    text list, straight from the ＋ menu: creates the deck (named after the file),
@@ -13385,7 +13422,9 @@ function renderTagEditor(d, card, box){
   if(!loadOtagCache()[card.name]){
     detectOtagsForCards([card]).then(m=>{
       autoTags = (m[card.name] || []).slice();
-      if(box.isConnected) renderDrop();
+      if(!box.isConnected) return;
+      if(d && autoTags.length){ const keep = drop && !drop.hidden ? drop.scrollTop : null; box._keepDrop = keep; renderTagEditor(d, card, box); }
+      else renderDrop();
     }).catch(()=>{});
   }
   const pickerSections = ()=>buildTagPickerSections(getCardTags(d, card.name), autoTags, allAppTags(), BUDGET_OTAGS);
@@ -13423,18 +13462,24 @@ function renderTagEditor(d, card, box){
     ).join('');
     if(_dropHideT){ clearTimeout(_dropHideT); _dropHideT = null; }   // a fresh show outlives any stale hide
     drop.hidden = false;
+    state._localCsClose = hideDrop;   // back folds the list
     drop.querySelectorAll('[data-picktag]').forEach(b=>b.addEventListener('mousedown', (ev)=>{
       ev.preventDefault();   // fire before the input's blur hides the panel
       const t = decodeURIComponent(b.dataset.picktag);
+      // The list stays open for the next tag, at the same scroll spot,
+      // until you close it.
+      box._keepDrop = drop.scrollTop;
       if(addCardTag(d, card.name, t)) refresh();
+      else box._keepDrop = null;
     }));
   };
+  const hideDrop = ()=>{ if(drop) drop.hidden = true; box._dropStay = false; if(state._localCsClose === hideDrop) state._localCsClose = null; };
   // mousedown-preventDefault keeps the input focused — tapping the chevron
   // with the keyboard up used to blur it, whose delayed hide then closed
   // the freshly opened list a heartbeat later.
   box.querySelector('#tagCatChev').addEventListener('mousedown', ev=>ev.preventDefault());
   box.querySelector('#tagCatChev').addEventListener('click', ()=>{
-    if(!drop.hidden){ drop.hidden = true; return; }
+    if(!drop.hidden){ hideDrop(); return; }
     input.focus();
     renderDrop();
   });
@@ -13446,15 +13491,22 @@ function renderTagEditor(d, card, box){
   input.addEventListener('focus', ()=>{ if(Date.now() - _bornAt < 500) return; renderDrop(); });
   input.addEventListener('input', renderDrop);
   let _dropHideT = null;
-  input.addEventListener('blur', ()=>{ _dropHideT = setTimeout(()=>{ if(drop) drop.hidden = true; }, 150); });
+  input.addEventListener('blur', ()=>{ _dropHideT = setTimeout(()=>{ if(box._keepDrop == null && drop && drop.isConnected && document.activeElement !== input && !box._dropStay) hideDrop(); }, 150); });
   // A tap anywhere outside the tag row folds the list immediately — blur
   // alone missed taps on regions that never steal focus.
   document.addEventListener('pointerdown', (ev)=>{
     if(!drop || drop.hidden || !drop.isConnected) return;
     if(ev.target.closest && ev.target.closest('.tag-add-row')) return;
     if(_dropHideT){ clearTimeout(_dropHideT); _dropHideT = null; }
-    drop.hidden = true;
+    hideDrop();
   }, true);
+  // Reopen after a pick (the whole box was redrawn with the new chip).
+  if(box._keepDrop != null){
+    const st = box._keepDrop; box._keepDrop = null;
+    box._dropStay = true;   // picked from the list: stay open without the keyboard
+    renderDrop();
+    try{ drop.scrollTop = st; }catch(e){}
+  }
   input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
   box.querySelectorAll('[data-rmtag]').forEach(b=>b.addEventListener('click', ()=>{
     const t = decodeURIComponent(b.dataset.rmtag);
