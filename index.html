@@ -907,6 +907,8 @@ body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 .binder-glyphs{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-right:3px;}
 .binder-glyphs svg{width:14px;height:14px;}
 .vg-card.dl-msel{outline:2.5px solid var(--brass);outline-offset:-2px;border-radius:10px;}
+.vg-card.dl-msel img{filter:brightness(0.72);}
+.vg-card.dl-msel::after{content:'\2713';position:absolute;top:6px;right:6px;z-index:4;width:22px;height:22px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.5);pointer-events:none;}
 .ls-tile{width:46%;max-width:230px;border:2px solid transparent;border-radius:12px;padding:4px;position:relative;}
 .ls-tile img{width:100%;border-radius:9px;display:block;}
 .ls-noimg{min-height:120px;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border:2px solid var(--line);border-radius:9px;font-size:14px;}
@@ -1978,6 +1980,10 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
    and editable fields. Everywhere else a long-press is never meant as
    "select this label", so selection is off app-wide by default. */
 html, body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+/* Nothing in the app is dragged the browser's way. On Android a long-press on
+   a card image could start a system drag; when that drag never finished, no
+   tap reached the app any more (the "frozen after a long-press" bug). */
+img, a{-webkit-user-drag:none;user-drag:none;}
 input, textarea, [contenteditable="true"]{-webkit-user-select:text;user-select:text;}
 .sel-text, .sel-text *{-webkit-user-select:text;user-select:text;}
 /* Every card image everywhere — grids, tiles, previews, the detail view —
@@ -5590,13 +5596,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.661';
+const APP_VERSION = '2.51.662';
 const CHANGELOG_NOTES = {
   en: [
-    'Smooth scrolling in long collections'
+    'Long-press select no longer freezes',
+    'Selected deck cards show a check'
   ],
   nl: [
-    'Soepel scrollen in lange collecties'
+    'Long-press selectie loopt niet meer vast',
+    'Geselecteerde deckkaarten: vinkje'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -24743,6 +24751,15 @@ document.addEventListener('gesturechange', e=>e.preventDefault());
 // Two-finger touches are never a gesture this app uses, and any browser
 // pinch attempt is what shifts the layout — cancel them outright.
 document.addEventListener('touchstart', e=>{ if(e.touches.length > 1) e.preventDefault(); }, {passive:false});
+/* Long-press = select, in the decklist, the collection and Inspiration. The
+   browser's own long-press reactions (a drag of the card image, the image
+   menu) must never start: a drag that did not end swallowed every later tap. */
+document.addEventListener('dragstart', e=>e.preventDefault(), true);
+document.addEventListener('contextmenu', e=>{
+  const t = e.target;
+  if(t && t.closest && t.closest('input,textarea,[contenteditable="true"],.sel-text')) return;
+  e.preventDefault();
+}, true);
 document.addEventListener('touchmove', e=>{ if(e.touches.length > 1) e.preventDefault(); }, {passive:false});
 
 /* The app has no opening screen of its own any more. Inside the Android build
