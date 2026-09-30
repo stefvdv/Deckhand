@@ -5605,15 +5605,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.666';
+const APP_VERSION = '2.51.667';
 const CHANGELOG_NOTES = {
   en: [
-    'Theme picked: Kindred menu hides',
-    'Kindred picked: Theme menu hides'
+    'Generic icon for an empty folder',
+    'Folder icons: no ships outside Admiral'
   ],
   nl: [
-    'Thema gekozen: Kindred-menu verdwijnt',
-    'Kindred gekozen: Thema-menu verdwijnt'
+    'Algemeen icoon bij een lege map',
+    'Mapiconen: geen schepen buiten Admiral'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5927,17 +5927,34 @@ function warnStorageOnce(){
    (null = loose at top level). A deck's `fav` flag stars it. All stored
    alongside decks in localStorage. */
 const FOLDER_ICONS = ['anchor','wheel','sail','compass','waves','map','chest','bottle','flag','star2','skull','trident'];
+/* The stored key never changes (storage compatible); only the drawing does.
+   Outside the Admiral fleet: crown, shield, banner, crossed swords, flame,
+   scroll, gem, potion, tower, star, skull, lightning bolt. */
 const CMDR_FOLDER_SVG = {
   anchor: `<path d="M7 7 L7 4.5 L9.5 6.5 L12 4 L14.5 6.5 L17 4.5 L17 7 Z"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="8" y1="12" x2="16" y2="19"/><line x1="16" y1="12" x2="8" y2="19"/>`,
   wheel: `<path d="M12 3 L19 6 V12 C19 16.5 16 19.5 12 21 C8 19.5 5 16.5 5 12 V6 Z"/><path d="M12 7 V16 M8.5 11.5 H15.5"/>`,
   sail: `<path d="M5 5 H19 V13 L16.5 11.5 L14 13 L12 11.5 L10 13 L7.5 11.5 L5 13 Z"/><line x1="5" y1="5" x2="5" y2="21"/>`,
-  compass: `<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/><line x1="7.5" y1="16.5" x2="5" y2="19"/><line x1="16.5" y1="16.5" x2="19" y2="19"/><path d="M5.5 6.5 L5 5 L6.5 5.5 M18.5 6.5 L19 5 L17.5 5.5"/>`
+  compass: `<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/><line x1="7.5" y1="16.5" x2="5" y2="19"/><line x1="16.5" y1="16.5" x2="19" y2="19"/><path d="M5.5 6.5 L5 5 L6.5 5.5 M18.5 6.5 L19 5 L17.5 5.5"/>`,
+  waves: `<path d="M12 21c-3.6 0-6-2.6-6-6 0-3.4 2.8-5.4 3.8-9 1.6 1.8 2.3 3.4 2.2 5.2 1-.9 1.6-2 1.7-3.4 2.3 2 4.3 4.6 4.3 7.2 0 3.4-2.4 6-6 6z"/><path d="M12 21c-1.6 0-2.8-1.2-2.8-2.9 0-1.6 1.3-2.6 2.1-4 1.4 1.3 3.5 2.5 3.5 4 0 1.7-1.2 2.9-2.8 2.9z"/>`,
+  map: `<path d="M8 4h10a2 2 0 012 2v1.5h-4"/><path d="M8 4a2 2 0 00-2 2v11"/><path d="M16 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2v-1.5h10v1.5a2 2 0 002 2"/><path d="M9 9h4.5M9 12h4.5"/>`,
+  chest: `<path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M10 4L8 9l4 11 4-11-2-5"/>`,
+  bottle: `<path d="M10 3h4M10.5 3v5.2L5.8 16.3A3 3 0 008.4 21h7.2a3 3 0 002.6-4.7L13.5 8.2V3"/><path d="M7.3 14.5h9.4"/><circle cx="11" cy="17.5" r=".8"/><circle cx="13.5" cy="16.3" r=".6"/>`,
+  flag: `<path d="M4 21h16M6 21V10h12v11"/><path d="M6 10V5.5h2.4V7.5h2.4V5.5h2.4V7.5h2.4V5.5H18V10"/><path d="M10 21v-3.5a2 2 0 014 0V21"/>`,
+  star2: `<path d="M12 3l2.5 5.5L20 9.5l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-1z"/>`,
+  skull: `<path d="M12 3c-4 0-7 3-7 7 0 2.5 1.5 4 3 5v3h8v-3c1.5-1 3-2.5 3-5 0-4-3-7-7-7z"/><circle cx="9.5" cy="10.5" r="1.3"/><circle cx="14.5" cy="10.5" r="1.3"/><path d="M10.5 18v3M13.5 18v3"/>`,
+  trident: `<path d="M13.5 2.5L5 13.5h6.2L10 21.5l9-11.5h-6.4z"/>`
 };
-function folderIconSvg(name, px){
-  if(CMDR_FOLDER_SVG[name]){
-    return `<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${CMDR_FOLDER_SVG[name]}</svg>`;
-  }
+/* Is this folder part of the Admiral fleet (under the Admiral format folder)? */
+function folderIsNaval(f){
+  if(!f) return false;
+  try{ return fmtAncestorOf(typeof f === 'string' ? f : f.id) === 'admiral'; }catch(e){ return false; }
+}
+function folderIconSvg(name, px, naval){
   px = px || 44;
+  if(!naval){
+    const d = CMDR_FOLDER_SVG[name] || CMDR_FOLDER_SVG.anchor;
+    return `<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  }
   const p = (d)=>`<svg viewBox="0 0 24 24" width="${px}" height="${px}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   switch(name){
     case 'wheel': return p('<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/>');
@@ -6176,7 +6193,16 @@ function compassSvg(){
     <circle cx="50" cy="50" r="4" fill="#EFE6D0"/>
   </svg>`;
 }
-function formatSealSvg(){
+function formatSealSvg(naval){
+  if(!naval) return `<svg viewBox="0 0 120 120">
+    <circle cx="60" cy="60" r="56" fill="none" stroke="#C9A24B" stroke-width="2" opacity="0.55"/>
+    <circle cx="60" cy="60" r="48" fill="none" stroke="#C9A24B" stroke-width="1" stroke-dasharray="1.5 4.5" opacity="0.6"/>
+    <g stroke="#C9A24B" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="31" y="36" width="30" height="44" rx="4" transform="rotate(-12 46 58)"/>
+      <rect x="57" y="36" width="30" height="44" rx="4" transform="rotate(10 72 58)"/>
+    </g>
+    <path d="M60 8 l3.2 9 9.4 0.6 -7.2 6 2.3 9.1 -7.7 -5 -7.7 5 2.3 -9.1 -7.2 -6 9.4 -0.6 z" fill="#C9A24B" opacity="0.92"/>
+  </svg>`;
   return `<svg viewBox="0 0 120 120">
     <circle cx="60" cy="60" r="56" fill="none" stroke="#C9A24B" stroke-width="2" opacity="0.55"/>
     <circle cx="60" cy="60" r="48" fill="none" stroke="#C9A24B" stroke-width="1" stroke-dasharray="1.5 4.5" opacity="0.6"/>
@@ -7493,7 +7519,7 @@ function folderTileHtml(f){
   if(subN) bits.push(subN+' folder'+(subN>1?'s':''));
   return `<div class="folder-tile" data-folder="${f.id}">
       
-      <div class="folder-face">${folderIconSvg(f.icon, 56)}</div>
+      <div class="folder-face">${folderIconSvg(f.icon, 56, folderIsNaval(f))}</div>
       <div class="folder-name">${escapeHtml(f.name)}</div>
       <div class="folder-sub">${bits.join(' · ')||'empty'}</div>
     </div>`;
@@ -7553,7 +7579,7 @@ function homeHtml(){
          ${(!favTiles&&!folderTiles&&!deckTiles&&nav)?`<div class="empty-note">${fmtNav ? `No ${fmtLabelOf(fmtNav)} decks yet.` : 'This folder is empty.'}</div>`:''}
        ` :
        searching ? `<div class="empty-note">No decks match “${escapeHtml(state.deckFilter)}”.</div>` :
-       `<div class="empty-home"><div class="seal lg">${formatSealSvg()}</div><p>No decks yet. Start a new deck, pick its format and add your cards.</p><button id="newDeckBtn2">New Deck</button></div>` }
+       `<div class="empty-home"><div class="seal lg">${formatSealSvg(fmtAncestorOf(state.folderNav) === 'admiral')}</div><p>No decks yet. Start a new deck, pick its format and add your cards.</p><button id="newDeckBtn2">New Deck</button></div>` }
   </main>`;
 }
 /* Gentle persistence guidance: a one-time note that decks live in this
@@ -7778,7 +7804,7 @@ function openFolderIconPicker(f){
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
     <h4>Folder icon</h4>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 12px;">
-      ${FOLDER_ICONS.map(ic=>`<button class="icon-choice ${f.icon===ic?'sel':''}" data-ic="${ic}" style="display:flex;align-items:center;justify-content:center;padding:12px 0;background:var(--ink-2);border:1px solid ${f.icon===ic?'var(--brass)':'var(--line)'};border-radius:10px;color:var(--brass);">${folderIconSvg(ic,32)}</button>`).join('')}
+      ${FOLDER_ICONS.map(ic=>`<button class="icon-choice ${f.icon===ic?'sel':''}" data-ic="${ic}" style="display:flex;align-items:center;justify-content:center;padding:12px 0;background:var(--ink-2);border:1px solid ${f.icon===ic?'var(--brass)':'var(--line)'};border-radius:10px;color:var(--brass);">${folderIconSvg(ic,32,folderIsNaval(f))}</button>`).join('')}
     </div>
     <button class="dp-cancel" id="icCancel" style="margin:0;">Close</button>
   </div>`;
@@ -7855,7 +7881,7 @@ function renderFolderPicker(){
     <div class="fp-crumbs">${crumb}</div>
     <div class="deckpick-list" style="max-height:46vh;">
       ${!nav ? FMT_ORDER.map(f=>`<button class="dp-row" data-intofmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)} <span style="color:var(--sub-text);">· auto folder</span>${childFolders(fmtFolderId(f)).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : ''}
-      ${here.length ? here.map(f=>`<button class="dp-row" data-into="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,22)}</span><span class="dp-txt" style="display:inline;">${escapeHtml(f.name)}${childFolders(f.id).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : `<p class="hint" style="padding:6px 2px;">No subfolders here.</p>`}
+      ${here.length ? here.map(f=>`<button class="dp-row" data-into="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,22,folderIsNaval(f))}</span><span class="dp-txt" style="display:inline;">${escapeHtml(f.name)}${childFolders(f.id).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : `<p class="hint" style="padding:6px 2px;">No subfolders here.</p>`}
     </div>
     <button class="ghost-btn fp-newsub" id="fpNewSub">＋ Subfolder</button>
     <div class="fp-actions">
@@ -15208,7 +15234,7 @@ function openFolderPickPopup(d, onPick){
     <h4>Put ${escapeHtml(d.name)} in a folder?</h4>
     <div class="deckpick-list">
       <button class="dp-row" data-fid=""><div class="dp-txt">No folder<div class="dp-meta">${escapeHtml(d.name)} stays in its format folder</div></div></button>
-      ${flds.map(f=>`<button class="dp-row" data-fid="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,20)}</span><span class="dp-txt" style="display:inline;">${escapeHtml(folderPath(f.id).map(x=>x.name).join(' / '))}</span></button>`).join('')}
+      ${flds.map(f=>`<button class="dp-row" data-fid="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,20,folderIsNaval(f))}</span><span class="dp-txt" style="display:inline;">${escapeHtml(folderPath(f.id).map(x=>x.name).join(' / '))}</span></button>`).join('')}
     </div>
     <button class="dp-cancel" id="fpCancel">Skip</button>
   </div>`;
