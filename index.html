@@ -491,7 +491,10 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .salt-tile img{width:100%;display:block;border-radius:10px;aspect-ratio:63/88;object-fit:cover;background:var(--field);}
 .salt-noimg{border:1.5px solid var(--pop-line);border-radius:10px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;font-size:13.5px;color:var(--ink-text);}
 .salt-meta{text-align:center;color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:13.5px;margin-top:4px;}
-.edh-jump-row.insp-jump{position:fixed;right:14px;bottom:calc(78px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
+.edh-jump-row.insp-jump{position:fixed;right:14px;bottom:calc(14px + var(--nav-h) + env(safe-area-inset-bottom));left:auto;top:auto;justify-content:flex-end;z-index:60;height:auto;}
+/* Deck Inspiration: room between the explanation and the Theme / Kindred
+   menus -- that gap is where the \u2630 rests when the page sits at its foot. */
+.app > main:has(> #inspireResults) > .hint{padding-bottom:52px;margin-bottom:0;}
 /* The base .edh-jump-row is sticky — without !important the burger rode
    the content and scrolled away. Fixed for real, and lifted above the deck
    bar + tabs stack. */
@@ -5605,15 +5608,19 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.667';
+const APP_VERSION = '2.51.668';
 const CHANGELOG_NOTES = {
   en: [
-    'Generic icon for an empty folder',
-    'Folder icons: no ships outside Admiral'
+    'Recommendations: \u2630 sits lower',
+    'New Game: no text, opens at the foot',
+    'Poison & damage show \u2212N / +N',
+    'Stats: Most Expensive Cards removed'
   ],
   nl: [
-    'Algemeen icoon bij een lege map',
-    'Mapiconen: geen schepen buiten Admiral'
+    'Recommendations: \u2630 staat lager',
+    'New Game: geen uitleg, opent onderaan',
+    'Poison & damage tonen \u2212N / +N',
+    'Stats: duurste kaarten weg'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5648,9 +5655,9 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om er meerdere te selecteren — verplaatsen, verwijderen of naar het maybeboard.</p>
-           <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, duurste kaarten) en <strong>Deck Log</strong> (primer, potjes noteren, handtester). In de werkbalk vind je onder meer <strong>budgetalternatieven</strong> voor dure kaarten.</p>`
+           <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester). In de werkbalk vind je onder meer <strong>budgetalternatieven</strong> voor dure kaarten.</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select several at once — move, remove, or send them to the maybeboard.</p>
-           <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, most expensive cards), <strong>Deck Log</strong> (primer, game log, hand tester). The toolbar holds <strong>Budget alternatives</strong> for pricey cards, and more.</p>`) },
+           <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, combos), <strong>Deck Log</strong> (primer, game log, hand tester). The toolbar holds <strong>Budget alternatives</strong> for pricey cards, and more.</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
       t: NL ? '🃏 De kaart-detailpagina' : '🃏 The card detail view',
       b: soon + (NL
@@ -12093,9 +12100,6 @@ function statsTabHtml(d){
       <div id="msDetail"></div>
     </div>`;
     })()}
-    <div class="panel-card"><div class="panel-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;"><span>Most Expensive Cards</span><span id="deckTotalBadge" style="text-transform:none;color:var(--brass);font-weight:700;white-space:nowrap;"></span></div>
-      <p class="hint" id="deckPriceNote" style="margin:4px 0 8px;">Cardmarket trend price, cheapest printing of each card.</p>
-      <div class="action-row" style="margin:8px 0 4px;"><button class="ghost-btn" id="budgetBtn"><span class="ib">${ICONS.coins}</span>Budget alternatives</button></div><div id="topPriceBox"><div class="empty-note" style="padding:8px 0;">Pricing…</div></div></div>
     <div class="panel-card" id="deckCombosPanel"><div class="panel-h">${MANA_INF} Combos</div><div id="deckCombosBody" class="hint" style="margin:0;min-height:40px;display:flex;flex-direction:column;justify-content:center;">Scanning…</div></div>
   `;
 }
@@ -18011,6 +18015,36 @@ async function loadInspiration(d){
   // EDHREC unreachable: the colour-wide Scryfall list, as before, with a way back.
   loadInspirationScryfall(d);
 }
+/* The \u2630 of deck Inspiration rides just above the Theme / Kindred menus
+   (in the gap under the explanation) and, once those scroll out of view,
+   sinks to a spot just above the bottom navigation. */
+let _inspJumpBound = false, _safeBottomPx = null;
+function placeInspJump(){
+  const row = document.querySelector('.app > main .edh-jump-row.insp-jump');
+  if(!row) return;
+  if(_safeBottomPx === null){
+    try{
+      const pr = document.createElement('div');
+      pr.style.cssText = 'position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none;';
+      document.body.appendChild(pr); _safeBottomPx = pr.offsetHeight || 0; pr.remove();
+    }catch(e){ _safeBottomPx = 0; }
+  }
+  const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 66;
+  const min = navH + 14 + _safeBottomPx;
+  const sel = document.querySelector('.app > main > .browse-selects');
+  let b = min;
+  if(sel){ const top = sel.getBoundingClientRect().top; if(top > 0) b = Math.max(min, window.innerHeight - top + 5); }
+  row.style.bottom = Math.round(b) + 'px';
+}
+function bindInspJump(){
+  placeInspJump();
+  if(_inspJumpBound) return;
+  _inspJumpBound = true;
+  let raf = 0;
+  const go = ()=>{ if(raf) return; raf = requestAnimationFrame(()=>{ raf = 0; placeInspJump(); }); };
+  window.addEventListener('scroll', go, { passive:true });
+  window.addEventListener('resize', go);
+}
 function renderInspEdh(d, entry, keepScroll, partial, okSet){
   const box = document.getElementById('inspireResults');
   if(!box) return;
@@ -18039,6 +18073,7 @@ function renderInspEdh(d, entry, keepScroll, partial, okSet){
     return `<div class="edh-sec" data-isec="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > n ? `<button class="ghost-btn edh-more" data-si="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid">${cards.map(c=>searchRowHtml(c, d)).join('')}</div></div>`;
   }).join('')
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="inspJump" title="${trS('Jump to section')}">☰</button></div>`;
+  bindInspJump();
   document.getElementById('inspJump')?.addEventListener('click', (e)=>{
     e.stopPropagation();
     openTileMenu(e.currentTarget, groups.map((g, i)=>({ label: g.title, fn: ()=>{ document.querySelector(`.edh-sec[data-isec="${i}"]`)?.scrollIntoView({ behavior:'smooth', block:'end' }); } })));
@@ -18135,6 +18170,7 @@ function renderInspireFromCache(cacheKey, d, keepScroll){
   const groups = inspireGroups(display);
   box.innerHTML = groups.map((g, i)=>`<div class="edh-sec" data-isec="${i}"><div class="section-label" style="margin-top:14px;border-bottom:2px solid var(--line);">${escapeHtml(g.title)}</div><div class="sr-grid">${g.cards.map(c=>searchRowHtml(c, d)).join('')}</div></div>`).join('')
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="inspJump" title="${trS('Jump to section')}">☰</button></div>` + edhNote;
+  bindInspJump();
   document.getElementById('inspJump')?.addEventListener('click', (e)=>{
     e.stopPropagation();
     openTileMenu(e.currentTarget, groups.map((g, i)=>({ label: g.title, fn: ()=>{ document.querySelector(`.edh-sec[data-isec="${i}"]`)?.scrollIntoView({ behavior:'smooth', block:'end' }); } })));
@@ -22957,7 +22993,19 @@ function adjustLifeField(idx, field, d, from){
     p._deltaT = setTimeout(()=>{ delete p._delta; renderLifeGrid(); }, 2500);
     lifeLog(`${p.name}: life ${d>0?'+':''}${d} → ${p.life}`);
   }
-  else if(field==='poison'){ p.poison = Math.max(0, p.poison+d); lifeLog(`${p.name}: poison ${d>0?'+':''}${d} → ${p.poison}`); }
+  else if(field==='poison'){
+    const before = p.poison;
+    p.poison = Math.max(0, p.poison+d);
+    const ap = p.poison - before;
+    if(ap){
+      // The same running −N / +N the life total shows, beside the poison count.
+      p._pzDelta = (p._pzDelta||0) + ap; p._pzFresh = true;
+      if(p._pzDelta === 0){ delete p._pzDelta; delete p._pzFresh; }
+      clearTimeout(p._pzT);
+      p._pzT = setTimeout(()=>{ delete p._pzDelta; renderLifeGrid(); }, 2500);
+    }
+    lifeLog(`${p.name}: poison ${d>0?'+':''}${d} → ${p.poison}`);
+  }
   else if(field==='dmg'){
     // Commander damage IS damage: the tally and the life total move together.
     // Clamp-aware so correcting a mistake with − gives the life back exactly.
@@ -22970,6 +23018,12 @@ function adjustLifeField(idx, field, d, from){
       if(p._delta === 0) delete p._delta;
       clearTimeout(p._deltaT);
       p._deltaT = setTimeout(()=>{ delete p._delta; renderLifeGrid(); }, 2500);
+      // … and beside the damage tally on the attacker's card.
+      p._dmgDelta = p._dmgDelta || {}; p._dmgFresh = p._dmgFresh || {}; p._dmgT = p._dmgT || {};
+      p._dmgDelta[from] = (p._dmgDelta[from]||0) + applied; p._dmgFresh[from] = true;
+      if(p._dmgDelta[from] === 0) delete p._dmgDelta[from];
+      clearTimeout(p._dmgT[from]);
+      p._dmgT[from] = setTimeout(()=>{ if(p._dmgDelta) delete p._dmgDelta[from]; renderLifeGrid(); }, 2500);
     }
     lifeLog(`${p.name}: cmdr dmg from ${players[from].name} ${d>0?'+':''}${d} → ${p.dmg[from]}${applied?` · life → ${p.life}`:''}`);
   }
@@ -23402,6 +23456,13 @@ function lifeBadgeHtml(p, idx){
     ? `<span class="lb-grp cd ${hi ? 'hit' : ''} ${hi >= lethalDmg() ? 'danger' : ''}"${col ? ` style="--lbc:${col}"` : ''}>${cmdrDmgSvg(19)}<b>${hi}</b></span>` : '';
   return (poison + cmd) || '\u2620';
 }
+/* The running −N (left of a number) or +N (right of it) that fades a moment
+   after the tapping stops -- life, poison and commander damage alike. */
+function ldeltaHtml(v, fresh, plusSide){
+  v = v || 0;
+  if(plusSide) return `<span class="ldelta plus ${v>0?'show':''} ${v>0&&fresh?'pop':''}">${v>0?'+'+v:''}</span>`;
+  return `<span class="ldelta minus ${v<0?'show':''} ${v<0&&fresh?'pop':''}">${v<0?'\u2212'+Math.abs(v):''}</span>`;
+}
 function lifeCardHtml(p, idx, count){
   const rot = state.life.rotate ? ((lifeLayout().rot[idx] ?? seatRotation(idx, count))) : 0;
   const open = state.life.expandedIdx === idx;
@@ -23422,7 +23483,7 @@ function lifeCardHtml(p, idx, count){
       <div class="dmg-overlay ${lethalDmg() && taken>=lethalDmg()?'lethal':''}" data-dmgfrom="${idx}">
         <div class="tap-zone left" data-dmgside="minus"><span class="tap-glyph">−</span></div>
         <div class="tap-zone right" data-dmgside="plus"><span class="tap-glyph">+</span></div>
-        <div class="dmg-ov-val">${taken}</div>
+        <div class="lval-row">${ldeltaHtml((fp._dmgDelta||{})[idx], !!(fp._dmgFresh||{})[idx])}<div class="dmg-ov-val">${taken}</div>${ldeltaHtml((fp._dmgDelta||{})[idx], !!(fp._dmgFresh||{})[idx], true)}</div>
       </div>
     </div></div>`;
   }
@@ -23439,7 +23500,7 @@ function lifeCardHtml(p, idx, count){
         <div class="tap-zone right" data-poison="${idx}" data-side="plus"><span class="tap-glyph">+</span></div>` : ''}
         <div class="focus-name">${escapeHtml(p.name)}</div>
         ${pz ? `<div class="pz-label">${phyrexianSvg(15)}<span>Poison</span></div>
-        <div class="lval-row"><div class="lval2 pz-val ${p.poison >= 10 ? 'danger' : ''}">${p.poison}</div></div>`
+        <div class="lval-row">${ldeltaHtml(p._pzDelta, p._pzFresh)}<div class="lval2 pz-val ${p.poison >= 10 ? 'danger' : ''}">${p.poison}</div>${ldeltaHtml(p._pzDelta, p._pzFresh, true)}</div>`
           : `<div class="pz-label" style="max-width:80%;white-space:normal;text-transform:none;">${trS('Tap another player to count the damage you took from them.')}</div>`}
         <button class="submenu-toggle done" data-idx="${idx}">${trS('\u2713 Done')}</button>
       </div>
@@ -23477,7 +23538,7 @@ function renderLifeGrid(){
   box.style.gridTemplateAreas = lay.areas.map(r=>`"${r}"`).join(' ');
   box.style.gridAutoRows = '';
   box.innerHTML = players.map((p,i)=>lifeCardHtml(p,i,players.length)).join('');
-  players.forEach(p=>{ delete p._deltaFresh; });
+  players.forEach(p=>{ delete p._deltaFresh; delete p._pzFresh; delete p._dmgFresh; });
   Array.from(box.children).forEach((cell,i)=>{ cell.style.gridArea = 'abcdefgh'[i] || 'auto'; });
   // The cog lives at the table's centre (absolutely positioned, so it is no
   // grid cell); the cards around it get their facing corner cut in
@@ -23711,11 +23772,13 @@ function renderModal(){
     };
     el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet">
       <h3>New Game</h3>
-      <p style="font-size:13.5px;color:var(--sub-text);margin:-4px 0 12px;">${trS('Pick the table layout — every panel turns to face its seat.')}</p>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;max-height:52vh;overflow-y:auto;">${LIFE_LAYOUTS.map(thumb).join('')}</div>
+      <div style="display:flex;flex-wrap:wrap-reverse;gap:10px;justify-content:center;margin-bottom:16px;">${LIFE_LAYOUTS.map(thumb).join('')}</div>
       <div class="life-fmt-row">${LIFE_FMTS.map(f=>`<button type="button" class="chip ${lifeFmt()===f?'active':''}" data-lifefmt="${f}">${escapeHtml(lifeFmtLabel(f))}<small>${fmtSpec(f==='constructed'?'standard':f).life}</small></button>`).join('')}</div>
       <div class="modal-actions"><button class="confirm" id="startGameBtn" style="width:100%;">Start &amp; Spin for First Player</button></div>
     </div></div>`;
+    // Bottom-up: the sheet opens at its FOOT -- Start, the formats and the
+    // smallest tables (first in the list, lowest row) in view at once.
+    { const sh = el.querySelector('.modal-sheet'); if(sh){ sh.scrollTop = sh.scrollHeight; requestAnimationFrame(()=>{ sh.scrollTop = sh.scrollHeight; }); } }
     document.querySelectorAll('[data-lifefmt]').forEach(b=>b.addEventListener('click', ()=>{
       try{ localStorage.setItem(LS_PREFIX + 'lifeFmt', b.dataset.lifefmt); }catch(e){}
       document.querySelectorAll('[data-lifefmt]').forEach(x=>x.classList.toggle('active', x===b));
