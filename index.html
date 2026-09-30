@@ -1738,7 +1738,6 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 #recoOverlay:has(.reco-fab:not([hidden])) .edh-jump-row{bottom:calc(96px + var(--nav-h) + env(safe-area-inset-bottom));}
 .edh-jump-row{top:70px;}
 .reco-fab{position:fixed;right:16px;bottom:calc(18px + var(--nav-h) + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--acc-fill);color:var(--on-acc);font-size:26px;font-weight:800;border:none;z-index:140;box-shadow:0 6px 18px rgba(0,0,0,0.5);cursor:pointer;}
-.reco-fab .fab-n{position:absolute;top:-4px;right:-4px;background:var(--ink);color:var(--brass);border:2.5px solid var(--brass);border-radius:999px;font-size:12px;padding:1px 6px;font-weight:700;}
 .reco-theme-banner{width:fit-content;margin:0 auto 8px;padding:6px 14px;border:2.5px solid var(--brass);border-radius:999px;color:var(--brass);font-size:14px;font-weight:600;text-align:center;}
 #tileMenuPop{max-height:70vh;overflow-y:auto;}
 .edh-rel{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-top:10px;-webkit-overflow-scrolling:touch;}
@@ -1751,6 +1750,11 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 /* The selection button TAKES the ＋'s place (it used to sit half over it). */
 body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !important;}
 /* Gold selection buttons: ＋ for one pick, the count itself from two up. */
+.fp-newsub{display:block;width:100%;flex:none;min-height:46px;margin-top:10px;font-size:15px;white-space:normal;}
+.fp-actions{display:flex;gap:8px;margin-top:8px;align-items:stretch;}
+.fp-actions > button{margin:0;min-height:50px;white-space:normal;line-height:1.2;}
+.fp-actions #fpCancel{flex:1;}
+.fp-actions #fpHere{flex:2;}
 .fab-count{font-family:'Inter',sans-serif;font-size:21px;font-weight:800;line-height:1;letter-spacing:-0.5px;}
 .fab-count.long{font-size:16px;}
 .searchbar .sel-fab{flex:none;width:48px;height:48px;min-height:0;align-self:center;padding:0;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,0.4);cursor:pointer;}
@@ -2069,7 +2073,7 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
 .deck-select, .lg-card, .ruling, .tag-add-row input, .tag-sugg, .lg-chip, .pair-cell, .adv-panel, .sr-tile, .chip, .toggle-switch .track, .modal-sheet input, .player-count button, .life-toolbar button, .turn-hub, .deckpick{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--ink-2),var(--ink-2)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
 .rpill, .modal-sheet{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--ink-3),var(--ink-3)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
 .edh-jump{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--field),var(--field)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
-.reco-fab .fab-n, .glog-sheet{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--ink),var(--ink)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
+.glog-sheet{border-color:transparent;background-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%), linear-gradient(var(--ink),var(--ink)), linear-gradient(var(--brass),var(--brass));background-origin:padding-box,padding-box,border-box;background-clip:padding-box,padding-box,border-box;}
 #lifeMenuPop .lm-opt{border-color:transparent;background-image:linear-gradient(var(--ink-deep),var(--ink-deep)), linear-gradient(color-mix(in srgb, var(--ink-deep) 45%, #000), color-mix(in srgb, var(--ink-deep) 45%, #000));background-origin:padding-box,border-box;background-clip:padding-box,border-box;}
 /* Solid accent buttons: one flat, uniform colour — the sheen retired. */
 .new-deck-btn, .empty-home button, .need-deck button, .ghost-btn.active, .primary-btn, .deck-fab, .pair-add, .searchbar button, .seg button.active, .reco-create, .chip.active, .modal-actions .confirm, .player-count button.active, .reco-fab, .cotd .cotd-add, .rt-chip.on{
@@ -2096,7 +2100,6 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
    side-coloured plates, the same contrast logic as everywhere else. */
 .banner-tab svg, .icon-btn svg, .dk-tool svg, .compass svg{color:var(--icon-pl);}
 .deck-fab, .reco-fab, .searchbar .sel-fab{background-image:linear-gradient(var(--gold),var(--gold));color:#241A04;}
-.reco-fab .fab-n{background-image:none;background:none;-webkit-text-fill-color:#241A04;color:#241A04;}
 
 /* Field faces flip to the MAIN colour when they sit on a SECONDARY surface:
    a button inside a panel wears the page ink, standing off its card exactly
@@ -5602,23 +5605,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.663';
+const APP_VERSION = '2.51.664';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck selection: + menu with actions',
-    'Add picks to collection or maybeboard',
-    'Back clears a selection',
-    'Count replaces the + button',
-    'Search: long-press to pick cards',
-    'Inspiration starts clean'
+    'Move dialog: tidy Subfolder button',
+    'Inspiration: count inside the +'
   ],
   nl: [
-    'Deckselectie: +-menu met acties',
-    'Selectie naar collectie of maybeboard',
-    'Terug heft een selectie op',
-    'Aantal vervangt de +-knop',
-    'Search: long-press om te selecteren',
-    'Inspiration begint weer leeg'
+    'Verplaatsen: nette Subfolder-knop',
+    'Inspiration: aantal in de +'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -7862,10 +7857,10 @@ function renderFolderPicker(){
       ${!nav ? FMT_ORDER.map(f=>`<button class="dp-row" data-intofmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)} <span style="color:var(--sub-text);">· auto folder</span>${childFolders(fmtFolderId(f)).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : ''}
       ${here.length ? here.map(f=>`<button class="dp-row" data-into="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,22)}</span><span class="dp-txt" style="display:inline;">${escapeHtml(f.name)}${childFolders(f.id).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : `<p class="hint" style="padding:6px 2px;">No subfolders here.</p>`}
     </div>
-    <div style="display:flex;gap:8px;margin-top:10px;">
-      <button class="dp-cancel" id="fpCancel" style="flex:1;margin:0;">Cancel</button>
-      <button class="ghost-btn" id="fpNewSub" style="flex:1;">＋ Subfolder</button>
-      <button class="primary-btn" id="fpHere" style="flex:1.3;">Move to ${escapeHtml(curName)}</button>
+    <button class="ghost-btn fp-newsub" id="fpNewSub">＋ Subfolder</button>
+    <div class="fp-actions">
+      <button class="dp-cancel" id="fpCancel">Cancel</button>
+      <button class="primary-btn" id="fpHere">Move to ${escapeHtml(curName)}</button>
     </div>
   </div>`;
   const close=()=>{ el.remove(); state._fpDeck=null; };
