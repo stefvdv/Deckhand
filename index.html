@@ -1702,7 +1702,7 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .tr-qty span{font-size:13px;min-width:26px;text-align:center;font-family:'JetBrains Mono',monospace;}
 .tr-del{flex:none;color:var(--sub-text);}
 .iac-msg{font-size:15px;line-height:1.5;white-space:pre-line;color:var(--ink-text);text-align:left;}
-.col-grid .col-tile{content-visibility:auto;contain-intrinsic-size:auto 330px;}
+.col-grid .col-tile{content-visibility:auto;contain-intrinsic-size:auto var(--col-tile-h, 330px);}
 /* The double-faced flip button: a circle on the art, Moxfield-style —
    right of center, off the name line and the text box. */
 .dfc-flip-box{position:absolute;top:0;left:0;width:100%;aspect-ratio:63/88;pointer-events:none;z-index:4;}
@@ -5590,15 +5590,13 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.660';
+const APP_VERSION = '2.51.661';
 const CHANGELOG_NOTES = {
   en: [
-    'Spoiler push: only unseen cards',
-    'No push for a new set by itself'
+    'Smooth scrolling in long collections'
   ],
   nl: [
-    'Spoilermelding: alleen ongeziene kaarten',
-    'Geen melding meer voor alleen een set'
+    'Soepel scrollen in lange collecties'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -8509,7 +8507,31 @@ function openBinderLongMenu(binder, x, y){
   });
   setTimeout(()=>document.addEventListener('click', function once(ev){ if(!pop.contains(ev.target)){ pop.remove(); document.removeEventListener('click', once); } }), 0);
 }
+/* Long collection lists skip drawing the tiles that are off screen, holding
+   their place with a guessed height. The guess was a fixed 330px; the real
+   tile is taller or shorter per phone, so every row that came into view
+   while scrolling UP (this page grows upward) changed height above the
+   reader and the list jerked. The guess is now the measured height of a
+   real tile on this screen. */
+function fitColTileHeight(){
+  try{
+    const grid = document.querySelector('.col-grid');
+    if(!grid) return;
+    let h = 0;
+    for(const t of grid.children){
+      const r = t.getBoundingClientRect();
+      if(r.height > 0 && r.bottom > 0 && r.top < window.innerHeight){ h = Math.max(h, r.height); }
+      if(h && r.top > window.innerHeight) break;
+    }
+    // The placeholder size is the CONTENT box: borders and padding come on top.
+    const t0 = grid.firstElementChild, cs = t0 ? getComputedStyle(t0) : null;
+    const extra = cs ? ['borderTopWidth','borderBottomWidth','paddingTop','paddingBottom'].reduce((a, k)=>a + (parseFloat(cs[k]) || 0), 0) : 0;
+    if(h > 60) grid.style.setProperty('--col-tile-h', (h - extra).toFixed(2) + 'px');
+  }catch(e){}
+}
+window.addEventListener('resize', ()=>{ if(state.screen === 'collection') fitColTileHeight(); });
 function wireCollectionPage(){
+  requestAnimationFrame(()=>requestAnimationFrame(fitColTileHeight));
   ensureBinderFaces();
   document.querySelectorAll('[data-binderopen]').forEach(t=>{
     // Long-press manages the binder (art / rename / delete); a plain tap opens it.
