@@ -920,7 +920,7 @@ body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 .vg-row .vr-q{flex:0 0 18px;color:var(--sub-text);font-variant-numeric:tabular-nums;}
 .vg-row .vr-n{flex:1;min-width:0;}
 .vg-row .vr-cost{flex:none;display:flex;gap:2px;align-items:center;}
-.vg-row .vr-cost .pip-gen{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:8px;background:#CFC9C2;color:#1a1a1a;font-size:10.5px;font-weight:700;}
+.vg-row .vr-cost .mana-ic{flex:none;display:block;}
 .vg-row .vr-p{flex:0 0 58px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--brass);}
 .vg-card.vg-row.vg-illegal{box-shadow:none;}
 .vg-card.vg-row.vg-illegal .vr-n{color:var(--danger);}
@@ -5674,21 +5674,17 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.670';
+const APP_VERSION = '2.51.671';
 const CHANGELOG_NOTES = {
   en: [
-    'My Decks & binders: list view',
-    'Pick it at the foot of the + menu',
-    'Nav taps work with a menu open',
-    'Decklist: stack and text view',
-    'Pick it at the foot of the \u22ef menu'
+    'Collection + opens the same drop-up',
+    'Hybrid mana shows both colours',
+    'New icons for tile, stack, text view'
   ],
   nl: [
-    'Mijn decks & mappen: lijstweergave',
-    'Te kiezen onderaan het +-menu',
-    'Navigatie werkt met open menu',
-    'Decklist: stapel- en tekstweergave',
-    'Te kiezen onderaan het \u22ef-menu'
+    'Collectie-+ opent hetzelfde menu',
+    'Hybride mana toont beide kleuren',
+    'Nieuwe iconen voor de weergaven'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -7561,7 +7557,27 @@ function openCoverPicker(d){
 /* Tiles or a Moxfield-style list, per page, remembered on this phone. */
 function folderView(page){ try{ return localStorage.getItem(LS_PREFIX + page + 'View') === 'list' ? 'list' : 'tiles'; }catch(e){ return 'tiles'; } }
 function setFolderView(page, v){ try{ localStorage.setItem(LS_PREFIX + page + 'View', v === 'list' ? 'list' : 'tiles'); }catch(e){} }
-function folderViewToggleLabel(page){ return folderView(page) === 'list' ? '\u25A6 ' + trS('Tile view') : '\u2630 ' + trS('List view'); }
+/* View icons: tiles = four squares, stack = three bold bars, text / list =
+   short bullets beside lines. */
+const VIEW_ICONS = {
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.2"/><rect x="13" y="4" width="7" height="7" rx="1.2"/><rect x="4" y="13" width="7" height="7" rx="1.2"/><rect x="13" y="13" width="7" height="7" rx="1.2"/></svg>',
+  stack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>',
+  text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="6.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="5" cy="17.5" r="1.3" fill="currentColor" stroke="none"/><path d="M9.5 6.5H20M9.5 12H20M9.5 17.5h7"/></svg>'
+};
+function viewIco(k){ return `<span class="ib">${VIEW_ICONS[k]}</span>`; }
+function folderViewToggleLabel(page){ return folderView(page) === 'list' ? viewIco('grid') + trS('Tile view') : viewIco('text') + trS('List view'); }
+/* The drop-up menu of a page's big \uFF0B -- My Decks and the collection
+   alike: the same small sheet just above the button. Items: [id, html, fn]. */
+function openFabMenu(items){
+  const old = document.getElementById('fabMenu');
+  if(old){ old.remove(); return; }
+  const menu = document.createElement('div');
+  menu.id = 'fabMenu';
+  menu.innerHTML = items.map(([id, html])=>`<button id="${id}">${html}</button>`).join('');
+  document.body.appendChild(menu);
+  items.forEach(([id, , fn])=>document.getElementById(id).addEventListener('click', ()=>{ menu.remove(); fn(); }));
+  setTimeout(()=>document.addEventListener('click', function once(){ menu.remove(); document.removeEventListener('click', once); }), 0);
+}
 function deckTileHtml(d){
   const _cv = deckCoverCard(d);
   const art = _cv ? cardImageLarge(_cv) : '';
@@ -7724,28 +7740,13 @@ function wireHome(){
   if(fab){
     fab.addEventListener('click', (e)=>{
       e.stopPropagation();
-      const m = document.getElementById('fabMenu');
-      if(m){ m.remove(); return; }
-      const menu = document.createElement('div');
-      menu.id = 'fabMenu';
-      menu.innerHTML = `<button id="fabNewDeck">⚔ New deck</button><button id="fabNewFolder"><span class="ib">${ICONS.decks}</span>New folder</button><button id="fabImportDeck">📋 Paste in decklist</button><button id="fabImportFile">📄 Import from file</button><button id="fabView">${folderViewToggleLabel('decks')}</button>`;
-      document.body.appendChild(menu);
-      document.getElementById('fabNewDeck').addEventListener('click', ()=>{ menu.remove(); openModal('newdeck'); });
-      document.getElementById('fabNewFolder').addEventListener('click', ()=>{ menu.remove(); openNewFolderPrompt(state.folderNav||null); });
-      document.getElementById('fabImportDeck').addEventListener('click', ()=>{
-        menu.remove();
-        openPasteListSheet();
-      });
-      document.getElementById('fabImportFile').addEventListener('click', ()=>{
-        menu.remove();
-        openPasteListSheet({ pickFile: true });   // sheet opens with the phone's file picker
-      });
-      document.getElementById('fabView').addEventListener('click', ()=>{
-        menu.remove();
-        setFolderView('decks', folderView('decks') === 'list' ? 'tiles' : 'list');
-        render(); scrollToPageFoot();
-      });
-      setTimeout(()=>document.addEventListener('click', function once(){ menu.remove(); document.removeEventListener('click', once); }), 0);
+      openFabMenu([
+        ['fabNewDeck', '⚔ New deck', ()=>openModal('newdeck')],
+        ['fabNewFolder', `<span class="ib">${ICONS.decks}</span>New folder`, ()=>openNewFolderPrompt(state.folderNav||null)],
+        ['fabImportDeck', '📋 Paste in decklist', ()=>openPasteListSheet()],
+        ['fabImportFile', '📄 Import from file', ()=>openPasteListSheet({ pickFile: true })],   // sheet opens with the phone's file picker
+        ['fabView', folderViewToggleLabel('decks'), ()=>{ setFolderView('decks', folderView('decks') === 'list' ? 'tiles' : 'list'); render(); scrollToPageFoot(); }]
+      ]);
     });
   }
   // Open a deck (but not when a tile button was tapped)
@@ -8697,50 +8698,31 @@ function wireCollectionPage(){
   });
   document.getElementById('colBackBtn')?.addEventListener('click', ()=>history.back());
   document.getElementById('tradeBtn')?.addEventListener('click', ()=>switchPage('trade'));
-  document.getElementById('binderFab')?.addEventListener('click', ()=>{
+  document.getElementById('binderFab')?.addEventListener('click', (e)=>{
+    e.stopPropagation();
     const bid = state.colFilter.binder;
-    const bl = binderName(bid) || 'binder';
-    const el = document.createElement('div');
-    el.className = 'deckpick-scrim'; el.id = 'deckPickScrim';
-    el.innerHTML = `<div class="deckpick"><h3 class="dp-title">${trS('Add to')} ${escapeHtml(bl)}</h3>
-      <button class="dp-row" id="bfAddCard"><div class="dp-txt">${trS('Add card')}<div class="dp-meta">${trS('Search Scryfall and file it into a binder')}</div></div></button>
-      <button class="dp-row" id="bfImport"><div class="dp-txt">⬆ ${trS('Import')}<div class="dp-meta">${trS('A collection or binder from Moxfield / Archidekt')}</div></div></button>
-      <button class="dp-row" id="bfPaste"><div class="dp-txt">📋 ${trS('Paste a list')}<div class="dp-meta">${trS('One card per line, e.g. 1 Sol Ring')}</div></div></button>
-      <button class="dp-cancel" id="bfCancel">${trS('Cancel')}</button></div>`;
-    document.body.appendChild(el);
-    const close = ()=>el.remove();
-    el.addEventListener('click', e=>{ if(e.target === el) close(); });
-    document.getElementById('bfCancel').addEventListener('click', close);
-    document.getElementById('bfAddCard').addEventListener('click', ()=>{ close(); openColAddCardSheet(); });
-    document.getElementById('bfImport').addEventListener('click', ()=>{ close(); openCollectionImport(bid); });
-    document.getElementById('bfPaste').addEventListener('click', ()=>{ close(); openBinderPasteSheet(bid); });
+    openFabMenu([
+      ['bfAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
+      ['bfImport', '⬆ ' + trS('Import'), ()=>openCollectionImport(bid)],
+      ['bfPaste', '📋 ' + trS('Paste a list'), ()=>openBinderPasteSheet(bid)]
+    ]);
   });
-  document.getElementById('colFab')?.addEventListener('click', ()=>{
-    const el = document.createElement('div');
-    el.className = 'deckpick-scrim'; el.id = 'deckPickScrim';   // back press closes it like any popup
-    el.innerHTML = `<div class="deckpick"><h3 class="dp-title">${trS('Add')}</h3>
-      <button class="dp-row" id="fabAddCard"><div class="dp-txt">${trS('Add card')}<div class="dp-meta">${trS('Search Scryfall and file it into a binder')}</div></div></button>
-      <button class="dp-row" id="fabAddBinder"><div class="dp-txt">${trS('New binder')}<div class="dp-meta">${trS('A fresh empty binder')}</div></div></button>
-      <button class="dp-row" id="fabImport"><div class="dp-txt">⬆ ${trS('Import')}<div class="dp-meta">${trS('A collection or binder from Moxfield / Archidekt')}</div></div></button>
-      <button class="dp-row" id="fabView"><div class="dp-txt">${folderViewToggleLabel('col')}<div class="dp-meta">${trS('How the binders are shown')}</div></div></button>
-      <button class="dp-cancel" id="fabCancel">${trS('Cancel')}</button></div>`;
-    document.body.appendChild(el);
-    const close = ()=>el.remove();
-    el.addEventListener('click', e=>{ if(e.target === el) close(); });
-    document.getElementById('fabCancel').addEventListener('click', close);
-    document.getElementById('fabAddBinder').addEventListener('click', ()=>{
-      close();
-      openInAppPrompt('New binder name', 'Binder name', '', (name)=>{
-        if(name && name.trim()){
-          const nb = { id: 'bnd_'+Date.now().toString(36), name: name.trim() };
-          state.collection.binders.push(nb); saveCollection();
-          openBinderIn(nb.id);
-        }
-      });
-    });
-    document.getElementById('fabAddCard').addEventListener('click', ()=>{ close(); openColAddCardSheet(); });
-    document.getElementById('fabImport').addEventListener('click', ()=>{ close(); openCollectionImport(); });
-    document.getElementById('fabView').addEventListener('click', ()=>{ close(); setFolderView('col', folderView('col') === 'list' ? 'tiles' : 'list'); render(); scrollToPageFoot(); });
+  document.getElementById('colFab')?.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    openFabMenu([
+      ['fabAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
+      ['fabAddBinder', `<span class="ib">${ICONS.collection}</span>${trS('New binder')}`, ()=>{
+        openInAppPrompt('New binder name', 'Binder name', '', (name)=>{
+          if(name && name.trim()){
+            const nb = { id: 'bnd_'+Date.now().toString(36), name: name.trim() };
+            state.collection.binders.push(nb); saveCollection();
+            openBinderIn(nb.id);
+          }
+        });
+      }],
+      ['fabImport', '⬆ ' + trS('Import'), ()=>openCollectionImport()],
+      ['fabView', folderViewToggleLabel('col'), ()=>{ setFolderView('col', folderView('col') === 'list' ? 'tiles' : 'list'); render(); scrollToPageFoot(); }]
+    ]);
   });
   document.getElementById('colChev')?.addEventListener('click', ()=>{
     // Toggle the panel in place — a full page render (thousands of grid
@@ -9652,7 +9634,7 @@ function decklistPageHtml(){
   </main>`;
 }
 function menuPopHtml(){
-  return `<div class="menu-pop" id="menuPop"><button id="mImpExp">Import / Export</button><button id="mSortBy">${trS('Sort by')} ⌄</button><button id="mFormat">Format ⌄</button><button id="mAddFolder">Move to folder…</button><button id="mDuplicate">Duplicate deck</button><button id="mShare">Share deck</button><hr><button id="mDelete" class="danger">Delete deck</button><hr>${[['grid','\u25A6 ' + trS('Tile view')],['stack','\u2261 ' + trS('Stack view')],['text','\u2630 ' + trS('Text view')]].filter(o=>o[0] !== dlView()).map(o=>`<button data-dlview="${o[0]}">${o[1]}</button>`).join('')}</div>`;
+  return `<div class="menu-pop" id="menuPop"><button id="mImpExp">Import / Export</button><button id="mSortBy">${trS('Sort by')} ⌄</button><button id="mFormat">Format ⌄</button><button id="mAddFolder">Move to folder…</button><button id="mDuplicate">Duplicate deck</button><button id="mShare">Share deck</button><hr><button id="mDelete" class="danger">Delete deck</button><hr>${[['grid',viewIco('grid') + trS('Tile view')],['stack',viewIco('stack') + trS('Stack view')],['text',viewIco('text') + trS('Text view')]].filter(o=>o[0] !== dlView()).map(o=>`<button data-dlview="${o[0]}">${o[1]}</button>`).join('')}</div>`;
 }
 /* ---- legality ----------------------------------------------------------
    Re-derived from scratch on every deck change, so swapping your Admiral or
@@ -12111,8 +12093,32 @@ function costPipsHtml(card){
   return (raw.match(/\x7b[^\x7d]+\x7d/g) || []).map(t=>{
     const k = t.slice(1, -1).toUpperCase();
     if(/^[WUBRGC]$/.test(k)) return manaIconSvg(k, 16);
-    return `<span class="pip-gen">${escapeHtml(k.replace(/\//g, ''))}</span>`;
+    const parts = k.split('/');
+    if(parts.length === 2) return manaHybridSvg(parts[0], parts[1], 16);
+    return manaGenericSvg(k, 16);
   }).join('');
+}
+/* Symbols the card-symbol set draws beyond the five colours, built from the
+   same glyphs: a grey numbered pip (2, X, S), a hybrid pip split diagonally
+   into its two colours (W/U, B/G, 2/W), and a Phyrexian pip (colour + \u03A6). */
+function manaGenericSvg(k, px){
+  const t = escapeHtml(String(k));
+  const fs = t.length > 1 ? 15 : 20;
+  return `<svg class="mana-ic" width="${px}" height="${px}" viewBox="0 0 32 32" aria-label="${t}"><circle cx="16" cy="16" r="15" fill="#CFC9C2" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/><text x="16" y="16.5" text-anchor="middle" dominant-baseline="central" font-family="Inter, sans-serif" font-weight="800" font-size="${fs}" fill="#130c0e">${t}</text></svg>`;
+}
+function manaHybridSvg(a, b, px){
+  const bgOf = (x)=> MANA_GLYPHS[x] ? MANA_GLYPHS[x].bg : '#CFC9C2';
+  if(b === 'P'){
+    return `<svg class="mana-ic" width="${px}" height="${px}" viewBox="0 0 32 32" aria-label="${escapeHtml(a)}/P"><circle cx="16" cy="16" r="15" fill="${bgOf(a)}" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/><g fill="none" stroke="#130c0e" stroke-width="2.6"><ellipse cx="16" cy="16" rx="7" ry="5.6"/><path d="M16 7v18"/></g></svg>`;
+  }
+  const glyph = (x, cx)=> MANA_GLYPHS[x]
+    ? `<g transform="translate(${cx} ${cx}) scale(0.4) translate(-16 -16)"><path fill="#130c0e" d="${MANA_GLYPHS[x].d}"/></g>`
+    : `<text x="${cx}" y="${cx + 0.5}" text-anchor="middle" dominant-baseline="central" font-family="Inter, sans-serif" font-weight="800" font-size="12" fill="#130c0e">${escapeHtml(x)}</text>`;
+  // The diagonal runs bottom-left to top-right: first colour top-left.
+  return `<svg class="mana-ic" width="${px}" height="${px}" viewBox="0 0 32 32" aria-label="${escapeHtml(a)}/${escapeHtml(b)}">`
+    + `<path d="M5.4 26.6A15 15 0 0 1 26.6 5.4Z" fill="${bgOf(a)}"/><path d="M26.6 5.4A15 15 0 0 1 5.4 26.6Z" fill="${bgOf(b)}"/>`
+    + `<circle cx="16" cy="16" r="15" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>`
+    + glyph(a, 10.6) + glyph(b, 21.4) + `</svg>`;
 }
 function cardRowHtml(card, idx, loc, qty){
   const _rd = getDeck(state.activeDeckId);
