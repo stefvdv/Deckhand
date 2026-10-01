@@ -1078,7 +1078,7 @@ html{--accent-ink:var(--head-ink);}   /* the page's own light accent, computed a
 .dl-desc-text{font-size:13px;line-height:1.4;color:var(--ink-text);overflow-wrap:anywhere;}
 .dk-type svg{width:14px;height:14px;opacity:0.8;flex:none;}
 .dk-mid:has(.dk-type){gap:4px;}
-.deck-dock .menu-pop{position:absolute;bottom:56px;right:8px;top:auto;}
+.deck-dock .menu-pop{position:absolute;bottom:56px;left:8px;right:auto;top:auto;}
 main.has-dock{padding-bottom:84px;}
 .admiral-tile{max-width:118px;}
 .vg-card{position:relative;cursor:pointer;overflow:hidden;border-radius:4.75% / 3.5%;border:2px solid var(--line);background:#111113;aspect-ratio:63/88;}
@@ -5674,13 +5674,13 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.677';
+const APP_VERSION = '2.51.678';
 const CHANGELOG_NOTES = {
   en: [
-    'Decklist: + and Bulk Edit swapped'
+    'Decklist: \u22ef menu moved to the left'
   ],
   nl: [
-    'Decklist: + en Bulk Edit gewisseld'
+    'Decklist: \u22ef-menu naar links'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -9678,10 +9678,11 @@ function deckMeterHtml(d){
   } else {
     mid = dockTypeCounts(d) || '<span>Empty deck</span>';
   }
+  // \u22EF at the far left, the tools after it, the \u203A chevron at the far right.
   return `<div class="deck-dock" id="deckMeterRow">
+    <button class="icon-btn" id="menuBtn">${ICONS.dots}</button>
     <div class="dk-mid">${mid}</div>
     <button class="dk-arr" id="dockNext"${state._dlSel && state._dlSel.size ? ' hidden' : ''}>${ICONS.chevRight}</button>
-    <button class="icon-btn" id="menuBtn">${ICONS.dots}</button>
     ${state.menuOpen ? menuPopHtml() : ''}
   </div>`;
 }
