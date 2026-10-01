@@ -5674,13 +5674,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.672';
+const APP_VERSION = '2.51.674';
 const CHANGELOG_NOTES = {
   en: [
-    'Guided tour covers the newest features'
+    'Inspiration: all themes and Kindred back',
+    'Deck themes no longer leak into it'
   ],
   nl: [
-    'Rondleiding toont de nieuwste functies'
+    'Inspiration: thema\'s en Kindred terug',
+    'Deckthema\'s lekken er niet meer in'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6075,16 +6077,97 @@ function deleteFolder(id){
   saveFolders();
 }
 
+/* ---- Deck store: IndexedDB --------------------------------------------
+   localStorage holds ~5 MB for the WHOLE app (collection, prices, settings
+   and decks together), so a deck collector hit "storage full" after a few
+   dozen decks. Decks now live in their own IndexedDB database, which the
+   phone sizes in hundreds of megabytes. Keys keep their old names
+   (admiral_app:deck:<id>). A deck still in localStorage is moved over on the
+   next start -- and only removed there once IndexedDB has confirmed it. */
+let _deckDbP = null;
+function deckDbOpen(){
+  if(_deckDbP) return _deckDbP;
+  _deckDbP = new Promise((res)=>{
+    try{
+      const req = indexedDB.open('admiral-decks', 1);
+      req.onupgradeneeded = ()=>{ try{ req.result.createObjectStore('decks'); }catch(e){} };
+      req.onsuccess = ()=>res(req.result);
+      req.onerror = ()=>res(null);
+      req.onblocked = ()=>res(null);
+    }catch(e){ res(null); }
+  });
+  _deckDbP.then(db=>{ if(!db) _deckDbP = null; });   // a failure is never cached
+  return _deckDbP;
+}
+/* Resolves true only once the write is durable (transaction complete). */
+async function deckDbPutMany(entries){
+  const db = await deckDbOpen(); if(!db || !entries.length) return !!db;
+  return await new Promise((res)=>{
+    try{
+      const tx = db.transaction('decks', 'readwrite');
+      const st = tx.objectStore('decks');
+      entries.forEach(([k, v])=>st.put(v, k));
+      tx.oncomplete = ()=>res(true);
+      tx.onerror = ()=>res(false);
+      tx.onabort = ()=>res(false);
+    }catch(e){ res(false); }
+  });
+}
+async function deckDbDelete(key){
+  const db = await deckDbOpen(); if(!db) return false;
+  return await new Promise((res)=>{
+    try{ const tx = db.transaction('decks', 'readwrite'); tx.objectStore('decks').delete(key); tx.oncomplete = ()=>res(true); tx.onerror = ()=>res(false); }
+    catch(e){ res(false); }
+  });
+}
+async function deckDbAll(){
+  const db = await deckDbOpen(); if(!db) return null;
+  return await new Promise((res)=>{
+    const out = {};
+    try{
+      const cur = db.transaction('decks').objectStore('decks').openCursor();
+      cur.onsuccess = ()=>{ const c = cur.result; if(!c){ res(out); return; } out[String(c.key)] = c.value; c.continue(); };
+      cur.onerror = ()=>res(null);
+    }catch(e){ res(null); }
+  });
+}
+async function deckDbClear(){
+  const db = await deckDbOpen(); if(!db) return false;
+  return await new Promise((res)=>{
+    try{ const tx = db.transaction('decks', 'readwrite'); tx.objectStore('decks').clear(); tx.oncomplete = ()=>res(true); tx.onerror = ()=>res(false); }
+    catch(e){ res(false); }
+  });
+}
+let _deckDbOk = false;   // decks are being kept in IndexedDB this session
 async function loadDecksIndex(){
   try{
-    if(!lsAvailable()){ warnStorageOnce(); state.decksIndex=[]; state.homeLoaded=true; return; }
-    const decks = [];
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(!k || !k.startsWith(LS_PREFIX+'deck:')) continue;
-      try{ decks.push(JSON.parse(localStorage.getItem(k))); }catch(e){ /* skip corrupt entry */ }
+    const lsOk = lsAvailable();
+    const byKey = {};
+    const idb = await deckDbAll();
+    if(idb){
+      _deckDbOk = true;
+      Object.keys(idb).forEach(k=>{ try{ const v = idb[k]; const d = typeof v === 'string' ? JSON.parse(v) : v; if(d && d.id) byKey[k] = d; }catch(e){} });
     }
-    state.decksIndex = decks.filter(Boolean).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+    // Decks still in localStorage: older saves, or written while IndexedDB
+    // was unavailable. The newer copy wins; then they move house.
+    const lsKeys = [];
+    if(lsOk){
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(!k || !k.startsWith(LS_PREFIX+'deck:')) continue;
+        lsKeys.push(k);
+        try{
+          const d = JSON.parse(localStorage.getItem(k));
+          if(d && d.id && (!byKey[k] || (d.updatedAt||0) > (byKey[k].updatedAt||0))) byKey[k] = d;
+        }catch(e){ /* skip corrupt entry */ }
+      }
+    }
+    if(!idb && !lsOk){ warnStorageOnce(); }
+    state.decksIndex = Object.values(byKey).filter(Boolean).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+    if(idb && lsKeys.length){
+      const moved = lsKeys.filter(k=>byKey[k]).map(k=>[k, JSON.stringify(byKey[k])]);
+      deckDbPutMany(moved).then(ok=>{ if(ok) lsKeys.forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} }); });
+    }
   }catch(e){ console.error(e); state.decksIndex = []; }
   state.folders = loadFolders();
   if(state.folderNav===undefined) state.folderNav = null;   // which folder we're viewing (null = top)
@@ -6137,6 +6220,7 @@ function slimDeckForSave(clean){
 function compactAllDecks(skipId){
   (state.decksIndex||[]).forEach(dd=>{
     if(!dd || dd.id === skipId) return;
+    if(_deckDbOk){ try{ if(localStorage.getItem(LS_PREFIX+'deck:'+dd.id) === null) return; }catch(e){} }
     try{
       const clean = {}; Object.keys(dd).forEach(k=>{ if(k!=='_saveStatus') clean[k]=dd[k]; });
       localStorage.setItem(LS_PREFIX+'deck:'+dd.id, JSON.stringify(slimDeckForSave(clean)));
@@ -6146,6 +6230,14 @@ function compactAllDecks(skipId){
 async function persistDeck(d){
   const clean = {}; Object.keys(d).forEach(k=>{ if(k!=='_saveStatus') clean[k]=d[k]; });
   const payload = JSON.stringify(slimDeckForSave(clean));
+  const key = LS_PREFIX+'deck:'+d.id;
+  // IndexedDB first: room for as many decks as anyone builds. Once that
+  // write is confirmed, any old localStorage copy goes (frees the small store).
+  if(await deckDbPutMany([[key, payload]])){
+    _deckDbOk = true;
+    try{ if(localStorage.getItem(key) !== null) localStorage.removeItem(key); }catch(e){}
+    return;
+  }
   try{
     localStorage.setItem(LS_PREFIX+'deck:'+d.id, payload);
   }catch(e){
@@ -6171,6 +6263,7 @@ async function persistDeck(d){
 }
 async function deleteDeckStorage(id){
   try{ localStorage.removeItem(LS_PREFIX+'deck:'+id); }catch(e){}
+  try{ await deckDbDelete(LS_PREFIX+'deck:'+id); }catch(e){}
 }
 
 async function loadSettings(){
@@ -9867,7 +9960,20 @@ async function repriceCollectionDaily(){
     }
   }catch(err){}
 }
-function saveCollection(){ state._ownedSet = null; try{ localStorage.setItem(LS_PREFIX+'collection', JSON.stringify(state.collection)); }catch(e){} }
+function saveCollection(){
+  state._ownedSet = null;
+  try{ localStorage.setItem(LS_PREFIX+'collection', JSON.stringify(state.collection)); }
+  catch(e){
+    // Make room: move any decks still in localStorage to the deck store, then retry.
+    (async ()=>{
+      try{
+        const moves = (state.decksIndex||[]).filter(d=>{ try{ return localStorage.getItem(LS_PREFIX+'deck:'+d.id) !== null; }catch(err){ return false; } });
+        for(const d of moves) await persistDeck(d);
+        localStorage.setItem(LS_PREFIX+'collection', JSON.stringify(state.collection));
+      }catch(err){ toast(appLang() === 'nl' ? '\u26A0 Opslag vol \u2014 de collectie kon niet bewaard worden. Maak een back-up in Extra\u2019s.' : '\u26A0 Storage full \u2014 the collection could not be saved. Make a backup in Extras.'); }
+    })();
+  }
+}
 const COL_CONDS = [['MT','Mint'],['NM','Near Mint'],['EX','Excellent'],['GD','Good'],['LP','Light Played'],['PL','Played'],['PO','Poor']];
 function slimForCollection(card){
   return { name: card.name, set: card.set, set_name: card.set_name||'', cn: card.collector_number||'',
@@ -18625,7 +18731,7 @@ function dedupeTagList(list){
   return Array.from(byKey.values()).sort((a,b)=>(b.count||0)-(a.count||0));
 }
 async function ensureEdhrecTags(){
-  if(state.edhrecTags && state.edhrecTags.length) return;
+  if(state.edhrecTags && state.edhrecTags.length && state._edtagsFull) return;
   if(state._edtagsAt && (Date.now() - state._edtagsAt) < 60000) return;   // retry at most once a minute
   state._edtagsAt = Date.now();
   try{
@@ -18644,9 +18750,13 @@ async function ensureEdhrecTags(){
         const deduped = dedupeTagList(valid);
         let hasKin = deduped.some(t=>t.k);
         if(!hasKin){ try{ const ks = kindredNameSet(); hasKin = deduped.some(t=>ks.has(String(t.label||'').toLowerCase())); }catch(e){} }
+        const complete = edtagsLooksComplete(deduped);
         const maxAge = (j.p || !hasKin) ? 3600*1000 : 14*24*3600*1000;
-        if((Date.now() - (j.t||0)) < maxAge){
+        // A thin list (a single commander's themes, no Kindred) is not a
+        // catalog at all: never served, fetched fresh instead.
+        if(complete && (Date.now() - (j.t||0)) < maxAge){
           state.edhrecTags = deduped;
+          edtagsMarkFull(j.t);
           // A shrunken list means near-duplicate variants were merged — persist
           // the clean catalog so they never come back (keeping its partial flag).
           if(deduped.length && deduped.length < valid.length){
@@ -18687,6 +18797,7 @@ async function ensureEdhrecTags(){
   tags.sort((a,b)=>(b.count||0)-(a.count||0));
   if(tags.length){
     state.edhrecTags = tags;
+    edtagsMarkFull(Date.now());
     // Fewer than 60 non-kindred themes can only be the hub SAMPLE — the
     // census document did not land. Store it as partial (p:1) so it serves
     // the dropdown today but is retried within the hour, not frozen for
@@ -18868,6 +18979,14 @@ function mergeEdhrecTags(list){
   // niche builds) — fold every theme we meet into the stored catalog so the
   // dropdown keeps growing with use.
   if(!Array.isArray(list) || !list.length) return;
+  // Only a COMPLETE catalog (the EDHREC census, loaded or stored) may grow.
+  // With none loaded yet, one commander's ten themes once BECAME the whole
+  // catalog -- stored with a fresh date, so Inspiration showed that deck's
+  // themes and zero Kindred for good. They wait aside until the census is in.
+  if(!state._edtagsFull){
+    state._edtagsExtra = (state._edtagsExtra || []).concat(list.filter(Boolean));
+    return;
+  }
   const cur = state.edhrecTags || [];
   const have = new Set(cur.map(t=>normTagKey(t.slug)));
   let grew = false;
@@ -18882,8 +19001,25 @@ function mergeEdhrecTags(list){
   });
   if(grew){
     state.edhrecTags = cur;
-    try{ localStorage.setItem('admiral_app:edhrecTags4', JSON.stringify({ t: Date.now(), v: cur })); }catch(e){}
+    // Keep the census's own date (and partial flag): growing the list must
+    // never make an old or half catalog look fresh.
+    try{
+      const old = JSON.parse(localStorage.getItem('admiral_app:edhrecTags4') || '{}');
+      localStorage.setItem('admiral_app:edhrecTags4', JSON.stringify(Object.assign({ t: old.t || state._edtagsT || 0, v: cur }, old.p ? { p: 1 } : {})));
+    }catch(e){}
   }
+}
+/* A real EDHREC census has well over a hundred themes plus the Kindred
+   list; anything thinner is a half harvest or a poisoned leftover. */
+function edtagsLooksComplete(list){
+  const ks = kindredNameSet();
+  const kin = list.filter(t=>t.k || ks.has(String(t.label||'').toLowerCase())).length;
+  return kin >= 10 && (list.length - kin) >= 60;
+}
+function edtagsMarkFull(t){
+  state._edtagsFull = true; state._edtagsT = t || Date.now();
+  const extra = state._edtagsExtra; state._edtagsExtra = null;
+  if(extra && extra.length) mergeEdhrecTags(extra);
 }
 const KINDRED_PLURAL_IRREGULAR = { Elf:'Elves', Wolf:'Wolves', Werewolf:'Werewolves', Dwarf:'Dwarves', Mouse:'Mice', Fox:'Foxes', Sphinx:'Sphinxes', Phoenix:'Phoenixes', Ox:'Oxen', Octopus:'Octopuses' };
 /* Scryfall's live creature-type catalog: the complete current list, cached
@@ -22804,6 +22940,11 @@ function backupAllDecks(){
       if(k && k.indexOf(LS_PREFIX) === 0) ls[k] = localStorage.getItem(k);
     }
   }catch(e){}
+  // Decks live in IndexedDB now: write them into the same key layout, so the
+  // file restores on this version and on older ones alike.
+  (state.decksIndex||[]).forEach(d=>{
+    try{ const c = {}; Object.keys(d).forEach(k=>{ if(k!=='_saveStatus') c[k] = d[k]; }); ls[LS_PREFIX+'deck:'+d.id] = JSON.stringify(slimDeckForSave(c)); }catch(e){}
+  });
   const payload = {
     app: 'admiral-deck-builder', v: 2, exportedAt: new Date().toISOString(),
     decks: state.decksIndex.map(d=>{ const c={}; Object.keys(d).forEach(k=>{ if(k!=='_saveStatus') c[k]=d[k]; }); return c; }),
@@ -22839,7 +22980,12 @@ async function restoreFromFile(file){
         if(k && k.indexOf(LS_PREFIX) === 0) drop.push(k);
       }
       drop.forEach(k=>localStorage.removeItem(k));
-      keys.forEach(k=>localStorage.setItem(k, payload.ls[k]));
+      // Decks go to the deck store (any number fits); everything else back
+      // into localStorage. Without IndexedDB, decks fall back to localStorage.
+      const deckKeys = keys.filter(k=>k.indexOf(LS_PREFIX+'deck:') === 0);
+      const otherKeys = keys.filter(k=>k.indexOf(LS_PREFIX+'deck:') !== 0);
+      const inDb = (await deckDbClear()) && (await deckDbPutMany(deckKeys.map(k=>[k, payload.ls[k]])));
+      (inDb ? otherKeys : keys).forEach(k=>localStorage.setItem(k, payload.ls[k]));
     }catch(e){
       toast('Restore hit a storage error — free some space and try again.');
       return;
