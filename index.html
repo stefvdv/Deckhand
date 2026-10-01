@@ -12,6 +12,8 @@
 <meta property="og:description" content="Deck building, EDHREC built in, card search, collection, gameplay tools and more. No ads, works offline.">
 <meta property="og:url" content="https://deckhandcompanion.netlify.app/">
 <meta property="og:image" content="https://deckhandcompanion.netlify.app/og-image.png">
+<meta property="og:image:secure_url" content="https://deckhandcompanion.netlify.app/og-image.png">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Deckhand: a deck of cards floating above an open hand">
@@ -5694,15 +5696,13 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.681';
+const APP_VERSION = '2.51.682';
 const CHANGELOG_NOTES = {
   en: [
-    'Shorter invite, no emoji',
-    'Invite preview shows the picture'
+    'Invite always fetches a fresh preview'
   ],
   nl: [
-    'Kortere uitnodiging, geen emoji',
-    'Uitnodiging toont het plaatje'
+    'Uitnodiging toont altijd vers plaatje'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -22928,9 +22928,10 @@ function createDeckFromReco(){
    the public site -- inside the APK, location is not the website. */
 const DECKHAND_SITE = 'https://deckhandcompanion.netlify.app/';
 function shareAppText(lang){
-  // ?invite: a link WhatsApp has never seen, so it fetches the preview card
-  // (og-image.png) fresh instead of reusing an old cached one.
-  const S = DECKHAND_SITE, site = S + '?invite', apk = S + 'Deckhand.apk';
+  // ?v=<version>: every release is a link WhatsApp has never seen, so it
+  // fetches the preview card (og-image.png) fresh instead of reusing an old
+  // cached one -- shares within one version still reuse the good card.
+  const S = DECKHAND_SITE, site = S + '?v=' + APP_VERSION, apk = S + 'Deckhand.apk';
   if(lang === 'nl') return `Deckhand — de complete Magic: The Gathering-app. Gratis, zonder reclame.
 ${site}
 
