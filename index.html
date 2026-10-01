@@ -5674,15 +5674,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.674';
+const APP_VERSION = '2.51.675';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration: all themes and Kindred back',
-    'Deck themes no longer leak into it'
+    'Deck themes & Kindred: the full list',
+    'Sorted by play with your commander'
   ],
   nl: [
-    'Inspiration: thema\'s en Kindred terug',
-    'Deckthema\'s lekken er niet meer in'
+    'Deckthema\'s & Kindred: volledige lijst',
+    'Gesorteerd op spel met je commander'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -22037,8 +22037,12 @@ function edhrecThemesFrom(data){
       const tc = dict.tag_counts || (data||{}).tag_counts || {};
       out = Object.keys(tc).map(k=>({ label: k, slug: edhrecSlug(k), count: tc[k] || 0 }));
     }
+    // EVERY theme and kindred this commander's page lists, most played with
+    // THIS commander first -- the old top-10 cut left the Kindred menu empty.
+    const seen = new Set();
+    out = out.filter(t=>{ const k = String(t.slug||'').toLowerCase(); if(!k || seen.has(k)) return false; seen.add(k); return true; });
     out.sort((a,b)=>(b.count||0)-(a.count||0));
-    return out.slice(0, 10);
+    return out;
   }catch(e){ return []; }
 }
 async function edhrecPairPage(a, b){
