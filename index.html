@@ -5694,17 +5694,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.680';
+const APP_VERSION = '2.51.681';
 const CHANGELOG_NOTES = {
   en: [
-    'Share app: new invite text',
-    'Invite shows a Deckhand picture',
-    'Invite installs the Android app'
+    'Shorter invite, no emoji',
+    'Invite preview shows the picture'
   ],
   nl: [
-    'App delen: nieuwe uitnodiging',
-    'Met Deckhand-plaatje in de chat',
-    'Android-app direct te installeren'
+    'Kortere uitnodiging, geen emoji',
+    'Uitnodiging toont het plaatje'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -22930,43 +22928,29 @@ function createDeckFromReco(){
    the public site -- inside the APK, location is not the website. */
 const DECKHAND_SITE = 'https://deckhandcompanion.netlify.app/';
 function shareAppText(lang){
-  const S = DECKHAND_SITE, apk = S + 'Deckhand.apk';
-  if(lang === 'nl') return `\u{1F0CF} Deckhand — de complete Magic: The Gathering-app. Gratis en zonder reclame.
-${S}
+  // ?invite: a link WhatsApp has never seen, so it fetches the preview card
+  // (og-image.png) fresh instead of reusing an old cached one.
+  const S = DECKHAND_SITE, site = S + '?invite', apk = S + 'Deckhand.apk';
+  if(lang === 'nl') return `Deckhand — de complete Magic: The Gathering-app. Gratis, zonder reclame.
+${site}
 
-• Decks bouwen voor elk format — ook een gloednieuw format: Admiral
-• EDHREC ingebouwd: thema's, topkaarten en combo's
-• Krachtig kaarten zoeken, plus een tool voor vergelijkbare kaarten
-• Budgettool voor goedkopere alternatieven
-• Je collectie bijhouden, met Cardmarket-prijzen
-• Life counter en meer handigheid aan tafel
-• Magic-nieuws en spoilers
-• Werkt ook offline
-…en nog veel meer.
+Decks bouwen voor elk format (ook het gloednieuwe Admiral), EDHREC ingebouwd, krachtig kaarten zoeken, een budgettool, je collectie met Cardmarket-prijzen, een life counter en Magic-nieuws. En alles werkt offline.
 
-\u{1F4F2} Android — tik om de app te installeren:
+Android: installeer de app direct
 ${apk}
-Je telefoon vraagt misschien één keer of je apps van buiten de Play Store toestaat. Dat is normaal; sta het toe.
+(Je telefoon vraagt misschien één keer of je apps van buiten de Play Store toestaat.)
 
-\u{1F34E} iPhone — open de eerste link in Safari en kies Delen → Zet op beginscherm.`;
-  return `\u{1F0CF} Deckhand — the complete Magic: The Gathering companion. Free, and without ads.
-${S}
+iPhone: open de eerste link in Safari en kies Delen → Zet op beginscherm.`;
+  return `Deckhand — the complete Magic: The Gathering companion. Free, no ads.
+${site}
 
-• Deck building for every format — including a brand-new one: Admiral
-• EDHREC built in: themes, top cards and combos
-• Powerful card search, plus a similar-card finder
-• Budget tool for cheaper alternatives
-• Track your collection, with Cardmarket prices
-• Life counter and more tools for the table
-• Magic news and spoilers
-• Works offline
-…and plenty more.
+Deck building for every format (including the brand-new Admiral), EDHREC built in, powerful card search, a budget tool, your collection with Cardmarket prices, a life counter and Magic news. And it all works offline.
 
-\u{1F4F2} Android — tap to install the app:
+Android: install the app directly
 ${apk}
-Your phone may ask once to allow apps from outside the Play Store. That's normal; just allow it.
+(Your phone may ask once to allow apps from outside the Play Store.)
 
-\u{1F34E} iPhone — open the first link in Safari, then Share → Add to Home Screen.`;
+iPhone: open the first link in Safari, then Share → Add to Home Screen.`;
 }
 function inAndroidApp(){
   try{ return typeof window.DeckhandExport !== 'undefined'; }catch(e){ return false; }
