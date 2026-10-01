@@ -6,6 +6,17 @@
 <title>Deckhand — MTG deck builder</title>
 <meta name="description" content="Deck builder, card search, play-data recommendations, and a life tracker for every Magic: The Gathering format — Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern, Legacy and Vintage.">
 <meta name="theme-color" content="#111111">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Deckhand">
+<meta property="og:title" content="Deckhand — the free Magic: The Gathering companion">
+<meta property="og:description" content="Deck building, EDHREC built in, card search, collection, gameplay tools and more. No ads, works offline.">
+<meta property="og:url" content="https://deckhandcompanion.netlify.app/">
+<meta property="og:image" content="https://deckhandcompanion.netlify.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Deckhand: a deck of cards floating above an open hand">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://deckhandcompanion.netlify.app/og-image.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="A&C MTG">
@@ -5683,15 +5694,17 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.679';
+const APP_VERSION = '2.51.680';
 const CHANGELOG_NOTES = {
   en: [
-    'Filters: gold search button',
-    'Works after picking from a list'
+    'Share app: new invite text',
+    'Invite shows a Deckhand picture',
+    'Invite installs the Android app'
   ],
   nl: [
-    'Filters: gouden zoekknop',
-    'Werkt ook na kiezen uit een lijst'
+    'App delen: nieuwe uitnodiging',
+    'Met Deckhand-plaatje in de chat',
+    'Android-app direct te installeren'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5769,9 +5782,9 @@ function tourSteps(){
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
         ? `<p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, de <strong>officiële regels</strong> (Comprehensive Rules), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; herstel</strong>, alles in één bestand.</p>`
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; herstel</strong>, alles in één bestand. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren.</p>`
         : `<p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file.</p>` }
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away.</p>` }
   ];
 }
 function startAppTour(){
@@ -22911,6 +22924,50 @@ function createDeckFromReco(){
 /* Inside the standalone Android build (Deckhand.apk) the Java side exposes this
    bridge. It is the one honest signal that we are running in the app rather
    than a browser tab, so the install and download rows hide themselves there. */
+/* The "share this app" invite. The website link comes FIRST: chat apps build
+   their preview card (og-image.png) from the first link in a message. The APK
+   link installs straight on Android; iPhone gets the web app via Safari. Always
+   the public site -- inside the APK, location is not the website. */
+const DECKHAND_SITE = 'https://deckhandcompanion.netlify.app/';
+function shareAppText(lang){
+  const S = DECKHAND_SITE, apk = S + 'Deckhand.apk';
+  if(lang === 'nl') return `\u{1F0CF} Deckhand — de complete Magic: The Gathering-app. Gratis en zonder reclame.
+${S}
+
+• Decks bouwen voor elk format — ook een gloednieuw format: Admiral
+• EDHREC ingebouwd: thema's, topkaarten en combo's
+• Krachtig kaarten zoeken, plus een tool voor vergelijkbare kaarten
+• Budgettool voor goedkopere alternatieven
+• Je collectie bijhouden, met Cardmarket-prijzen
+• Life counter en meer handigheid aan tafel
+• Magic-nieuws en spoilers
+• Werkt ook offline
+…en nog veel meer.
+
+\u{1F4F2} Android — tik om de app te installeren:
+${apk}
+Je telefoon vraagt misschien één keer of je apps van buiten de Play Store toestaat. Dat is normaal; sta het toe.
+
+\u{1F34E} iPhone — open de eerste link in Safari en kies Delen → Zet op beginscherm.`;
+  return `\u{1F0CF} Deckhand — the complete Magic: The Gathering companion. Free, and without ads.
+${S}
+
+• Deck building for every format — including a brand-new one: Admiral
+• EDHREC built in: themes, top cards and combos
+• Powerful card search, plus a similar-card finder
+• Budget tool for cheaper alternatives
+• Track your collection, with Cardmarket prices
+• Life counter and more tools for the table
+• Magic news and spoilers
+• Works offline
+…and plenty more.
+
+\u{1F4F2} Android — tap to install the app:
+${apk}
+Your phone may ask once to allow apps from outside the Play Store. That's normal; just allow it.
+
+\u{1F34E} iPhone — open the first link in Safari, then Share → Add to Home Screen.`;
+}
 function inAndroidApp(){
   try{ return typeof window.DeckhandExport !== 'undefined'; }catch(e){ return false; }
 }
@@ -22971,7 +23028,7 @@ function settingsPageHtml(){
       <div class="settings-row" id="installAppRow"><div><div class="l1">📲 Install as an app</div><div class="l2">Home-screen icon, full screen, offline</div></div></div>
     </div>`}
     <div class="settings-section">
-      <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} ${trS('Share this app with a friend')}</div><div class="l2">Sends the app link</div></div></div>
+      <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} ${trS('Share this app with a friend')}</div><div class="l2">${appLang()==='nl' ? 'Stuurt een link, plus de Android-app' : 'Sends a link, plus the Android app'}</div></div></div>
     </div>
     <p class="hint" id="appFootNote" style="text-align:center;margin:14px 8px 4px;line-height:1.5;font-size:11.5px;">Deckhand v${APP_VERSION} · ${appLang()==='nl' ? 'kaarten' : 'cards'} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${appLang()==='nl' ? 'thema\u2019s' : 'themes'} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${appLang()==='nl' ? 'prijzen' : 'prices'} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
   </main>`;
@@ -23381,15 +23438,15 @@ function wireSettingsPage(){
     }
   });
   document.getElementById('shareAppRow')?.addEventListener('click', async ()=>{
-    const hosted = /^https?:/.test(location.protocol);
-    const url = hosted ? (location.origin + location.pathname) : '';
-    const text = `🖐🃏 Deckhand — the free MTG deck builder in my pocket: Commander, Admiral, Pauper Commander, PreDH and Duel Commander, with live legality and ban lists, collection tracking with Cardmarket prices, EDHREC-powered inspiration and combos — all offline-capable. Deal yourself in: ${location.origin}${location.pathname}`;
+    const text = shareAppText(appLang());
+    // Text only: the links live IN the message. A separate url field made
+    // Android paste the link a second time underneath.
     if(navigator.share){
-      try{ await navigator.share(hosted ? {title: brandTitle(), text, url} : {title: brandTitle(), text}); return; }
+      try{ await navigator.share({ title: brandTitle(), text }); return; }
       catch(e){ if(e && e.name==='AbortError') return; }
     }
-    try{ await navigator.clipboard.writeText(text + (url ? ' ' + url : '')); toast('Invite copied — paste it anywhere.'); }
-    catch(e){ toast('Could not open sharing on this device.'); }
+    try{ await navigator.clipboard.writeText(text); toast(trS('Invite copied — paste it anywhere.')); }
+    catch(e){ toast(trS('Could not open sharing on this device.')); }
   });
 }
 
