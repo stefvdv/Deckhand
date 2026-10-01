@@ -5423,7 +5423,7 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
   _searchBusy++;
   try{
   await resolveLegalSets();
-  const orderParam = sortOrder==='cmc' ? 'cmc' : sortOrder==='edhrec' ? 'edhrec' : 'name';
+  const orderParam = sortOrder==='cmc' ? 'cmc' : sortOrder==='eur' ? 'eur' : (sortOrder==='edhrec' || sortOrder==='salt') ? 'edhrec' : 'name';
   const dir = opts.dir === 'desc' ? 'desc' : 'auto';
   if(fmtWanted !== 'admiral'){
     // Scryfall's own format flag IS the legality engine — one query, all
@@ -5674,15 +5674,17 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.675';
+const APP_VERSION = '2.51.676';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck themes & Kindred: the full list',
-    'Sorted by play with your commander'
+    'Search: new sort button',
+    'Sort by popularity, price, mana, salt',
+    'Theme list per commander complete'
   ],
   nl: [
-    'Deckthema\'s & Kindred: volledige lijst',
-    'Gesorteerd op spel met je commander'
+    'Zoeken: nieuwe sorteerknop',
+    'Sorteer op populair, prijs, mana, salt',
+    'Themalijst per commander compleet'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5743,10 +5745,10 @@ function tourSteps(){
       b: NL
         ? `<p style="margin:6px 0;">Zoek op naam of open het <strong>geavanceerde filter</strong>: kleuren, tags (wat een kaart <em>doet</em>), type, Oracle text, set, format en meer. De zoektoets van je toetsenbord start de zoekopdracht.</p>
            <p style="margin:6px 0;">Vanaf de derde letter verschijnen <strong>naamsuggesties</strong>. Houd een resultaat <strong>lang ingedrukt</strong> om meerdere kaarten te kiezen: de gouden knop (＋, of het aantal) zet ze in een deck of je collectie.</p>
-           <p style="margin:6px 0;">De 🔮-knop opent de <strong>Spoilers</strong>-pagina — de nieuwste kaarten per set, dag voor dag.</p>`
+           <p style="margin:6px 0;">De sorteerknop (⇅) zet de resultaten op <strong>populariteit, prijs, mana value of salt</strong>, oplopend of aflopend. De 🔮-knop opent de <strong>Spoilers</strong>-pagina — de nieuwste kaarten per set, dag voor dag.</p>`
         : `<p style="margin:6px 0;">Search by name, or open the <strong>Advanced filter</strong>: colors, tags (what a card <em>does</em>), type, Oracle text, set, format and more. Your keyboard's search key runs it.</p>
            <p style="margin:6px 0;">From the third letter <strong>name suggestions</strong> appear. <strong>Long-press</strong> a result to pick several cards: the gold button (＋, or the count) puts them in a deck or your collection.</p>
-           <p style="margin:6px 0;">The 🔮 button opens the <strong>Spoilers</strong> page — the newest cards per set, day by day.</p>` },
+           <p style="margin:6px 0;">The sort button (⇅) orders the results by <strong>popularity, price, mana value or salt</strong>, either way round. The 🔮 button opens the <strong>Spoilers</strong> page — the newest cards per set, day by day.</p>` },
     { k:'inspiration', go:()=>switchPage('browse'),
       t: NL ? '✦ Inspiration' : '✦ Inspiration',
       b: NL
@@ -14490,7 +14492,7 @@ function searchPageHtml(){
     ${pinned
       ? `<div class="pin-pill"><span class="pp-txt">Adding straight to <strong>${escapeHtml(pinned.name)}</strong></span><button id="unpinBtn" title="Stop adding to this deck">✕</button></div>`
       : ''}
-    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}" style="padding-right:36px;"><button class="in-chev" id="qChev" title="${trS('Advanced filters')}">${state.advOpen?'▴':'▾'}</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;"${state.searchSel && state.searchSel.size ? ' hidden' : ''}>🔮</button><button id="srSelFab" class="sel-fab" title="${trS('Add to deck…')}"${state.searchSel && state.searchSel.size ? '' : ' hidden'}>${selFabLabel(state.searchSel ? state.searchSel.size : 0)}</button></div>
+    <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}" style="padding-right:36px;"><button class="in-chev" id="qChev" title="${trS('Advanced filters')}">${state.advOpen?'▴':'▾'}</button><button id="srSortBtn" class="ghost-btn${state.searchSort !== 'name' ? ' active' : ''}" title="${trS('Sort')}" style="padding:0 11px;flex:none;">${SORT_ICON}</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;"${state.searchSel && state.searchSel.size ? ' hidden' : ''}>🔮</button><button id="srSelFab" class="sel-fab" title="${trS('Add to deck…')}"${state.searchSel && state.searchSel.size ? '' : ' hidden'}>${selFabLabel(state.searchSel ? state.searchSel.size : 0)}</button></div>
     <div id="advSlot">${state.advOpen ? advancedPanelHtml() : ''}</div>
     <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
     <div class="cotd" id="cotdBox" ${(state.searchRan || state.advOpen)?'style="display:none;"':''}></div>
@@ -14590,7 +14592,9 @@ function advancedPanelHtml(){
     <div class="adv-row"><label>Sort Order</label>${cselectHtml('sortSel', [
       {v:'name', l:'Name'},
       {v:'cmc', l:'Mana Value'},
-      {v:'edhrec', l:'Popularity'}
+      {v:'edhrec', l:'Popularity'},
+      {v:'eur', l:'Price'},
+      {v:'salt', l:'Salt score'}
     ], s.searchSort, 'Name')}</div>
     <div class="adv-row"><label>Sort Direction</label>${cselectHtml('dirSel', [
       {v:'asc', l:'Ascending'},
@@ -14629,6 +14633,7 @@ function wireSearchPage(){
     if(adv && adv.value !== e.target.value) adv.value = e.target.value;   // mirror into the filters panel
   });
   document.getElementById('spoilersBtn')?.addEventListener('click', ()=>switchPage('spoilers'));
+  document.getElementById('srSortBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); openSearchSortMenu(e.currentTarget); });
   document.getElementById('qChev')?.addEventListener('click', ()=>{
     // In-place toggle — the old full re-render rebuilt the whole page
     // mid-tap, which was the shift-and-blink.
@@ -14885,11 +14890,22 @@ function _lsCmp(sortKey, sortDir, acc){
       const ra = rk(a) == null ? Infinity : rk(a), rb = rk(b) == null ? Infinity : rk(b);
       return (ra - rb) * dir || String(nm(a)).localeCompare(String(nm(b)));
     }
+    if(sortKey === 'eur' || sortKey === 'salt'){
+      // A card without a price / salt score sits at the END either way;
+      // among those, the most played come first.
+      const get = sortKey === 'eur' ? acc.eur : acc.salt;
+      const va = get(a), vb = get(b);
+      const na = va == null || isNaN(va), nb = vb == null || isNaN(vb);
+      if(na !== nb) return na ? 1 : -1;
+      if(!na && va !== vb) return (va - vb) * dir;
+      const ra = rk(a) == null ? Infinity : rk(a), rb = rk(b) == null ? Infinity : rk(b);
+      return (ra - rb) || String(nm(a)).localeCompare(String(nm(b)));
+    }
     return String(nm(a)).localeCompare(String(nm(b))) * dir;
   };
 }
-const _LS_BULK = { nm: c=>c.n,    cmc: c=>c.mv,  rk: c=>c.rk };
-const _LS_CARD = { nm: c=>c.name, cmc: c=>c.cmc, rk: c=>c.edhrec_rank };
+const _LS_BULK = { nm: c=>c.n,    cmc: c=>c.mv,  rk: c=>c.rk, eur: c=>(c.eur != null ? +c.eur : null), salt: ()=>null };
+const _LS_CARD = { nm: c=>c.name, cmc: c=>c.cmc, rk: c=>c.edhrec_rank, eur: c=>printEur(c), salt: c=>(c._salt == null ? null : c._salt) };
 function _lsCostFits(cardCost, wanted){
   const A = _lsCostBag(cardCost), B = _lsCostBag(wanted);
   for(const k in B){
@@ -15056,7 +15072,7 @@ async function searchNewSets(baseClause, codes, limit){
   const base = (baseClause || '').replace(/\s*-t:land/g, '');
   const setClause = '(' + codes.map(c=>'set:' + c).join(' OR ') + ')';
   const q = (base + ' ' + setClause + ' game:paper -is:digital').trim();
-  const orderParam = state.searchSort === 'cmc' ? 'cmc' : state.searchSort === 'edhrec' ? 'edhrec' : 'name';
+  const orderParam = state.searchSort === 'cmc' ? 'cmc' : state.searchSort === 'eur' ? 'eur' : (state.searchSort === 'edhrec' || state.searchSort === 'salt') ? 'edhrec' : 'name';
   const dir = state.searchSortDir === 'desc' ? 'desc' : 'auto';
   const url = `${SF_BASE}/cards/search?unique=cards&order=${orderParam}&dir=${dir}&q=${encodeURIComponent(q)}`;
   const res = await sfFetch(url, 0, false);
@@ -15123,8 +15139,9 @@ async function runAdvancedSearch(){
     });
   };
   const paint = (list, err)=>{
-    state.searchResults = (list || []).filter(isRealCard); state.searchError = !!err; state.searching = false;
+    state.searchResults = searchSortList((list || []).filter(isRealCard)); state.searchError = !!err; state.searching = false;
     renderSearchResultsBox();
+    if(state.searchSort === 'salt') loadSearchSalt();
   };
   // 1. The device answers first — instantly, and without touching the queue.
   //    An EMPTY array is a real answer ("nothing matches"); only null means
@@ -15256,6 +15273,101 @@ function openSearchSelMenu(anchor){
       : { label:'\uFF0B ' + trS('Add to deck…'), fn:()=>openMultiDeckChooser(cards, done) }
   ];
   openTileMenu(anchor, items);
+}
+/* ---- Sorting the results: popularity, price, mana value, salt ----------
+   The sort button sits between the filter \u25BE and the \uD83D\uDD2E. Its drop-up names
+   every order in plain words; the current one wears a \u2713. Results re-sort
+   on the spot, and the next search keeps the order. */
+const SORT_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5"/><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg>';
+function searchSortList(list){
+  return (list || []).slice().sort(_lsCmp(state.searchSort, state.searchSortDir, _LS_CARD));
+}
+function searchSortOptions(){
+  const NL = appLang() === 'nl';
+  // Drop-up, bottom-up: the most used order sits at the foot, by the thumb.
+  return [
+    ['name', 'asc',  NL ? 'Naam A \u2192 Z' : 'Name A \u2192 Z'],
+    ['salt', 'asc',  NL ? 'Salt: minst zout eerst' : 'Salt: least salty first'],
+    ['salt', 'desc', NL ? 'Salt: zoutste eerst' : 'Salt: saltiest first'],
+    ['cmc',  'desc', NL ? 'Mana value: hoog \u2192 laag' : 'Mana value: high \u2192 low'],
+    ['cmc',  'asc',  NL ? 'Mana value: laag \u2192 hoog' : 'Mana value: low \u2192 high'],
+    ['eur',  'desc', NL ? 'Prijs: hoog \u2192 laag' : 'Price: high \u2192 low'],
+    ['eur',  'asc',  NL ? 'Prijs: laag \u2192 hoog' : 'Price: low \u2192 high'],
+    ['edhrec', 'desc', NL ? 'Populariteit: minst gespeeld eerst' : 'Popularity: least played first'],
+    ['edhrec', 'asc',  NL ? 'Populariteit: meest gespeeld eerst' : 'Popularity: most played first']
+  ];
+}
+function openSearchSortMenu(anchor){
+  openTileMenu(anchor, searchSortOptions().map(([k, dir, label])=>{
+    const on = state.searchSort === k && state.searchSortDir === dir;
+    return { label: `<span style="display:inline-block;width:1.2em;">${on ? '\u2713' : ''}</span>` + label, fn: ()=>applySearchSort(k, dir) };
+  }));
+  // One line per order, the whole sheet just above the button.
+  const pop = document.getElementById('tileMenuPop');
+  if(pop){
+    pop.querySelectorAll('button').forEach(b=>{ b.style.whiteSpace = 'nowrap'; });
+    const r = anchor.getBoundingClientRect();
+    pop.style.top = Math.max(8, r.top - 6 - pop.offsetHeight) + 'px';
+    pop.style.left = Math.max(8, Math.min(r.right - pop.offsetWidth, window.innerWidth - 8 - pop.offsetWidth)) + 'px';
+    pop.scrollTop = pop.scrollHeight;
+  }
+}
+function applySearchSort(k, dir){
+  state.searchSort = k; state.searchSortDir = dir;
+  const b = document.getElementById('srSortBtn'); if(b) b.classList.toggle('active', k !== 'name');
+  if(state.searchRan && (state.searchResults || []).length){
+    state.searchResults = searchSortList(state.searchResults);
+    const box = document.getElementById('searchResultsBox');
+    if(box) box.innerHTML = '';            // a fresh grid: the new best result at the foot
+    renderSearchResultsBox();
+    if(k === 'salt') loadSearchSalt();
+  }
+}
+/* Salt scores come from EDHREC, card by card. The saltiest hundred arrive in
+   one list; the rest of the leading results are looked up a few at a time
+   (week-cached, so a second sort is instant). The grid re-sorts as they land. */
+let _saltSeq = 0;
+async function loadSearchSalt(){
+  const seq = ++_saltSeq;
+  const live = ()=> seq === _saltSeq && state.screen === 'search' && state.searchSort === 'salt';
+  const list = state.searchResults || [];
+  if(!list.length) return;
+  try{
+    if(!state._saltTop){
+      const data = await edhrecFetchJson('/pages/top/salt.json');
+      const m = new Map();
+      ((((data||{}).container||{}).json_dict||{}).cardlists || []).forEach(L=>((L && L.cardviews) || []).forEach(cv=>{
+        let v = Number(cv && cv.salt);
+        if(!isFinite(v)){ const mm = /([0-9]+(?:\.[0-9]+)?)/.exec(String((cv && (cv.label || cv.value)) || '')); v = mm ? Number(mm[1]) : NaN; }
+        if(cv && cv.name && isFinite(v)) m.set(String(cv.name).toLowerCase(), v);
+      }));
+      state._saltTop = m;
+    }
+  }catch(e){}
+  if(!live()) return;
+  const top = state._saltTop || new Map();
+  list.forEach(c=>{ if(c._salt === undefined && top.has(String(c.name).toLowerCase())) c._salt = top.get(String(c.name).toLowerCase()); });
+  const todo = list.filter(c=>c._salt === undefined).slice(0, 60);
+  const repaint = ()=>{
+    if(!live()) return;
+    state.searchResults = searchSortList(state.searchResults);
+    const box = document.getElementById('searchResultsBox');
+    if(box) box.innerHTML = '';
+    renderSearchResultsBox();
+  };
+  repaint();
+  if(!todo.length) return;
+  toast(appLang() === 'nl' ? '\uD83E\uDDC2 Salt scores worden opgehaald\u2026' : '\uD83E\uDDC2 Fetching salt scores\u2026');
+  let i = 0, done = 0;
+  const worker = async ()=>{
+    while(i < todo.length && live()){
+      const c = todo[i++];
+      try{ await edhrecSaltFor(c); }catch(e){}
+      if(++done % 12 === 0) repaint();
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  repaint();
 }
 function renderSearchResultsBox(){
   const box = document.getElementById('searchResultsBox');
