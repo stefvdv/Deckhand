@@ -314,6 +314,15 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 }
 .adv-panel .cselect,
 #colAdvBox .cselect{display:flex;flex-direction:column-reverse;}
+/* The floating loupe: a real foot row (so at rest it covers nothing), sticky
+   to the bottom edge of the scrolling sheet. The row itself lets taps fall
+   through; only the button catches them. Explicit margins -- no inherited
+   adv-row spacing. */
+.adv-go-row{position:sticky;bottom:0;z-index:8;flex:0 0 auto;height:48px;margin:0 !important;padding:0;display:flex;align-items:flex-end;justify-content:flex-start;pointer-events:none;}
+.adv-go{pointer-events:auto;flex:none;width:46px;height:46px;min-height:0;margin:0;padding:0;border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(var(--gold),var(--gold));color:#241A04;box-shadow:0 4px 14px rgba(0,0,0,0.5);cursor:pointer;}
+.adv-go svg{width:24px;height:24px;stroke-width:2.6;}
+/* The deck filter scrolls with the PAGE, whose foot is under the dock stack. */
+.df-compact > .adv-go-row{bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom));}
 .adv-panel .cselect-panel,
 #colAdvBox .cselect-panel{position:static;margin:0 0 4px;max-height:240px;display:flex;flex-direction:column-reverse;}
 .adv-panel .cselect-panel .cselect-opt,
@@ -5674,13 +5683,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.678';
+const APP_VERSION = '2.51.679';
 const CHANGELOG_NOTES = {
   en: [
-    'Decklist: \u22ef menu moved to the left'
+    'Filters: gold search button',
+    'Works after picking from a list'
   ],
   nl: [
-    'Decklist: \u22ef-menu naar links'
+    'Filters: gouden zoekknop',
+    'Werkt ook na kiezen uit een lijst'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5739,10 +5750,10 @@ function tourSteps(){
     { k:'search', go:()=>switchPage('search'),
       t: NL ? '🔍 Zoeken' : '🔍 Search',
       b: NL
-        ? `<p style="margin:6px 0;">Zoek op naam of open het <strong>geavanceerde filter</strong>: kleuren, tags (wat een kaart <em>doet</em>), type, Oracle text, set, format en meer. De zoektoets van je toetsenbord start de zoekopdracht.</p>
+        ? `<p style="margin:6px 0;">Zoek op naam of open het <strong>geavanceerde filter</strong>: kleuren, tags (wat een kaart <em>doet</em>), type, Oracle text, set, format en meer. De zoektoets van je toetsenbord start de zoekopdracht — of de gouden <strong>loep</strong> linksonder in het filtermenu (die zit ook in de filters van Collectie, Spoilers en deck).</p>
            <p style="margin:6px 0;">Vanaf de derde letter verschijnen <strong>naamsuggesties</strong>. Houd een resultaat <strong>lang ingedrukt</strong> om meerdere kaarten te kiezen: de gouden knop (＋, of het aantal) zet ze in een deck of je collectie.</p>
            <p style="margin:6px 0;">De sorteerknop (⇅) zet de resultaten op <strong>populariteit, prijs, mana value of salt</strong>, oplopend of aflopend. De 🔮-knop opent de <strong>Spoilers</strong>-pagina — de nieuwste kaarten per set, dag voor dag.</p>`
-        : `<p style="margin:6px 0;">Search by name, or open the <strong>Advanced filter</strong>: colors, tags (what a card <em>does</em>), type, Oracle text, set, format and more. Your keyboard's search key runs it.</p>
+        : `<p style="margin:6px 0;">Search by name, or open the <strong>Advanced filter</strong>: colors, tags (what a card <em>does</em>), type, Oracle text, set, format and more. Your keyboard's search key runs it — or the gold <strong>loupe</strong> bottom-left in the filter menu (Collection, Spoilers and deck filters have one too).</p>
            <p style="margin:6px 0;">From the third letter <strong>name suggestions</strong> appear. <strong>Long-press</strong> a result to pick several cards: the gold button (＋, or the count) puts them in a deck or your collection.</p>
            <p style="margin:6px 0;">The sort button (⇅) orders the results by <strong>popularity, price, mana value or salt</strong>, either way round. The 🔮 button opens the <strong>Spoilers</strong> page — the newest cards per set, day by day.</p>` },
     { k:'inspiration', go:()=>switchPage('browse'),
@@ -8391,6 +8402,7 @@ function collectionPageHtml(){
       const setOpts = [{v:'',l:'All sets'}].concat(sets.map(([code,name])=>({v:code, l:name, icons:setIconHtml(code)})));
       const colorOrder = ['W','U','B','R','G','C'];
       return `<div class="panel-card" id="colAdvPanel" style="margin-bottom:12px;display:flex;flex-direction:column-reverse;">
+        ${advGoHtml('colGo')}
         <div class="adv-row"><label>Name</label><input id="colFq" class="col-filter-input" placeholder="Card name…" value="${escapeHtml(f.q)}"></div>
         <div class="adv-row"><label>Set</label>${cselectHtml('colSet', setOpts, f.set, 'All sets', {search:true})}</div>
         <div class="adv-row"><label>Type</label><input id="colTypeText" class="col-filter-input" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(f.type)}"></div>
@@ -8885,6 +8897,20 @@ function wireCollectionPage(){
     };
     colQ?.addEventListener('input', ()=>{ clearTimeout(cqT); cqT = setTimeout(applyColQ, 300); });
     colQ?.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ clearTimeout(cqT); applyColQ(); } });
+    document.getElementById('colGo')?.addEventListener('click', (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      // The debounced re-renders would put the cursor (and keyboard) back.
+      clearTimeout(cqT); clearTimeout(t); clearTimeout(tt);
+      const fqEl = document.getElementById('colFq'), ftEl = document.getElementById('colTypeText');
+      if(fqEl && fqEl.value !== (state.colFilter.q || '')) state.colFilter.q = fqEl.value;
+      else if(colQ) state.colFilter.q = colQ.value;
+      if(ftEl) state.colFilter.type = ftEl.value;
+      try{ document.activeElement && document.activeElement.blur && document.activeElement.blur(); }catch(err){}
+      state.openCSelect = null;
+      state.colAdvOpen = false;
+      render();
+      scrollToPageFoot();
+    });
   }
 
   // Long-press selects a card; once anything is selected, every further tap
@@ -10965,6 +10991,7 @@ function spoilersPageHtml(){
       const colorOrder = ['W','U','B','R','G','C'];
       return `<button class="adv-toggle" id="spAdvToggle">Advanced filter ${foldIcoHtml(state.spAdvOpen)}</button>
       <div class="adv-panel" id="spAdvBox" style="${state.spAdvOpen?'':'display:none;'}">
+        ${advGoHtml('spGo')}
         <div class="adv-row"><label>Name</label><input id="spFq" class="col-filter-input" placeholder="Card name\u2026" value="${escapeHtml(sf.q)}"></div>
         <div class="adv-row"><label>Set</label>${cselectHtml('spSet', setOpts, active||'', 'All sets')}</div>
         <div class="adv-row"><label>Type</label><input id="spTypeText" class="col-filter-input" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(sf.type)}"></div>
@@ -11282,6 +11309,18 @@ async function wireSpoilersPage(){
   const spTy = document.getElementById('spTypeText');
   let spTT = null;
   spTy?.addEventListener('input', ()=>{ clearTimeout(spTT); spTT = setTimeout(()=>{ state.spFilter.type = spTy.value; spRepaint(); }, 300); });
+  document.getElementById('spGo')?.addEventListener('click', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    clearTimeout(spQT); clearTimeout(spTT);
+    if(spFq) state.spFilter.q = spFq.value;
+    if(spTy) state.spFilter.type = spTy.value;
+    try{ document.activeElement && document.activeElement.blur && document.activeElement.blur(); }catch(err){}
+    state.spAdvOpen = false;
+    const abox = document.getElementById('spAdvBox'); if(abox) abox.style.display = 'none';
+    const t = document.getElementById('spAdvToggle'); if(t) t.innerHTML = 'Advanced filter ' + foldIcoHtml(false);
+    spRepaint();
+    scrollToPageFoot();
+  });
   const freshPull = !!state._spoilerFresh;
   state._spoilerFresh = false;
   const loaded = {}, failed = new Set();
@@ -11914,6 +11953,7 @@ function dlPanelHtml(d){
     // ≤/=/≥ choice as a page-style dropdown — one filter language app-wide.
     const colorOrder = ['W','U','B','R','G','C'];
     return `<div class="panel-card df-compact" style="display:flex;flex-direction:column-reverse;">
+      ${advGoHtml('dfGo')}
       <div class="adv-row"><label>${trS('Name')}</label><input id="dfName" class="col-filter-input" placeholder="${trS('Card name…')}" value="${escapeHtml(f.name||'')}" autocomplete="off"></div>
       <div class="adv-row"><label>${trS('Oracle text')}</label><input id="dfText" class="col-filter-input" placeholder="${trS('Any text, e.g. draw a card')}" value="${escapeHtml(f.text||'')}" autocomplete="off"></div>
       <div class="adv-row"><label>Type</label><input id="dfType" class="col-filter-input" placeholder="${trS('e.g. Dragon, Equipment')}" value="${escapeHtml(f.type||'')}" autocomplete="off"></div>
@@ -12995,6 +13035,17 @@ function wireDlPanel(d){
       inp?.addEventListener('blur', ()=>setTimeout(()=>{ if(pop) pop.hidden = true; }, 250));
     }
     bind('dfName', 'name'); bind('dfText', 'text'); bind('dfType', 'type'); bind('dfTag', 'tag'); bind('dfMvVal', 'mvVal');
+    document.getElementById('dfGo')?.addEventListener('click', (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      clearTimeout(state._dfT);
+      [['dfName','name'],['dfText','text'],['dfType','type'],['dfTag','tag'],['dfMvVal','mvVal']].forEach(([id, key])=>{
+        const el2 = document.getElementById(id); if(el2) f[key] = el2.value;
+      });
+      if(f.name || f.text || f.type || f.tag || f.mvVal || (f.ci && f.ci.length)) state.dlFilterOn = true;
+      try{ document.activeElement && document.activeElement.blur && document.activeElement.blur(); }catch(err){}
+      state.openCSelect = null;
+      closeDeckFilterPanel(d, true);
+    });
     // The panel opens ready to type: cursor in Name, keyboard up (the tap
     // that opened the panel is the gesture the keyboard needs).
     setTimeout(()=>{ try{ document.getElementById('dfName')?.focus({ preventScroll: true }); }catch(e){} }, 60);
@@ -14495,6 +14546,14 @@ function searchPageHtml(){
     <div class="cotd" id="cotdBox" ${(state.searchRan || state.advOpen)?'style="display:none;"':''}></div>
   </main>`;
 }
+/* The gold loupe in every advanced-filter drop-up: picking from a list (a
+   set, a format) brings up no keyboard, so there was no search key to press.
+   First child of the column-reverse panel = the panel's FOOT, bottom-left
+   under the Name row; position:sticky keeps it at the bottom edge while the
+   panel scrolls. It lives inside the panel, so a folded panel has none. */
+function advGoHtml(id){
+  return `<div class="adv-go-row"><button type="button" class="adv-go" id="${id}" title="${trS('Search')}" aria-label="${trS('Search')}">${ICONS.search}</button></div>`;
+}
 function opSelectHtml(id, val){
   const ops = [{v:'',l:'Any'},{v:'=',l:'Equals'},{v:'<',l:'<'},{v:'<=',l:'≤'},{v:'>',l:'>'},{v:'>=',l:'≥'}];
   return cselectHtml(id, ops, val, 'Any', {cls:'cs-op'});
@@ -14527,6 +14586,7 @@ function advancedPanelHtml(){
   }catch(e){}
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
   return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;">
+    ${advGoHtml('advGo')}
     ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<div class="toggle-row" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Include off-color cards')}</div><div style="color:var(--sub-text);font-size:11.5px;margin-top:2px;">${trS('Off — only cards legal in this deck. On — every format-legal card, off-color included.')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
     <div class="adv-row"><label>Card Name</label><input id="advName" type="text" placeholder="Any words in the name" value="${escapeHtml(s.searchName)}"></div>
     <div class="adv-row"><label>Format</label>
@@ -14702,6 +14762,12 @@ function renderCotd(card){
   document.getElementById('cotdReroll').addEventListener('click', ()=>loadCardOfTheDay(true));
 }
 function wireAdvancedPanel(){
+  document.getElementById('advGo')?.addEventListener('click', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    try{ document.activeElement && document.activeElement.blur && document.activeElement.blur(); }catch(err){}   // a pending 'change' lands first
+    state.openCSelect = null;
+    state.advOpen = false; render(); runAdvancedSearch();
+  });
   document.getElementById('advName')?.addEventListener('input', e=>{
     state.searchName = e.target.value;
     const top = document.getElementById('searchName');
