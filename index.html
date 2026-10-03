@@ -592,6 +592,21 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .card-detail{max-width:560px;margin:0 auto;width:100%;}
 .detail-sec{margin-top:10px;}
 .ms-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px 18px;margin-top:12px;justify-items:center;}
+/* Cast-ability summary */
+.cast-sum{margin:0 0 12px;padding-bottom:12px;border-bottom:1px solid var(--line);}
+.cast-score{display:flex;align-items:baseline;gap:10px;}
+.cast-score b{font-family:'JetBrains Mono',monospace;font-size:30px;line-height:1;}
+.cast-score span{font-size:12.5px;color:var(--sub-text);}
+.cast-tip{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:13px;line-height:1.45;color:var(--ink-text);}
+.cast-tip svg{vertical-align:-3px;}
+.cast-tip-k{flex:none;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--on-acc);background:var(--acc-fill);border-radius:4px;padding:2px 6px;margin-top:1px;}
+.cast-row{display:flex;align-items:center;gap:8px;width:100%;padding:7px 2px;background:none;border:none;border-top:1px solid var(--line);color:var(--ink-text);font:inherit;font-size:13.5px;text-align:left;cursor:pointer;}
+.cast-row:first-of-type{border-top:none;}
+.cast-mv{flex:none;width:18px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--sub-text);}
+.cast-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cast-pips{flex:none;display:flex;gap:1px;}
+.cast-p{flex:none;min-width:44px;text-align:right;font-family:'JetBrains Mono',monospace;}
+.cast-p.low{background:var(--field);border-radius:6px;padding:1px 6px;font-weight:700;}
 /* Stats drill-downs: a full-width row, label at the FOOT (by the tapped
    symbol or bar), cards above it -- the visual-grid already wraps upward. */
 .st-detail{display:flex;flex-direction:column-reverse;gap:8px;width:100%;margin:0;}
@@ -5784,17 +5799,13 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.685';
+const APP_VERSION = '2.51.687';
 const CHANGELOG_NOTES = {
   en: [
-    'Wants: shows which deck wants it',
-    'Decks: average salt score',
-    'Stats: card lists open above the tap'
+    'No more \'newer version\' pop-up'
   ],
   nl: [
-    'Wants: toont voor welk deck',
-    'Decks: gemiddelde salt score',
-    'Stats: kaarten openen boven je tik'
+    'Geen \'nieuwere versie\'-melding meer'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5832,10 +5843,10 @@ function tourSteps(){
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
            <p style="margin:6px 0;">In de werkbalk: <strong>budgetalternatieven</strong> (munten), <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred), kaarten toevoegen en 🔍 <strong>zoeken in je deck</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
-           <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester).</p>`
+           <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
            <p style="margin:6px 0;">The toolbar: <strong>Budget alternatives</strong> (coins), <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred), adding cards and 🔍 <strong>find in deck</strong>. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
-           <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, combos), <strong>Deck Log</strong> (primer, game log, hand tester).</p>`) },
+           <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
       t: NL ? '🃏 De kaart-detailpagina' : '🃏 The card detail view',
       b: soon + (NL
@@ -12514,6 +12525,110 @@ function statKeepPlace(anchor, fn){
   fn();
   if(anchor && t0 != null){ const dy = anchor.getBoundingClientRect().top - t0; if(Math.abs(dy) > 1) window.scrollBy(0, dy); }
 }
+/* ---- Cast-ability of the whole deck ----
+   Same model as the single-card picker: by a card's own turn you have seen
+   7 + MV cards; each colour's pips are met when enough of that colour's
+   sources are among them (hypergeometric). A card's chance is the product
+   over its colours. Pure: tested in Node. */
+function castabilityReport(d){
+  const cards = (d && d.cards) || [];
+  const N = cards.length;
+  if(!N) return null;
+  const COLS = ['W','U','B','R','G'];
+  const pmOf = (c)=>c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
+  const src = {}; COLS.forEach(k=>{ src[k] = 0; });
+  cards.forEach(c=>new Set(pmOf(c)).forEach(k=>{ if(src[k] != null) src[k]++; }));
+  const lnF = (a)=>{ let t = 0; for(let i = 2; i <= a; i++) t += Math.log(i); return t; };
+  const logC = (n, k)=>(k < 0 || k > n) ? -Infinity : lnF(n) - lnF(k) - lnF(n - k);
+  const pAt = (S, k, draw)=>{
+    if(S < k) return 0;
+    let miss = 0;
+    for(let x = 0; x < k; x++){ const l = logC(S, x) + logC(N - S, draw - x) - logC(N, draw); if(isFinite(l)) miss += Math.exp(l); }
+    return Math.max(0, Math.min(1, 1 - miss));
+  };
+  const spells = [], seen = new Set();
+  cards.forEach(c=>{
+    if(!c || seen.has(c.name)) return;
+    const f = (c.card_faces && c.card_faces.length) ? c.card_faces[0] : c;
+    if(/\bLand\b/.test(String(f.type_line || c.type_line || ''))) return;
+    const cost = String(c.mana_cost || f.mana_cost || '');
+    const needs = {};
+    cost.replace(/\{([WUBRG])\}/g, (m, p)=>{ needs[p] = (needs[p] || 0) + 1; return m; });
+    if(!Object.keys(needs).length) return;
+    seen.add(c.name);
+    const mv = Math.max(1, Math.round(c.cmc || 0) || 1);
+    spells.push({ c, needs, mv, draw: Math.min(N, 7 + mv) });
+  });
+  if(!spells.length) return { avg: null, n: 0, hardest: [], tip: null, tapped: 0, src };
+  const odds = (S)=>spells.map(sp=>Object.keys(sp.needs).reduce((acc, k)=>acc * pAt(S[k], sp.needs[k], sp.draw), 1));
+  const mean = (a)=>a.reduce((t, v)=>t + v, 0) / a.length;
+  const base = odds(src);
+  const avg = mean(base);
+  const hardest = spells.map((sp, i)=>({ c: sp.c, needs: sp.needs, mv: sp.mv, p: base[i] }))
+    .sort((a, b)=>a.p - b.p || a.mv - b.mv || String(a.c.name).localeCompare(String(b.c.name))).slice(0, 5);
+  // Lands that always enter tapped (not the "unless…"/"you may pay" kind).
+  const tapped = cards.filter(c=>{
+    const f = (c.card_faces && c.card_faces.length) ? c.card_faces[0] : c;
+    if(!/\bLand\b/.test(String(f.type_line || c.type_line || ''))) return false;
+    const t = String(f.oracle_text || c.oracle_text || '');
+    return /enters (the battlefield )?tapped/i.test(t) && !/unless|you may pay|if you control|if it's not your/i.test(t);
+  }).length;
+  // The one change that helps most: two more sources of one colour.
+  let best = null;
+  COLS.forEach(k=>{
+    if(!spells.some(sp=>sp.needs[k])) return;
+    const S2 = Object.assign({}, src); S2[k] += 2;
+    const gain = mean(odds(S2)) - avg;
+    if(!best || gain > best.gain) best = { k, gain };
+  });
+  // Or one card that is a real problem on its own (RRR on turn 4 in a
+  // three-colour deck): the colour that rescues it most.
+  let worst = null;
+  const h0 = hardest[0];
+  if(h0 && h0.p < 0.5){
+    const sp = spells.find(x=>x.c === h0.c);
+    Object.keys(sp.needs).forEach(k=>{
+      const S2 = Object.assign({}, src); S2[k] += 2;
+      const p2 = Object.keys(sp.needs).reduce((acc, kk)=>acc * pAt(S2[kk], sp.needs[kk], sp.draw), 1);
+      if(!worst || p2 > worst.p2) worst = { name: h0.c.name, k, p: h0.p, p2, S: src[k], mv: sp.mv };
+    });
+  }
+  let tip = null;
+  if(best && best.gain >= 0.03) tip = { kind:'color', k: best.k, gain: best.gain };
+  else if(worst) tip = Object.assign({ kind:'card' }, worst);
+  else if(tapped >= 6) tip = { kind:'tapped', n: tapped };
+  else tip = { kind:'ok' };
+  return { avg, n: spells.length, hardest, tip, tapped, src };
+}
+function castabilitySummaryHtml(d){
+  const r = castabilityReport(d);
+  if(!r || r.avg == null) return '';
+  const nl = appLang() === 'nl';
+  const pct = (v)=>Math.round(v * 100) + '%';
+  const col = (v)=>v >= 0.9 ? 'var(--brass)' : v >= 0.75 ? 'var(--ink-text)' : 'color-mix(in srgb, var(--danger) 55%, #fff)';
+  const CN = nl ? { W:'witte', U:'blauwe', B:'zwarte', R:'rode', G:'groene' } : { W:'white', U:'blue', B:'black', R:'red', G:'green' };
+  let tip = '';
+  if(r.tip.kind === 'color') tip = nl
+    ? `Nog 2 ${CN[r.tip.k]} bronnen ${manaIconSvg(r.tip.k, 15)} maken je gekleurde spells gemiddeld <b>${Math.round(r.tip.gain * 100)}%</b> beter op curve castbaar.`
+    : `2 more ${CN[r.tip.k]} sources ${manaIconSvg(r.tip.k, 15)} make your coloured spells <b>${Math.round(r.tip.gain * 100)}%</b> more castable on curve, on average.`;
+  else if(r.tip.kind === 'card'){
+    const t = r.tip, more = t.p2 - t.p >= 0.05;
+    tip = nl
+      ? `<b>${escapeHtml(t.name)}</b> is maar ${pct(t.p)} van de keren castbaar op beurt ${t.mv} (${t.S} ${CN[t.k]} bronnen ${manaIconSvg(t.k, 15)}). ${more ? `Met 2 bronnen meer wordt dat <b>${pct(t.p2)}</b>.` : 'Meer bronnen helpen hier weinig: overweeg een kaart met minder van die symbolen.'}`
+      : `<b>${escapeHtml(t.name)}</b> is castable on turn ${t.mv} only ${pct(t.p)} of the time (${t.S} ${CN[t.k]} sources ${manaIconSvg(t.k, 15)}). ${more ? `2 more sources raise that to <b>${pct(t.p2)}</b>.` : 'More sources barely help here: consider a card with fewer of those pips.'}`;
+  }
+  else if(r.tip.kind === 'tapped') tip = nl
+    ? `${r.tip.n} lands komen altijd tapped binnen — overweeg er 2 te vervangen door lands die untapped binnenkomen.`
+    : `${r.tip.n} lands always enter tapped — consider swapping 2 of them for lands that enter untapped.`;
+  else tip = nl ? 'Je mana basis past goed bij dit deck.' : 'Your mana base fits this deck well.';
+  const pips = (needs)=>Object.keys(needs).map(k=>Array.from({ length: needs[k] }, ()=>manaIconSvg(k, 14)).join('')).join('');
+  return `<div class="cast-sum">
+    <div class="cast-score"><b style="color:${col(r.avg)};">${pct(r.avg)}</b><span>${nl ? `op curve castbaar · gemiddeld over ${r.n} gekleurde spells` : `castable on curve · average of ${r.n} coloured spells`}</span></div>
+    <div class="cast-tip"><span class="cast-tip-k">Tip</span><span>${tip}</span></div>
+    <div class="chip-label" style="margin:10px 0 4px;">${nl ? 'Lastigst op curve' : 'Hardest on curve'}</div>
+    ${r.hardest.map((h, i)=>`<button type="button" class="cast-row" data-casthard="${i}"><span class="cast-mv">${h.mv}</span><span class="cast-nm">${escapeHtml(h.c.name)}</span><span class="cast-pips">${pips(h.needs)}</span><span class="cast-p${h.p < 0.75 ? ' low' : ''}" style="color:${col(h.p)};">${pct(h.p)}</span></button>`).join('')}
+  </div>`;
+}
 function statsTabHtml(d){
   const curve=[0,0,0,0,0,0,0]; const curveCards={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
   const typeCounts={}; const rarityCounts={};
@@ -12547,6 +12662,7 @@ function statsTabHtml(d){
       <div class="curve-panel">${curve.map((n,i)=>`<div class="curve-col" data-cmc="${i}" style="cursor:${n?'pointer':'default'};"><div class="curve-bar" style="height:${n?(14+(n/maxB)*54):2}px"></div><div class="curve-n">${n||''}</div><div class="curve-lbl">${i===6?'6+':i}</div></div>`).join('')}</div>
     </div>
     ${deckKind(d) !== 'admiral' && d.cards.length ? `<div class="panel-card"><div class="panel-h">Cast-ability</div>
+      ${castabilitySummaryHtml(d)}
       <div id="castResult" class="hint" style="margin:0 0 8px;">Pick a card from this deck to see its odds.</div>
       <div class="otag-wrap"><input id="castPick" class="col-filter-input" placeholder="Card in this deck…" autocomplete="off"><div id="castPop" class="otag-pop" hidden></div></div>
     </div>` : ''}
@@ -12715,6 +12831,14 @@ function wireStatsTab(d){
       inp.addEventListener('input', fill);
       inp.addEventListener('blur', ()=>setTimeout(()=>{ pop.hidden = true; }, 250));
     }
+  }
+  {
+    const rep0 = document.querySelector('.cast-sum') ? castabilityReport(d) : null;
+    if(rep0) document.querySelectorAll('[data-casthard]').forEach(b=>b.addEventListener('click', ()=>{
+      const pool = rep0.hardest.map(h=>h.c);
+      const i = +b.dataset.casthard;
+      openCardInfo(pool[i], { pool, poolIdx: i });
+    }));
   }
   wireDeckCombosPanel(d);
   document.getElementById('budgetBtn')?.addEventListener('click', ()=>openBudgetOverlay(d));
@@ -26940,7 +27064,8 @@ document.addEventListener('error', (e)=>{
 }, true);
 setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
 /* The page may have been served from the cache to keep the launch quick, so
-   the newest deploy can be one start behind. Say so, quietly, once. */
+   the newest deploy can be one start behind. Only noted in the journal --
+   no toast: the next start picks the new version up by itself. */
 setTimeout(async ()=>{
   try{
     if(!/^https:/.test(location.protocol)) return;
@@ -26949,7 +27074,6 @@ setTimeout(async ()=>{
     const v = await r.json();
     if(v && v.version && v.version !== APP_VERSION){
       sfJournal('update: v' + v.version + ' staat klaar (deze sessie draait v' + APP_VERSION + ')');
-      toast(trS('A newer version is ready — close the app and open it again.'));
     }
   }catch(e){}
 }, 6000);
