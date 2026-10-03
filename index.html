@@ -592,6 +592,13 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .card-detail{max-width:560px;margin:0 auto;width:100%;}
 .detail-sec{margin-top:10px;}
 .ms-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px 18px;margin-top:12px;justify-items:center;}
+/* Stats drill-downs: a full-width row, label at the FOOT (by the tapped
+   symbol or bar), cards above it -- the visual-grid already wraps upward. */
+.st-detail{display:flex;flex-direction:column-reverse;gap:8px;width:100%;margin:0;}
+.st-detail:empty{display:none;}
+.ms-grid > .st-detail{grid-column:1 / -1;}
+.st-detail .chip-label{margin:0;}
+#curveDetail.st-detail{margin:0 0 14px;}
 .ms-cell{display:flex;flex-direction:column;align-items:center;gap:7px;width:100%;max-width:150px;min-width:0;}
 .ms-big{position:relative;width:92px;height:92px;filter:drop-shadow(0 2px 7px rgba(0,0,0,0.35));}
 .ms-big svg{width:100%;height:100%;display:block;}
@@ -791,7 +798,9 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .deck-tile .body{padding:10px;}
 .deck-tile .nm{font-size:14px;font-weight:700;line-height:1.25;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .deck-tile .meta{font-size:11.5px;color:var(--sub-text);display:flex;justify-content:space-between;align-items:center;}
-.deck-tile .edited{font-size:13px;color:var(--sub-text-2);margin-top:1px;}
+.deck-tile .edited{font-size:13px;color:var(--sub-text-2);margin-top:1px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.deck-tile .dk-salt{white-space:nowrap;color:var(--sub-text);font-family:'JetBrains Mono',monospace;font-size:12px;}
+.as-list .deck-tile .edited{flex-direction:row-reverse;}   /* list: salt LEFT of the price */
 /* The price ring replaces the old "+". Spinning means this deck is being
    priced right now; standing still and dimmed means the total is still
    partial but nothing is happening for it at this moment. */
@@ -962,6 +971,12 @@ body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 .col-tile-info .l1{font-size:13.5px;font-weight:600;color:var(--ink-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .col-tile-info .l2{font-size:11.5px;color:var(--sub-text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0;}
 .col-tile-info .l3{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub-text);}
+/* Wants: the deck names may run onto the second line, up to the price. The
+   zero-width float pushes the price down to the second line's right end. */
+.col-tile-info .l2.want-in{white-space:normal;text-overflow:clip;line-height:1.4;height:2.8em;overflow:hidden;margin:2px 0 0;}
+.col-tile-info .l2.want-in::before{content:'';float:right;width:0;height:1.4em;}
+.want-in .wi-eur{float:right;clear:right;margin-left:6px;font-size:12.5px;color:var(--brass);font-family:'JetBrains Mono',monospace;}
+.want-in .wi-k{color:var(--sub-text);}
 .col-addlist{border:2px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:10px;}
 #colAddSheet .col-addlist{display:flex;flex-direction:column-reverse;margin-bottom:0;}
 #colAddSheet .cas-bar{margin:0;padding:8px 14px 10px;flex:0 0 auto;}
@@ -5769,13 +5784,17 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.684';
+const APP_VERSION = '2.51.685';
 const CHANGELOG_NOTES = {
   en: [
-    'Wants: cards open instantly'
+    'Wants: shows which deck wants it',
+    'Decks: average salt score',
+    'Stats: card lists open above the tap'
   ],
   nl: [
-    'Wants: kaarten openen direct'
+    'Wants: toont voor welk deck',
+    'Decks: gemiddelde salt score',
+    'Stats: kaarten openen boven je tik'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5803,9 +5822,11 @@ function tourSteps(){
       t: NL ? '⚔ My Stuff — je decks' : '⚔ My Stuff — your decks',
       b: NL
         ? `<p style="margin:6px 0;">Al je decks op één plek. Ze sorteren zichzelf in <strong>automatische format-mappen</strong>: elk format krijgt zijn eigen map.</p>
-           <p style="margin:6px 0;">De <strong>＋</strong>-knop opent een menu: nieuw deck, nieuwe map, een lijst plakken of een bestand importeren — en onderaan <strong>List view</strong>, om je mappen en decks als lijst te zien in plaats van tegels. ★ favorieten kunnen ook.</p>`
+           <p style="margin:6px 0;">De <strong>＋</strong>-knop opent een menu: nieuw deck, nieuwe map, een lijst plakken of een bestand importeren — en onderaan <strong>List view</strong>, om je mappen en decks als lijst te zien in plaats van tegels. ★ favorieten kunnen ook.</p>
+           <p style="margin:6px 0;">Naast de prijs van een Commander-deck staat de 🧂 <strong>gemiddelde salt score</strong> van zijn kaarten (EDHREC).</p>`
         : `<p style="margin:6px 0;">All your decks in one place. They sort themselves into <strong>automatic format folders</strong>: every format gets its own.</p>
-           <p style="margin:6px 0;">The <strong>＋</strong> button opens a menu: new deck, new folder, paste a list or import a file — and at its foot <strong>List view</strong>, to see folders and decks as rows instead of tiles. ★ favorites work too.</p>` },
+           <p style="margin:6px 0;">The <strong>＋</strong> button opens a menu: new deck, new folder, paste a list or import a file — and at its foot <strong>List view</strong>, to see folders and decks as rows instead of tiles. ★ favorites work too.</p>
+           <p style="margin:6px 0;">Next to a Commander deck's price sits the 🧂 <strong>average salt score</strong> of its cards (EDHREC).</p>` },
     { k:'decklist', go:()=>{ const d = d0(); if(d){ state.activeDeckId = d.id; state.builderTab = 'list'; switchPage('decklist'); } },
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
@@ -5825,10 +5846,10 @@ function tourSteps(){
     { k:'collection', go:()=>switchPage('collection'),
       t: NL ? '📒 Je collectie' : '📒 Your collection',
       b: NL
-        ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
+        ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
-        : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong>. Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
+        : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -7770,6 +7791,91 @@ function openFabMenu(items){
   items.forEach(([id, , fn])=>document.getElementById(id).addEventListener('click', ()=>{ menu.remove(); fn(); }));
   setTimeout(()=>document.addEventListener('click', function once(){ menu.remove(); document.removeEventListener('click', once); }), 0);
 }
+/* ---- Salt: EDHREC's per-card salt score, kept as a NUMBER per card name
+   (never the whole EDHREC page -- that would fill the phone). The salt
+   survey runs about once a year, so a score is good for 90 days; a card
+   EDHREC doesn't know is asked again after a week. */
+const SALT_KEY = LS_PREFIX + 'saltCache';
+let _saltStore = null;
+function saltStore(){
+  if(!_saltStore){ try{ _saltStore = JSON.parse(localStorage.getItem(SALT_KEY) || '{}') || {}; }catch(e){ _saltStore = {}; } }
+  return _saltStore;
+}
+function saltStoreSave(){ try{ localStorage.setItem(SALT_KEY, JSON.stringify(saltStore())); }catch(e){} }
+function _saltDay(){ return Math.floor(Date.now() / 864e5); }
+function cardSaltKnown(name){
+  const r = saltStore()[name];
+  if(!r) return undefined;
+  const age = _saltDay() - r[0];
+  if(r[1] < 0) return age > 7 ? undefined : null;
+  return age > 90 ? undefined : r[1];
+}
+function cardSaltPut(name, v){ saltStore()[name] = [_saltDay(), (typeof v === 'number' && isFinite(v)) ? Math.round(v * 1000) / 1000 : -1]; }
+// The cards that count: every distinct nonland card, leaders included.
+function deckSaltNames(d){
+  const out = [], seen = new Set();
+  deckLeaders(d).concat(d.cards || []).forEach(c=>{
+    if(!c || !c.name || seen.has(c.name)) return;
+    const tl = String(c.type_line || (c.card_faces && c.card_faces[0] && c.card_faces[0].type_line) || '').split('//')[0];
+    if(/\bLand\b/.test(tl)) return;
+    seen.add(c.name); out.push(c.name);
+  });
+  return out;
+}
+function deckSalt(d){
+  const names = deckSaltNames(d);
+  let sum = 0, n = 0, pending = 0;
+  names.forEach(nm=>{ const v = cardSaltKnown(nm); if(v === undefined) pending++; else if(typeof v === 'number'){ sum += v; n++; } });
+  return { avg: n ? sum / n : null, known: n, pending, total: names.length };
+}
+function deckSaltLabel(d){
+  if(!d || deckKind(d) !== 'cmdr') return '';
+  const s = deckSalt(d);
+  // Shown once at least 80% of the deck has been looked up.
+  if(s.avg == null || s.pending > s.total * 0.2) return '';
+  const t = appLang() === 'nl' ? 'Gemiddelde salt score (EDHREC) van de kaarten zonder lands' : 'Average salt score (EDHREC) of the nonland cards';
+  return `<span class="dk-salt" title="${t}">🧂 ${s.avg.toFixed(2)}</span>`;
+}
+function paintDeckSalts(){
+  document.querySelectorAll('[data-decksalt]').forEach(el=>{ const d = getDeck(el.dataset.decksalt); el.innerHTML = deckSaltLabel(d); });
+}
+async function saltFromEdhrec(name){
+  // Network straight, no page cache: only the number is kept.
+  const data = await edhrecFetchNetwork('/pages/cards/' + edhrecSlug(name) + '.json');
+  if(!data) return undefined;
+  const c2 = ((data.container || {}).json_dict || {}).card || {};
+  let v = Number(c2.salt);
+  if(!isFinite(v)){ const m = /"salt":\s*([0-9.]+)/.exec(JSON.stringify(c2) || ''); v = m ? Number(m[1]) : NaN; }
+  return isFinite(v) ? v : null;
+}
+let _saltRun = false;
+/* Fills the salt of every Commander deck in the background, one card at a
+   time, deck by deck (so whole decks finish early). Stops when the app is
+   hidden or EDHREC stops answering; picks up where it left off next time. */
+async function saltFillDecks(){
+  if(_saltRun) return;
+  _saltRun = true;
+  try{
+    const decks = (state.decksIndex || []).filter(d=>deckKind(d) === 'cmdr');
+    const todo = [], seen = new Set();
+    decks.forEach(d=>deckSaltNames(d).forEach(n=>{ if(!seen.has(n) && cardSaltKnown(n) === undefined){ seen.add(n); todo.push(n); } }));
+    if(!todo.length) return;
+    let misses = 0, done = 0;
+    for(const n of todo){
+      if(document.hidden || (typeof _netDown !== 'undefined' && _netDown)) break;
+      let v;
+      try{ v = await saltFromEdhrec(n); }catch(e){ v = undefined; }
+      if(v === undefined){ if(++misses >= 8) break; await new Promise(r=>setTimeout(r, 400)); continue; }
+      misses = 0;
+      cardSaltPut(n, v);
+      if(++done % 12 === 0){ saltStoreSave(); paintDeckSalts(); }
+      await new Promise(r=>setTimeout(r, 350));
+    }
+  }finally{
+    _saltRun = false;
+    saltStoreSave(); paintDeckSalts();
+  }
+}
 function deckTileHtml(d){
   const _cv = deckCoverCard(d);
   const art = _cv ? cardImageLarge(_cv) : '';
@@ -7783,7 +7889,7 @@ function deckTileHtml(d){
       <div class="body">
         <div class="nm">${escapeHtml(d.name||'Untitled deck')}</div>
         <div class="meta"><span${deckCountState(d) === 'bad' ? ' style="color:var(--count-bad-tile);"' : ''}>${deckCountLabel(d)}${d.primer&&d.primer.trim()?' · ✎':''}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span class="pips-mini">${d.admiral?pipsHtml(deckColorIdentity(d),'sm'):''}</span>${deckKind(d) === 'cmdr' ? `<span class="bkt-mini" title="Bracket estimate">B${bracketEstimate(d, null).b}</span>` : ''}</span></div>
-        <div class="edited"><span data-deckprice="${d.id}">${deckPriceLabel(d)}</span></div>
+        <div class="edited"><span data-deckprice="${d.id}">${deckPriceLabel(d)}</span><span data-decksalt="${d.id}">${deckSaltLabel(d)}</span></div>
       </div>
     </div>`;
 }
@@ -7925,6 +8031,7 @@ async function sweepDeckPrices(){
 }
 function wireHome(){
   sweepDeckPrices();
+  setTimeout(()=>{ if(state.screen === 'decks') saltFillDecks(); }, 2500);
   wireDecksNotice();
   document.getElementById('newDeckBtn2')?.addEventListener('click', ()=>openModal('newdeck'));
   document.querySelector('[data-opencollection]')?.addEventListener('click', ()=>switchPage('collection'));
@@ -8454,19 +8561,23 @@ function computeWants(){
   // pointer to it, so tapping a Wants tile opens the card page at once
   // instead of asking Scryfall first.
   const src = state._wantsSrc = new Map();
-  const take = (c)=>{
+  const take = (c, deckName)=>{
     if(c && c.name && !src.has(c.name) && (c.oracle_text != null || Array.isArray(c.card_faces))) src.set(c.name, c);
-    if(!c || !c.name || owned.has(c.name) || ex.has(c.name) || map.has(c.name)) return;
+    if(!c || !c.name || owned.has(c.name) || ex.has(c.name)) return;
+    const had = map.get(c.name);
+    if(had){ if(deckName && had.decks.indexOf(deckName) < 0) had.decks.push(deckName); else if(!deckName) had.manual = true; return; }
     const hit = state.priceCache[c.name];
     map.set(c.name, { name:c.name, img: c.img || cardImageMed(c), type_line: c.type_line||'', set: c.set||'',
       set_name: c.set_name||'', colors: c.colors || c.color_identity || [], rarity: c.rarity||'',
-      border_color: c.border_color||'', eur: c.eur != null ? c.eur : ((hit && typeof hit.v==='number') ? hit.v : null) });
+      border_color: c.border_color||'', eur: c.eur != null ? c.eur : ((hit && typeof hit.v==='number') ? hit.v : null),
+      decks: deckName ? [deckName] : [], manual: !deckName });
   };
   (state.decksIndex||[]).forEach(d=>{
-    deckLeaders(d).forEach(take);
-    (d.cards||[]).forEach(take);
+    const dn = d.name || 'Untitled deck';
+    deckLeaders(d).forEach(c=>take(c, dn));
+    (d.cards||[]).forEach(c=>take(c, dn));
   });
-  (state.collection.wantsManual||[]).forEach(take);
+  (state.collection.wantsManual||[]).forEach(c=>take(c, null));
   return Array.from(map.values());
 }
 function collectionPageHtml(){
@@ -8520,8 +8631,7 @@ function collectionPageHtml(){
         <img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}">
         <div class="col-tile-info">
           <div class="l1">${escapeHtml(it.name)}</div>
-          <div class="l2">wanted · from your decks</div>
-          <div class="l3"><span></span>${it.eur!=null?`<span style="color:var(--brass);font-family:'JetBrains Mono',monospace;">€${it.eur.toFixed(2)}</span>`:''}</div>
+          <div class="l2 want-in">${it.eur!=null?`<span class="wi-eur">€${it.eur.toFixed(2)}</span>`:''}${wantInLabel(it)}</div>
         </div>
       </div>` : `
       <button class="sr-tile col-tile ${state.colSel && state.colSel.has(_idxOf.get(it))?'csel':''}" data-ci="${_idxOf.get(it)}">
@@ -9247,6 +9357,14 @@ function wirePrintsDropdown(rootEl, id, onPick){
 /* The card behind a Wants tile, fastest source first: the copy in your deck
    (instant), then the offline card database, and only then Scryfall -- at
    the head of the queue, because the person is waiting for it. */
+/* "wanted in: Deck A, Deck B" -- two lines at most, flowing round the price
+   that sits at the right of the second line. */
+function wantInLabel(it){
+  const nl = appLang() === 'nl';
+  const decks = (it.decks || []).map(n=>escapeHtml(n));
+  if(decks.length) return `<span class="wi-k">${nl ? 'gezocht voor:' : 'wanted in:'}</span> ${decks.join(', ')}`;
+  return nl ? 'gezocht · zelf toegevoegd' : 'wanted · added by you';
+}
 async function wantCardFor(name){
   const own = state._wantsSrc && state._wantsSrc.get(name);
   if(own) return own;
@@ -12389,6 +12507,13 @@ function cardTileHtml(card, idx, loc, qty){
   const _ill = _v === 'banned' || _v === 'not_legal';
   return `<div class="vg-card${_ill?' vg-illegal':''}" data-idx="${idx}" data-loc="${loc}"><img class="${wbClass(card)}" src="${cardImageMed(card)}" alt="${escapeHtml(card.name)}">${(qty&&qty>1)?`<span class="vg-qty">×${qty}</span>`:''}${cardBadgesHtml(card)}${gcMarkHtml(card)}</div>`;
 }
+/* Open or close a stats drill-down without moving what was tapped: the list
+   grows UPWARD from it (bottom-up), the tapped symbol or bar stays put. */
+function statKeepPlace(anchor, fn){
+  const t0 = anchor ? anchor.getBoundingClientRect().top : null;
+  fn();
+  if(anchor && t0 != null){ const dy = anchor.getBoundingClientRect().top - t0; if(Math.abs(dy) > 1) window.scrollBy(0, dy); }
+}
 function statsTabHtml(d){
   const curve=[0,0,0,0,0,0,0]; const curveCards={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
   const typeCounts={}; const rarityCounts={};
@@ -12418,8 +12543,8 @@ function statsTabHtml(d){
     </div>
     <div class="panel-card">
       <div class="panel-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;"><span>Mana Curve <span style="text-transform:none;color:var(--sub-text);font-weight:400;">— tap a bar to see those cards</span></span><span id="avgMvBadge" style="text-transform:none;color:var(--brass);font-weight:700;white-space:nowrap;"></span></div>
+      <div id="curveDetail" class="st-detail"></div>
       <div class="curve-panel">${curve.map((n,i)=>`<div class="curve-col" data-cmc="${i}" style="cursor:${n?'pointer':'default'};"><div class="curve-bar" style="height:${n?(14+(n/maxB)*54):2}px"></div><div class="curve-n">${n||''}</div><div class="curve-lbl">${i===6?'6+':i}</div></div>`).join('')}</div>
-      <div id="curveDetail"></div>
     </div>
     ${deckKind(d) !== 'admiral' && d.cards.length ? `<div class="panel-card"><div class="panel-h">Cast-ability</div>
       <div id="castResult" class="hint" style="margin:0 0 8px;">Pick a card from this deck to see its odds.</div>
@@ -12468,8 +12593,7 @@ function statsTabHtml(d){
         </div>`;
       };
       return `<div class="panel-card"><div class="panel-h">Color Distribution <span style="text-transform:none;color:var(--sub-text);font-weight:400;">— tap a symbol or bar to see those cards</span></div>
-      <div class="ms-grid">${order.map(cell).join('')}</div>
-      <div id="msDetail"></div>
+      <div class="ms-grid">${order.map(cell).join('')}<div id="msDetail" class="st-detail"></div></div>
     </div>`;
     })()}
     <div class="panel-card" id="deckCombosPanel"><div class="panel-h">${MANA_INF} Combos</div><div id="deckCombosBody" class="hint" style="margin:0;min-height:40px;display:flex;flex-direction:column;justify-content:center;">Scanning…</div></div>
@@ -12622,12 +12746,12 @@ function wireStatsTab(d){
     col.addEventListener('click', ()=>{
       const cmc = col.dataset.cmc;
       const box = document.getElementById('curveDetail');
-      if(selectedCmc === cmc){ selectedCmc = null; box.innerHTML=''; return; }
+      if(selectedCmc === cmc){ selectedCmc = null; statKeepPlace(col, ()=>{ box.innerHTML=''; }); return; }
       selectedCmc = cmc;
       const cards = curveCards[cmc].slice().sort((a,b)=>a.name.localeCompare(b.name));
-      if(!cards.length){ box.innerHTML = ''; return; }
-      box.innerHTML = `<div class="chip-label" style="margin-top:12px;">Mana value ${cmc==='6'?'6+':cmc} (${cards.length})</div>
-        <div class="visual-grid">${cards.map(c=>`<div class="vg-card" data-name="${encodeURIComponent(c.name)}"><img src="${cardImage(c)}" alt="${escapeHtml(c.name)}"></div>`).join('')}</div>`;
+      if(!cards.length){ statKeepPlace(col, ()=>{ box.innerHTML = ''; }); return; }
+      statKeepPlace(col, ()=>{ box.innerHTML = `<div class="chip-label">Mana value ${cmc==='6'?'6+':cmc} (${cards.length})</div>
+        <div class="visual-grid">${cards.map(c=>`<div class="vg-card" data-name="${encodeURIComponent(c.name)}"><img src="${cardImage(c)}" alt="${escapeHtml(c.name)}"></div>`).join('')}</div>`; });
       box.querySelectorAll('.vg-card img').forEach(img=>{
         img.addEventListener('click', ()=>{
           const nm = decodeURIComponent(img.closest('[data-name]').dataset.name);
@@ -12666,15 +12790,24 @@ function wireStatsTab(d){
     let msSel = null;
     { const md = document.getElementById('msDetail'); if(md) md._clear = ()=>{ msSel = null; md.innerHTML = ''; }; }
     const NAME = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', GEN:'Generic', C:'Colorless' };
-    const show = (key, cards, label)=>{
+    const show = (key, cards, label, from)=>{
       const b = document.getElementById('msDetail');
       if(!b) return;
-      if(msSel === key){ msSel = null; b.innerHTML = ''; return; }
+      const cellEl = from && from.closest('.ms-cell');
+      if(msSel === key){ msSel = null; statKeepPlace(cellEl, ()=>{ b.innerHTML = ''; }); return; }
       msSel = key;
       const list = cards.slice().sort((a,x)=>a.name.localeCompare(x.name));
-      if(!list.length){ b.innerHTML = ''; msSel = null; return; }
-      b.innerHTML = `<div class="chip-label" style="margin-top:12px;">${label} (${list.length})</div>
+      if(!list.length){ msSel = null; statKeepPlace(cellEl, ()=>{ b.innerHTML = ''; }); return; }
+      statKeepPlace(cellEl, ()=>{
+        // The list takes a full row of the grid right ABOVE the tapped
+        // symbol's row; label at its foot, cards growing upward.
+        const grid = b.parentNode, cells = Array.from(grid.querySelectorAll(':scope > .ms-cell'));
+        const i = cellEl ? cells.indexOf(cellEl) : -1;
+        const rowStart = i >= 0 ? cells[i - (i % 2)] : null;
+        if(rowStart) grid.insertBefore(b, rowStart); else grid.appendChild(b);
+        b.innerHTML = `<div class="chip-label">${label} (${list.length})</div>
         <div class="visual-grid">${list.map(c=>`<div class="vg-card" data-name="${encodeURIComponent(c.name)}"><img src="${cardImage(c)}" alt="${escapeHtml(c.name)}"></div>`).join('')}</div>`;
+      });
       b.querySelectorAll('.vg-card img').forEach(img=>{
         img.addEventListener('click', ()=>{
           const nm = decodeURIComponent(img.closest('[data-name]').dataset.name);
@@ -12685,11 +12818,11 @@ function wireStatsTab(d){
     };
     document.querySelectorAll('[data-msym]').forEach(elx=>elx.addEventListener('click', ()=>{
       const k = elx.dataset.msym;
-      show('s'+k, symCards[k]||[], `${NAME[k]||k} symbols`);
+      show('s'+k, symCards[k]||[], `${NAME[k]||k} symbols`, elx);
     }));
     document.querySelectorAll('[data-mprod]').forEach(elx=>elx.addEventListener('click', ()=>{
       const k = elx.dataset.mprod;
-      show('p'+k, prodCards[k === 'GEN' ? 'C' : k]||[], `${NAME[k]||k} production`);
+      show('p'+k, prodCards[k === 'GEN' ? 'C' : k]||[], `${NAME[k]||k} production`, elx);
     }));
   })();
 }
@@ -17872,6 +18005,7 @@ async function openSaltiestOverlay(){
 }
 async function edhrecSaltFor(card){
   if(card._salt !== undefined) return card._salt;
+  { const k = cardSaltKnown(card.name); if(k !== undefined) return (card._salt = k); }
   try{
     const data = await edhrecFetchJson('/pages/cards/' + edhrecSlug(card.name) + '.json');
     const c2 = (((data||{}).container||{}).json_dict||{}).card || {};
@@ -17880,7 +18014,9 @@ async function edhrecSaltFor(card){
       const m2 = /"salt":\s*([0-9.]+)/.exec(JSON.stringify(data) || '');
       v = m2 ? Number(m2[1]) : NaN;
     }
-    return (card._salt = isFinite(v) ? v : null);
+    card._salt = isFinite(v) ? v : null;
+    cardSaltPut(card.name, card._salt); saltStoreSave();
+    return card._salt;
   }catch(e){ return (card._salt = null); }
 }
 async function edhrecThemeNames(slug){
