@@ -851,7 +851,14 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .as-list .deck-tile .meta .bkt-mini{font-size:12px;}
 .as-list .binder-glyph-row{align-self:center;margin:0 0 0 4px;}
 /* Binder rules */
-.br-sub{color:var(--brass) !important;font-size:11.5px;margin-top:2px;}
+.br-info{position:absolute;top:8px;right:8px;z-index:2;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--brass-dim);background:var(--field);color:var(--brass);font:italic 700 14px/1 Georgia,serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;}
+.br-gl{padding:6px 10px;min-width:42px;justify-content:center;}
+.br-gl svg{width:20px;height:20px;}
+.br-gl .rar-dot{width:14px;height:14px;}
+.br-h2{border-top:1.5px solid var(--line);padding-top:10px;margin-top:2px;color:var(--brass);}
+.want-tile{position:relative;}
+.want-img{position:relative;}
+.want-have{position:absolute;bottom:8px;left:8px;z-index:3;width:38px;height:38px;border-radius:50%;border:none;background-image:linear-gradient(var(--gold),var(--gold));color:#241A04;font-size:22px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 3px 10px rgba(0,0,0,0.5);cursor:pointer;}
 .deckpick.br-sheet{display:flex;flex-direction:column-reverse;gap:12px;width:100%;max-width:560px;max-height:84vh;overflow-y:auto;border-radius:16px 16px 0 0;margin:0 auto;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-sizing:border-box;}
 .br-title b{display:block;font-family:'Cinzel',serif;font-size:18px;color:var(--brass);margin-bottom:4px;}
 .br-title span{font-size:12.5px;color:var(--sub-text);line-height:1.45;}
@@ -5825,19 +5832,15 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.688';
+const APP_VERSION = '2.51.690';
 const CHANGELOG_NOTES = {
   en: [
-    'Binders: auto-fill rules',
-    'Rarity, color, card type and price',
-    'New cards go to the right binder',
-    'Re-sort binders after price changes'
+    'Wants: + moved to bottom left',
+    'Mana cost is visible again'
   ],
   nl: [
-    'Mappen: automatisch vullen',
-    'Rarity, kleur, kaarttype en prijs',
-    'Nieuwe kaarten naar de juiste map',
-    'Mappen opnieuw sorteren op prijs'
+    'Gezocht: + staat nu linksonder',
+    'Manakosten weer zichtbaar'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5890,11 +5893,11 @@ function tourSteps(){
       t: NL ? '📒 Je collectie' : '📒 Your collection',
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
-           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn.</p>
+           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. De <strong>i</strong> op de tegel toont de regels, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. In <strong>Gezocht</strong> zet de gouden ＋ linksonder op een kaart hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
-           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. New cards then go to the right binder by themselves; if one fits more binders, you choose. <strong>Re-sort binders</strong> puts everything right again after prices change.</p>
+           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. New cards then go to the right binder by themselves; if one fits more binders, you choose. The <strong>i</strong> on a tile shows its rules, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. In <strong>Wants</strong> the gold ＋ at the bottom left of a card adds it to your collection: pick the printing and it goes to the right binder.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -8614,7 +8617,7 @@ function computeWants(){
     const hit = state.priceCache[c.name];
     map.set(c.name, { name:c.name, img: c.img || cardImageMed(c), type_line: c.type_line||'', set: c.set||'',
       set_name: c.set_name||'', colors: c.colors || c.color_identity || [], rarity: c.rarity||'',
-      border_color: c.border_color||'', eur: c.eur != null ? c.eur : ((hit && typeof hit.v==='number') ? hit.v : null),
+      border_color: c.border_color||'', eur: c.eur != null ? c.eur : ((hit && typeof hit.v==='number') ? hit.v : brItemEur({ name: c.name })),
       decks: deckName ? [deckName] : [], manual: !deckName });
   };
   (state.decksIndex||[]).forEach(d=>{
@@ -8673,7 +8676,7 @@ function collectionPageHtml(){
     ${f.binder ? `<button class="deck-fab" id="binderFab" title="${trS('Add cards to collection…')}">＋</button>` : ''}
     ${items.length ? `<div class="col-grid">${items.map((it)=> wantsMode ? `
       <div class="sr-tile col-tile want-tile" data-wn="${escapeHtml(it.name)}">
-        <img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}">
+        <div class="want-img"><img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}"><button type="button" class="want-have" data-wanthave="${escapeHtml(it.name)}" title="${appLang()==='nl' ? 'Ik heb hem' : 'I got it'}" aria-label="${appLang()==='nl' ? 'Ik heb hem' : 'I got it'}">\uFF0B</button></div>
         <div class="col-tile-info">
           <div class="l1">${escapeHtml(it.name)}</div>
           <div class="l2 want-in">${it.eur!=null?`<span class="wi-eur">€${it.eur.toFixed(2)}</span>`:''}${wantInLabel(it)}</div>
@@ -8913,8 +8916,17 @@ function binderRuleMatch(b, it){
     const tl = String(it.type_line || '').split('//')[0];
     if(!r.type.some(t=>new RegExp('\\b' + t + '\\b').test(tl))) return false;
   }
-  if(r.price && !brPriceFits(r.price, it.eur)) return false;
+  if(r.price && !brPriceFits(r.price, brItemEur(it))) return false;
   return true;
+}
+/* A copy's own price, else what the app knows for the card by name: the
+   price cache or the daily price file. Some printings (The List, promos)
+   carry no price of their own. */
+function brItemEur(it){
+  if(it.eur != null && isFinite(it.eur)) return it.eur;
+  try{ const h = state.priceCache && state.priceCache[it.name]; if(h && typeof h.v === 'number') return h.v; }catch(e){}
+  try{ const v = bulkEurFor(it.name); if(typeof v === 'number' && isFinite(v)) return v; }catch(e){}
+  return null;
 }
 // Can no card ever meet both rule sets (price aside)? Rarity and colour can
 // rule each other out; card types never do (an Artifact Creature is both).
@@ -8955,13 +8967,50 @@ function binderRulesSummary(b){
   if(r.price) bits.push(brPriceLabel(r.price));
   return 'auto · ' + bits.join(' · ');
 }
+const BR_GLYPHS = ['W', 'U', 'B', 'R', 'G', 'C', 'multi', 'rC', 'rU', 'rR', 'rM', 'Creature', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Planeswalker', 'Battle', 'Land', 'token', 'foil'];
+function brGlyphHtml(k, px){
+  px = px || 14;
+  if('WUBRGC'.indexOf(k) >= 0 && k.length === 1) return manaIconSvg(k, px);
+  if(k === 'multi') return multiIconSvg(px);
+  if(/^r[CURM]$/.test(k)) return `<span class="rar-dot rar-${k[1]}"></span>`;
+  if(k === 'token') return '🎫';
+  if(k === 'foil') return '<span style="color:var(--head-ink);">✦</span>';
+  return (typeof DOCK_TYPE_ICONS !== 'undefined' && DOCK_TYPE_ICONS[k]) || '';
+}
+// The tile's icons: the player's own pick, else the old guess from the name.
+function binderTileGlyphs(b){
+  if(Array.isArray(b.glyphs)) return b.glyphs.length ? `<span class="binder-glyphs">${b.glyphs.map(k=>brGlyphHtml(k, 14)).join('')}</span>` : '';
+  return binderGlyphsHtml(b.name);
+}
+function brSheetOpen(el, id, onClose){
+  document.body.appendChild(el);
+  pushOverlay(id, ()=>{ el.remove(); if(onClose) onClose(); });
+}
+function brSheetClose(id){
+  const st = state.overlayStack, top = st[st.length - 1];
+  if(top && top.id === id) closeTopOverlay();
+  else document.getElementById(id)?.remove();
+}
+// Resolves once the pending history back-step (a sheet that just closed) has
+// landed, so the next sheet is not mistaken for the one being closed.
+function brAfterPop(){
+  return new Promise((res)=>{
+    let fin = false;
+    const f = ()=>{ if(fin) return; fin = true; window.removeEventListener('popstate', f); setTimeout(res, 30); };
+    window.addEventListener('popstate', f);
+    setTimeout(f, 450);
+  });
+}
 function ruledBinders(){ return (state.collection.binders || []).filter(binderHasRules); }
 function binderCandidates(it){ return ruledBinders().filter(b=>binderRuleMatch(b, it)); }
 /* Fits more than one binder: the player picks. "Same choice for the rest"
    remembers the pick for every later card with the very same candidates. */
-function openBinderConflict(it, cands){
+function openBinderConflict(it, cands, o){
+  o = o || {};
   return new Promise((resolve)=>{
     const nl = appLang() === 'nl';
+    let settled = false;
+    const done = (v)=>{ if(settled) return; settled = true; resolve(v); };
     document.getElementById('binderConflict')?.remove();
     const el = document.createElement('div');
     el.className = 'deckpick-scrim'; el.id = 'binderConflict';
@@ -8970,14 +9019,18 @@ function openBinderConflict(it, cands){
     el.innerHTML = `<div class="deckpick bc-sheet">
       ${cands.map(b=>`<button type="button" class="primary-btn bc-opt" data-bc="${b.id}"><b>${escapeHtml(b.name)}</b><small>${escapeHtml(binderRulesSummary(b))}</small></button>`).join('')}
       <button type="button" class="ghost-btn bc-opt" data-bc="">${nl ? 'Geen map' : 'No binder'}</button>
-      <label class="bc-rem"><input type="checkbox" id="bcRemember"> ${nl ? 'Zelfde keuze voor de rest van deze kaarten' : 'Same choice for the rest of these cards'}</label>
-      <div class="bc-head">${it.img ? `<img src="${it.img}" alt="">` : ''}<div><b>${escapeHtml(it.name)}</b><span>${nl ? 'past in meer dan één map. Waar moet hij heen?' : 'fits more than one binder. Where should it go?'}</span></div></div>
+      ${o.noneFit ? '' : `<label class="bc-rem"><input type="checkbox" id="bcRemember"> ${nl ? 'Zelfde keuze voor de rest van deze kaarten' : 'Same choice for the rest of these cards'}</label>`}
+      <div class="bc-head">${it.img ? `<img src="${it.img}" alt="">` : ''}<div><b>${escapeHtml(it.name)}</b><span>${o.noneFit
+        ? (nl ? 'past in geen enkele map met regels. Waar moet hij heen?' : 'fits no binder with rules. Where should it go?')
+        : (nl ? 'past in meer dan \u00E9\u00E9n map. Waar moet hij heen?' : 'fits more than one binder. Where should it go?')}</span></div></div>
     </div>`;
-    document.body.appendChild(el);
+    // The answer is handed over only once the sheet's history entry is gone,
+    // so a next sheet can never be closed by this one's late back-step.
+    let pick = { id: null, remember: false };                                    // back = no binder
+    brSheetOpen(el, 'binderConflict', ()=>setTimeout(()=>done(pick), 0));
     el.querySelectorAll('[data-bc]').forEach(btn=>btn.addEventListener('click', ()=>{
-      const rem = !!(document.getElementById('bcRemember') || {}).checked;
-      el.remove();
-      resolve({ id: btn.dataset.bc || null, remember: rem });
+      pick = { id: btn.dataset.bc || null, remember: !!(document.getElementById('bcRemember') || {}).checked };
+      brSheetClose('binderConflict');
     }));
   });
 }
@@ -9032,6 +9085,7 @@ function openBinderRules(b, isNew){
   const r = JSON.parse(JSON.stringify(b.rules || {}));
   r.rarity = r.rarity || []; r.color = r.color || []; r.type = r.type || [];
   document.getElementById('binderRulesSheet')?.remove();
+  const glyphs = Array.isArray(b.glyphs) ? b.glyphs.slice() : [];
   const el = document.createElement('div');
   el.className = 'deckpick-scrim'; el.id = 'binderRulesSheet';
   el.style.zIndex = 205; el.style.alignItems = 'flex-end';
@@ -9051,9 +9105,18 @@ function openBinderRules(b, isNew){
     <div class="br-sec"><div class="br-h">${nl ? 'Kaarttype' : 'Card type'}</div><div class="br-chips">${BR_TYPES.map(t=>chip('type', t, t)).join('')}</div></div>
     <div class="br-sec"><div class="br-h">${nl ? 'Kleur' : 'Color'}</div><div class="br-chips">${BR_COLORS.map(c=>chip('color', c, 'WUBRG'.indexOf(c) >= 0 ? manaIconSvg(c, 20) : (c === 'C' ? manaIconSvg('C', 20) + ' ' + CL.C : CL[c]))).join('')}</div></div>
     <div class="br-sec"><div class="br-h">Rarity</div><div class="br-chips">${BR_RARITIES.map(v=>chip('rarity', v, v[0].toUpperCase() + v.slice(1))).join('')}</div></div>
-    <div class="br-title"><b>${escapeHtml(b.name)}</b><span>${nl ? 'Automatisch vullen: nieuwe kaarten die hierbij passen komen vanzelf in deze map. Binnen een rij telt elke keuze, tussen de rijen moeten ze allemaal kloppen.' : 'Auto-fill: new cards that fit go into this binder by themselves. Within a row any choice counts; across rows all must match.'}</span></div>
+    <div class="br-h br-h2">${nl ? 'Automatisch vullen' : 'Auto-fill'}</div>
+    <div class="br-sec"><div class="br-h">${nl ? 'Iconen op de tegel' : 'Icons on the tile'}</div><div class="br-chips">${BR_GLYPHS.map(k=>`<button type="button" class="chip br-chip br-gl${glyphs.indexOf(k) >= 0 ? ' active' : ''}" data-brg="${k}" aria-label="${k}">${brGlyphHtml(k, 20)}</button>`).join('')}</div></div>
+    <div class="br-title"><b>${escapeHtml(b.name)}</b><span>${nl ? 'Kies de iconen voor de tegel. Met automatisch vullen komen nieuwe kaarten die passen vanzelf in deze map: binnen een rij telt elke keuze, tussen de rijen moeten ze allemaal kloppen.' : 'Pick the icons for the tile. With auto-fill, new cards that fit go into this binder by themselves: within a row any choice counts; across rows all must match.'}</span></div>
   </div>`;
-  document.body.appendChild(el);
+  let afterClose = null;
+  brSheetOpen(el, 'binderRulesSheet', ()=>{ if(afterClose){ const f = afterClose; afterClose = null; setTimeout(f, 0); } });
+  el.querySelectorAll('[data-brg]').forEach(c=>c.addEventListener('click', ()=>{
+    const k = c.dataset.brg, i = glyphs.indexOf(k);
+    if(i >= 0) glyphs.splice(i, 1); else glyphs.push(k);
+    c.classList.toggle('active', i < 0);
+  }));
+  const keepGlyphs = ()=>{ b.glyphs = BR_GLYPHS.filter(k=>glyphs.indexOf(k) >= 0); };
   const err = el.querySelector('#brErr');
   const showErr = (m)=>{ err.textContent = m || ''; err.hidden = !m; };
   const check = ()=>{
@@ -9070,16 +9133,18 @@ function openBinderRules(b, isNew){
   }));
   el.querySelector('#brPriceOn').addEventListener('change', (e)=>{ el.querySelector('#brPriceBox').hidden = !e.target.checked; check(); });
   wirePriceSlider('brPr', (mn, mx)=>{ pr.min = mn || 0; pr.max = mx; el.querySelector('#brPriceLab').textContent = brPriceLabel(pr); check(); });
-  const close = ()=>el.remove();
+  const close = ()=>brSheetClose('binderRulesSheet');
   el.addEventListener('click', (e)=>{ if(e.target === el) close(); });
-  el.querySelector('#brNone').addEventListener('click', ()=>{ delete b.rules; saveCollection(); close(); render(); });
+  el.querySelector('#brNone').addEventListener('click', ()=>{ delete b.rules; keepGlyphs(); saveCollection(); afterClose = ()=>render(); close(); });
   el.querySelector('#brSave').addEventListener('click', ()=>{
     if(!check()) return;
+    keepGlyphs();
     const rules = { rarity:r.rarity.slice(), color:r.color.slice(), type:r.type.slice() };
     if(el.querySelector('#brPriceOn').checked) rules.price = { min: pr.min || 0, max: pr.max == null ? null : pr.max };
     if(binderHasRules({ rules })) b.rules = rules; else delete b.rules;
-    saveCollection(); close(); render();
-    binderRulesOfferMove(b);
+    saveCollection();
+    afterClose = ()=>{ render(); binderRulesOfferMove(b); };
+    close();
   });
   check();
 }
@@ -9111,8 +9176,8 @@ async function binderResort(){
     <div class="brs-list">${moved.map(m=>`<div class="brs-row"><b>${escapeHtml(m.name)}${m.qty > 1 ? ' ×' + m.qty : ''}</b><span>${escapeHtml(m.from)} → ${escapeHtml(m.to)}</span></div>`).join('')}</div>
     <div class="br-title"><b>${nl ? `${n} kaart${n === 1 ? '' : 'en'} verplaatst` : `${n} card${n === 1 ? '' : 's'} moved`}</b></div>
   </div>`;
-  document.body.appendChild(el);
-  const close = ()=>el.remove();
+  brSheetOpen(el, 'binderResortSheet');
+  const close = ()=>brSheetClose('binderResortSheet');
   el.querySelector('#brsOk').addEventListener('click', close);
   el.addEventListener('click', (e)=>{ if(e.target === el) close(); });
 }
@@ -9124,11 +9189,11 @@ function binderTileHtml(b){
   const eur = items.reduce((a,it)=>a+((it.eur!=null?it.eur:0)*(it.qty||1)), 0);
   const face = b.face || (first ? artCropFrom(first.img) : null);
   return `<div class="folder-tile binder-tile" data-binderopen="${b.id}">
-      <div class="binder-glyph-row">${binderGlyphsHtml(b.name)}</div>
+      <div class="binder-glyph-row">${binderTileGlyphs(b)}</div>
+      ${binderHasRules(b) ? `<button type="button" class="br-info" data-brinfo="${b.id}" aria-label="Auto-fill">i</button>` : ''}
       <div class="folder-face">${face ? `<img loading="lazy" src="${face}" alt="">` : '<span style="font-size:44px;line-height:1;">🗂</span>'}</div>
       <div class="folder-name">${escapeHtml(b.name)}</div>
       <div class="folder-sub">${qty} card${qty===1?'':'s'}${eur?` · €${eur.toFixed(2)}`:''}</div>
-      ${binderHasRules(b) ? `<div class="folder-sub br-sub">${escapeHtml(binderRulesSummary(b))}</div>` : ''}
     </div>`;
 }
 async function openBinderArtPicker(binder){
@@ -9192,10 +9257,12 @@ function collectionBindersGridHtml(){
       <div class="folder-sub">${qtyW} card${qtyW===1?'':'s'}${eurW?` · €${eurW.toFixed(2)}`:''}</div>
     </div>`;
   const _gc = folderView('col') === 'list' ? 'deck-grid as-list' : 'deck-grid';
-  return `${binders.length ? `<div class="section-label">Binders</div>
-    <div class="${_gc}" style="margin-bottom:12px;">${binders.map(binderTileHtml).join('')}</div>` : ''}
-    <div class="section-label">Automatic folders</div>
+  // The collection page is column-reverse: what comes FIRST here sits LOWEST,
+  // so each label follows its grid to land just above it.
+  return `${binders.length ? `<div class="${_gc}" style="margin-bottom:12px;">${binders.map(binderTileHtml).join('')}</div>
+    <div class="section-label">Binders</div>` : ''}
     <div class="${_gc}" style="margin-bottom:12px;">${allTile}${wantsTile}</div>
+    <div class="section-label">Automatic folders</div>
     <button class="deck-fab" id="colFab" title="New binder">＋</button>`;
 }
 function openBinderIn(id){
@@ -9271,6 +9338,15 @@ window.addEventListener('resize', ()=>{ if(state.screen === 'collection') fitCol
 function wireCollectionPage(){
   requestAnimationFrame(()=>requestAnimationFrame(fitColTileHeight));
   ensureBinderFaces();
+  document.querySelectorAll('[data-brinfo]').forEach(btn=>{
+    const stop = (e)=>e.stopPropagation();
+    btn.addEventListener('pointerdown', stop);
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation(); e.preventDefault();
+      const b = state.collection.binders.find(x=>x.id === btn.dataset.brinfo);
+      if(b) toast(b.name + ' \u2014 ' + binderRulesSummary(b));
+    });
+  });
   document.querySelectorAll('[data-binderopen]').forEach(t=>{
     // Long-press manages the binder (art / rename / delete); a plain tap opens it.
     let lpT = null, lpFired = false;
@@ -9301,7 +9377,7 @@ function wireCollectionPage(){
       ['bfImport', '⬆ ' + trS('Import'), ()=>openCollectionImport(bid)],
       ['bfPaste', '📋 ' + trS('Paste a list'), ()=>openBinderPasteSheet(bid)]
     ].concat((state.collection.binders || []).some(b=>b.id === bid)
-      ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Automatisch vullen…' : 'Auto-fill rules…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
+      ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Iconen & automatisch vullen…' : 'Icons & auto-fill…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
       : []));
   });
   document.getElementById('colFab')?.addEventListener('click', (e)=>{
@@ -9363,6 +9439,10 @@ function wireCollectionPage(){
     const el = document.getElementById('colTypeText');
     if(el){ el.focus(); const v=el.value; el.value=''; el.value=v; }
   }, 380); });
+  document.querySelectorAll('[data-wanthave]').forEach(btn=>{
+    btn.addEventListener('pointerdown', (e)=>e.stopPropagation());
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); e.preventDefault(); wantGotIt(btn.dataset.wanthave); });
+  });
   document.querySelectorAll('.want-tile').forEach(tile=>tile.addEventListener('click', async ()=>{
     // A Wants tile opens the normal card page (with Add to my collection and
     // Remove from Wants); the little manage sheet survives only as the
@@ -9655,6 +9735,34 @@ function wantInLabel(it){
   const decks = (it.decks || []).map(n=>escapeHtml(n));
   if(decks.length) return `<span class="wi-k">${nl ? 'gezocht voor:' : 'wanted in:'}</span> ${decks.join(', ')}`;
   return nl ? 'gezocht · zelf toegevoegd' : 'wanted · added by you';
+}
+/* "I got it" on a Wants tile: pick the printing you have (the normal Change
+   printing screen), then it joins the collection -- in the binder whose rules
+   it meets, the player choosing if several fit, or if none does. */
+async function wantGotIt(name){
+  const nl = appLang() === 'nl';
+  const card = await wantCardFor(name);
+  if(!card){ toast(nl ? 'Kaart niet gevonden.' : 'Card not found.'); return; }
+  openPrintingGrid(card, async (chosen)=>{
+    await brAfterPop();
+    const slim = slimForCollection(chosen || card);
+    const it = Object.assign({}, slim, { cond:'NM', qty:1 });
+    const binders = state.collection.binders || [];
+    let bid = null;
+    if(binders.length){
+      const cands = binderCandidates(it);
+      if(cands.length === 1) bid = cands[0].id;
+      else if(cands.length > 1) bid = (await openBinderConflict(it, cands)).id;
+      else bid = (await openBinderConflict(it, binders, { noneFit:true })).id;
+    }
+    const same = state.collection.items.find(x=>x.name===slim.name && x.set===slim.set && x.cn===slim.cn && x.cond==='NM' && (x.binder||null)===(bid||null));
+    if(same) same.qty += 1;
+    else state.collection.items.unshift(Object.assign({}, slim, { cond:'NM', qty:1, binder: bid, addedAt: Date.now() }));
+    state.collection.wantsManual = (state.collection.wantsManual || []).filter(w=>w.name !== slim.name);
+    saveCollection();
+    toast(`${slim.name} \u2192 ${brBinderName(bid)}`);
+    if(state.screen === 'collection') render();
+  }, { noCustom: true });
 }
 async function wantCardFor(name){
   const own = state._wantsSrc && state._wantsSrc.get(name);
