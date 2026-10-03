@@ -5769,23 +5769,13 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.683';
+const APP_VERSION = '2.51.684';
 const CHANGELOG_NOTES = {
   en: [
-    'New: Draft tools in Extras',
-    'Random seats and pass directions',
-    'Pick timer with tournament times',
-    'Deckbuilding timer and land helper',
-    'Automatic pairings, Swiss rounds',
-    'Results, round timer, standings'
+    'Wants: cards open instantly'
   ],
   nl: [
-    'Nieuw: Draft tools in Extra\'s',
-    'Willekeurige plaatsen aan tafel',
-    'Pick-timer met toernooitijden',
-    'Deckbouw-timer en land-hulp',
-    'Automatische pairings (Swiss)',
-    'Uitslagen, rondetimer en stand'
+    'Wants: kaarten openen direct'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -8460,7 +8450,12 @@ function computeWants(){
   const owned = ownedNames();
   const ex = new Set(state.collection.wantsExclude||[]);
   const map = new Map();
+  // The deck already holds the whole card (Oracle text, art, faces): keep a
+  // pointer to it, so tapping a Wants tile opens the card page at once
+  // instead of asking Scryfall first.
+  const src = state._wantsSrc = new Map();
   const take = (c)=>{
+    if(c && c.name && !src.has(c.name) && (c.oracle_text != null || Array.isArray(c.card_faces))) src.set(c.name, c);
     if(!c || !c.name || owned.has(c.name) || ex.has(c.name) || map.has(c.name)) return;
     const hit = state.priceCache[c.name];
     map.set(c.name, { name:c.name, img: c.img || cardImageMed(c), type_line: c.type_line||'', set: c.set||'',
@@ -8975,10 +8970,8 @@ function wireCollectionPage(){
     // Hand over the whole rendered Wants list, so the card page's chevrons
     // and swipe gestures sail through it card by card.
     const wpool = Array.from(document.querySelectorAll('.want-tile')).map(t=>t.dataset.wn);
-    try{
-      const r = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(name)}`);
-      if(r.ok){ openCardInfo(await r.json(), { wantName: name, wantPool: wpool, wantIdx: wpool.indexOf(name) }); return; }
-    }catch(e){}
+    const card = await wantCardFor(name);
+    if(card){ openCardInfo(card, { wantName: name, wantPool: wpool, wantIdx: wpool.indexOf(name) }); return; }
     openWantSheet(name);
   }));
   // The top box searches WHAT YOU OWN — the whole collection, or just the
@@ -9250,6 +9243,17 @@ function wirePrintsDropdown(rootEl, id, onPick){
   btn.addEventListener('click', (e)=>{ e.stopPropagation(); panel.hidden = !panel.hidden; });
   pd.querySelectorAll('.pd-opt').forEach(o=>o.addEventListener('click', (e)=>{ e.stopPropagation(); panel.hidden = true; onPick(+o.dataset.pi); }));
   // Outside-tap closing (with swallow) is handled by the document gatekeeper.
+}
+/* The card behind a Wants tile, fastest source first: the copy in your deck
+   (instant), then the offline card database, and only then Scryfall -- at
+   the head of the queue, because the person is waiting for it. */
+async function wantCardFor(name){
+  const own = state._wantsSrc && state._wantsSrc.get(name);
+  if(own) return own;
+  const url = `${SF_BASE}/cards/named?exact=${encodeURIComponent(name)}`;
+  try{ const b = await _bulkNamedServe(url); if(b && b.ok){ const c = await b.json(); if(c && c.name) return c; } }catch(e){}
+  try{ const r = await sfFetch(url, 0, false, false, true); if(r && r.ok) return await r.json(); }catch(e){}
+  return null;
 }
 function openWantSheet(name){
   pushOverlay('wantSheet', ()=>document.getElementById('wantSheetOverlay')?.remove());
@@ -16422,12 +16426,14 @@ function openCardInfo(card, opts){
         // Generation guard: with two quick swipes, the earlier fetch can land
         // after the later one — a stale resolve must never repaint the sheet.
         const myGen = _cardSheetGen;
-        const r = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(wpool[n])}`);
-        if(r.ok && _cardSheetGen === myGen) openCardInfo(await r.json(), Object.assign({}, opts, { wantName: wpool[n], wantIdx: n, _replace: true }));
+        const c = await wantCardFor(wpool[n]);
+        if(c && _cardSheetGen === myGen) openCardInfo(c, Object.assign({}, opts, { wantName: wpool[n], wantIdx: n, _replace: true }));
       }catch(e){}
     };
+    const peekW = (k)=>{ const c = state._wantsSrc && state._wantsSrc.get(wpool[k]); return c ? cardImageMed(c) : null; };
     attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
-      canNext: ()=>wi + 1 < wpool.length, canPrev: ()=>wi - 1 >= 0
+      canNext: ()=>wi + 1 < wpool.length, canPrev: ()=>wi - 1 >= 0,
+      peekNext: ()=>peekW(wi + 1), peekPrev: ()=>peekW(wi - 1)
     });
   }
 }
