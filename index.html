@@ -5912,19 +5912,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 const CHANGELOG_NOTES = {
   en: [
-    'Scan cards with your camera',
-    'Wants: price alert with the bell',
-    'Playtest: play a game on your own',
-    'Mulligan, lands, tokens and scry'
+    'Android app: update with one tap',
+    'New app version? You get a popup',
+    'Extras shows your app version'
   ],
   nl: [
-    'Kaarten scannen met je camera',
-    'Gezocht: prijsalert met de bel',
-    'Speeltest: speel een potje alleen',
-    'Mulligan, lands, tokens en scry'
+    'Android-app: bijwerken met 1 tik',
+    'Nieuwe app? Je krijgt een melding',
+    'Extra\u2019s toont je app-versie'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6007,10 +6005,10 @@ function tourSteps(){
       b: NL
         ? `<p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
            <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, de <strong>officiële regels</strong> (Comprehensive Rules), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren.</p>`
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren.</p>`
         : `<p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
            <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away.</p>` }
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away.</p>` }
   ];
 }
 function startAppTour(){
@@ -7135,7 +7133,7 @@ document.addEventListener('click', (e)=>{
 }, true);
 function _promoteDeferredOverlay(){
   const top = state.overlayStack[state.overlayStack.length-1];
-  if(top && !top.pushed){
+  if(top && !top.pushed && !top.noHist){
     top.pushed = true;
     try{ history.pushState({overlay: top.id}, '', '#'+top.id); }catch(e){}
   }
@@ -9197,9 +9195,21 @@ function binderTileGlyphs(b){
   if(Array.isArray(b.glyphs)) return b.glyphs.length ? `<span class="binder-glyphs">${b.glyphs.map(k=>brGlyphHtml(k, 14)).join('')}</span>` : '';
   return binderGlyphsHtml(b.name);
 }
-function brSheetOpen(el, id, onClose){
+function brSheetOpen(el, id, onClose, noHist){
   document.body.appendChild(el);
-  pushOverlay(id, ()=>{ el.remove(); if(onClose) onClose(); });
+  const fn = ()=>{ el.remove(); if(onClose) onClose(); };
+  // noHist: a popup the app opens by itself at start-up. The history entries
+  // made before the first touch are skipped by Chrome, so a history.back()
+  // from it would sail past the home page onto the exit guard. It stays out
+  // of history: its buttons close it directly, and back (appBackStep) still
+  // finds it on the overlay stack.
+  if(noHist){
+    const top = state.overlayStack[state.overlayStack.length - 1];
+    if(top && top.id === id) top.closeFn = fn;
+    else state.overlayStack.push({ id, closeFn: fn, pushed: false, noHist: true });
+    return;
+  }
+  pushOverlay(id, fn);
 }
 function brSheetClose(id){
   const st = state.overlayStack, top = st[st.length - 1];
@@ -23970,6 +23980,93 @@ function createDeckFromReco(){
    link installs straight on Android; iPhone gets the web app via Safari. Always
    the public site -- inside the APK, location is not the website. */
 const DECKHAND_SITE = 'https://deckhandcompanion.netlify.app/';
+/* ---- The Android app keeps itself current ----
+   APK_LATEST is the Deckhand.apk that sits next to this page on the site:
+   raise it whenever a new APK goes into the repo. Inside an older app the
+   page offers the update once (again after three days if put off): from APK
+   4.3 the app downloads it and opens Android's installer itself; an older
+   app hands the download to the browser. Android always asks the person to
+   confirm, and the same signature means every deck and card stays. */
+const APK_LATEST = '4.3';
+function apkVerCmp(a, b){
+  const x = String(a || '0').split('.').map(Number), y = String(b || '0').split('.').map(Number);
+  for(let i = 0; i < Math.max(x.length, y.length); i++){ const d = (x[i] || 0) - (y[i] || 0); if(d) return d < 0 ? -1 : 1; }
+  return 0;
+}
+// The installed Android app's version, or null in a plain browser. Apps from
+// before 4.3 do not say it, so their features give them away.
+function apkInstalled(){
+  try{
+    const n = window.DeckhandNotify;
+    if(!n) return null;
+    if(typeof n.appVersion === 'function'){ const v = String(n.appVersion() || ''); if(v) return v; }
+    if(typeof n.setPriceWatch === 'function') return '4.2';
+    if(window.DeckhandExport && typeof window.DeckhandExport.share === 'function') return '4.1';
+    if(typeof n.markSpoilersSeen === 'function') return '4.0';
+    return '3.0';
+  }catch(e){ return null; }
+}
+function apkOutdated(){ const v = apkInstalled(); return !!(v && apkVerCmp(v, APK_LATEST) < 0); }
+function apkUpdateNow(){
+  const nl = appLang() === 'nl', url = DECKHAND_SITE + 'Deckhand.apk?v=' + APK_LATEST;
+  const n = window.DeckhandNotify;
+  if(n && typeof n.installUpdate === 'function'){ n.installUpdate(url); return 'self'; }
+  // An older app: the page asks for the file, the app hands the download to
+  // the browser, and the browser saves it -- tap it there to install.
+  toast(nl ? 'Je browser downloadt de nieuwe app. Tik op de download en dan op Installeren.' : 'Your browser downloads the new app. Tap the download, then Install.');
+  try{ location.href = url; }catch(e){}
+  return 'browser';
+}
+window.dhUpdateState = function(st){
+  const nl = appLang() === 'nl';
+  const M = { downloading: nl ? 'Nieuwe app downloaden…' : 'Downloading the new app…',
+              permission: nl ? 'Sta toe dat Deckhand apps installeert, en ga dan terug.' : 'Allow Deckhand to install apps, then come back.',
+              installing: nl ? 'Bevestig de installatie in het scherm van Android.' : 'Confirm the install on Android\u2019s screen.',
+              error: nl ? 'Downloaden mislukt — probeer het later nog eens.' : 'Download failed — try again later.' };
+  if(M[st]) toast(M[st]);
+};
+function openApkUpdateSheet(){
+  const nl = appLang() === 'nl', cur = apkInstalled();
+  if(!cur) return;
+  document.getElementById('apkSheet')?.remove();
+  const self = !!(window.DeckhandNotify && typeof window.DeckhandNotify.installUpdate === 'function');
+  const el = document.createElement('div');
+  el.className = 'deckpick-scrim'; el.id = 'apkSheet';
+  el.style.zIndex = 215; el.style.alignItems = 'flex-end';
+  // column-reverse sheet: Install at the foot, by the thumb.
+  el.innerHTML = `<div class="deckpick br-sheet apk-sheet">
+    <div class="br-actions">
+      <button type="button" class="primary-btn" id="apkNow">${nl ? 'Nu installeren' : 'Install now'}</button>
+      <button type="button" class="ghost-btn" id="apkLater">${nl ? 'Later' : 'Later'}</button>
+    </div>
+    <div class="bk-hint">${self
+      ? (nl ? 'De app downloadt de nieuwe versie en Android vraagt je om te bevestigen.' : 'The app downloads the new version and Android asks you to confirm.')
+      : (nl ? 'Je browser downloadt de nieuwe versie. Tik op de download en daarna op <b>Installeren</b>. Android vraagt misschien eerst of de browser apps mag installeren.' : 'Your browser downloads the new version. Tap the download, then <b>Install</b>. Android may first ask whether the browser may install apps.')}
+      ${nl ? ' Je decks, collectie en instellingen blijven gewoon staan.' : ' Your decks, collection and settings stay as they are.'}</div>
+    <div class="br-title"><b>📱 ${nl ? 'Nieuwe Android-app' : 'New Android app'} — ${APK_LATEST}</b><span>${nl
+      ? `Je hebt versie ${escapeHtml(cur)}. De nieuwe versie is nodig voor de camerascanner, prijsmeldingen en back-up naar je cloud, en werkt zichzelf voortaan met één tik bij.`
+      : `You have version ${escapeHtml(cur)}. The new version is needed for the camera scanner, price alerts and backup to your cloud, and from now on updates itself with one tap.`}</span></div>
+  </div>`;
+  let after = null;
+  brSheetOpen(el, 'apkSheet', ()=>{ if(after){ const f = after; after = null; setTimeout(f, 0); } }, true);
+  const close = ()=>brSheetClose('apkSheet');
+  el.addEventListener('click', (e)=>{ if(e.target === el) close(); });
+  el.querySelector('#apkLater').addEventListener('click', ()=>{
+    try{ localStorage.setItem(LS_PREFIX + 'apkSnooze', JSON.stringify({ v: APK_LATEST, t: Date.now() })); }catch(e){}
+    close();
+  });
+  el.querySelector('#apkNow').addEventListener('click', ()=>{ after = ()=>apkUpdateNow(); close(); });
+}
+// At start-up: once per new APK, again three days after "Later".
+function apkUpdateCheck(){
+  try{
+    if(!apkOutdated()) return;
+    let sz = null; try{ sz = JSON.parse(localStorage.getItem(LS_PREFIX + 'apkSnooze') || 'null'); }catch(e){}
+    if(sz && sz.v === APK_LATEST && Date.now() - (sz.t || 0) < 3 * 86400000) return;
+    if(document.getElementById('inAppConfirm') || (state.overlayStack || []).length) return;   // never on top of something
+    openApkUpdateSheet();
+  }catch(e){}
+}
 function shareAppText(lang){
   // ?v=<version>: every release is a link WhatsApp has never seen, so it
   // fetches the preview card (og-image.png) fresh instead of reusing an old
@@ -24048,6 +24145,10 @@ function settingsPageHtml(){
         <input type="file" id="restoreFile" accept="application/json,.json,application/octet-stream,text/plain" style="display:none;">
       </div>
     </div>
+    ${apkInstalled() ? `<div class="settings-section" id="apkRow">
+      <div class="settings-row"><div style="flex:1;min-width:0;"><div class="l1">📱 ${appLang()==='nl' ? 'Android-app' : 'Android app'}</div><div class="l2">${appLang()==='nl' ? 'Versie' : 'Version'} ${escapeHtml(apkInstalled())}${apkOutdated() ? (appLang()==='nl' ? ` — nieuwe versie ${APK_LATEST} staat klaar` : ` — version ${APK_LATEST} is ready`) : (appLang()==='nl' ? ' — de nieuwste' : ' — the latest')}</div></div>
+        ${apkOutdated() ? `<button class="ghost-btn" id="apkUpdBtn" style="padding:9px 12px;font-size:13px;color:var(--brass);border-color:var(--brass);">${appLang()==='nl' ? 'Bijwerken' : 'Update'}</button>` : ''}</div>
+    </div>` : ''}
     <div class="settings-section">
       <div id="dataSourcesBody" class="l2 acc-up" hidden style="padding:10px 12px 0;">${dataSourcesHtml()}</div>
       <div class="settings-row" id="dataSourcesRow" style="cursor:pointer;"><div><div class="l1">${trS('Data Sources')}</div><div class="l2">${appLang()==='nl' ? 'Kaarten, prijzen en thema\u2019s \u2014 verversen vanzelf' : 'Cards, prices and themes \u2014 refresh on their own'}</div></div>${foldIcoHtml(false)}</div>
@@ -24426,6 +24527,7 @@ function wireSettingsPage(){
   }));
   ensureCmdrBans(!((state.cmdrBans||{}).names||[]).length);
   document.getElementById('backupBtn').addEventListener('click', ()=>openBackupSheet());
+  document.getElementById('apkUpdBtn')?.addEventListener('click', ()=>openApkUpdateSheet());
   document.getElementById('restoreBtn').addEventListener('click', ()=>document.getElementById('restoreFile').click());
   document.getElementById('restoreFile').addEventListener('change', e=>{
     const f = e.target.files && e.target.files[0];
@@ -27361,6 +27463,7 @@ try{
 // Living catalogs, fetched once the app is settled — 30-day cache.
 setTimeout(()=>{ try{ ensureCreatureTypes(); }catch(e){} }, 5000);
 setTimeout(()=>{ try{ pwTellNative(); }catch(e){} }, 1500);
+setTimeout(()=>{ try{ apkUpdateCheck(); }catch(e){} }, 4000);
 setTimeout(async ()=>{ try{ await dailyPricesReady(); }catch(e){} try{ pwStartupCheck(); }catch(e){} }, 9000);
 /* Any text input the user focuses gets the keyboard's 🔍 Enter key unless it
    opted for another hint — search is what Enter does in this app's fields. */
