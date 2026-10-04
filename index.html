@@ -858,6 +858,12 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .br-h2{border-top:1.5px solid var(--line);padding-top:10px;margin-top:2px;color:var(--brass);}
 .want-tile{position:relative;}
 .want-img{position:relative;}
+.br-dd .br-dd-panel{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;max-height:260px;}
+.br-dd .br-dd-panel[hidden]{display:none;}
+.br-dd .cselect-opt{flex:0 0 auto;}
+.col-group-label{margin:16px 2px 8px;display:flex;align-items:center;gap:6px;}
+.col-group-label .cg-n{color:var(--sub-text);font-family:'Inter';font-size:12px;letter-spacing:0;}
+.col-group-label svg{flex:none;}
 .ac-foil{display:flex;align-items:center;gap:8px;font-size:14.5px;color:var(--ink-text);cursor:pointer;}
 .ac-foil input{width:20px;height:20px;accent-color:var(--brass);margin:0;}
 .ci-foil-on{color:var(--brass);border-color:var(--brass);}
@@ -5836,21 +5842,19 @@ const LS_PREFIX = 'admiral_app:';
    about what the player notices -- no explanations, no causes, no
    technical words. A test enforces it. Also bump the
    VERSION string in sw.js so phones fetch the new build. */
-const APP_VERSION = '2.51.692';
+const APP_VERSION = '2.51.693';
 const CHANGELOG_NOTES = {
   en: [
-    'Foil is now an auto-fill rule',
-    'Add sheets: tick Foil',
-    'Foil printing marks the copy foil',
-    'i shows Settings; "all" if all',
-    'Wants: Add to... covers collection'
+    'Binders: group by color, rarity...',
+    '...foil or card type',
+    'Binders: sort by name, MV or price',
+    'Pick both in the binder settings'
   ],
   nl: [
-    'Foil is nu een auto-vul-regel',
-    'Toevoegen: vink Foil aan',
-    'Foil-printing maakt kaart foil',
-    'i toont Instellingen; "alle"',
-    'Gezocht: dubbele knop weg'
+    'Mappen: groeperen op kleur, rarity',
+    '...foil of kaarttype',
+    'Mappen: sorteer op naam, MV, prijs',
+    'Kies het in de map-instellingen'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5903,11 +5907,11 @@ function tourSteps(){
       t: NL ? '📒 Je collectie' : '📒 Your collection',
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
-           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. In <strong>Gezocht</strong> zet de gouden ＋ linksonder op een kaart (of Toevoegen aan…) hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
+           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. In <strong>Gezocht</strong> zet de gouden ＋ linksonder op een kaart (of Toevoegen aan…) hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
-           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. In <strong>Wants</strong> the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
+           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. In <strong>Wants</strong> the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -8684,7 +8688,7 @@ function collectionPageHtml(){
     })()}</div>
     ${(f.binder || colFilterActive()) ? '' : collectionBindersGridHtml()}
     ${f.binder ? `<button class="deck-fab" id="binderFab" title="${trS('Add cards to collection…')}">＋</button>` : ''}
-    ${items.length ? `<div class="col-grid">${items.map((it)=> wantsMode ? `
+    ${items.length ? colGridsHtml(items, (it)=> wantsMode ? `
       <div class="sr-tile col-tile want-tile" data-wn="${escapeHtml(it.name)}">
         <div class="want-img"><img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}"><button type="button" class="want-have" data-wanthave="${escapeHtml(it.name)}" title="${appLang()==='nl' ? 'Ik heb hem' : 'I got it'}" aria-label="${appLang()==='nl' ? 'Ik heb hem' : 'I got it'}">\uFF0B</button></div>
         <div class="col-tile-info">
@@ -8699,7 +8703,7 @@ function collectionPageHtml(){
           ${(!f.binder && colFilterActive()) || f.binder === '__all__' ? `<div class="l2 col-bnd">🗂 ${escapeHtml(it.binder ? (binderName(it.binder) || trS('Binder')) : trS('No binder'))}</div>` : ''}
           <div class="l2" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((it.set||'').toUpperCase())}${it.cn?' #'+escapeHtml(it.cn):''} · ${escapeHtml(it.cond)}</span>${it.eur!=null?`<span style="color:var(--brass);font-family:'JetBrains Mono',monospace;flex:none;">€${(it.eur*it.qty).toFixed(2)}</span>`:''}</div>
         </div>
-      </button>`).join('')}</div>`
+      </button>`)
     : `<div class="empty-note" style="margin-top:20px;">${wantsMode ? 'Nothing on the Wants list — every card in your decks is in your collection.' : (!f.binder && state.collection.items.length && !colFilterActive()) ? '' : state.collection.items.length?'Nothing matches these filters.':'Your collection is empty. Search above, or use "Add to collection" on any card in the app.'}</div>`}
     ${state.colSel && state.colSel.size ? `<button class="deck-fab col-sel-fab" id="colSelFab" title="Selected cards">${selFabLabel(Array.from(state.colSel).reduce((a,i)=>a + ((state.collection.items[i]||{}).qty||1), 0))}</button>` : ''}
   </main>`;
@@ -9022,6 +9026,83 @@ function binderRulesList(b){
   if(r.price) L.push('• ' + (nl ? 'Prijs' : 'Price') + ': ' + brPriceLabel(r.price));
   return b.name + '\n' + (nl ? 'Instellingen' : 'Settings') + '\n' + L.join('\n');
 }
+/* ---- How a binder shows its cards: grouped by colour, rarity, finish or
+   card type, and sorted by name, mana value or price (b.view). The grid is
+   bottom-up, so the first group and the first card sit at the foot. */
+const BR_GROUPS = ['none', 'color', 'rarity', 'finish', 'type'];
+const BR_SORTS = ['name', 'mv', 'price'];
+function brViewLabels(){
+  const nl = appLang() === 'nl';
+  return {
+    group: { none: nl ? 'Geen groepen' : 'No groups', color: nl ? 'Kleur(en)' : 'Color(s)', rarity: 'Rarity', finish: nl ? 'Foil / geen foil' : 'Foil / non-foil', type: nl ? 'Kaarttype' : 'Card type' },
+    sort: { name: nl ? 'Alfabetisch (A–Z)' : 'Alphabetical (A–Z)', mv: nl ? 'Mana value (laag–hoog)' : 'Mana value (low–high)', price: nl ? 'Prijs (hoog–laag)' : 'Price (high–low)' }
+  };
+}
+function binderView(b){
+  const v = (b && b.view) || {};
+  return { group: BR_GROUPS.indexOf(v.group) >= 0 ? v.group : 'none', sort: BR_SORTS.indexOf(v.sort) >= 0 ? v.sort : 'name' };
+}
+// Mana value: stored on new copies; older ones ask the local card database.
+function brItemMv(it){
+  if(typeof it.mv === 'number') return it.mv;
+  try{
+    const ix = (typeof _bulkIdx !== 'undefined') ? _bulkIdx : null;
+    const bc = ix && ix.byName && ix.byName.get(String(it.name || '').toLowerCase());
+    if(bc && typeof bc.mv === 'number'){ it.mv = bc.mv; return it.mv; }
+  }catch(e){}
+  return null;
+}
+function binderSortItems(items, sort){
+  const nm = (a, b2)=>String(a.name || '').localeCompare(String(b2.name || ''));
+  if(sort === 'mv') return items.sort((a, b2)=>{ const x = brItemMv(a), y = brItemMv(b2); return (x == null ? 99 : x) - (y == null ? 99 : y) || nm(a, b2); });
+  if(sort === 'price') return items.sort((a, b2)=>{ const x = brItemEur(a), y = brItemEur(b2); return (y == null ? -1 : y) - (x == null ? -1 : x) || nm(a, b2); });
+  return items.sort(nm);
+}
+const BR_TYPE_ORDER = ['Creature', 'Planeswalker', 'Battle', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Land'];
+// The group a copy belongs to: [order, key, label].
+function binderGroupOf(it, group){
+  const nl = appLang() === 'nl';
+  if(group === 'color'){
+    const cs = brCardColors(it).filter(c=>'WUBRG'.indexOf(c) >= 0);
+    const N = nl ? { W:'Wit', U:'Blauw', B:'Zwart', R:'Rood', G:'Groen' } : { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green' };
+    if(cs.length === 1) return ['WUBRG'.indexOf(cs[0]), cs[0], manaIconSvg(cs[0], 16) + ' ' + N[cs[0]]];
+    if(cs.length > 1) return [5, 'M', multiIconSvg(16) + ' ' + (nl ? 'Meerkleurig' : 'Multicolor')];
+    return [6, 'C', manaIconSvg('C', 16) + ' ' + (nl ? 'Kleurloos' : 'Colorless')];
+  }
+  if(group === 'rarity'){
+    const r = String(it.rarity || '').toLowerCase(), i = ['mythic', 'rare', 'uncommon', 'common'].indexOf(r);
+    return i >= 0 ? [i, r, r[0].toUpperCase() + r.slice(1)] : [4, 'other', nl ? 'Overig' : 'Other'];
+  }
+  if(group === 'finish') return it.foil ? [0, 'foil', '✨ Foil'] : [1, 'nonfoil', nl ? 'Geen foil' : 'Non-foil'];
+  if(group === 'type'){
+    const tl = String(it.type_line || '').split('//')[0];
+    const i = BR_TYPE_ORDER.findIndex(t=>new RegExp('\\b' + t + '\\b').test(tl));
+    return i >= 0 ? [i, BR_TYPE_ORDER[i], BR_TYPE_ORDER[i]] : [BR_TYPE_ORDER.length, 'other', nl ? 'Overig' : 'Other'];
+  }
+  return [0, 'all', ''];
+}
+/* The collection grid(s). Inside a binder its own view applies: sorted, and
+   split into labelled groups. The page is column-reverse, so each label
+   follows its grid in the DOM to sit above it. */
+function colGridsHtml(items, tileFn){
+  const f = state.colFilter;
+  const b = (f.binder && f.binder !== '__all__' && f.binder !== '__wants__') ? (state.collection.binders || []).find(x=>x.id === f.binder) : null;
+  if(!b) return `<div class="col-grid">${items.map(tileFn).join('')}</div>`;
+  const v = binderView(b);
+  binderSortItems(items, v.sort);
+  if(v.group === 'none') return `<div class="col-grid">${items.map(tileFn).join('')}</div>`;
+  const groups = new Map();
+  items.forEach(it=>{
+    const g = binderGroupOf(it, v.group);
+    if(!groups.has(g[1])) groups.set(g[1], { o: g[0], k: g[1], label: g[2], list: [] });
+    groups.get(g[1]).list.push(it);
+  });
+  return Array.from(groups.values()).sort((a, c)=>a.o - c.o).map(g=>{
+    const n = g.list.reduce((a, it)=>a + (it.qty || 1), 0);
+    return `<div class="col-grid col-group" data-colgroup="${escapeHtml(g.k)}">${g.list.map(tileFn).join('')}</div>
+    <div class="section-label col-group-label">${g.label} <span class="cg-n">· ${n}</span></div>`;
+  }).join('');
+}
 const BR_GLYPHS = ['W', 'U', 'B', 'R', 'G', 'C', 'multi', 'rC', 'rU', 'rR', 'rM', 'Creature', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Planeswalker', 'Battle', 'Land', 'token', 'foil'];
 function brGlyphHtml(k, px){
   px = px || 14;
@@ -9170,6 +9251,12 @@ function openBinderRules(b, isNew){
                : { C:'Colorless', '2c':'2 colors', '3c':'3 colors', '4c':'4 colors', '5c':'5 colors', multi:'Multicolor' };
   const chip = (kind, v, label)=>`<button type="button" class="chip br-chip${r[kind].indexOf(v) >= 0 ? ' active' : ''}" data-brk="${kind}" data-brv="${v}">${label}</button>`;
   const pr = r.price || { min:0, max:5 };
+  const view = binderView(b), VL = brViewLabels();
+  // A small drop-up: the options open ABOVE the button, the first option nearest the thumb.
+  const dd = (id, kind, vals)=>`<div class="cselect br-dd" id="${id}">
+      <div class="cselect-panel br-dd-panel" hidden>${vals.map(v=>`<button type="button" class="cselect-opt${view[kind] === v ? ' sel' : ''}" data-brdd="${kind}" data-v="${v}">${VL[kind][v]}</button>`).join('')}</div>
+      <button type="button" class="cselect-btn br-dd-btn"><span class="cs-label">${VL[kind][view[kind]]}</span><span class="cs-car">▴</span></button>
+    </div>`;
   // column-reverse sheet: Save at the foot, the title at the top.
   el.innerHTML = `<div class="deckpick br-sheet">
     <div class="br-actions">
@@ -9177,6 +9264,9 @@ function openBinderRules(b, isNew){
       <button type="button" class="ghost-btn" id="brNone">${isNew ? (nl ? 'Overslaan — gewone map' : 'Skip — standard binder') : (nl ? 'Regels wissen' : 'Clear rules')}</button>
     </div>
     <div class="br-err" id="brErr" hidden></div>
+    <div class="br-sec"><div class="br-h">${nl ? 'Sorteren op' : 'Sort by'}</div>${dd('brSort', 'sort', BR_SORTS)}</div>
+    <div class="br-sec"><div class="br-h">${nl ? 'Groeperen op' : 'Group by'}</div>${dd('brGroup', 'group', BR_GROUPS)}</div>
+    <div class="br-h br-h2">${nl ? 'Indeling in de map' : 'Layout inside the binder'}</div>
     <div class="br-sec"><div class="br-h"><label class="br-pt"><input type="checkbox" id="brPriceOn"${r.price ? ' checked' : ''}> ${nl ? 'Prijs per kaart' : 'Price per card'}</label><span id="brPriceLab">${brPriceLabel(pr)}</span></div>
       <div id="brPriceBox"${r.price ? '' : ' hidden'}>${priceSliderHtml('brPr', pr.min || 0, pr.max)}</div></div>
     <div class="br-sec"><div class="br-h">Foil</div><div class="br-chips">${chip('finish', 'foil', '✨ Foil')}${chip('finish', 'nonfoil', nl ? 'Geen foil' : 'Non-foil')}</div></div>
@@ -9185,7 +9275,7 @@ function openBinderRules(b, isNew){
     <div class="br-sec"><div class="br-h">Rarity</div><div class="br-chips">${BR_RARITIES.map(v=>chip('rarity', v, v[0].toUpperCase() + v.slice(1))).join('')}</div></div>
     <div class="br-h br-h2">${nl ? 'Automatisch vullen' : 'Auto-fill'}</div>
     <div class="br-sec"><div class="br-h">${nl ? 'Iconen op de tegel' : 'Icons on the tile'}</div><div class="br-chips">${BR_GLYPHS.map(k=>`<button type="button" class="chip br-chip br-gl${glyphs.indexOf(k) >= 0 ? ' active' : ''}" data-brg="${k}" aria-label="${k}">${brGlyphHtml(k, 20)}</button>`).join('')}</div></div>
-    <div class="br-title"><b>${escapeHtml(b.name)}</b><span>${nl ? 'Kies de iconen voor de tegel. Met automatisch vullen komen nieuwe kaarten die passen vanzelf in deze map: binnen een rij telt elke keuze, tussen de rijen moeten ze allemaal kloppen.' : 'Pick the icons for the tile. With auto-fill, new cards that fit go into this binder by themselves: within a row any choice counts; across rows all must match.'}</span></div>
+    <div class="br-title"><b>${escapeHtml(b.name)}</b><span>${nl ? 'Kies de iconen voor de tegel, hoe de kaarten in de map gegroepeerd en gesorteerd worden, en of de map zichzelf vult. Met automatisch vullen komen nieuwe kaarten die passen vanzelf in deze map: binnen een rij telt elke keuze, tussen de rijen moeten ze allemaal kloppen.' : 'Pick the icons for the tile, how the cards inside are grouped and sorted, and whether the binder fills itself. With auto-fill, new cards that fit go into this binder by themselves: within a row any choice counts; across rows all must match.'}</span></div>
   </div>`;
   let afterClose = null;
   brSheetOpen(el, 'binderRulesSheet', ()=>{ if(afterClose){ const f = afterClose; afterClose = null; setTimeout(f, 0); } });
@@ -9194,7 +9284,26 @@ function openBinderRules(b, isNew){
     if(i >= 0) glyphs.splice(i, 1); else glyphs.push(k);
     c.classList.toggle('active', i < 0);
   }));
-  const keepGlyphs = ()=>{ b.glyphs = BR_GLYPHS.filter(k=>glyphs.indexOf(k) >= 0); };
+  const keepGlyphs = ()=>{ b.glyphs = BR_GLYPHS.filter(k=>glyphs.indexOf(k) >= 0); b.view = { group: view.group, sort: view.sort }; };
+  el.querySelectorAll('.br-dd').forEach(box=>{
+    const panel = box.querySelector('.br-dd-panel'), btn = box.querySelector('.br-dd-btn');
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      el.querySelectorAll('.br-dd-panel').forEach(pn=>{ if(pn !== panel) pn.hidden = true; });
+      panel.hidden = !panel.hidden;
+      btn.querySelector('.cs-car').textContent = panel.hidden ? '▴' : '▾';
+    });
+    panel.querySelectorAll('[data-brdd]').forEach(o=>o.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const kind = o.dataset.brdd;
+      view[kind] = o.dataset.v;
+      panel.querySelectorAll('[data-brdd]').forEach(x=>x.classList.toggle('sel', x === o));
+      btn.querySelector('.cs-label').textContent = VL[kind][view[kind]];
+      btn.querySelector('.cs-car').textContent = '▴';
+      panel.hidden = true;
+    }));
+  });
+  el.querySelector('.br-sheet').addEventListener('click', ()=>el.querySelectorAll('.br-dd-panel').forEach(pn=>{ pn.hidden = true; }));
   const err = el.querySelector('#brErr');
   const showErr = (m)=>{ err.textContent = m || ''; err.hidden = !m; };
   const check = ()=>{
@@ -9397,7 +9506,7 @@ function fitColTileHeight(){
     // The placeholder size is the CONTENT box: borders and padding come on top.
     const t0 = grid.firstElementChild, cs = t0 ? getComputedStyle(t0) : null;
     const extra = cs ? ['borderTopWidth','borderBottomWidth','paddingTop','paddingBottom'].reduce((a, k)=>a + (parseFloat(cs[k]) || 0), 0) : 0;
-    if(h > 60) grid.style.setProperty('--col-tile-h', (h - extra).toFixed(2) + 'px');
+    if(h > 60) document.querySelectorAll('.col-grid').forEach(g=>g.style.setProperty('--col-tile-h', (h - extra).toFixed(2) + 'px'));
   }catch(e){}
 }
 window.addEventListener('resize', ()=>{ if(state.screen === 'collection') fitColTileHeight(); });
@@ -9443,7 +9552,7 @@ function wireCollectionPage(){
       ['bfImport', '⬆ ' + trS('Import'), ()=>openCollectionImport(bid)],
       ['bfPaste', '📋 ' + trS('Paste a list'), ()=>openBinderPasteSheet(bid)]
     ].concat((state.collection.binders || []).some(b=>b.id === bid)
-      ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Iconen & automatisch vullen…' : 'Icons & auto-fill…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
+      ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Map-instellingen…' : 'Binder settings…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
       : []));
   });
   document.getElementById('colFab')?.addEventListener('click', (e)=>{
@@ -10720,6 +10829,7 @@ function slimForCollection(card){
     img: cardImageMed(card), eur: (card.prices && (parseFloat(card.prices.eur)||parseFloat(card.prices.eur_foil)))||null,
     type_line: card.type_line||'', colors: (card.color_identity||card.colors||[]),
     foil: card._foilPick ? true : undefined,
+    mv: typeof card.cmc === 'number' ? card.cmc : undefined,
     cc: Array.isArray(card.colors) ? card.colors : ((card.card_faces && card.card_faces[0] && Array.isArray(card.card_faces[0].colors)) ? card.card_faces[0].colors : undefined),
     rarity: card.rarity||'', border_color: card.border_color||'',
     legal_std: (card.legalities && card.legalities.standard) || '', legal_cmd: (card.legalities && card.legalities.commander) || '' };
