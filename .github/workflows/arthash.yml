@@ -1,0 +1,63 @@
+name: Card art fingerprints (scanner)
+
+# The card scanner recognises the exact printing by its art. This builds the
+# fingerprints from Scryfall's images: weekly, only the new printings. The
+# very first run has ~100k images to fetch and does 40k of them; start it by
+# hand a few times (Actions -> this workflow -> Run workflow) until the log
+# says "0 still to do". After that, Tuesdays take care of themselves.
+on:
+  schedule:
+    - cron: '30 4 * * 2'      # Tuesday 04:30 UTC, after Monday's card build
+  workflow_dispatch:
+
+concurrency:
+  group: bulk-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  arthash:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: JPEG decoder (pure JavaScript, nothing to compile)
+        run: npm install --no-save jpeg-js@0.4.4
+
+      - name: Build the fingerprints
+        run: node scripts/build-arthash.mjs
+
+      - name: What the build produced
+        run: ls -l arthash.tsv.gz arthash-meta.json && cat arthash-meta.json
+
+      - name: Publish
+        run: |
+          git config user.name  "deckhand-bot"
+          git config user.email "deckhand-bot@users.noreply.github.com"
+          git add -A arthash.tsv.gz arthash-meta.json
+          if git diff --cached --quiet; then
+            echo "No new printings."
+            exit 0
+          fi
+          git commit -m "Art fingerprints: $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "Pushed on attempt $i."
+              exit 0
+            fi
+            echo "Push rejected — someone else committed. Rebasing and retrying…"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}" || { git rebase --abort; exit 1; }
+            sleep 5
+          done
+          echo "Could not push after 5 attempts."
+          exit 1
