@@ -5945,21 +5945,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 const CHANGELOG_NOTES = {
   en: [
-    'Tap the deck price: card prices list',
-    'Average card price per deck',
-    'Card budget and deck budget',
-    'Warning when a card breaks the budget',
-    'Jump button now sits in the toolbar'
+    'Spoiler alerts show the cards',
+    'Up to 3 cards side by side, not cut',
+    'One new card: tap opens that card'
   ],
   nl: [
-    'Tik op de deckprijs: prijzenlijst',
-    'Gemiddelde kaartprijs per deck',
-    'Kaartbudget en deckbudget',
-    'Melding als een kaart te duur is',
-    'Springknop staat nu in de werkbalk'
+    'Spoilermeldingen tonen de kaarten',
+    'Tot 3 kaarten naast elkaar, heel',
+    'Een nieuwe kaart: tik opent hem'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6044,10 +6040,10 @@ function tourSteps(){
       b: NL
         ? `<p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
            <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, de <strong>officiële regels</strong> (Comprehensive Rules), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren.</p>`
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Zet je hier de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren.</p>`
         : `<p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
            <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away.</p>` }
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. Turn on <strong>spoiler alerts</strong> here (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away.</p>` }
   ];
 }
 function startAppTour(){
@@ -24249,7 +24245,7 @@ const DECKHAND_SITE = 'https://deckhandcompanion.netlify.app/';
    4.3 the app downloads it and opens Android's installer itself; an older
    app hands the download to the browser. Android always asks the person to
    confirm, and the same signature means every deck and card stays. */
-const APK_LATEST = '4.3';
+const APK_LATEST = '4.4';
 function apkVerCmp(a, b){
   const x = String(a || '0').split('.').map(Number), y = String(b || '0').split('.').map(Number);
   for(let i = 0; i < Math.max(x.length, y.length); i++){ const d = (x[i] || 0) - (y[i] || 0); if(d) return d < 0 ? -1 : 1; }
