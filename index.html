@@ -1758,6 +1758,29 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 .overlay main{flex:1;overflow-y:auto;padding-bottom:24px;}
 #recoOverlay main, #similarOverlay main, #printOverlay main, #colAddSheet main,
 #addCollOverlay main, #budgetOverlay main, #cardRecoOverlay main, #metaDeckOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;}
+/* Deck prices: bottom-up like the rest -- the summary with the budgets at the
+   foot, the list above it, most expensive card nearest the thumb. */
+#deckPriceOverlay main{display:flex;flex-direction:column-reverse;justify-content:flex-start;padding:16px 14px 18px;}
+#deckPriceOverlay .panel-card{margin:0 0 12px;}
+.dpp-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;}
+.dpp-k{font-size:11px;color:var(--sub-text);text-transform:uppercase;letter-spacing:0.5px;}
+.dpp-v{font-family:'JetBrains Mono',monospace;font-size:19px;color:var(--brass);white-space:nowrap;}
+/* Over budget: a ⚠ in the panel's own ink, never red on the panel (kleurenwet). */
+.dpp-v.over::before, .dpp-row.over .dpp-eur::before, .dpp-note.over::before{content:'\26A0  ';font-weight:700;}
+.dpp-row.over .dpp-eur, .dpp-note.over{color:var(--ink-text);font-weight:700;}
+.dpp-note{font-size:12px;color:var(--sub-text);min-height:16px;}
+.dpp-in{width:100%;box-sizing:border-box;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:9px 10px;font-size:15px;font-family:'JetBrains Mono',monospace;}
+.dpp-in:focus{outline:none;border-color:var(--brass);}
+.dpp-alt{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:12px;padding:11px 8px;font-size:14px;}
+.dpp-alt svg{width:20px;height:20px;flex:none;}
+.dpp-box{max-height:44vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column-reverse;}
+.dpp-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:13.5px;cursor:pointer;}
+.dpp-row .dpp-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dpp-row .dpp-q{color:var(--sub-text);margin-right:4px;}
+.dpp-eur{font-family:'JetBrains Mono',monospace;color:var(--brass);flex:none;}
+.dpp-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.dpp-head .dpp-cnt{font-size:12px;color:var(--sub-text);font-family:'JetBrains Mono',monospace;}
+#deckPriceOverlay .pr-slider{margin-top:10px;}
 /* Meta-deck tiles: the key card's art, the deck's name, its colours, its
    share of the metagame and its style. */
 .meta-tile{display:flex;flex-direction:column;align-items:stretch;padding:0;overflow:hidden;background:var(--panel);border:2px solid var(--line);border-radius:10px;cursor:pointer;text-align:left;font-family:'Inter';color:var(--panel-text);}
@@ -3304,6 +3327,11 @@ document.addEventListener('click', (e)=>{
     });
     return;
   }
+  if(e.target && e.target.closest && e.target.closest('#capNoteBtn') && state.screen === 'decklist'){
+    const dd = getDeck(state.activeDeckId);
+    if(dd) openDeckPricePage(dd);
+    return;
+  }
   if(e.target && e.target.id === 'capNoteBtn' && state.screen === 'collection'){
     const b = state.colFilter.binder || 'all';
     const _vnl = appLang() === 'nl';
@@ -4690,6 +4718,7 @@ function logDeckChange(d, entry){
   entry.ts = Date.now(); entry.undone = false; entry.id = uid();
   ensureChangelog(d).unshift(entry);
   if(d.changelog.length > 300) d.changelog.length = 300;
+  if((entry.type === 'add' || entry.type === 'toMain') && entry.card) budgetNoteAdded(d, [entry.card], entry.type);
 }
 function histLabel(e){
   // Verbs carry their own colour (added green, removed red, moved gold), and
@@ -5916,19 +5945,21 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 const CHANGELOG_NOTES = {
   en: [
-    'Scanner: faster, one look is enough',
-    'Scanner knows the printing by its art',
-    'Scanner reads foreign cards too',
-    'Scanner: lamp and tap to focus'
+    'Tap the deck price: card prices list',
+    'Average card price per deck',
+    'Card budget and deck budget',
+    'Warning when a card breaks the budget',
+    'Jump button now sits in the toolbar'
   ],
   nl: [
-    'Scanner: sneller, 1 blik is genoeg',
-    'Scanner kent de printing aan de art',
-    'Scanner leest ook buitenlandse kaart',
-    'Scanner: lamp en tik = scherpstellen'
+    'Tik op de deckprijs: prijzenlijst',
+    'Gemiddelde kaartprijs per deck',
+    'Kaartbudget en deckbudget',
+    'Melding als een kaart te duur is',
+    'Springknop staat nu in de werkbalk'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -5965,10 +5996,12 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>budgetalternatieven</strong> (munten), <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred), kaarten toevoegen en 🔍 <strong>zoeken in je deck</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred), kaarten toevoegen, 🔍 <strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
+           <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Budget alternatives</strong> (coins), <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred), adding cards and 🔍 <strong>find in deck</strong>. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred), adding cards, 🔍 <strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
+           <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
       t: NL ? '🃏 De kaart-detailpagina' : '🃏 The card detail view',
@@ -6665,6 +6698,7 @@ const ICONS = {
   exp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 17V6M7.5 10L12 5.5 16.5 10"/><path d="M4 20h16"/></svg>`,
   bulk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h11M4 11h7M4 16h5"/><path d="M13.5 18.2l6.2-6.2 2.3 2.3-6.2 6.2-2.9.6z"/></svg>`,
   list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>`,
+  burger: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 6.5h15M4.5 12h15M4.5 17.5h15"/></svg>`,
   search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>`,
   inspire: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>`,
   settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>`,
@@ -7380,7 +7414,7 @@ function navHtml(){
       return `<span id="capDeckCount" title="Tap to see the deck's legality check" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;font-family:'JetBrains Mono',monospace;color:${deckCountColor(deckCountState(dd, issues))};white-space:nowrap;cursor:pointer;padding:8px 6px 8px 0;">${deckCountLabel(dd)}${issues.length?' ⚠':''}</span>`; })()}
     ${state.screen === 'collection' && state._capCount != null ? `<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--sub-text);">${state._capCount}</span>` : ''}
     <div class="brand-txt ${editable?'editable':''} two-line" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner">${capInner}</span></div>
-    ${state._capNote ? `<span class="cap-note${state.screen === 'collection' ? ' cap-tap' : ''}" id="capNoteBtn">${state._capNote}</span>` : ''}
+    ${state._capNote ? `<span class="cap-note${(state.screen === 'collection' || state.screen === 'decklist') ? ' cap-tap' : ''}" id="capNoteBtn"${state.screen === 'decklist' ? ' role="button"' : ''}>${state._capNote}</span>` : ''}
   </div><div class="brand-banner">
     <div class="compass ${state.screen==='home'?'active':''}" id="homeBtn" title="Home">${compassSvg()}</div>
     <button class="banner-tab" id="capBack" aria-label="Back" title="Back">${ICONS.back}</button>
@@ -10614,11 +10648,11 @@ function deckMeterHtml(d){
       // opens the full filter, like the Collection's bar.
       ? `<div class="dock-search-wrap"><input id="dockSearchInput" class="dock-search" enterkeyhint="search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="in-chev" id="dockFilterChev" title="${trS('Advanced filter')}">${state.dlPanel==='dsearch'?'▴':'▾'}</button></div>
         <button class="dk-tool active" id="dockSearchBtn" title="${trS('Search deck')}">${ICONS.search}</button>`
-      : `<button class="dk-tool" id="dockBudget" title="Budget">${ICONS.coins}</button>
-        <button class="dk-tool" id="dockInspire" title="Inspiration">${ICONS.spark}</button>
+      : `<button class="dk-tool" id="dockInspire" title="Inspiration">${ICONS.spark}</button>
         <button class="dk-tool ${state.dlPanel==='bulk'?'active':''}" data-panel="bulk" title="Bulk Edit">${ICONS.bulk}</button>
         <button class="dk-tool" id="dockAddCards" title="Add Cards">${ICONS.plus}</button>
-        <button class="dk-tool" id="dockSearchBtn" title="${trS('Search deck')}">${ICONS.search}</button>`;
+        <button class="dk-tool" id="dockSearchBtn" title="${trS('Search deck')}">${ICONS.search}</button>
+        <button class="dk-tool" id="dlCatJump" title="${trS('Jump to section')}">${ICONS.burger}</button>`;
   } else {
     mid = dockTypeCounts(d) || '<span>Empty deck</span>';
   }
@@ -10648,8 +10682,9 @@ function refreshCapPrice(){
   if(!txt){ if(el) el.remove(); return; }
   if(!el){
     el = document.createElement('span');
-    el.className = 'cap-note';
+    el.className = 'cap-note cap-tap';      // a button: it opens the deck's prices
     el.id = 'capNoteBtn';
+    el.setAttribute('role', 'button');
     cap.appendChild(el);
   }
   el.innerHTML = txt;   // carries the ring, which textContent would print literally
@@ -12792,7 +12827,6 @@ function bridge60Html(d){
         <button type="button" class="dl60-logrow" id="bridgeLogGame"><span class="icon-btn dl-mini-add">${ICONS.plus}</span><span>${trS('Log a game')}</span></button>
       </div>
       <div id="dlPanelBox" class="${dlBoxClass()}">${dlPanelHtml(d)}</div>
-      <div class="edh-jump-row dl-jump"><button class="icon-btn edh-jump" id="dlCatJump" title="${trS('Jump to section')}">☰</button></div>
     </div>
     <div id="decklistBox">${categorizedListHtml(d)}</div>`;
 }
@@ -12809,7 +12843,6 @@ function listTabHtml(d){
           return `<div class="dl-winrate"><button class="icon-btn dl-mini-add" id="bridgeLogGame" title="${escapeHtml(trS('Log a game'))}" style="margin-left:0;">${ICONS.plus}</button><span>${st ? `${trS('Winrate')} <b>${st.winrate}%</b> · ${st.wins}–${st.losses}` : trS('No games logged yet.')}</span></div><div class="dl-leader-cat" style="visibility:hidden;margin-top:0;" aria-hidden="true">&nbsp;</div>`; })()}
       </div>
       <div id="dlPanelBox" class="${dlBoxClass()}">${dlPanelHtml(d)}</div>
-      <div class="edh-jump-row dl-jump"><button class="icon-btn edh-jump" id="dlCatJump" title="${trS('Jump to section')}">☰</button></div>
     </div>
     <div id="decklistBox">${categorizedListHtml(d)}</div>`;
 }
@@ -13954,18 +13987,6 @@ function wireBuilderBody(d){
       state._focusDeckDesc = true;
       render();
     });
-    document.getElementById('dlCatJump')?.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const heads = Array.from(document.querySelectorAll('.cat-group > .cat-head'));
-      const items = heads.map(h=>{
-        const t = h.querySelector('.t');
-        return { label: t ? t.textContent.trim() : '—', fn: ()=>h.scrollIntoView({ behavior:'smooth', block:'end' }) };
-      }).filter(x=>x.label && x.label !== '—');
-      // The menu mirrors the page: the deck reads bottom-up, so the list
-      // flips — Creatures at the menu's foot, Maybeboard at its head.
-      items.reverse();
-      if(items.length) openTileMenu(e.currentTarget, items);
-    });
     document.querySelector('.dl-desc-text')?.addEventListener('click', ()=>{
       // Straight to the pen: Deck Log tab, description field focused, cursor
       // at the end — the tap IS the edit intent.
@@ -14427,7 +14448,9 @@ function dlSelApply(d, mode){
     es.filter(e=>e.loc === 'main').sort((a,b)=>b.idx - a.idx).forEach(e=>{ const [c] = d.cards.splice(e.idx, 1); if(c) d.maybeboard.push(c); });
   } else if(mode === 'main'){
     ensureMaybeboard(d);
-    es.filter(e=>e.loc === 'maybe').sort((a,b)=>b.idx - a.idx).forEach(e=>{ const [c] = d.maybeboard.splice(e.idx, 1); if(c) d.cards.push(c); });
+    const moved = [];
+    es.filter(e=>e.loc === 'maybe').sort((a,b)=>b.idx - a.idx).forEach(e=>{ const [c] = d.maybeboard.splice(e.idx, 1); if(c){ d.cards.push(c); moved.push(c); } });
+    if(moved.length) budgetNoteAdded(d, moved, 'toMain');
   } else {
     es.filter(e=>e.loc === 'main').sort((a,b)=>b.idx - a.idx).forEach(e=>d.cards.splice(e.idx, 1));
     es.filter(e=>e.loc === 'maybe').sort((a,b)=>b.idx - a.idx).forEach(e=>d.maybeboard.splice(e.idx, 1));
@@ -14469,7 +14492,30 @@ function wireMeterRow(d){
     updateDeckMeter(d); });
   // The tools bar: every button opens what its bridge ancestor used to.
   document.querySelectorAll('#deckMeterRow [data-panel]').forEach(b=>b.addEventListener('click', ()=>toggleDlPanel(d, b.dataset.panel)));
-  document.getElementById('dockBudget')?.addEventListener('click', ()=>openBudgetOverlay(d));
+  // The jump menu: one square tool left of the chevron (it used to float
+  // round over the list). From Stats or Deck Log it first goes to the list.
+  document.getElementById('dlCatJump')?.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const anchor = e.currentTarget;
+    const open = ()=>{
+      const heads = Array.from(document.querySelectorAll('.cat-group > .cat-head'));
+      const items = heads.map(h=>{
+        const t = h.querySelector('.t');
+        return { label: t ? t.textContent.trim() : '—', fn: ()=>h.scrollIntoView({ behavior:'smooth', block:'end' }) };
+      }).filter(x=>x.label && x.label !== '—');
+      // The menu mirrors the page: the deck reads bottom-up, so the list
+      // flips — Creatures at the menu's foot, Maybeboard at its head.
+      items.reverse();
+      if(items.length) openTileMenu(document.getElementById('dlCatJump') || anchor, items);
+    };
+    if(state.builderTab !== 'list'){
+      state.builderTab = 'list'; state.dlPanel = null;
+      try{ renderBuilderBody(d); syncTabsUI(); }catch(err){}
+      requestAnimationFrame(open);
+      return;
+    }
+    open();
+  });
   document.getElementById('dockInspire')?.addEventListener('click', ()=>{ state.inspireDeckId = d.id; switchPage('inspiration'); });
   document.getElementById('dockAddCards')?.addEventListener('click', ()=>{
     // Pin: every card added during *this* visit to Search goes straight into
@@ -18455,6 +18501,216 @@ function openPriceHistory(card, key){
     box.addEventListener('pointerdown', e=>{ show(e.clientX); });
     box.addEventListener('pointermove', e=>{ if(e.buttons || e.pointerType === 'touch') show(e.clientX); });
   }
+}
+/* ── Deck prices ─ the price in a deck's cap opens this page. ─────────────
+   Average price per card, every card by price (a slider narrows the list),
+   the deck's card budget and deck budget, and the way to Budget
+   Alternatives. Prices follow the cap's own rule: one price per card name,
+   the cheapest paper printing. The budgets live on the deck (d.budget) and
+   are watched on every add: see budgetNoteAdded below. */
+function deckBudgetOf(d){
+  const b = d && d.budget;
+  if(!b) return null;
+  const card = (typeof b.card === 'number' && b.card > 0) ? b.card : null;
+  const deck = (typeof b.deck === 'number' && b.deck > 0) ? b.deck : null;
+  return (card == null && deck == null) ? null : { card, deck };
+}
+function parseEurInput(v){
+  const t = String(v == null ? '' : v).replace(/[€\s]/g, '').replace(',', '.');
+  if(!t) return null;
+  const n = parseFloat(t);
+  return (isFinite(n) && n > 0) ? Math.round(n * 100) / 100 : null;
+}
+// What this phone knows about a card's price right now, without asking:
+// a number, null (Cardmarket lists no price) or undefined (not known yet).
+function knownEur(name){
+  const hit = state.priceCache[name];
+  if(hit && typeof hit.v === 'number') return hit.v;
+  const b = bulkEurFor(name);
+  if(b !== undefined) return b;
+  if(hit && hit.v === null) return null;
+  return undefined;
+}
+function deckPriceRows(d){
+  const by = new Map();
+  deckLeaders(d).concat(d.cards || []).forEach(c=>{
+    if(!c || !c.name) return;
+    const r = by.get(c.name);
+    if(r) r.qty++; else by.set(c.name, { card: c, qty: 1, eur: knownEur(c.name) });
+  });
+  const val = r=>typeof r.eur === 'number' ? r.eur : -1;
+  return Array.from(by.values()).sort((a, b)=>(val(b) - val(a)) || a.card.name.localeCompare(b.card.name));
+}
+function deckPriceSums(rows){
+  let total = 0, priced = 0, unknown = 0;
+  rows.forEach(r=>{ if(typeof r.eur === 'number'){ total += r.eur; priced++; } else if(r.eur === undefined) unknown++; });
+  return { total, priced, unknown, avg: priced ? total / priced : 0 };
+}
+function openDeckPricePage(d){
+  if(!d) return;
+  const NL = appLang() === 'nl';
+  document.getElementById('deckPriceOverlay')?.remove();
+  const el = document.createElement('div');
+  el.className = 'overlay'; el.id = 'deckPriceOverlay';
+  const b0 = d.budget || {};
+  const fmtIn = v=>(typeof v === 'number' && v > 0) ? v.toFixed(2) : '';
+  const filt = { lo: 0, hi: null };
+  // Written foot-first: main is column-reverse, so the summary (with the
+  // budgets and the coin button) lands at the foot, the list above it.
+  el.innerHTML = `<div class="overlay-inner">${overlayCapHtml((NL ? 'Prijzen' : 'Prices') + ' · ' + d.name)}
+    <main>
+      <div class="panel-card" id="dppSum">
+        <div class="dpp-grid" id="dppStats"></div>
+        <div class="dpp-grid" style="margin-top:10px;">
+          <label class="dpp-k" for="dppCard">${NL ? 'Kaartbudget' : 'Card budget'}</label>
+          <label class="dpp-k" for="dppDeck">${NL ? 'Deckbudget' : 'Deck budget'}</label>
+          <input class="dpp-in" id="dppCard" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="€ —" value="${fmtIn(b0.card)}">
+          <input class="dpp-in" id="dppDeck" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="€ —" value="${fmtIn(b0.deck)}">
+        </div>
+        <button type="button" class="ghost-btn dpp-alt" id="dppAlt">${ICONS.coins}<span>${NL ? 'Budgetalternatieven' : 'Budget alternatives'}</span></button>
+      </div>
+      <div class="panel-card">
+        <div class="dpp-head"><div class="panel-h" style="margin:0 0 6px;">${NL ? 'Kaarten op prijs' : 'Cards by price'}</div><span class="dpp-cnt" id="dppCnt"></span></div>
+        <div class="dpp-box" id="dppList"></div>
+        ${priceSliderHtml('dppSlider', 0, null)}
+      </div>
+    </main>${overlayNavHtml()}</div>`;
+  document.body.appendChild(el);
+  wireOverlayNav(el);
+  pushOverlay('deckprice', ()=>{ document.getElementById('deckPriceOverlay')?.remove(); });
+  const main = el.querySelector('main'), box = el.querySelector('#dppList');
+  let shown = [];
+  const paint = ()=>{
+    const rows = deckPriceRows(d), sums = deckPriceSums(rows), bud = deckBudgetOf(d) || {};
+    const overDeck = bud.deck != null && sums.total > bud.deck + 1e-9;
+    const overCards = bud.card != null ? rows.filter(r=>typeof r.eur === 'number' && r.eur > bud.card + 1e-9).length : 0;
+    const left = bud.deck != null ? bud.deck - sums.total : null;
+    el.querySelector('#dppStats').innerHTML = `
+      <div class="dpp-k">${NL ? 'Gemiddeld per kaart' : 'Average per card'}</div>
+      <div class="dpp-k">${NL ? 'Deck totaal' : 'Deck total'}</div>
+      <div class="dpp-v">${sums.priced ? fmtEur(sums.avg) : '—'}</div>
+      <div class="dpp-v${overDeck ? ' over' : ''}">${fmtEur(sums.total)}</div>
+      <div class="dpp-note${overCards ? ' over' : ''}">${overCards ? (NL ? overCards + ' boven budget' : overCards + ' over budget') : (sums.unknown ? (NL ? sums.unknown + ' nog onbekend' : sums.unknown + ' not known yet') : '')}</div>
+      <div class="dpp-note${overDeck ? ' over' : ''}">${left == null ? '' : overDeck ? fmtEur(-left) + (NL ? ' te veel' : ' over') : fmtEur(left) + (NL ? ' over' : ' left')}</div>`;
+    shown = rows.filter(r=>{
+      if(typeof r.eur !== 'number') return filt.lo <= 0 && filt.hi == null;   // unknown prices only in the full range
+      return r.eur >= filt.lo - 1e-9 && (filt.hi == null || r.eur <= filt.hi + 1e-9);
+    });
+    el.querySelector('#dppCnt').textContent = shown.length + ' / ' + rows.length;
+    // Most expensive first in the markup = at the foot of the reversed box.
+    box.innerHTML = shown.map((r, i)=>{
+      const over = bud.card != null && typeof r.eur === 'number' && r.eur > bud.card + 1e-9;
+      return `<div class="dpp-row${over ? ' over' : ''}" data-dpp="${i}" role="button"><span class="dpp-nm">${r.qty > 1 ? `<span class="dpp-q">${r.qty}×</span>` : ''}${escapeHtml(r.card.name)}</span><span class="dpp-eur">${typeof r.eur === 'number' ? fmtEur(r.eur) : '—'}</span></div>`;
+    }).join('') || `<div class="hint" style="text-align:center;margin:10px 0;">${NL ? 'Geen kaarten in deze prijsklasse.' : 'No cards in this price range.'}</div>`;
+    box.scrollTop = box.scrollHeight;   // the foot: in a reversed box that is where it starts
+  };
+  paint();
+  box.addEventListener('click', e=>{
+    const r = e.target.closest && e.target.closest('[data-dpp]');
+    if(!r) return;
+    const i = +r.dataset.dpp, pool = shown.map(x=>x.card);
+    if(pool[i]) openCardInfo(pool[i], { pool, poolIdx: i });
+  });
+  // The slider filters while it moves, not only when it is let go.
+  wirePriceSlider('dppSlider', (lo, hi)=>{ filt.lo = lo || 0; filt.hi = hi == null ? null : hi; paint(); });
+  { const sl = el.querySelector('#dppSlider'), lo = sl.querySelector('[data-prlo]'), hi = sl.querySelector('[data-prhi]');
+    const live = ()=>{ filt.lo = PRICE_STOPS[+lo.value] || 0; filt.hi = PRICE_STOPS[+hi.value]; filt.hi = filt.hi == null ? null : filt.hi; paint(); };
+    lo.addEventListener('input', live); hi.addEventListener('input', live); }
+  const setB = (k, inp)=>{
+    const v = parseEurInput(inp.value);
+    d.budget = Object.assign({}, d.budget || {}, { [k]: v });
+    paint();
+    return v;
+  };
+  [['card', '#dppCard'], ['deck', '#dppDeck']].forEach(([k, sel])=>{
+    const inp = el.querySelector(sel);
+    inp.addEventListener('input', ()=>setB(k, inp));
+    inp.addEventListener('change', ()=>{ const v = setB(k, inp); inp.value = v == null ? '' : v.toFixed(2); scheduleSave(d); });
+    inp.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); try{ inp.blur(); }catch(err){} } });
+  });
+  el.querySelector('#dppAlt').addEventListener('click', ()=>openBudgetOverlay(d));
+  // Opens at the foot: the summary, right above the bar.
+  requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; box.scrollTop = box.scrollHeight; });
+  // Cards the phone had no price for yet: fetch, then fill in place.
+  if(!deckPriceFromCache(d).complete){
+    ensureDeckPriced(d).then(()=>{ if(document.getElementById('deckPriceOverlay') === el) paint(); }).catch(()=>{});
+  }
+}
+/* Budget watch. Every card that joins a deck's main board passes here (via
+   logDeckChange, plus the multi-select move); a burst -- a bulk add, a
+   pasted list -- is gathered for a moment and judged once. Over the card
+   budget, or the deck pushed past its budget: one popup, with the choice
+   to take those cards out again. */
+const _budgetQ = new Map();
+let _budgetT = null;
+function budgetNoteAdded(d, cards, kind){
+  if(!d || !deckBudgetOf(d) || !cards || !cards.length) return;
+  const q = _budgetQ.get(d.id) || { d, items: [] };
+  cards.forEach(c=>{ if(c && c.name) q.items.push({ card: c, kind: kind === 'toMain' ? 'toMain' : 'add' }); });
+  _budgetQ.set(d.id, q);
+  clearTimeout(_budgetT);
+  _budgetT = setTimeout(()=>{
+    const qs = Array.from(_budgetQ.values());
+    _budgetQ.clear();
+    (async ()=>{ for(const x of qs){ try{ await budgetCheckBatch(x.d, x.items); }catch(e){} } })();
+  }, 450);
+}
+function deckTotalNow(d){ return deckPriceSums(deckPriceRows(d)).total; }
+async function budgetCheckBatch(d, items){
+  const bud = deckBudgetOf(d);
+  if(!bud) return;
+  try{ await bulkIndexReady(); }catch(e){}
+  const seen = new Set();
+  for(const it of items){
+    const nm = it.card.name;
+    if(seen.has(nm)) continue;
+    seen.add(nm);
+    if(knownEur(nm) === undefined){ try{ await cheapestEur(it.card, true); }catch(e){} }
+  }
+  // Only what is still in the main deck counts (an undo may have beaten us).
+  const live = items.filter(it=>d.cards.includes(it.card));
+  if(!live.length) return;
+  const NL = appLang() === 'nl';
+  const priceOf = it=>knownEur(it.card.name);
+  const overCard = bud.card != null ? live.filter(it=>{ const v = priceOf(it); return typeof v === 'number' && v > bud.card + 1e-9; }) : [];
+  const total = deckTotalNow(d);
+  const addsMoney = live.some(it=>{ const v = priceOf(it); return typeof v === 'number' && v > 0; });
+  const overDeck = bud.deck != null && total > bud.deck + 1e-9 && addsMoney;
+  if(!overCard.length && !overDeck) return;
+  const lines = [];
+  if(overCard.length){
+    const names = [];
+    overCard.forEach(it=>{ const s = it.card.name + ' (' + fmtEur(priceOf(it)) + ')'; if(!names.includes(s)) names.push(s); });
+    const list = names.slice(0, 5).join(', ') + (names.length > 5 ? (NL ? ' en nog ' : ' and ') + (names.length - 5) + (NL ? '' : ' more') : '');
+    lines.push(NL
+      ? (names.length === 1 ? list + ' kost meer dan je kaartbudget van ' + fmtEur(bud.card) + '.' : names.length + ' kaarten kosten meer dan je kaartbudget van ' + fmtEur(bud.card) + ': ' + list + '.')
+      : (names.length === 1 ? list + ' costs more than your card budget of ' + fmtEur(bud.card) + '.' : names.length + ' cards cost more than your card budget of ' + fmtEur(bud.card) + ': ' + list + '.'));
+  }
+  if(overDeck){
+    lines.push(NL
+      ? d.name + ' kost nu ' + fmtEur(total) + ', ' + fmtEur(total - bud.deck) + ' boven je deckbudget van ' + fmtEur(bud.deck) + '.'
+      : d.name + ' now costs ' + fmtEur(total) + ', ' + fmtEur(total - bud.deck) + ' over your deck budget of ' + fmtEur(bud.deck) + '.');
+  }
+  // Remove what caused it: the whole batch when the deck went over, else
+  // only the cards above the card budget.
+  const drop = overDeck ? live : overCard;
+  const n = drop.length;
+  openInAppConfirm((NL ? '💰 Buiten budget\n' : '💰 Over budget\n') + lines.join('\n'), (ok)=>{
+    if(!ok) return;
+    let gone = 0;
+    drop.forEach(it=>{
+      const i = d.cards.indexOf(it.card);
+      if(i < 0) return;
+      d.cards.splice(i, 1);
+      if(it.kind === 'toMain'){ ensureMaybeboard(d).push(it.card); logDeckChange(d, { type:'toMaybe', name: it.card.name, card: it.card }); }
+      else logDeckChange(d, { type:'remove', name: it.card.name, card: it.card });
+      gone++;
+    });
+    if(!gone) return;
+    scheduleSave(d);
+    toast(NL ? (gone === 1 ? drop[0].card.name + ' is er weer uit.' : gone + ' kaarten zijn er weer uit.') : (gone === 1 ? drop[0].card.name + ' is out again.' : gone + ' cards are out again.'));
+    if(state.screen === 'decklist' && state.activeDeckId === d.id && !document.querySelector('.overlay')) render();
+  }, { ok: NL ? (n === 1 ? 'Verwijderen' : n + ' verwijderen') : (n === 1 ? 'Remove' : 'Remove ' + n), cancel: NL ? 'Houden' : 'Keep' });
 }
 /* ── Format legality ─ Scryfall's legalities map as a chip grid, the
    Moxfield way: green = legal, red = banned, amber = restricted, grey =
