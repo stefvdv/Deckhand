@@ -1819,6 +1819,16 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 .sub-fold{display:flex;align-items:center;gap:0;}
 .sub-fold .fold-ico{margin-left:auto;padding-left:10px;font-size:13px;color:var(--sub-text);}
 .inl-ico{display:inline-flex;vertical-align:-2px;margin-right:6px;}
+.ib.ib-t{width:20px;justify-content:center;font-size:16px;line-height:20px;}
+.cselect-search .cs-mag{display:inline-flex;}
+.cselect-search .cs-mag svg{width:16px;height:16px;}
+.iac-ico{display:flex;justify-content:center;color:var(--head-ink);margin:2px 0 8px;}
+.iac-ico svg{width:30px;height:30px;}
+.big-ico{display:inline-flex;}
+.big-ico svg{width:46px;height:46px;}
+.tok-ico{display:inline-flex;}
+.tok-ico svg{width:1em;height:1em;}
+.dk-tool#dlSelDel svg{width:20px;height:20px;}
 .inl-ico svg{width:var(--ii,15px);height:var(--ii,15px);}
 .want-bell svg{width:15px;height:15px;flex:none;}
 .want-bell.on svg{margin-right:4px;}
@@ -2942,7 +2952,7 @@ function cselectHtml(id, options, value, placeholder, o){
       <span class="cs-car">${open ? '▴' : '▾'}</span>
     </button>
     ${open ? (()=>{
-      const searchRow = o.search?`<div class="cselect-search"><span class="cs-mag">🔍</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:'';
+      const searchRow = o.search?`<div class="cselect-search"><span class="cs-mag">${ICONS.search}</span><input type="text" placeholder="Type to filter…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>`:'';
       const noRes = o.search?`<div class="cs-noresults" style="display:none;">No matches — try fewer letters</div>`:'';
       // Dedupe pass in POPULARITY order (the options array as given, before
       // the bottom-up reverse): the most-played entry keeps the primary art,
@@ -5988,19 +5998,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.9';
+const APP_VERSION = '1.10';
 const CHANGELOG_NOTES = {
   en: [
-    'Extras: long texts read top-down',
-    'About Deckhand at the very bottom',
-    'Same arrow on every page row',
-    'Line icons instead of emoji'
+    'Line icons instead of emoji',
+    'Menus line up neatly',
+    'Life Counter: dice, coin, wheel icons'
   ],
   nl: [
-    'Extra\'s: lange teksten lezen omlaag',
-    'Over Deckhand helemaal onderaan',
-    'Zelfde pijltje bij elke paginarij',
-    'Lijniconen in plaats van emoji'
+    'Lijniconen in plaats van emoji',
+    'Menu\'s staan netjes in een rij',
+    'Life Counter: iconen dobbel en munt'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6020,10 +6028,10 @@ function tourSteps(){
       b: NL
         ? `<p style="margin:4px 0;">Deckhand is <strong>voor je telefoon</strong> gemaakt: alles is <strong>van onder naar boven</strong> gebouwd — knoppen, menu\u2019s en de beste content zitten onderin, binnen <strong>duimbereik</strong>.</p>
            <p style="margin:4px 0;">Bouw decks in <strong>Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern, Legacy en Vintage</strong>; alles werkt offline. Dit is <strong>Home</strong>, met onderin het laatste Magic-<strong>nieuws</strong>.</p>
-           <p style="margin:4px 0;color:var(--sub-text);">📲 Tip: installeer Deckhand als app — Chrome ⋮ → <em>App installeren</em>. We lopen nu alle pagina\u2019s langs.</p>`
+           <p style="margin:4px 0;color:var(--sub-text);">${inlIco('phone', 14)}Tip: installeer Deckhand als app — Chrome ⋮ → <em>App installeren</em>. We lopen nu alle pagina\u2019s langs.</p>`
         : `<p style="margin:4px 0;">Deckhand is built <strong>for your phone</strong>: everything runs <strong>bottom-up</strong> — buttons, menus and the best content sit at the foot, within <strong>thumb reach</strong>.</p>
            <p style="margin:4px 0;">Build decks in <strong>Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern, Legacy and Vintage</strong>; everything works offline. This is <strong>Home</strong>, with the latest Magic <strong>news</strong> at the foot.</p>
-           <p style="margin:4px 0;color:var(--sub-text);">📲 Tip: install Deckhand as an app — Chrome ⋮ → <em>Install app</em>. Let\u2019s walk every page together.</p>` },
+           <p style="margin:4px 0;color:var(--sub-text);">${inlIco('phone', 14)}Tip: install Deckhand as an app — Chrome ⋮ → <em>Install app</em>. Let\u2019s walk every page together.</p>` },
     { k:'decks', go:()=>switchPage('decks'),
       t: NL ? '⚔ My Stuff — je decks' : '⚔ My Stuff — your decks',
       b: NL
@@ -6037,22 +6045,22 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred), kaarten toevoegen, 🔍 <strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
            <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred), adding cards, 🔍 <strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
            <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
-      t: NL ? '🃏 De kaart-detailpagina' : '🃏 The card detail view',
+      t: inlIco('cardview', 14) + (NL ? 'De kaart-detailpagina' : 'The card detail view'),
       b: soon + (NL
         ? `<p style="margin:6px 0;">Tik op een kaart en je ziet alles: Oracle text, prijs (tik erop voor de <strong>prijsgeschiedenis</strong>) en de 🧂 <strong>salt score</strong>.</p>
            <p style="margin:6px 0;"><strong>Recommendations</strong> toont wat het meest met deze kaart gespeeld wordt, <strong>Similar cards</strong> kaarten met dezelfde rol, en via <strong>Change printing</strong> kies je een andere versie/art. <strong>Tags</strong> en <strong>∞ combo's</strong> staan naast elkaar; veeg opzij naar de volgende kaart.</p>`
         : `<p style="margin:6px 0;">Tap any card and everything is here: oracle text, price (tap it for the <strong>price history</strong>) and the 🧂 <strong>salt score</strong>.</p>
            <p style="margin:6px 0;"><strong>Recommendations</strong> shows what people play alongside it, <strong>Similar cards</strong> finds cards with the same job, and <strong>Change printing</strong> picks another version/art. <strong>Tags</strong> and <strong>∞ combos</strong> sit side by side; swipe sideways to the next card.</p>`) },
     { k:'collection', go:()=>switchPage('collection'),
-      t: NL ? '📒 Je collectie' : '📒 Your collection',
+      t: inlIco('binder', 14) + (NL ? 'Je collectie' : 'Your collection'),
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
            <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
@@ -6063,7 +6071,7 @@ function tourSteps(){
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
-      t: NL ? '🔍 Zoeken' : '🔍 Search',
+      t: inlIco('search', 14) + (NL ? 'Zoeken' : 'Search'),
       b: NL
         ? `<p style="margin:6px 0;">Zoek op naam of open het <strong>geavanceerde filter</strong>: kleuren, tags (wat een kaart <em>doet</em>), type, Oracle text, set, format en meer. De zoektoets van je toetsenbord start de zoekopdracht — of de gouden <strong>loep</strong> linksonder in het filtermenu (die zit ook in de filters van Collectie, Spoilers en deck).</p>
            <p style="margin:6px 0;">Vanaf de derde letter verschijnen <strong>naamsuggesties</strong>. Houd een resultaat <strong>lang ingedrukt</strong> om meerdere kaarten te kiezen: de gouden knop (＋, of het aantal) zet ze in een deck of je collectie.</p>
@@ -6106,7 +6114,7 @@ function showTourLangChoice(){
   const el = document.createElement('div');
   el.className = 'deckpick-scrim'; el.id = 'tourScrim';
   el.innerHTML = `<div class="deckpick" style="border-radius:14px;margin:0 12px;max-width:330px;padding:10px 12px 12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
-    <h4 style="font-size:12.5px;margin:0 0 2px;">🌐 Taal · Language</h4>
+    <h4 style="font-size:12.5px;margin:0 0 2px;">${inlIco('globe', 14)}Taal · Language</h4>
     <div style="font-size:12px;line-height:1.45;color:var(--ink-text);">
       <p style="margin:4px 0;">In welke taal wil je de rondleiding en de app?</p>
       <p style="margin:4px 0;">Which language would you like for the tour and the app?</p>
@@ -6259,11 +6267,11 @@ function maybeShowFormatChanges(){
         ${sec('🔮 New cards have been spoiled', spoiled)}
         ${sec('🚫 Newly banned', banned)}
         ${sec('✅ Unbanned', unbanned)}
-        ${sec('🌌 Universes Beyond sets added', ubAdded)}
-        ${sec('🌌 Universes Beyond sets removed', ubRemoved)}
+        ${sec(inlIco('planet', 15) + 'Universes Beyond sets added', ubAdded)}
+        ${sec(inlIco('planet', 15) + 'Universes Beyond sets removed', ubRemoved)}
         ${rulesChanged ? `<p style="margin:8px 0;"><strong>📜 The format rules were updated</strong> — read them under Extras → Format Rules.</p>` : ''}
       </div>
-      <button class="primary-btn" id="formatChangeOk" style="margin-top:10px;">⛵ ${trS('Explore')}</button>
+      <button class="primary-btn" id="formatChangeOk" style="margin-top:10px;"><span class="inl-ico" style="--ii:16px;">${anchorSvg(16)}</span>${trS('Explore')}</button>
     </div>`;
     document.body.appendChild(el);
     el.style.alignItems = 'center';
@@ -6744,6 +6752,27 @@ const ICONS = {
   restore: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5v-11"/><path d="M7.5 9 12 4.5 16.5 9"/><path d="M5 19.5h14"/></svg>`,
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 19 6v5.5c0 4.2-3 7.6-7 9-4-1.4-7-4.8-7-9V6z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg>`,
   warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 21 19.5H3z"/><path d="M12 10v4.5"/><path d="M12 17.2v.3"/></svg>`,
+  folder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.2c0-.9.7-1.7 1.7-1.7h3.9l2 2.2h7.7c.9 0 1.7.8 1.7 1.7v8.2c0 .9-.8 1.7-1.7 1.7H5.2c-1 0-1.7-.8-1.7-1.7z"/></svg>`,
+  folderPlus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.2c0-.9.7-1.7 1.7-1.7h3.9l2 2.2h7.7c.9 0 1.7.8 1.7 1.7v8.2c0 .9-.8 1.7-1.7 1.7H5.2c-1 0-1.7-.8-1.7-1.7z"/><path d="M12 10.6v5M9.5 13.1h5"/></svg>`,
+  image: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="9.8" r="1.6"/><path d="m4 17.2 4.8-4.4 3.4 3 3.1-2.6 4.7 4.1"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15"/><path d="M9.5 7V5.2c0-.4.3-.7.7-.7h3.6c.4 0 .7.3.7.7V7"/><path d="m6.5 7 .9 11.7c.1.8.7 1.3 1.5 1.3h6.2c.8 0 1.4-.5 1.5-1.3L17.5 7"/><path d="M10.2 10.7v5.8M13.8 10.7v5.8"/></svg>`,
+  clipboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5" width="13" height="15.5" rx="1.8"/><path d="M9.2 5V4c0-.3.2-.5.5-.5h4.6c.3 0 .5.2.5.5v1"/><path d="M9 10.5h6M9 13.5h6M9 16.5h3.8"/></svg>`,
+  file: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.5H7.2c-.9 0-1.7.8-1.7 1.7v13.6c0 .9.8 1.7 1.7 1.7h9.6c.9 0 1.7-.8 1.7-1.7V8.5z"/><path d="M13.5 3.5v5h5"/><path d="M8.8 12.8h6.4M8.8 15.8h6.4"/></svg>`,
+  printer: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V4.5h10V9"/><rect x="3.8" y="9" width="16.4" height="7.6" rx="1.7"/><path d="M7 13.8h10v5.7H7z"/><path d="M16.3 11.6h.4"/></svg>`,
+  chart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16"/><path d="m5 15.3 4.4-4.4 3.4 3.1L18.6 8"/><path d="M14.8 8h3.8v3.8"/></svg>`,
+  library: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="6.5" width="11.5" height="14" rx="1.6"/><path d="M8.3 3.5h9.2c.9 0 1.6.7 1.6 1.6v12.4"/></svg>`,
+  grave: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V10.2a5 5 0 0 1 10 0V20"/><path d="M4.8 20h14.4"/><path d="M12 9.2v5.6M9.7 11.4h4.6"/></svg>`,
+  token: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.3"/><circle cx="12" cy="12" r="4.6"/></svg>`,
+  camera: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.6c0-.9.7-1.6 1.6-1.6h2.3l1.5-2h5.2l1.5 2h2.3c.9 0 1.6.7 1.6 1.6v8.8c0 .9-.7 1.6-1.6 1.6H5.6c-.9 0-1.6-.7-1.6-1.6z"/><circle cx="12" cy="12.8" r="3.4"/></svg>`,
+  phone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.2"/><path d="M11 17.6h2"/></svg>`,
+  globe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.3 3.5 5.2 3.5 8.5s-1.2 6.2-3.5 8.5c-2.3-2.3-3.5-5.2-3.5-8.5s1.2-6.2 3.5-8.5z"/></svg>`,
+  planet: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5.2"/><path d="M7.4 9.6C4.4 8.1 2.6 8 2.2 8.8c-.7 1.3 3.4 4.7 9 7.6s10.7 4 11.4 2.7c.4-.8-.8-2.2-3.2-3.9"/></svg>`,
+  dice: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="4.5" width="15" height="15" rx="3.2"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>`,
+  coin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="9.5" rx="7.5" ry="4.5"/><path d="M4.5 9.5v4.6c0 2.5 3.4 4.5 7.5 4.5s7.5-2 7.5-4.5V9.5"/><path d="M8.5 17.8v-2.9M12 18.6v-3M15.5 17.8v-2.9"/></svg>`,
+  wheel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="1.7"/><path d="M12 3.5v6.8M12 13.7v6.8M3.5 12h6.8M13.7 12h6.8M6 6l4.8 4.8M13.2 13.2 18 18M18 6l-4.8 4.8M10.8 13.2 6 18"/></svg>`,
+  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.8 5.2 18.8 9.2 9 19H5v-4z"/><path d="m12.8 7.2 4 4"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="1.8"/><path d="M16 8V5.8c0-1-.8-1.8-1.8-1.8H5.8C4.8 4 4 4.8 4 5.8v8.4c0 1 .8 1.8 1.8 1.8H8"/></svg>`,
+  cardview: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3.5" width="12" height="17" rx="1.8"/><path d="M8.6 7h6.8M8.6 14.5h6.8M8.6 17h4.2"/><rect x="8.6" y="8.8" width="6.8" height="3.8" rx=".6"/></svg>`,
   burger: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 6.5h15M4.5 12h15M4.5 17.5h15"/></svg>`,
   search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>`,
   inspire: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>`,
@@ -8005,7 +8034,7 @@ function openFabMenu(items){
   if(old){ old.remove(); return; }
   const menu = document.createElement('div');
   menu.id = 'fabMenu';
-  menu.innerHTML = items.map(([id, html])=>`<button id="${id}">${html}</button>`).join('');
+  menu.innerHTML = items.map(([id, html])=>`<button id="${id}">${menuLabel(html)}</button>`).join('');
   document.body.appendChild(menu);
   items.forEach(([id, , fn])=>document.getElementById(id).addEventListener('click', ()=>{ menu.remove(); fn(); }));
   setTimeout(()=>document.addEventListener('click', function once(){ menu.remove(); document.removeEventListener('click', once); }), 0);
@@ -8216,10 +8245,10 @@ function decksNoticeHtml(){
       const nl = appLang() === 'nl';
       const days = last ? Math.floor((Date.now() - last) / 86400000) : 0;
       const msg = last
-        ? (nl ? `🛟 Je laatste back-up is ${days} dagen oud.` : `🛟 Your last backup is ${days} days old.`)
-        : (nl ? '🛟 Je hebt nog geen back-up van je decks en collectie.' : '🛟 You have no backup of your decks and collection yet.');
+        ? (nl ? `Je laatste back-up is ${days} dagen oud.` : `Your last backup is ${days} days old.`)
+        : (nl ? 'Je hebt nog geen back-up van je decks en collectie.' : 'You have no backup of your decks and collection yet.');
       return `<div class="pin-pill" id="backupNote" style="align-items:center;">
-        <span class="pp-txt" style="white-space:normal;line-height:1.5;">${msg}</span>
+        <span class="pp-txt" style="white-space:normal;line-height:1.5;">${inlIco('save', 15)}${msg}</span>
         <button type="button" class="bk-now" id="backupNow">${nl ? 'Nu maken' : 'Back up'}</button>
         <button id="backupLater" title="${nl ? 'Later' : 'Later'}">✕</button></div>`;
     }
@@ -8271,8 +8300,8 @@ function wireHome(){
       openFabMenu([
         ['fabNewDeck', '⚔ New deck', ()=>openModal('newdeck')],
         ['fabNewFolder', `<span class="ib">${ICONS.decks}</span>New folder`, ()=>openNewFolderPrompt(state.folderNav||null)],
-        ['fabImportDeck', '📋 Paste in decklist', ()=>openPasteListSheet()],
-        ['fabImportFile', '📄 Import from file', ()=>openPasteListSheet({ pickFile: true })],   // sheet opens with the phone's file picker
+        ['fabImportDeck', mIco('clipboard') + trS('Paste in decklist'), ()=>openPasteListSheet()],
+        ['fabImportFile', mIco('file') + trS('Import from file'), ()=>openPasteListSheet({ pickFile: true })],   // sheet opens with the phone's file picker
         ['fabView', folderViewToggleLabel('decks'), ()=>{ setFolderView('decks', folderView('decks') === 'list' ? 'tiles' : 'list'); render(); scrollToPageFoot(); }]
       ]);
     });
@@ -8380,7 +8409,7 @@ function openInAppConfirm(msg, onResult, o){
   el.style.alignItems='center';
   el.style.zIndex = 200;
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:320px;">
-    <div class="iac-msg">${escapeHtml(msg)}</div>
+    ${o.icon && ICONS[o.icon] ? `<div class="iac-ico">${ICONS[o.icon]}</div>` : ''}<div class="iac-msg">${escapeHtml(msg)}</div>
     <div style="display:flex;gap:10px;margin-top:14px;"><button class="dp-cancel" id="iacCancel" style="flex:1;margin:0;">${escapeHtml(o.cancel||trS('Cancel'))}</button><button class="primary-btn" id="iacOk" style="flex:1;margin:0;${o.danger?'background:var(--danger);border-color:var(--danger);color:#fff;':''}">${escapeHtml(o.ok||'OK')}</button></div>
   </div>`;
   let settled = false;
@@ -8392,22 +8421,22 @@ function openInAppConfirm(msg, onResult, o){
 function openDeckTileMenu(id, anchorEl){
   const d = getDeck(id); if(!d) return;
   openTileMenu(anchorEl, [
-    {label:'📁 Move to…', fn:()=>openFolderPicker(d)},
+    {label:mIco('folder') + trS('Move to…'), fn:()=>openFolderPicker(d)},
     {label:'⚔ Set format…', fn:()=>openFormatPicker(d)},
-    {label:(appLang() === 'nl' ? '🖼 Deckplaatje…' : '🖼 Cover art…'), fn:()=>openCoverPicker(d)},
-    {label:'⧉ Duplicate deck', fn:()=>{ duplicateDeck(d); }},
-    {label:'↗ Share deck', fn:()=>shareDeck(d)},
-    {label:'🗑 Delete deck', danger:true, fn:()=>{ state.activeDeckId=d.id; openModal('delete'); }}
+    {label:mIco('image') + (appLang() === 'nl' ? 'Deckplaatje…' : 'Cover art…'), fn:()=>openCoverPicker(d)},
+    {label:mIco('copy') + trS('Duplicate deck'), fn:()=>{ duplicateDeck(d); }},
+    {label:mIco('share') + trS('Share deck'), fn:()=>shareDeck(d)},
+    {label:mIco('trash') + trS('Delete deck'), danger:true, fn:()=>{ state.activeDeckId=d.id; openModal('delete'); }}
   ]);
 }
 function openFolderMenu(id, anchorEl){
   const f = (state.folders||[]).find(x=>x.id===id); if(!f) return;
   openTileMenu(anchorEl, [
-    {label:'✎ Rename', fn:()=>openInAppPrompt('Rename folder','Folder name',f.name,(v)=>{ if(v&&v.trim()){ f.name=v.trim(); saveFolders(); render(); } })},
+    {label:mIco('edit') + trS('Rename'), fn:()=>openInAppPrompt('Rename folder','Folder name',f.name,(v)=>{ if(v&&v.trim()){ f.name=v.trim(); saveFolders(); render(); } })},
     {label: modeGlyph()+' Change icon', fn:()=>openFolderIconPicker(f)},
-    {label:'📁 New subfolder', fn:()=>openNewFolderPrompt(f.id)},
-    {label:'📁 Move to…', fn:()=>openFolderPicker(f, {folder:true})},
-    {label:'🗑 Delete folder', danger:true, fn:()=>{ openModal('deleteFolder', {folderId:f.id}); }}
+    {label:mIco('folderPlus') + trS('New subfolder'), fn:()=>openNewFolderPrompt(f.id)},
+    {label:mIco('folder') + trS('Move to…'), fn:()=>openFolderPicker(f, {folder:true})},
+    {label:mIco('trash') + trS('Delete folder'), danger:true, fn:()=>{ openModal('deleteFolder', {folderId:f.id}); }}
   ]);
 }
 function openFolderIconPicker(f){
@@ -8552,11 +8581,23 @@ function selFabLabel(n){
   const t = String(n);
   return `<span class="fab-count${t.length > 2 ? ' long' : ''}">${t}</span>`;
 }
+/* A menu label's icon column: a line icon (<span class="ib">) stays as it
+   is; a leading text glyph (⚔ ✎ ⧉ ↗ …) goes into the same 20px box, so
+   every label in a menu starts at the same place. Translated first, whole. */
+function menuLabel(h){
+  h = String(h == null ? '' : h);
+  if(/^\s*</.test(h)) return h;
+  const t = trS(h);
+  const m = t.match(/^(\S{1,2})\s+([\s\S]+)$/);
+  if(m && !/[A-Za-z0-9\u20AC\u00C0-\u024F]/.test(m[1])) return `<span class="ib ib-t">${m[1]}</span>${m[2]}`;
+  return t;
+}
+function mIco(name){ return `<span class="ib">${ICONS[name] || ''}</span>`; }
 function openTileMenu(anchorEl, items){
   document.getElementById('tileMenuPop')?.remove();
   const pop = document.createElement('div');
   pop.className='menu-pop'; pop.id='tileMenuPop';
-  pop.innerHTML = items.map((it,i)=>`${it.danger&&i>0?'<hr>':''}<button data-i="${i}" ${it.danger?'class="danger"':''}>${it.label}</button>`).join('');
+  pop.innerHTML = items.map((it,i)=>`${it.danger&&i>0?'<hr>':''}<button data-i="${i}" ${it.danger?'class="danger"':''}>${menuLabel(it.label)}</button>`).join('');
   document.body.appendChild(pop);
   const r = anchorEl.getBoundingClientRect();
   pop.style.position='fixed';
@@ -8646,7 +8687,7 @@ function openPasteListSheet(opts){
         <input id="pasteDeckName" style="width:100%;margin:0 0 8px;box-sizing:border-box;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:9px 10px;font-family:Inter;font-size:15px;" value="" placeholder="Deck name">
         <textarea id="pasteDeckText" class="bulk-textarea" style="min-height:180px;" placeholder="${appLang() === 'nl' ? '1 Kaartnaam&#10;1 Nog een kaart&#10;…' : '1 Card Name&#10;1 Another Card&#10;…'}"></textarea>
         <input type="file" id="pasteDeckFile" accept=".txt,.dec,text/plain" style="display:none;">
-        <button class="ghost-btn" id="pasteDeckFileBtn" style="width:100%;margin-top:8px;">📄 ${trS('Load a .txt file')}</button>
+        <button class="ghost-btn" id="pasteDeckFileBtn" style="width:100%;margin-top:8px;">${inlIco('file')}${trS('Load a .txt file')}</button>
         <button class="primary-btn" id="pasteCreateBtn" style="margin-top:10px;">Create deck</button>
       </div>`;
     document.body.appendChild(el);
@@ -8867,7 +8908,7 @@ function collectionPageHtml(){
         <img loading="lazy" class="${it.border_color==='white'?'wb-card':''}" src="${it.img}" alt="${escapeHtml(it.name)}">${it.qty>1?`<span class="vg-qty">×${it.qty}</span>`:''}${it.foil?'<i class="foil-star col-foil" title="Foil">✨</i>':''}${state.colSel && state.colSel.has(_idxOf.get(it))?'<span class="csel-mark">✓</span>':''}${collectionMarkHtml(it, _colLegalCodes)}
         <div class="col-tile-info">
           <div class="l1">${escapeHtml(it.name)}</div>
-          ${(!f.binder && colFilterActive()) || f.binder === '__all__' ? `<div class="l2 col-bnd">🗂 ${escapeHtml(it.binder ? (binderName(it.binder) || trS('Binder')) : trS('No binder'))}</div>` : ''}
+          ${(!f.binder && colFilterActive()) || f.binder === '__all__' ? `<div class="l2 col-bnd">${inlIco('binder', 13)}${escapeHtml(it.binder ? (binderName(it.binder) || trS('Binder')) : trS('No binder'))}</div>` : ''}
           <div class="l2" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((it.set||'').toUpperCase())}${it.cn?' #'+escapeHtml(it.cn):''} · ${escapeHtml(it.cond)}</span>${it.eur!=null?`<span style="color:var(--brass);font-family:'JetBrains Mono',monospace;flex:none;">€${(it.eur*it.qty).toFixed(2)}</span>`:''}</div>
         </div>
       </button>`)
@@ -8907,6 +8948,21 @@ nl:{"Tile view":"Tegelweergave","List view":"Lijstweergave","Stack view":"Stapel
 const I18N_RX = {
 nl:[[/^Format of “(.*)”$/g,'Format van “$1”'],[/^(\d+)mo ago$/g,'$1 mnd geleden'],[/^Now legal in Admiral: /g,'Nu legaal in Admiral: '],[/^(\d+) cards? owned$/g,'$1 kaarten in bezit'],[/What's new — v/g,'Wat is nieuw — v'],[/^Avg MV /g,'Gem. MV '],[/^(\d+)d ago · undone$/g,'$1d geleden · ongedaan'],[/^(\d+)d ago$/g,'$1d geleden'],[/^(\d+)h ago$/g,'$1u geleden'],[/^(\d+)m ago$/g,'$1m geleden'],[/^just now$/g,'zojuist'],[/^Bulk edit: (\d+) added, (\d+) removed$/g,'Bulk bewerken: $1 toegevoegd, $2 verwijderd'],[/^Deck total: /g,'Decktotaal: '],[/(\d+) decks? · waiting for the flag to change/g,'$1 decks · wachten op de vlagwissel'],[/(Commanders|Admirals) — any colors/g,'$1 — alle kleuren'],[/Admirals — any colors/g,'Admirals — alle kleuren'],[/^(\d+) cards — the official Commander list, live from Scryfall$/g,'$1 kaarten — de officiële Commander-lijst, live van Scryfall'],[/^(\d+) cards — tap a name to see it/g,'$1 kaarten — tik op een naam om hem te zien'],[/^Player (\d+)$/g,'Speler $1'],[/\bMain (\d+)\//g,'Deck $1/'],[/(\d+) cards\b/g,'$1 kaarten'],[/(\d+) card\b/g,'$1 kaart']],
 };
+// Labels lost their colored emoji in 1.10: each emoji-led phrase in the
+// table also answers to the bare phrase -- plus the few menu labels that
+// never had a Dutch line of their own.
+(function(){
+  const add = { 'Move to…':'Verplaatsen naar…', 'Rename':'Hernoemen', '⚔ Set format…':'⚔ Format kiezen…', 'View card':'Kaart bekijken', 'Add to collection…':'Aan collectie toevoegen…' };
+  Object.keys(add).forEach(k=>{ if(I18N.nl && I18N.nl[k] == null) I18N.nl[k] = add[k]; });
+  Object.keys(I18N).forEach(lang=>{
+    const d = I18N[lang];
+    Object.keys(d).forEach(k=>{
+      const m = k.match(/^(\S+)\s+([\s\S]+)$/);
+      if(!m || !/[\u{1F000}-\u{1FAFF}]/u.test(m[1])) return;
+      if(d[m[2]] == null) d[m[2]] = String(d[k]).replace(/^\S+\s+/, '');
+    });
+  });
+})();
 function trS(t){
   // For strings built in JS (dialog titles, buttons, toasts) that the DOM
   // translator can't reach — translate at the call site instead.
@@ -9276,7 +9332,7 @@ function brGlyphHtml(k, px){
   if('WUBRGC'.indexOf(k) >= 0 && k.length === 1) return manaIconSvg(k, px);
   if(k === 'multi') return multiIconSvg(px);
   if(/^r[CURM]$/.test(k)) return `<span class="rar-dot rar-${k[1]}"></span>`;
-  if(k === 'token') return '🎫';
+  if(k === 'token') return `<span class="tok-ico">${ICONS.token}</span>`;
   if(k === 'foil') return '<span style="color:var(--head-ink);">✦</span>';
   return (typeof DOCK_TYPE_ICONS !== 'undefined' && DOCK_TYPE_ICONS[k]) || '';
 }
@@ -9545,7 +9601,7 @@ function binderTileHtml(b){
   return `<div class="folder-tile binder-tile" data-binderopen="${b.id}">
       <div class="binder-glyph-row">${binderTileGlyphs(b)}</div>
       ${binderHasRules(b) ? `<button type="button" class="br-info" data-brinfo="${b.id}" aria-label="Auto-fill">i</button>` : ''}
-      <div class="folder-face">${face ? `<img loading="lazy" src="${face}" alt="">` : '<span style="font-size:44px;line-height:1;">🗂</span>'}</div>
+      <div class="folder-face">${face ? `<img loading="lazy" src="${face}" alt="">` : `<span class="big-ico">${ICONS.binder}</span>`}</div>
       <div class="folder-name">${escapeHtml(b.name)}</div>
       <div class="folder-sub">${qty} card${qty===1?'':'s'}${eur?` · €${eur.toFixed(2)}`:''}</div>
     </div>`;
@@ -9601,7 +9657,7 @@ function collectionBindersGridHtml(){
   // simply every card you own — filed or loose — so filing a card into any
   // binder "adds" it here by definition, and nothing can ever desync.
   const allTile = `<div class="folder-tile binder-tile" data-binderopen="__all__">
-      <div class="folder-face colfold-ico">${ICONS.collection || '🗂'}</div>
+      <div class="folder-face colfold-ico">${ICONS.collection}</div>
       <div class="folder-name">All cards</div>
       <div class="folder-sub">${qtyAll} card${qtyAll===1?'':'s'}${eurAll?` · €${eurAll.toFixed(2)}`:''}</div>
     </div>`;
@@ -9642,7 +9698,7 @@ function openBinderLongMenu(binder, x, y){
   const pop = document.createElement('div');
   pop.id = 'binderLongPop';
   pop.style.cssText = 'position:fixed;z-index:120;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;min-width:200px;';
-  pop.innerHTML = `<button data-a="art">🖼 Choose cover art</button><button data-a="ren">✎ Rename</button><button data-a="del" style="color:var(--danger);">🗑 Delete binder</button>`;
+  pop.innerHTML = `<button data-a="art">${mIco('image')}${trS('Choose cover art')}</button><button data-a="ren">${mIco('edit')}${trS('Rename')}</button><button data-a="del" style="color:var(--danger);">${mIco('trash')}${trS('Delete binder')}</button>`;
   pop.querySelectorAll('button').forEach(b=>b.style.cssText += ';background:none;border:none;color:inherit;padding:12px 16px;font-size:15px;text-align:left;cursor:pointer;border-bottom:2px solid var(--line);');
   document.body.appendChild(pop);
   pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, x - pop.offsetWidth/2)) + 'px';
@@ -9728,9 +9784,9 @@ function wireCollectionPage(){
     const bid = state.colFilter.binder;
     openFabMenu([
       ['bfAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
-      ['bfScan', '📷 ' + (appLang() === 'nl' ? 'Kaarten scannen' : 'Scan cards'), ()=>openCardScanner({ binder: bid })],
+      ['bfScan', mIco('camera') + (appLang() === 'nl' ? 'Kaarten scannen' : 'Scan cards'), ()=>openCardScanner({ binder: bid })],
       ['bfImport', '⬆ ' + trS('Import'), ()=>openCollectionImport(bid)],
-      ['bfPaste', '📋 ' + trS('Paste a list'), ()=>openBinderPasteSheet(bid)]
+      ['bfPaste', mIco('clipboard') + trS('Paste a list'), ()=>openBinderPasteSheet(bid)]
     ].concat((state.collection.binders || []).some(b=>b.id === bid)
       ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Map-instellingen…' : 'Binder settings…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
       : []));
@@ -9739,7 +9795,7 @@ function wireCollectionPage(){
     e.stopPropagation();
     openFabMenu([
       ['fabAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
-      ['fabScan', '📷 ' + (appLang() === 'nl' ? 'Kaarten scannen' : 'Scan cards'), ()=>openCardScanner({})],
+      ['fabScan', mIco('camera') + (appLang() === 'nl' ? 'Kaarten scannen' : 'Scan cards'), ()=>openCardScanner({})],
       ['fabAddBinder', `<span class="ib">${ICONS.collection}</span>${trS('New binder')}`, ()=>{
         openInAppPrompt('New binder name', 'Binder name', '', (name)=>{
           if(name && name.trim()){
@@ -9915,7 +9971,7 @@ function wireCollectionPage(){
         state.colSel = new Set(Array.from(document.querySelectorAll('.col-tile[data-ci]')).map(t=>+t.dataset.ci));
         const y = window.scrollY; render(); window.scrollTo(0, y);
       }},
-      {label:'📁 '+trS('Move to binder…'), fn:()=>{
+      {label:mIco('folder') + trS('Move to binder…'), fn:()=>{
         openBindersPop(anchor, (bid)=>{
           state.colSel.forEach(i=>{ const it = state.collection.items[i]; if(it) it.binder = bid || null; });
           state.colSel = null;
@@ -9924,7 +9980,7 @@ function wireCollectionPage(){
           render();
         }, false);
       }},
-      {label:'🗑 '+trS('Remove from collection'), danger:true, fn:()=>{
+      {label:mIco('trash') + trS('Remove from collection'), danger:true, fn:()=>{
         const q = appLang()==='nl' ? n+' kaart'+(n===1?'':'en')+' uit je collectie verwijderen?' : 'Remove '+n+' card'+(n===1?'':'s')+' from your collection?';
         openInAppConfirm(q, (ok)=>{
           if(!ok) return;
@@ -9971,10 +10027,10 @@ function binderGlyphsHtml(name){
   const order2 = ['Creature','Instant','Sorcery','Artifact','Enchantment','Planeswalker','Battle','Land'];
   kinds.sort((a,b)=>order2.indexOf(a)-order2.indexOf(b));
   kinds.forEach(k=>out.push(DOCK_TYPE_ICONS[k] || ''));
-  if(toks.has('token') || toks.has('tokens')) out.push('🎫');
+  if(toks.has('token') || toks.has('tokens')) out.push(ICONS.token);
   if(toks.has('foil') || toks.has('foils') || toks.has('foiled')) out.push('<span style="color:var(--head-ink);">✦</span>');
   if(out.length) return `<span class="binder-glyphs">${out.join('')}</span>`;
-  return '🗂';
+  return `<span class="binder-glyphs">${ICONS.binder}</span>`;
 }
 function hybridManaSvg(a, b, px){
   // The real Magic hybrid symbol: one circle split on the diagonal — first
@@ -10143,7 +10199,7 @@ function openWantSheet(name){
     <div class="panel-card">
       <div class="panel-h">🔖 ${escapeHtml(name)}</div>
       <p class="hint">On your Wants list.</p>
-      <button class="ghost-btn" id="wsView" style="width:100%;margin-bottom:8px;">🔎 View card</button>
+      <button class="ghost-btn" id="wsView" style="width:100%;margin-bottom:8px;">${inlIco('search')}${trS('View card')}</button>
       <button class="ghost-btn" id="wsRemove" style="width:100%;color:var(--danger);border-color:var(--danger);margin-bottom:8px;">Remove from Wants</button>
       <button class="ghost-btn" id="wsClose" style="width:100%;">Close</button>
     </div>
@@ -10242,7 +10298,7 @@ function renderColItemSheet(idx){
       </div>
       <div class="adv-row" style="margin-bottom:8px;"><label>Printing</label><div id="ciPdBox">${printsDropdownHtml('ciPd', state._colPrints && state._colPrints.name===it.name ? state._colPrints.list : [], -1, !(state._colPrints && state._colPrints.name===it.name))}</div></div>
       <div class="cs-actions-grid" style="margin-bottom:8px;">
-        <button class="ghost-btn" id="ciMoveB">🗂 ${escapeHtml(it.binder ? (binderName(it.binder)||'Binder') : 'No binder')}</button>
+        <button class="ghost-btn" id="ciMoveB">${inlIco('binder')}${escapeHtml(it.binder ? (binderName(it.binder)||'Binder') : 'No binder')}</button>
         <button class="ghost-btn" id="ciDel" style="color:var(--danger);border-color:var(--danger);">Remove</button>
         <button class="ghost-btn${it.foil ? ' ci-foil-on' : ''}" id="ciFoil" style="grid-column:1/-1;">✨ Foil: ${it.foil ? (appLang()==='nl' ? 'ja' : 'yes') : (appLang()==='nl' ? 'nee' : 'no')}</button>
       </div>
@@ -10691,7 +10747,7 @@ function deckMeterHtml(d){
       // the main deck / maybeboard line (both ways when both are picked).
       mid = `<span style="flex:1;font-size:14px;">${state._dlSel.size} selected</span>
         <button class="dk-tool" id="dlSelMenu" title="${trS('Add to collection…')}">${ICONS.plus}</button>
-        <button class="dk-tool" id="dlSelDel" title="Delete" style="color:var(--danger);">🗑</button>
+        <button class="dk-tool" id="dlSelDel" title="Delete" style="color:var(--danger);">${ICONS.trash}</button>
         <button class="dk-tool" id="dlSelX" title="Cancel">✕</button>`;
     } else     mid = state.dlSearchOpen
       // The tools left of the loupe step aside for a search bar; its ▾
@@ -11295,7 +11351,7 @@ function openBinderPasteSheet(binderId){
   const el=document.createElement('div'); el.id='colImportOverlay';
   el.innerHTML = `
     <div class="appoint-sheet" style="max-width:460px;">
-      <div class="appoint-head"><span>📋 ${trS('Paste a list')} — ${escapeHtml(binderName(binderId)||'')}</span><button class="icon-btn" id="ciClose">${ICONS.close||'✕'}</button></div>
+      <div class="appoint-head"><span>${inlIco('clipboard', 16)}${trS('Paste a list')} — ${escapeHtml(binderName(binderId)||'')}</span><button class="icon-btn" id="ciClose">${ICONS.close||'✕'}</button></div>
       <p class="hint" style="margin:0 0 8px;">${trS('One card per line, e.g. 1 Sol Ring')} — ${appLang() === 'nl' ? 'CSV-tekst van Moxfield/Archidekt werkt ook.' : 'Moxfield/Archidekt CSV text works too.'}</p>
       <textarea id="bpText" style="width:100%;box-sizing:border-box;min-height:160px;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:10px;font-size:14px;" placeholder="1 Sol Ring&#10;2 Arcane Signet"></textarea>
       <div id="ciReport" class="hint" style="margin:8px 0;min-height:18px;"></div>
@@ -12691,7 +12747,7 @@ function matchupPanelHtml(d){
       </div>
       <div class="mu-detail">
         ${txt('Their plan', m.theirs)}${txt('Our plan', m.ours)}${sb}${txt('Notes', m.notes)}
-        <div class="mu-btns"><button type="button" class="ghost-btn" data-muedit="${i}">✎ ${trS('Edit')}</button><button type="button" class="ghost-btn danger-ghost" data-mudel="${i}">🗑 ${trS('Delete')}</button></div>
+        <div class="mu-btns"><button type="button" class="ghost-btn" data-muedit="${i}">${inlIco('edit')}${trS('Edit')}</button><button type="button" class="ghost-btn danger-ghost" data-mudel="${i}">${inlIco('trash')}${trS('Delete')}</button></div>
       </div>
     </div>`;
   }).join('');
@@ -12996,7 +13052,7 @@ function dlPanelHtml(d){
       <div class="panel-h" style="display:flex;align-items:center;"><span>Import Deck</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
       <textarea id="importText" class="bulk-textarea" placeholder="${leaderLineLabel(d)}: ${deckFormat(d)==='commander'?"Atraxa, Praetors' Voice":"Admiral Beckett Brass"}&#10;Sol Ring&#10;..."></textarea>
       <input type="file" id="importFile" accept=".txt,.dec,text/plain" style="display:none;">
-      <button class="ghost-btn" id="importFileBtn" style="width:100%;margin:8px 0 2px;">📄 ${trS('Load a .txt file')}</button>
+      <button class="ghost-btn" id="importFileBtn" style="width:100%;margin:8px 0 2px;">${inlIco('file')}${trS('Load a .txt file')}</button>
       <button class="primary-btn danger-fill" id="applyImportBtn">Replace Deck</button>
       <div id="importReport"></div>
     </div>`;
@@ -13010,7 +13066,7 @@ function dlPanelHtml(d){
         ${EXPORT_FORMATS.map(f=>`<button data-expfmt="${f.key}" class="${fmt===f.key?'active':''}">${f.label}</button>`).join('')}
       </div>
       <textarea class="bulk-textarea" id="exportText" readonly>${escapeHtml(text)}</textarea>
-      <div class="action-row"><button class="ghost-btn" id="copyExport">Copy</button><button class="ghost-btn" id="proxyExport">🖨 Proxies</button><button class="ghost-btn" id="downloadExport">Download .${exportExt(fmt)}</button></div>
+      <div class="action-row"><button class="ghost-btn" id="copyExport">Copy</button><button class="ghost-btn" id="proxyExport">${inlIco('printer')}Proxies</button><button class="ghost-btn" id="downloadExport">Download .${exportExt(fmt)}</button></div>
     </div>`;
   }
   return '';
@@ -14642,7 +14698,7 @@ function wireMeterRow(d){
     const items = [];
     if(hasMaybe) items.push({ label:'\u2191 ' + trS('Move to main deck'), fn:()=>dlSelApply(d, 'main') });
     if(hasMain) items.push({ label:'\u2193 ' + trS('Move to ' + sideName(d)), fn:()=>dlSelApply(d, 'maybe') });
-    items.push({ label:'\uD83D\uDDC2 ' + trS('Add to collection…'), fn:()=>openAddManyToCollection(dlSelCards(d), ()=>dlSelClear()) });
+    items.push({ label:mIco('binder') + trS('Add to collection…'), fn:()=>openAddManyToCollection(dlSelCards(d), ()=>dlSelClear()) });
     openTileMenu(e.currentTarget, items);
   });
   document.getElementById('dlSelDel')?.addEventListener('click', ()=>openInAppConfirm(`Delete ${selN()} card${selN()===1?'':'s'} from the deck?`, (ok)=>{ if(ok) dlSelApply(d, 'del'); }));
@@ -15276,7 +15332,7 @@ async function openPrintingGrid(card, onPick, gOpts){
   el.innerHTML = `<div class="overlay-inner">
     ${overlayCapHtml(trS('Change printing'))}
     <main>
-      ${gOpts && gOpts.noCustom ? '' : `<button class="ghost-btn" id="ppCustom" style="width:100%;margin:2px 0 4px;">📷 ${trS('Use your own image…')}</button>`}
+      ${gOpts && gOpts.noCustom ? '' : `<button class="ghost-btn" id="ppCustom" style="width:100%;margin:2px 0 4px;">${inlIco('camera')}${trS('Use your own image…')}</button>`}
       ${gOpts && gOpts.noCustom ? '' : `<p class="hint" style="margin:0 0 12px;text-align:center;">${infoBtnHtml(trS('Camera or any image file — it becomes this card\'s picture everywhere in the app. Picking a real printing below puts things back.'))}</p>`}
       <input type="file" id="ppCustomFile" accept="image/*" style="display:none;">
       <div id="ppList" class="status"><div class="spinner"></div>Loading printings…</div>
@@ -16489,7 +16545,7 @@ function openSearchSelMenu(anchor){
   // Drop-up: the first choice sits nearest the thumb (last here).
   const items = [
     { label:'\u2715 ' + trS('Deselect all'), fn:()=>searchSelClear() },
-    { label:'\uD83D\uDDC2 ' + trS('Add to collection…'), fn:()=>openAddManyToCollection(cards, ()=>searchSelClear()) },
+    { label:mIco('binder') + trS('Add to collection…'), fn:()=>openAddManyToCollection(cards, ()=>searchSelClear()) },
     pinned
       ? { label:'\uFF0B ' + escapeHtml(pinned.name), fn:()=>{ if(addCardsToDeckQuiet(pinned, cards)) done(); } }
       : { label:'\uFF0B ' + trS('Add to deck…'), fn:()=>openMultiDeckChooser(cards, done) }
@@ -18508,7 +18564,7 @@ function openPriceHistory(card, key){
         : `<p class="hint" style="text-align:center;margin-top:12px;">No card has two recorded days yet — movers appear as histories grow.</p>`;
     }
   }
-  el.innerHTML = `<div class="overlay-inner">${overlayCapHtml('📈 ' + escapeHtml(card.name))}<main style="flex:1;overflow-y:auto;padding:16px 14px;">${body}${movers}</main>${overlayNavHtml()}</div>`;
+  el.innerHTML = `<div class="overlay-inner">${overlayCapHtml(card.name)}<main style="flex:1;overflow-y:auto;padding:16px 14px;">${body}${movers}</main>${overlayNavHtml()}</div>`;
   document.body.appendChild(el);
   wireOverlayNav(el);
   pushOverlay('pricehist', ()=>{ document.getElementById('phOverlay')?.remove(); });
@@ -18745,7 +18801,7 @@ async function budgetCheckBatch(d, items){
   // only the cards above the card budget.
   const drop = overDeck ? live : overCard;
   const n = drop.length;
-  openInAppConfirm((NL ? '💰 Buiten budget\n' : '💰 Over budget\n') + lines.join('\n'), (ok)=>{
+  openInAppConfirm((NL ? 'Buiten budget\n' : 'Over budget\n') + lines.join('\n'), (ok)=>{
     if(!ok) return;
     let gone = 0;
     drop.forEach(it=>{
@@ -18760,7 +18816,7 @@ async function budgetCheckBatch(d, items){
     scheduleSave(d);
     toast(NL ? (gone === 1 ? drop[0].card.name + ' is er weer uit.' : gone + ' kaarten zijn er weer uit.') : (gone === 1 ? drop[0].card.name + ' is out again.' : gone + ' cards are out again.'));
     if(state.screen === 'decklist' && state.activeDeckId === d.id && !document.querySelector('.overlay')) render();
-  }, { ok: NL ? (n === 1 ? 'Verwijderen' : n + ' verwijderen') : (n === 1 ? 'Remove' : 'Remove ' + n), cancel: NL ? 'Houden' : 'Keep' });
+  }, { ok: NL ? (n === 1 ? 'Verwijderen' : n + ' verwijderen') : (n === 1 ? 'Remove' : 'Remove ' + n), cancel: NL ? 'Houden' : 'Keep', icon: 'coins' });
 }
 /* ── Format legality ─ Scryfall's legalities map as a chip grid, the
    Moxfield way: green = legal, red = banned, amber = restricted, grey =
@@ -20640,7 +20696,7 @@ function dataSourcesHtml(){
     <span style="flex:1;">${escapeHtml(trS(r.n))}</span>
     <span style="color:var(--sub-text-2);${r.id==='lsrch' ? 'text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;' : ''}"${r.id==='lsrch' ? ' data-lsinfo="1"' : ''}>${r.note ? r.note : _srcAge(r.t)}</span>
     ${(r.id==='sets'||r.id==='tags') ? `<button class="icon-btn" data-srcrefresh="${r.id}" style="flex:none;width:28px;height:28px;font-size:13px;">↻</button>` : ''}
-  </div>`).join('') + `<button class="ghost-btn" id="bulkDlNow" style="width:100%;margin-top:8px;padding:7px 12px;font-size:13px;">⬇ ${trS('Download card database now')}</button><button class="ghost-btn" id="sfDiagCopy" hidden>📋 ${trS('Copy diagnostics')}</button>`;
+  </div>`).join('') + `<button class="ghost-btn" id="bulkDlNow" style="width:100%;margin-top:8px;padding:7px 12px;font-size:13px;">⬇ ${trS('Download card database now')}</button><button class="ghost-btn" id="sfDiagCopy" hidden>${inlIco('clipboard')}${trS('Copy diagnostics')}</button>`;
 }
 function wireDataSources(){
   // The Local card database row reads IndexedDB (async) — fill it once
@@ -24356,7 +24412,7 @@ function openApkUpdateSheet(){
       ? (nl ? 'De app downloadt de nieuwe versie en Android vraagt je om te bevestigen.' : 'The app downloads the new version and Android asks you to confirm.')
       : (nl ? 'Je browser downloadt de nieuwe versie. Tik op de download en daarna op <b>Installeren</b>. Android vraagt misschien eerst of de browser apps mag installeren.' : 'Your browser downloads the new version. Tap the download, then <b>Install</b>. Android may first ask whether the browser may install apps.')}
       ${nl ? ' Je decks, collectie en instellingen blijven gewoon staan.' : ' Your decks, collection and settings stay as they are.'}</div>
-    <div class="br-title"><b>📱 ${nl ? 'Nieuwe Android-app' : 'New Android app'} — ${APK_LATEST}</b><span>${nl
+    <div class="br-title"><b>${inlIco('phone', 16)}${nl ? 'Nieuwe Android-app' : 'New Android app'} — ${APK_LATEST}</b><span>${nl
       ? `Je hebt versie ${escapeHtml(cur)}. De nieuwe versie is nodig voor de camerascanner, prijsmeldingen en back-up naar je cloud, en werkt zichzelf voortaan met één tik bij.`
       : `You have version ${escapeHtml(cur)}. The new version is needed for the camera scanner, price alerts and backup to your cloud, and from now on updates itself with one tap.`}</span></div>
   </div>`;
@@ -24805,7 +24861,7 @@ function openBackupSheet(){
     <div class="bk-hint">${nl
       ? 'Kies in het deelmenu bijvoorbeeld <b>Google Drive</b>, <b>Nextcloud</b>, <b>Dropbox</b> of je <b>mail</b>. Terugzetten: Extra’s → Terugzetten, en kies het bestand — ook rechtstreeks uit je cloud.'
       : 'In the share menu pick, for example, <b>Google Drive</b>, <b>Nextcloud</b>, <b>Dropbox</b> or your <b>mail</b>. To restore: Extras → Restore, and pick the file — straight from your cloud too.'}</div>
-    <div class="br-title"><b>💾 ${nl ? 'Back-up maken' : 'Make a backup'}</b><span>${nl
+    <div class="br-title"><b>${inlIco('save', 16)}${nl ? 'Back-up maken' : 'Make a backup'}</b><span>${nl
       ? `${bkN(st.nDecks, 'deck', 'decks')}, ${bkN(st.nCards, 'kaart', 'kaarten')} in je collectie, mappen, Gezocht, tags en instellingen — alles in één bestand.`
       : `${bkN(st.nDecks, 'deck', 'decks')}, ${bkN(st.nCards, 'card', 'cards')} in your collection, binders, Wants, tags and settings — all in one file.`}</span><span>${escapeHtml(backupAgeLabel())}</span></div>
   </div>`;
@@ -25757,7 +25813,7 @@ function pwStartupCheck(){
     if(!hits.length) return;
     const nl = appLang() === 'nl';
     const list = hits.slice(0, 3).map(n=>`${n} ${pwEur(pwNow(n))}`).join(', ') + (hits.length > 3 ? (nl ? ` en nog ${hits.length - 3}` : ` and ${hits.length - 3} more`) : '');
-    toast((nl ? (hits.length === 1 ? '💰 Gezochte kaart onder je grens: ' : `💰 ${hits.length} gezochte kaarten onder je grens: `) : (hits.length === 1 ? '💰 A wanted card is under your limit: ' : `💰 ${hits.length} wanted cards are under your limit: `)) + list);
+    toast((nl ? (hits.length === 1 ? 'Gezochte kaart onder je grens: ' : `${hits.length} gezochte kaarten onder je grens: `) : (hits.length === 1 ? 'A wanted card is under your limit: ' : `${hits.length} wanted cards are under your limit: `)) + list);
   }catch(e){}
 }
 
@@ -25840,8 +25896,8 @@ function openPlaytest(d){
       ${overlayCapHtml(T('Speeltest', 'Playtest') + ' — ' + (d.name || ''))}
       <div class="pt-stats">
         <span>${T('Beurt', 'Turn')} <b>${S.turn || '–'}</b></span>
-        <span>📚 <b>${S.lib.length}</b></span>
-        <button type="button" class="pt-zone" data-ptpile="gy">🪦 <b>${S.gy.length}</b></button>
+        <span>${inlIco('library', 15)}<b>${S.lib.length}</b></span>
+        <button type="button" class="pt-zone" data-ptpile="gy">${inlIco('grave', 15)}<b>${S.gy.length}</b></button>
         <button type="button" class="pt-zone" data-ptpile="ex">✖ <b>${S.ex.length}</b></button>
         <span class="pt-life"><button type="button" data-ptlife="-1">−</button>❤ <b>${S.life}</b><button type="button" data-ptlife="1">+</button></span>
       </div>
@@ -26269,7 +26325,7 @@ function openCardScanner(opts){
   const ruled = ruledBinders().length > 0;
   const realBinder = (opts.binder && (state.collection.binders || []).some(b=>b.id === opts.binder)) ? opts.binder : null;
   const binderOpts = (ruled ? [['__auto__', T('✦ Automatisch (map-regels)', '✦ Automatic (binder rules)')]] : [])
-    .concat((state.collection.binders || []).map(b=>[b.id, '🗂 ' + b.name]))
+    .concat((state.collection.binders || []).map(b=>[b.id, b.name]))
     .concat([['', T('Geen map', 'No binder')]]);
   const binderSel = realBinder || (ruled ? '__auto__' : '');
   el.innerHTML = `<div class="overlay-inner scan-wrap">
@@ -26661,14 +26717,14 @@ async function animatedHighRoll(mode){
   }
   setSpinHighlight(null);
   if(mode === 'high'){
-    lifeLog(`🎲 High roll — ${players[winner].name} rolls highest!`);
-    showDiceResult('🎲 High Roll', escapeHtml(players[winner].name), 'rolls highest!', true);
+    lifeLog(`High roll — ${players[winner].name} rolls highest!`);
+    showDiceResult(inlIco('dice', 16) + 'High Roll', escapeHtml(players[winner].name), 'rolls highest!', true);
   } else {
     players.forEach((p,i)=>{ p.medal = (i===winner); });
     state.life.turnIdx = winner;
     state.life.startIdx = winner;
     state.life.turnNum = 1;
-    lifeLog(`🎡 Spin the wheel — ${players[winner].name} goes first!`);
+    lifeLog(`Spin the wheel — ${players[winner].name} goes first!`);
     toast(appLang() === 'nl' ? `${players[winner].name} begint!` : `${players[winner].name} goes first!`);
   }
   state.life.spinning = false;
@@ -26706,14 +26762,14 @@ function showDiceResult(title, big, sub, small){
 }
 function rollDie(sides){
   const r = 1+Math.floor(Math.random()*sides);
-  lifeLog(`🎲 Rolled a d${sides}: ${r}`);
-  showDiceResult(`🎲 D${sides}`, r);
+  lifeLog(`Rolled a d${sides}: ${r}`);
+  showDiceResult(inlIco('dice', 16) + `D${sides}`, r);
 }
 function flipCoin(){
   const heads = Math.random() < 0.5;
   const face = heads ? 'Heads' : 'Tails';
-  lifeLog(`🪙 Coin flip: ${face}`);
-  showDiceResult(`🪙 Coin`, face, '', true);
+  lifeLog(`Coin flip: ${face}`);
+  showDiceResult(inlIco('coin', 16) + `Coin`, face, '', true);
 }
 function restartLife(){
   openInAppConfirm(trS('Reset all life totals, poison, Admiral damage, and medals?'), (ok)=>{
@@ -26812,7 +26868,7 @@ function closeLifeOverlayUI(){ closeTopOverlay(); }
 function lifeMenuPopHtml(){
   return `<div class="menu-pop" id="lifeMenuPop">
     <button class="lm-opt" id="mNewGame">${escapeHtml(trS('↺ Restart'))}</button>
-    <button class="lm-opt" id="mDice">${escapeHtml(trS('🎲 Dice'))}</button>
+    <button class="lm-opt" id="mDice">${escapeHtml(trS('Dice'))}</button>
     <button class="lm-opt" id="mHistory">${escapeHtml(trS('History'))}</button>
     <button class="lm-opt" id="mLifeSettings">${escapeHtml(trS('Settings'))}</button>
   </div>`;
@@ -26822,7 +26878,7 @@ function dicePopHtml(){
   const d = (n)=>`<button class="dice-opt" data-die="${n}">D${n}</button>`;
   return `<div id="diceShield"></div><div id="dicePop" class="life-panel">
     <h4>Dice</h4>
-    <div class="dice-grid">${d(4)}${d(6)}${d(8)}${d(10)}${d(12)}${d(20)}<button class="dice-opt" data-die="coin">🪙 Coin</button><button class="dice-opt" data-die="high">🎲 High Roll</button></div>
+    <div class="dice-grid">${d(4)}${d(6)}${d(8)}${d(10)}${d(12)}${d(20)}<button class="dice-opt" data-die="coin">${inlIco('coin', 17)}${trS('Coin')}</button><button class="dice-opt" data-die="high">${inlIco('dice', 17)}${trS('High Roll')}</button></div>
   </div>`;
 }
 /* The spokes: diagonals rotated ±45° along their direction, verticals level.
