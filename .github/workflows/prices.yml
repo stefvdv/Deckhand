@@ -3,13 +3,15 @@ name: Daily card prices
 # Scryfall refreshes its price data early each morning. We run just after, so
 # the file on the site is never more than a day behind. This job is small:
 # one download, one 300 KB file, no Scryfall searches at all.
+#
+# The file goes to the "data" branch, which has no history (see
+# scripts/data-branch.sh): yesterday's prices are replaced, not kept forever.
 on:
   schedule:
     - cron: '0 10 * * *'      # 10:00 UTC daily
   workflow_dispatch:
 
-# Never two of these at once, and never at the same time as the weekly build
-# touching the same branch.
+# Every data robot shares this group: never two of them on the data branch.
 concurrency:
   group: bulk-data
   cancel-in-progress: false
@@ -22,45 +24,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: 24
+
+      - name: Get the current data files
+        run: bash scripts/data-branch.sh pull
 
       - name: Build the price file
-        run: node scripts/build-bulk.mjs --prices
+        run: OUT_DIR=data node scripts/build-bulk.mjs --prices
 
       - name: What the build produced
-        run: ls -l prices-slim.tsv.gz prices-meta.json && cat prices-meta.json
+        run: ls -l data/prices-slim.tsv.gz data/prices-meta.json && cat data/prices-meta.json
 
       - name: Publish
-        run: |
-          git config user.name  "deckhand-bot"
-          git config user.email "deckhand-bot@users.noreply.github.com"
-
-          # Nothing changed (Scryfall served the same numbers, or the ratchet
-          # kept yesterday's file): stop quietly, no empty commit.
-          git add -A prices-slim.tsv.gz prices-meta.json
-          if git diff --cached --quiet; then
-            echo "No price changes today."
-            exit 0
-          fi
-          git commit -m "Daily prices: $(date -u +%Y-%m-%d)"
-
-          # Stef may have uploaded a release while this ran. Take his commit,
-          # replay ours on top, try again.
-          for i in 1 2 3 4 5; do
-            if git push; then
-              echo "Pushed on attempt $i."
-              exit 0
-            fi
-            echo "Push rejected — someone else committed. Rebasing and retrying…"
-            git fetch origin "${GITHUB_REF_NAME}"
-            git rebase "origin/${GITHUB_REF_NAME}" || { git rebase --abort; exit 1; }
-            sleep 5
-          done
-          echo "Could not push after 5 attempts."
-          exit 1
+        run: bash scripts/data-branch.sh push "Daily prices"

@@ -1,9 +1,10 @@
 # Deckhand — weekly metagame for Standard, Pauper, Modern, Legacy, Vintage.
 #
 # Reads open tournament data (MTGODecklistCache) and the community's open
-# archetype rules (MTGOFormatData), both on GitHub, and writes meta.json next
-# to index.html. The app reads that file from its own site: no scraping of
-# other websites, no cross-site requests from the phone.
+# archetype rules (MTGOFormatData), both on GitHub, and writes meta.json to
+# the "data" branch (no history, see scripts/data-branch.sh). The app reads
+# that file from its own site: no scraping of other websites, no cross-site
+# requests from the phone.
 #
 # Start by hand: Actions -> Weekly metagame -> Run workflow (website only).
 name: Weekly metagame
@@ -16,8 +17,9 @@ on:
 permissions:
   contents: write
 
+# Every data robot shares this group: never two of them on the data branch.
 concurrency:
-  group: meta-data
+  group: bulk-data
   cancel-in-progress: false
 
 jobs:
@@ -25,13 +27,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: 24
+
+      - name: Get the current data files
+        run: bash scripts/data-branch.sh pull
 
       - name: Fetch the last three months of tournaments
         run: |
@@ -56,20 +59,8 @@ jobs:
 
       - name: Build meta.json
         run: |
-          node scripts/build-meta.mjs --cache ../MTGODecklistCache --rules ../MTGOFormatData --out meta.json --days 28 --cards oracle-slim.jsonl.gz
-          ls -l meta.json
+          node scripts/build-meta.mjs --cache ../MTGODecklistCache --rules ../MTGOFormatData --out data/meta.json --days 28 --cards data/oracle-slim.jsonl.gz
+          ls -l data/meta.json
 
-      - name: Commit & push when changed
-        run: |
-          git config user.name "deckhand-bot"
-          git config user.email "deckhand-bot@users.noreply.github.com"
-          git add meta.json
-          if git diff --cached --quiet; then echo "Nothing changed."; exit 0; fi
-          git commit -m "Weekly metagame $(date -u +%Y-%m-%d)"
-          # Someone may upload a release while this runs: rebase and retry.
-          for i in 1 2 3 4 5; do
-            if git push; then exit 0; fi
-            git pull --rebase origin "${GITHUB_REF_NAME}"
-            sleep $((i * 5))
-          done
-          echo "Push failed five times." ; exit 1
+      - name: Publish
+        run: bash scripts/data-branch.sh push "Weekly metagame"
