@@ -1807,6 +1807,21 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 .md-missing span{font-size:12.5px;padding:4px 8px;border:1.5px solid var(--line);border-radius:6px;color:var(--sub-text);}
 .dl-fmt-seat{line-height:1.5;font-size:13px;}
 .acc-up:not([hidden]){display:flex;flex-direction:column-reverse;}
+/* Drop-down folds in Extras: long reading, top to bottom. */
+.acc-down[hidden]{display:none;}
+.acc-down:not([hidden]){display:block;border-top:1.5px solid var(--line);}
+.acc-down [data-fmtruletxt]:not([hidden]), .acc-down [data-banbox]:not([hidden]){display:flex;flex-direction:column;gap:6px;margin:6px 0 4px;}
+.acc-down .ban-sub{font-size:12px;color:var(--sub-text);margin:8px 0 2px;text-transform:uppercase;letter-spacing:0.5px;}
+.acc-down .banlist-grid{flex-wrap:wrap;}
+.acc-down .ub-wrap, .acc-down .ub-switches{flex-direction:column;}
+.acc-down .settings-row{padding-left:2px;padding-right:2px;}
+.acc-down .settings-row + .settings-row{border-top:1px solid color-mix(in srgb, var(--line) 55%, transparent);}
+.sub-fold{display:flex;align-items:center;gap:0;}
+.sub-fold .fold-ico{margin-left:auto;padding-left:10px;font-size:13px;color:var(--sub-text);}
+.inl-ico{display:inline-flex;vertical-align:-2px;margin-right:6px;}
+.inl-ico svg{width:var(--ii,15px);height:var(--ii,15px);}
+.want-bell svg{width:15px;height:15px;flex:none;}
+.want-bell.on svg{margin-right:4px;}
 .acc-up [data-fmtrule] > div, .acc-up [data-banfmt] > div{display:flex;flex-direction:column-reverse;}
 input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .ub-wrap{display:flex;flex-direction:column-reverse;}
@@ -3243,7 +3258,7 @@ document.addEventListener('click', (e)=>{
   const abRow = e.target.closest && e.target.closest('#aboutRow');
   if(abRow){
     const b = document.getElementById('aboutBody');
-    if(b) keepAnchored(abRow, ()=>toggleAccordionBody(b, 'about'), ()=>abRow.isConnected ? abRow : null);
+    if(b){ keepAnchored(abRow, ()=>toggleAccordionBody(b, 'about'), ()=>abRow.isConnected ? abRow : null); if(!b.hidden) dropReveal(abRow); }
     return;
   }
   const dsRow = e.target.closest && e.target.closest('#dataSourcesRow');
@@ -3267,21 +3282,25 @@ document.addEventListener('click', (e)=>{
     return;
   }
   const frRow = e.target.closest && e.target.closest('#fmtRulesRow');
-  // Every fold here opens UPWARD: the row you tapped stays under your
-  // thumb and whatever unfolds grows above it (keepAnchored).
+  // Short folds open UPWARD (the row stays under your thumb, the rest grows
+  // above it). The long reads -- format rules, ban lists, About -- open
+  // DOWNWARD and bring their row up under the title (dropReveal).
   const _up = (el, fn)=>keepAnchored(el, fn, ()=>el.isConnected ? el : null);
   if(frRow){
     const b = document.getElementById('fmtRulesBody');
-    if(b) _up(frRow, ()=>{ if(!b.innerHTML) b.innerHTML = fmtRulesBodyHtml(); toggleAccordionBody(b, 'fmtRules'); });
+    if(b){ _up(frRow, ()=>{ if(!b.innerHTML) b.innerHTML = fmtRulesBodyHtml(); toggleAccordionBody(b, 'fmtRules'); }); if(!b.hidden) dropReveal(frRow); }
     return;
   }
   const ff = e.target.closest && e.target.closest('[data-fmtfull]');
   if(ff){
     const fbox = ff.parentElement.querySelector('[data-fmtfullbox="' + ff.dataset.fmtfull + '"]');
-    if(fbox) _up(ff, ()=>{
-      if(fbox.hidden && !fbox.innerHTML) fbox.innerHTML = fmtFullRulesHtml(ff.dataset.fmtfull);
-      foldToggle(fbox, (open)=>{ ff.innerHTML = foldIcoHtml(open) + ' ' + trS('Complete rules'); }, ff);
-    });
+    if(fbox){
+      _up(ff, ()=>{
+        if(fbox.hidden && !fbox.innerHTML) fbox.innerHTML = fmtFullRulesHtml(ff.dataset.fmtfull);
+        foldToggle(fbox, (open)=>{ ff.innerHTML = foldIcoHtml(open) + ' ' + trS('Complete rules'); }, ff);
+      });
+      if(!fbox.hidden) dropReveal(ff);
+    }
     return;
   }
   const fr = e.target.closest && e.target.closest('[data-fmtrule]');
@@ -3289,14 +3308,21 @@ document.addEventListener('click', (e)=>{
     if(e.target.closest('[data-fmtfullbox]')) return;   // reading the full rules, not a toggle
     const t = fr.querySelector('[data-fmtruletxt]');
     const lab = fr.querySelector('.l1') || fr;
-    if(t) _up(lab, ()=>{ foldToggle(t, null, lab); });
+    if(t){
+      _up(lab, ()=>{ foldToggle(t, (open)=>{ const ic = lab.querySelector('.fold-ico'); if(ic) ic.textContent = open ? '\u25B4' : '\u25BE'; }, lab); });
+      if(!t.hidden) dropReveal(lab);
+    }
     return;
   }
   const blRow = e.target.closest && e.target.closest('#banListsRow');
   if(blRow){
     const b = document.getElementById('banListsBody');
     if(b) _up(blRow, ()=>{
-      if(!b.innerHTML) b.innerHTML = FORMAT_RULES.filter(f=>f[0] !== 'admiral' && f[0] !== 'premodern').map(([id, label])=>`<div class="settings-row" data-banfmt="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-banbox="${id}" hidden></div></div></div>`).join('') + `<div class="settings-row" data-banfmt="admiral" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">Admiral</div><div class="l2" data-banbox="admiral" hidden></div></div></div>`;
+      requestAnimationFrame(()=>{ if(!b.hidden) dropReveal(blRow); });
+      if(!b.innerHTML){
+        const lab = {}; FORMAT_RULES.forEach(r=>{ lab[r[0]] = r[1]; });
+        b.innerHTML = EXTRAS_FMT_ORDER.filter(k=>lab[k] && k !== 'premodern').map(id=>`<div class="settings-row" data-banfmt="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1 sub-fold">${lab[id]}${foldIcoHtml(false)}</div><div class="l2" data-banbox="${id}" hidden></div></div></div>`).join('');
+      }
       toggleAccordionBody(b, 'banLists');
     });
     return;
@@ -3335,10 +3361,13 @@ document.addEventListener('click', (e)=>{
     if(e.target.closest('[data-banwhybox]') || e.target.closest('.ub-wrap')) return;   // reading the notes or setting the sets, not a toggle
     const box = bf.querySelector('[data-banbox]');
     const lab = bf.querySelector('.l1') || bf;
-    if(box) _up(lab, ()=>{
-      foldToggle(box, null, lab);
-      if(!box.hidden && !box.dataset.loaded){ box.dataset.loaded = '1'; fillBanList(bf.dataset.banfmt, box); }
-    });
+    if(box){
+      _up(lab, ()=>{
+        foldToggle(box, (open)=>{ const ic = lab.querySelector('.fold-ico'); if(ic) ic.textContent = open ? '\u25B4' : '\u25BE'; }, lab);
+        if(!box.hidden && !box.dataset.loaded){ box.dataset.loaded = '1'; fillBanList(bf.dataset.banfmt, box); }
+      });
+      if(!box.hidden) dropReveal(lab);
+    }
     return;
   }
   if(e.target && e.target.closest && e.target.closest('#capNoteBtn') && state.screen === 'decklist'){
@@ -5959,15 +5988,19 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 const CHANGELOG_NOTES = {
   en: [
-    'Admiral marked New! in Decks too',
-    'And when you pick a deck format'
+    'Extras: long texts read top-down',
+    'About Deckhand at the very bottom',
+    'Same arrow on every page row',
+    'Line icons instead of emoji'
   ],
   nl: [
-    'Admiral ook Nieuw! bij Decks',
-    'En bij het kiezen van een format'
+    'Extra\'s: lange teksten lezen omlaag',
+    'Over Deckhand helemaal onderaan',
+    'Zelfde pijltje bij elke paginarij',
+    'Lijniconen in plaats van emoji'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6022,11 +6055,11 @@ function tourSteps(){
       t: NL ? '📒 Je collectie' : '📒 Your collection',
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
-           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen. In <strong>Gezocht</strong> zet het 🔔 een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
+           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
-           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. 🔦 turns on the lamp; tap the picture to focus. In <strong>Wants</strong> the 🔔 sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
+           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. 🔦 turns on the lamp; tap the picture to focus. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -6051,11 +6084,11 @@ function tourSteps(){
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
         ? `<p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
-           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, de <strong>officiële regels</strong> (Comprehensive Rules), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Zet je hier de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
+           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (die klappen naar beneden open, om rustig te lezen), de <strong>officiële regels</strong> (Comprehensive Rules), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Zet je hier de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal onderaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
         : `<p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
-           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. Turn on <strong>spoiler alerts</strong> here (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
+           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (they unfold downward, for an easy read), the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. Turn on <strong>spoiler alerts</strong> here (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very bottom, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
   ];
 }
 function startAppTour(){
@@ -6706,6 +6739,11 @@ const ICONS = {
   exp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 17V6M7.5 10L12 5.5 16.5 10"/><path d="M4 20h16"/></svg>`,
   bulk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h11M4 11h7M4 16h5"/><path d="M13.5 18.2l6.2-6.2 2.3 2.3-6.2 6.2-2.9.6z"/></svg>`,
   list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>`,
+  bell: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>`,
+  save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M5 19.5h14"/></svg>`,
+  restore: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5v-11"/><path d="M7.5 9 12 4.5 16.5 9"/><path d="M5 19.5h14"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 19 6v5.5c0 4.2-3 7.6-7 9-4-1.4-7-4.8-7-9V6z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg>`,
+  warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 21 19.5H3z"/><path d="M12 10v4.5"/><path d="M12 17.2v.3"/></svg>`,
   burger: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 6.5h15M4.5 12h15M4.5 17.5h15"/></svg>`,
   search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>`,
   inspire: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>`,
@@ -18797,7 +18835,8 @@ function fmtRulesBodyHtml(){
   // Bottom-up (.acc-up): the digest sits right above the format's name, the
   // Complete rules button above that, the full text above the button.
   const _fnl = appLang() === 'nl';
-  return FORMAT_RULES.map(([id, label, txt])=>`<div class="settings-row" data-fmtrule="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}${id === 'admiral' ? newAdmiralPill() : ''}</div><div class="l2" data-fmtruletxt="${id}" hidden><span>${(_fnl && FORMAT_RULES_NL[id]) || txt}</span><button type="button" class="ghost-btn" data-fmtfull="${id}" style="display:block;width:100%;margin:2px 0;">${foldIcoHtml(false)} ${trS('Complete rules')}</button><div data-fmtfullbox="${id}" hidden></div></div></div></div>`).join('');
+  const byId = {}; FORMAT_RULES.forEach(r=>{ byId[r[0]] = r; });
+  return EXTRAS_FMT_ORDER.filter(k=>byId[k]).map(k=>byId[k]).map(([id, label, txt])=>`<div class="settings-row" data-fmtrule="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1 sub-fold">${label}${id === 'admiral' ? newAdmiralPill() : ''}${foldIcoHtml(false)}</div><div class="l2" data-fmtruletxt="${id}" hidden><span>${(_fnl && FORMAT_RULES_NL[id]) || txt}</span><button type="button" class="ghost-btn" data-fmtfull="${id}" style="display:block;width:100%;margin:2px 0;">${foldIcoHtml(false)} ${trS('Complete rules')}</button><div data-fmtfullbox="${id}" hidden></div></div></div></div>`).join('');
 }
 /* Complete rulebooks for the second unfold in the Extras format accordion.
    Admiral and Commander reuse the app's own full texts; the other formats
@@ -18945,7 +18984,7 @@ function ubSwitchesHtml(){
   if(!cat.length) return '';
   // Bottom-up: the button sits at the foot, the switches unfold above it.
   return `<div class="ub-wrap"><button type="button" class="ghost-btn" data-ubtoggle style="display:block;width:100%;margin:2px 0;">${foldIcoHtml(false)} ${ubToggleLabel()}</button>`
-    + `<div class="ub-switches" hidden><div class="ban-sub">🌌 Universes Beyond — ${nl ? 'Rule Zero: kies wat jullie tafel speelt' : 'Rule Zero: pick what your table plays'}</div>`
+    + `<div class="ub-switches" hidden><div class="ban-sub">Universes Beyond — ${nl ? 'Rule Zero: kies wat jullie tafel speelt' : 'Rule Zero: pick what your table plays'}</div>`
     + cat.map(x=>`<div class="settings-row" style="border:none;padding:7px 0;"><div class="l1" style="font-size:14.5px;font-weight:600;">${escapeHtml(x.name)}${x.preview?' <span style="font-size:11.5px;font-weight:500;color:var(--sub-text-2);font-style:italic;">· spoilers</span>':''}</div><label class="toggle-switch"><input type="checkbox" data-ubset="${escapeHtml(norm(x.name))}" ${state.ubOn[norm(x.name)]?'checked':''}><span class="track"></span><span class="knob"></span></label></div>`).join('')
     + `</div></div>`;
 }
@@ -24430,19 +24469,44 @@ function ndFmtBtnHtml(f){
   // name, where it would read as "Commander is new".
   return `${FMT_LABELS[f] || f} <span style="float:right;display:inline-flex;align-items:center;gap:2px;">${f !== 'admiral' ? newAdmiralPill('newAdmiralDecks') : ''}<span style="opacity:0.6;margin-left:6px;">▾</span></span>`;
 }
+/* An icon inline with text: the app's line icons at text size, in the
+   text's own ink -- never a coloured emoji. */
+function inlIco(name, px){ return `<span class="inl-ico" style="--ii:${px || 15}px;">${ICONS[name] || ''}</span>`; }
+/* Extras: the folds that hold long reading (format rules, ban lists, About)
+   open DOWNWARD and read top to bottom. Once open, the row moves up to sit
+   just under the page title, so the text runs down the screen from there. */
+function dropReveal(row){
+  requestAnimationFrame(()=>{
+    try{
+      const top = document.elementFromPoint(window.innerWidth / 2, 4);
+      const bar = top && top.closest ? top.closest('header, .topbar, .page-cap, .app-top, [class*="cap"]') : null;
+      const br = bar ? bar.getBoundingClientRect().bottom : 0;
+      const off = (br > 20 && br < 200 ? br : 90) + 8;
+      const r = row.getBoundingClientRect();
+      window.scrollBy(0, r.top - off);
+    }catch(err){}
+  });
+}
+/* Admiral first (the app's own format), then the commander family, then
+   the 60-card formats. */
+const EXTRAS_FMT_ORDER = ['admiral', 'commander', 'paupercommander', 'duel', 'predh', 'standard', 'pauper', 'modern', 'legacy', 'vintage', 'premodern'];
 function settingsPageHtml(){
   return `
   <main class="settings-main">
-    <div class="settings-section"><div class="settings-row" id="lifeRow"><div class="l1">Life Counter</div><div class="l2">Multiplayer life tracker</div></div></div>
-    <div class="settings-section"><div class="settings-row" id="draftRow"><div><div class="l1">Draft tools</div><div class="l2">${appLang()==='nl' ? 'Spelers, plaatsen, timers, pairings en stand' : 'Players, seats, timers, pairings and standings'}</div></div><span class="dr-row-chev">›</span></div></div>
-    <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">${appLang()==='nl' ? 'Officiële regels' : 'Comprehensive Rules'}</div><div class="l2">${appLang()==='nl' ? 'Comprehensive Rules — lees, zoek of stel een regelvraag' : 'Read, search, or ask a rules question'}</div></div></div>
     <div class="settings-section">
-      <div id="fmtRulesBody" class="acc-up" hidden style="padding:10px 12px 0;"></div>
+      <div class="settings-row" id="aboutRow" style="cursor:pointer;"><div><div class="l1">${appLang()==='nl' ? 'Over Deckhand' : 'About Deckhand'}</div><div class="l2">${appLang()==='nl' ? 'Waarom Deckhand bestaat' : 'Why Deckhand exists'}</div></div>${foldIcoHtml(false)}</div>
+      <div id="aboutBody" class="acc-down" hidden style="padding:0 14px 4px;">${aboutHtml()}</div>
+    </div>
+    <div class="settings-section"><div class="settings-row" id="lifeRow"><div><div class="l1">Life Counter</div><div class="l2">Multiplayer life tracker</div></div><span class="dr-row-chev">›</span></div></div>
+    <div class="settings-section"><div class="settings-row" id="draftRow"><div><div class="l1">Draft tools</div><div class="l2">${appLang()==='nl' ? 'Spelers, plaatsen, timers, pairings en stand' : 'Players, seats, timers, pairings and standings'}</div></div><span class="dr-row-chev">›</span></div></div>
+    <div class="settings-section"><div class="settings-row" id="crRow"><div><div class="l1">${appLang()==='nl' ? 'Officiële regels' : 'Comprehensive Rules'}</div><div class="l2">${appLang()==='nl' ? 'Comprehensive Rules — lees, zoek of stel een regelvraag' : 'Read, search, or ask a rules question'}</div></div><span class="dr-row-chev">›</span></div></div>
+    <div class="settings-section">
       <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules${newAdmiralPill()}</div><div class="l2">Deckbuilding and play, per format</div></div>${foldIcoHtml(false)}</div>
+      <div id="fmtRulesBody" class="acc-down" hidden style="padding:0 12px 6px;"></div>
     </div>
     <div class="settings-section">
-      <div id="banListsBody" class="acc-up" hidden style="padding:10px 12px 0;"></div>
       <div class="settings-row" id="banListsRow" style="cursor:pointer;"><div><div class="l1">Ban lists</div><div class="l2">Banned cards per format</div></div>${foldIcoHtml(false)}</div>
+      <div id="banListsBody" class="acc-down" hidden style="padding:0 12px 6px;"></div>
     </div>
 
     <div class="settings-section">
@@ -24458,28 +24522,28 @@ function settingsPageHtml(){
     </div>
     ${(()=>{ const _pp = pushPrefs(); const _nl = appLang()==='nl'; if(!nativeNotify()) return `
     <div class="settings-section">
-      <div class="settings-row" id="notifRow"><div><div class="l1">🔔 ${_nl ? 'Meldingen' : 'Notifications'}</div><div class="l2">${_nl ? 'Meldingen komen via de Android-app, tussen 09:00 en 21:00.' : 'Notifications come through the Android app, between 09:00 and 21:00.'}</div></div></div>
+      <div class="settings-row" id="notifRow"><div><div class="l1">${_nl ? 'Meldingen' : 'Notifications'}</div><div class="l2">${_nl ? 'Meldingen komen via de Android-app, tussen 09:00 en 21:00.' : 'Notifications come through the Android app, between 09:00 and 21:00.'}</div></div></div>
     </div>`; return `
     <div class="settings-section">
-      <div class="settings-row"><div class="l1">🔮 ${_nl ? 'Spoilers' : 'Spoilers'}</div><div class="otag-wrap" id="pushSpoilWrap"><button type="button" id="pushSpoilBtn" class="col-filter-input">${escapeHtml(spoilEveryLabel(_pp.spoilerEvery))} <span style="float:right;opacity:0.6;">▾</span></button><div id="pushSpoilPop" class="otag-pop" hidden>${SPOIL_EVERY_CHOICES.map(v=>`<button type="button" data-spoilevery="${v}">${escapeHtml(spoilEveryLabel(v))}</button>`).join('')}</div></div></div>
-      <div class="settings-row" style="border-top:2px solid var(--line);"><div class="l1">🔔 ${_nl ? 'App-updates' : 'App updates'}</div><label class="toggle-switch"><input type="checkbox" id="pushUpdToggle" ${_pp.updates?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
+      <div class="settings-row"><div class="l1">Spoilers</div><div class="otag-wrap" id="pushSpoilWrap"><button type="button" id="pushSpoilBtn" class="col-filter-input">${escapeHtml(spoilEveryLabel(_pp.spoilerEvery))} <span style="float:right;opacity:0.6;">▾</span></button><div id="pushSpoilPop" class="otag-pop" hidden>${SPOIL_EVERY_CHOICES.map(v=>`<button type="button" data-spoilevery="${v}">${escapeHtml(spoilEveryLabel(v))}</button>`).join('')}</div></div></div>
+      <div class="settings-row" style="border-top:2px solid var(--line);"><div class="l1">${_nl ? 'App-updates' : 'App updates'}</div><label class="toggle-switch"><input type="checkbox" id="pushUpdToggle" ${_pp.updates?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
       <div class="settings-body" style="padding-top:10px;"><div style="font-size:12px;color:var(--sub-text);">${_nl ? 'Meldingen komen tussen 09:00 en 21:00.' : 'Notifications arrive between 09:00 and 21:00.'}</div><div style="font-size:12px;color:var(--sub-text);margin-top:4px;" id="pushStatus"></div></div>
     </div>`; })()}
     <div class="settings-section">
       <div class="settings-row" style="flex-wrap:wrap;"><div style="flex:1 1 100%;min-width:0;"><div class="l1">${appLang()==='nl' ? 'Back-up &amp; terugzetten' : 'Backup &amp; Restore'}</div><div class="l2">${appLang()==='nl' ? 'Decks, collectie en instellingen in één bestand — bewaar het in je eigen cloud' : 'Decks, collection and settings in one file — keep it in your own cloud'}</div><div class="l2" id="lastBackupLine" style="margin-top:5px;">${backupAgeLabel()}</div><div class="l2" style="margin-top:5px;">${state._persisted === true
-        ? (appLang()==='nl' ? '🛡 Opslag beschermd' : '🛡 Storage protected')
+        ? inlIco('shield', 14) + (appLang()==='nl' ? 'Opslag beschermd' : 'Storage protected')
         : state._persisted === false
-        ? (appLang()==='nl' ? '⚠ Opslag onbeschermd — installeer de app en maak back-ups' : '⚠ Storage unprotected — install the app and back up')
+        ? inlIco('warn', 14) + (appLang()==='nl' ? 'Opslag onbeschermd — installeer de app en maak back-ups' : 'Storage unprotected — install the app and back up')
         : (appLang()==='nl' ? 'Opslag controleren\u2026' : 'Checking storage\u2026')}</div></div>
         <div style="display:flex;gap:8px;flex:1 1 100%;margin-top:10px;">
-          <button class="ghost-btn" id="backupBtn" style="padding:9px 12px;font-size:13px;">💾 ${appLang()==='nl' ? 'Back-up maken' : 'Make a backup'}</button>
-          <button class="ghost-btn" id="restoreBtn" style="padding:9px 12px;font-size:13px;">⬆ ${appLang()==='nl' ? 'Terugzetten' : 'Restore'}</button>
+          <button class="ghost-btn" id="backupBtn" style="padding:9px 12px;font-size:13px;">${inlIco('save')}${appLang()==='nl' ? 'Back-up maken' : 'Make a backup'}</button>
+          <button class="ghost-btn" id="restoreBtn" style="padding:9px 12px;font-size:13px;">${inlIco('restore')}${appLang()==='nl' ? 'Terugzetten' : 'Restore'}</button>
         </div>
         <input type="file" id="restoreFile" accept="application/json,.json,application/octet-stream,text/plain" style="display:none;">
       </div>
     </div>
     ${apkInstalled() ? `<div class="settings-section" id="apkRow">
-      <div class="settings-row"><div style="flex:1;min-width:0;"><div class="l1">📱 ${appLang()==='nl' ? 'Android-app' : 'Android app'}</div><div class="l2">${appLang()==='nl' ? 'Versie' : 'Version'} ${escapeHtml(apkInstalled())}${apkOutdated() ? (appLang()==='nl' ? ` — nieuwe versie ${APK_LATEST} staat klaar` : ` — version ${APK_LATEST} is ready`) : (appLang()==='nl' ? ' — de nieuwste' : ' — the latest')}</div></div>
+      <div class="settings-row"><div style="flex:1;min-width:0;"><div class="l1">${appLang()==='nl' ? 'Android-app' : 'Android app'}</div><div class="l2">${appLang()==='nl' ? 'Versie' : 'Version'} ${escapeHtml(apkInstalled())}${apkOutdated() ? (appLang()==='nl' ? ` — nieuwe versie ${APK_LATEST} staat klaar` : ` — version ${APK_LATEST} is ready`) : (appLang()==='nl' ? ' — de nieuwste' : ' — the latest')}</div></div>
         ${apkOutdated() ? `<button class="ghost-btn" id="apkUpdBtn" style="padding:9px 12px;font-size:13px;color:var(--brass);border-color:var(--brass);">${appLang()==='nl' ? 'Bijwerken' : 'Update'}</button>` : ''}</div>
     </div>` : ''}
     <div class="settings-section">
@@ -24487,15 +24551,11 @@ function settingsPageHtml(){
       <div class="settings-row" id="dataSourcesRow" style="cursor:pointer;"><div><div class="l1">${trS('Data Sources')}</div><div class="l2">${appLang()==='nl' ? 'Kaarten, prijzen en thema\u2019s \u2014 verversen vanzelf' : 'Cards, prices and themes \u2014 refresh on their own'}</div></div>${foldIcoHtml(false)}</div>
     </div>
     ${(window.matchMedia('(display-mode: standalone)').matches || inAndroidApp()) ? '' : `<div class="settings-section">
-      ${/Android/i.test(navigator.userAgent) ? `<div class="settings-row" id="apkRow"><div style="flex:1;min-width:0;"><div class="l1">\u2693 ${appLang()==='nl' ? 'Download de Android-app' : 'Download the Android app'}</div><div class="l2">${appLang()==='nl' ? 'Buiten de Play Store om, ook zonder Google. Updates komen vanzelf.' : 'No Play Store, Google-free phones too. Updates arrive on their own.'}</div><div class="l2" id="apkNote" style="margin-top:4px;"></div></div><button type="button" class="ghost-btn" id="apkBtn" style="flex:0 0 auto;margin-left:auto;padding:7px 12px;font-size:13px;">\u2b07 APK</button></div>` : ''}
-      <div class="settings-row" id="installAppRow"><div><div class="l1">📲 Install as an app</div><div class="l2">Home-screen icon, full screen, offline</div></div></div>
+      ${/Android/i.test(navigator.userAgent) ? `<div class="settings-row" id="apkRow"><div style="flex:1;min-width:0;"><div class="l1">${appLang()==='nl' ? 'Download de Android-app' : 'Download the Android app'}</div><div class="l2">${appLang()==='nl' ? 'Buiten de Play Store om, ook zonder Google. Updates komen vanzelf.' : 'No Play Store, Google-free phones too. Updates arrive on their own.'}</div><div class="l2" id="apkNote" style="margin-top:4px;"></div></div><button type="button" class="ghost-btn" id="apkBtn" style="flex:0 0 auto;margin-left:auto;padding:7px 12px;font-size:13px;">${inlIco('save')}APK</button></div>` : ''}
+      <div class="settings-row" id="installAppRow"><div><div class="l1">Install as an app</div><div class="l2">Home-screen icon, full screen, offline</div></div></div>
     </div>`}
     <div class="settings-section">
-      <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} ${trS('Share this app with a friend')}</div><div class="l2">${appLang()==='nl' ? 'Stuurt een link, plus de Android-app' : 'Sends a link, plus the Android app'}</div></div></div>
-    </div>
-    <div class="settings-section">
-      <div id="aboutBody" class="acc-up" hidden style="padding:10px 12px 0;">${aboutHtml()}</div>
-      <div class="settings-row" id="aboutRow" style="cursor:pointer;"><div><div class="l1">\u2139\uFE0F ${appLang()==='nl' ? 'Over Deckhand' : 'About Deckhand'}</div><div class="l2">${appLang()==='nl' ? 'Waarom Deckhand bestaat' : 'Why Deckhand exists'}</div></div>${foldIcoHtml(false)}</div>
+      <div class="settings-row" id="shareAppRow"><div><div class="l1">${trS('Share this app with a friend')}</div><div class="l2">${appLang()==='nl' ? 'Stuurt een link, plus de Android-app' : 'Sends a link, plus the Android app'}</div></div></div>
     </div>
     <p class="hint" id="appFootNote" style="text-align:center;margin:14px 8px 4px;line-height:1.5;font-size:11.5px;">Deckhand v${APP_VERSION} · ${appLang()==='nl' ? 'kaarten' : 'cards'} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${appLang()==='nl' ? 'thema\u2019s' : 'themes'} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${appLang()==='nl' ? 'prijzen' : 'prices'} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
   </main>`;
@@ -25634,9 +25694,9 @@ function pwEur(v){ return '€' + (appLang() === 'nl' ? v.toFixed(2).replace('.'
 function pwPillHtml(name){
   const w = pwAll()[name];
   const nm = escapeHtml(name);
-  if(!w) return `<button type="button" class="want-bell" data-wantbell="${nm}" aria-label="${appLang()==='nl' ? 'Prijsalert' : 'Price alert'}">🔔</button>`;
+  if(!w) return `<button type="button" class="want-bell" data-wantbell="${nm}" aria-label="${appLang()==='nl' ? 'Prijsalert' : 'Price alert'}">${ICONS.bell}</button>`;
   if(pwHit(name)) return `<button type="button" class="want-bell on hit" data-wantbell="${nm}">✓ ${pwEur(pwNow(name))}</button>`;
-  return `<button type="button" class="want-bell on" data-wantbell="${nm}">🔔 ${pwEur(w.max)}</button>`;
+  return `<button type="button" class="want-bell on" data-wantbell="${nm}">${ICONS.bell}${pwEur(w.max)}</button>`;
 }
 function openPriceWatchSheet(name){
   const nl = appLang() === 'nl', w = pwAll()[name], now = pwNow(name);
@@ -25656,7 +25716,7 @@ function openPriceWatchSheet(name){
       : 'The Android app notifies you as soon as the cheapest paper printing drops under it (checked once a day). In the browser you see it when you open the app.'}</div>
     ${now != null ? `<div class="br-chips pw-chips">${[10, 20, 30].map(p=>`<button type="button" class="chip br-chip" data-pwpct="${p}">−${p}%</button>`).join('')}</div>` : ''}
     <label class="pw-row"><span>${nl ? 'Waarschuw onder' : 'Alert under'}</span><span class="pw-eur">€</span><input id="pwMax" type="number" inputmode="decimal" min="0.01" step="0.01" value="${start.toFixed(2)}"></label>
-    <div class="br-title"><b>🔔 ${nl ? 'Prijsalert' : 'Price alert'}</b><span>${escapeHtml(name)}${now != null ? ` — ${nl ? 'nu' : 'now'} ${pwEur(now)}` : ''}</span></div>
+    <div class="br-title"><b>${inlIco('bell', 16)}${nl ? 'Prijsalert' : 'Price alert'}</b><span>${escapeHtml(name)}${now != null ? ` — ${nl ? 'nu' : 'now'} ${pwEur(now)}` : ''}</span></div>
   </div>`;
   let after = null;
   brSheetOpen(el, 'pwSheet', ()=>{ if(after){ const f = after; after = null; setTimeout(f, 0); } });
