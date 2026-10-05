@@ -1726,6 +1726,14 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 .settings-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;cursor:pointer;}
 .settings-row .l1{font-size:14.5px;font-weight:600;}
 .settings-row .l2{font-size:12px;color:var(--sub-text);margin-top:2px;}
+/* New! -- flat gold, dark ink (kleurenwet: gold is the seventh colour). */
+.new-pill{display:inline-block;margin-left:8px;padding:1px 7px 2px;border-radius:999px;background:var(--gold);color:#241A04;-webkit-text-fill-color:#241A04;font-family:'Inter',sans-serif;font-size:10.5px;font-weight:800;letter-spacing:0.4px;line-height:1.4;vertical-align:2px;text-transform:none;}
+.folder-tile .folder-new{position:absolute;top:8px;right:8px;margin:0;z-index:2;}
+.about-txt{font-size:13.5px;line-height:1.5;color:var(--ink-text);padding:0 2px 12px;}
+.about-txt p{margin:0 0 6px;}
+.about-txt ul{margin:0 0 12px;padding-left:18px;}
+.about-txt li{margin:5px 0;}
+.about-txt .about-gh{display:block;text-align:center;text-decoration:none;padding:10px 8px;}
 .settings-body{padding:0 14px 14px;border-top:2px solid var(--line);}
 .settings-body.collapsed{display:none;}
 .toggle-switch{position:relative;width:42px;height:24px;flex:0 0 auto;}
@@ -3221,8 +3229,8 @@ function closeAllFolds(){
   }
 }
 function toggleAccordionBody(body, id){
-  const ico = { guild:'#guildCur .fold-ico', dataSrc:'#dataSourcesRow .fold-ico', fmtRules:'#fmtRulesRow .fold-ico', banLists:'#banListsRow .fold-ico' }[id];
-  const row = { guild:'guildRow', dataSrc:'dataSourcesRow', fmtRules:'fmtRulesRow', banLists:'banListsRow' }[id];
+  const ico = { guild:'#guildCur .fold-ico', dataSrc:'#dataSourcesRow .fold-ico', fmtRules:'#fmtRulesRow .fold-ico', banLists:'#banListsRow .fold-ico', about:'#aboutRow .fold-ico' }[id];
+  const row = { guild:'guildRow', dataSrc:'dataSourcesRow', fmtRules:'fmtRulesRow', banLists:'banListsRow', about:'aboutRow' }[id];
   foldToggle(body, (open)=>{ const c = ico && document.querySelector(ico); if(c) c.textContent = open ? '\u25B4' : '\u25BE'; }, row ? document.getElementById(row) : null);
 }
 document.addEventListener('click', (e)=>{
@@ -3230,6 +3238,12 @@ document.addEventListener('click', (e)=>{
   if(gRow){
     const b = document.getElementById('guildBody');
     if(b) keepAnchored(gRow, ()=>toggleAccordionBody(b, 'guild'), ()=>gRow.isConnected ? gRow : null);
+    return;
+  }
+  const abRow = e.target.closest && e.target.closest('#aboutRow');
+  if(abRow){
+    const b = document.getElementById('aboutBody');
+    if(b) keepAnchored(abRow, ()=>toggleAccordionBody(b, 'about'), ()=>abRow.isConnected ? abRow : null);
     return;
   }
   const dsRow = e.target.closest && e.target.closest('#dataSourcesRow');
@@ -5945,17 +5959,15 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.8';
 const CHANGELOG_NOTES = {
   en: [
-    'Spoiler alerts show the cards',
-    'Up to 3 cards side by side, not cut',
-    'One new card: tap opens that card'
+    'Admiral marked New! in Decks too',
+    'And when you pick a deck format'
   ],
   nl: [
-    'Spoilermeldingen tonen de kaarten',
-    'Tot 3 kaarten naast elkaar, heel',
-    'Een nieuwe kaart: tik opent hem'
+    'Admiral ook Nieuw! bij Decks',
+    'En bij het kiezen van een format'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6040,10 +6052,10 @@ function tourSteps(){
       b: NL
         ? `<p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
            <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, de <strong>officiële regels</strong> (Comprehensive Rules), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Zet je hier de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren.</p>`
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Zet je hier de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
         : `<p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
            <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. Turn on <strong>spoiler alerts</strong> here (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away.</p>` }
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. Turn on <strong>spoiler alerts</strong> here (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
   ];
 }
 function startAppTour(){
@@ -7240,6 +7252,9 @@ function render(){
   // network. ensureCmdrBans throttles itself via its 24h freshness stamp.
   if(state.screen === 'decklist'){ try{ ensureCmdrBans(false); }catch(err){} }
   if(state.screen === 'collection'){ try{ repriceCollectionDaily(); }catch(err){} }
+  if(state.screen === 'settings' && state._newPrevScreen !== 'settings'){ try{ newAdmiralTick(); }catch(err){} }
+  if(state.screen === 'decks' && state._newPrevScreen !== 'decks'){ try{ newAdmiralTick('newAdmiralDecks'); }catch(err){} }
+  state._newPrevScreen = state.screen;
   if(!state._ladderBack){
     const L = (state.navLadder = state.navLadder || ['home']);
     const sc = state.screen || 'home';
@@ -8065,6 +8080,7 @@ function fmtFolderTileHtml(fmt){
   if(n) bits.push(n+' deck'+(n===1?'':'s'));
   if(sub) bits.push(sub+' folder'+(sub===1?'':'s'));
   return `<div class="folder-tile" data-folder="${fmtFolderId(fmt)}" data-fmtfolder="${fmt}">
+      ${fmt === 'admiral' ? newAdmiralPill('newAdmiralDecks').replace('class="new-pill"', 'class="new-pill folder-new"') : ''}
       <div class="folder-face" style="font-size:44px;line-height:1;color:var(--brass);">${fmtFolderGlyph(fmt, 40)}</div>
       <div class="folder-name">${fmtLabelOf(fmt)}</div>
       <div class="folder-sub">${bits.join(' · ')||'empty'} · auto</div>
@@ -8400,7 +8416,7 @@ function openFormatPicker(d){
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
     <h4>Format of “${escapeHtml(d.name)}”</h4>
     <div class="deckpick-list" style="max-height:46vh;">
-      ${FMT_ORDER.map(f=>`<button class="dp-row ${f===cur?'active':''}" data-setfmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)}${f===cur?' <span style="color:var(--sub-text);">· current</span>':''}</span></button>`).join('')}
+      ${FMT_ORDER.map(f=>`<button class="dp-row ${f===cur?'active':''}" data-setfmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)}${f === 'admiral' ? newAdmiralPill('newAdmiralDecks') : ''}${f===cur?' <span style="color:var(--sub-text);">· current</span>':''}</span></button>`).join('')}
     </div>
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button class="dp-cancel" id="fmtpCancel" style="flex:1;margin:0;">Cancel</button>
@@ -18781,7 +18797,7 @@ function fmtRulesBodyHtml(){
   // Bottom-up (.acc-up): the digest sits right above the format's name, the
   // Complete rules button above that, the full text above the button.
   const _fnl = appLang() === 'nl';
-  return FORMAT_RULES.map(([id, label, txt])=>`<div class="settings-row" data-fmtrule="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}</div><div class="l2" data-fmtruletxt="${id}" hidden><span>${(_fnl && FORMAT_RULES_NL[id]) || txt}</span><button type="button" class="ghost-btn" data-fmtfull="${id}" style="display:block;width:100%;margin:2px 0;">${foldIcoHtml(false)} ${trS('Complete rules')}</button><div data-fmtfullbox="${id}" hidden></div></div></div></div>`).join('');
+  return FORMAT_RULES.map(([id, label, txt])=>`<div class="settings-row" data-fmtrule="${id}" style="cursor:pointer;flex-wrap:wrap;"><div style="flex:1;"><div class="l1">${label}${id === 'admiral' ? newAdmiralPill() : ''}</div><div class="l2" data-fmtruletxt="${id}" hidden><span>${(_fnl && FORMAT_RULES_NL[id]) || txt}</span><button type="button" class="ghost-btn" data-fmtfull="${id}" style="display:block;width:100%;margin:2px 0;">${foldIcoHtml(false)} ${trS('Complete rules')}</button><div data-fmtfullbox="${id}" hidden></div></div></div></div>`).join('');
 }
 /* Complete rulebooks for the second unfold in the Extras format accordion.
    Admiral and Commander reuse the app's own full texts; the other formats
@@ -24355,6 +24371,65 @@ function inAndroidApp(){
   try{ return typeof window.DeckhandExport !== 'undefined'; }catch(e){ return false; }
 }
 
+/* "New!" beside the Admiral format in Extras -> Format rules, and on that
+   folded row itself, for a person's first five visits to Extras. A visit is
+   counted when the page is entered, not on every redraw; after the fifth
+   the pill is gone for good. */
+/* Since 1.8 the Decks side has its own five: the Admiral format folder on
+   the Decks page, the format menu of New Deck (folded, and the Admiral
+   choice inside it) and Set format. A visit there = entering the Decks
+   page. Extras keeps counting its own visits. */
+const NEW_ADMIRAL_VISITS = 5;
+function _newAdmiralCount(key){ try{ return parseInt(localStorage.getItem(LS_PREFIX + (key || 'newAdmiralSeen')) || '0', 10) || 0; }catch(e){ return NEW_ADMIRAL_VISITS + 1; } }
+function newAdmiralTick(key){
+  const n = _newAdmiralCount(key);
+  if(n > NEW_ADMIRAL_VISITS) return;
+  try{ localStorage.setItem(LS_PREFIX + (key || 'newAdmiralSeen'), String(n + 1)); }catch(e){}
+}
+function newAdmiralPill(key){
+  const n = _newAdmiralCount(key);
+  if(n < 1 || n > NEW_ADMIRAL_VISITS) return '';
+  return `<span class="new-pill">${appLang() === 'nl' ? 'Nieuw!' : 'New!'}</span>`;
+}
+/* About: what Deckhand stands for. */
+function aboutHtml(){
+  const NL = appLang() === 'nl';
+  const items = NL ? [
+    ['Een complete ervaring', 'decks, collectie, zoeken, spoilers, life counter, drafttools en de regels: alles wat je als Magic-speler nodig hebt, in één app.'],
+    ['Open source', 'de code staat openbaar op GitHub (GPL v3). Kijk erin, leer ervan, maak hem beter.'],
+    ['Voor altijd gratis', 'geen betaalde versie, geen abonnement, niets achter een betaalmuur.'],
+    ['Geen reclame', 'niets dat in de weg zit, niets dat je verkocht wordt.'],
+    ['Geen account, niemand die meekijkt', 'je hoeft niets aan te maken, en Deckhand houdt niet bij wat je doet.'],
+    ['Jouw data is van jou', 'je decks en collectie staan op je eigen telefoon. Eén back-upbestand naar je eigen cloud, en je decks exporteer je naar elke andere app.'],
+    ['Werkt offline', 'de kaartendatabase staat op je telefoon: aan de keukentafel, in de winkel, in de trein.'],
+    ['Gemaakt voor één hand', 'elke knop zit onderin, binnen bereik van je duim. De rest van het scherm is voor je kaarten.'],
+    ['Zuinig op de community', 'kaartdata van Scryfall, thema’s van EDHREC: altijd met naam genoemd, en nooit vaker gevraagd dan nodig.'],
+    ['Door Magic-spelers, voor Magic-spelers', 'gebouwd uit wat we aan onze eigen tafels misten. Ideeën zijn welkom.']
+  ] : [
+    ['A complete experience', 'decks, collection, search, spoilers, life counter, draft tools and the rules: everything a Magic player needs, in one app.'],
+    ['Open source', 'the code is public on GitHub (GPL v3). Look inside, learn from it, make it better.'],
+    ['Free forever', 'no paid version, no subscription, nothing behind a paywall.'],
+    ['No ads', 'nothing in your way, nothing being sold to you.'],
+    ['No account, nobody watching', 'there is nothing to sign up for, and Deckhand does not track what you do.'],
+    ['Your data is yours', 'your decks and collection live on your own phone. One backup file to your own cloud, and your decks export to any other app.'],
+    ['Works offline', 'the card database lives on your phone: at the kitchen table, in the store, on the train.'],
+    ['Made for one hand', 'every button sits at the bottom, within reach of your thumb. The rest of the screen is for your cards.'],
+    ['Kind to the community', 'card data from Scryfall, themes from EDHREC: always credited, and never asked more often than needed.'],
+    ['By Magic players, for Magic players', 'built from what we missed at our own tables. Ideas are welcome.']
+  ];
+  return `<div class="about-txt">
+    <p>${NL ? 'Deckhand rust op één gedachte: alles wat een Magic-speler nodig heeft, in één app, zonder addertjes.' : 'Deckhand rests on one idea: everything a Magic player needs, in one app, with no strings attached.'}</p>
+    <ul>${items.map(([k, v])=>`<li><strong>${k}</strong> — ${v}</li>`).join('')}</ul>
+    <a class="ghost-btn about-gh" href="https://github.com/stefvdv/Deckhand" target="_blank" rel="noopener">${NL ? 'De code op GitHub' : 'The code on GitHub'} ↗</a>
+  </div>`;
+}
+/* The folded format menu of New Deck: the chosen format, and -- while it is
+   not Admiral yet -- the New! that points inside. */
+function ndFmtBtnHtml(f){
+  // The New! sits by the arrow, on the menu -- not by the chosen format's
+  // name, where it would read as "Commander is new".
+  return `${FMT_LABELS[f] || f} <span style="float:right;display:inline-flex;align-items:center;gap:2px;">${f !== 'admiral' ? newAdmiralPill('newAdmiralDecks') : ''}<span style="opacity:0.6;margin-left:6px;">▾</span></span>`;
+}
 function settingsPageHtml(){
   return `
   <main class="settings-main">
@@ -24363,7 +24438,7 @@ function settingsPageHtml(){
     <div class="settings-section"><div class="settings-row" id="crRow"><div class="l1">${appLang()==='nl' ? 'Officiële regels' : 'Comprehensive Rules'}</div><div class="l2">${appLang()==='nl' ? 'Comprehensive Rules — lees, zoek of stel een regelvraag' : 'Read, search, or ask a rules question'}</div></div></div>
     <div class="settings-section">
       <div id="fmtRulesBody" class="acc-up" hidden style="padding:10px 12px 0;"></div>
-      <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules</div><div class="l2">Deckbuilding and play, per format</div></div>${foldIcoHtml(false)}</div>
+      <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules${newAdmiralPill()}</div><div class="l2">Deckbuilding and play, per format</div></div>${foldIcoHtml(false)}</div>
     </div>
     <div class="settings-section">
       <div id="banListsBody" class="acc-up" hidden style="padding:10px 12px 0;"></div>
@@ -24417,6 +24492,10 @@ function settingsPageHtml(){
     </div>`}
     <div class="settings-section">
       <div class="settings-row" id="shareAppRow"><div><div class="l1">${modeGlyph()} ${trS('Share this app with a friend')}</div><div class="l2">${appLang()==='nl' ? 'Stuurt een link, plus de Android-app' : 'Sends a link, plus the Android app'}</div></div></div>
+    </div>
+    <div class="settings-section">
+      <div id="aboutBody" class="acc-up" hidden style="padding:10px 12px 0;">${aboutHtml()}</div>
+      <div class="settings-row" id="aboutRow" style="cursor:pointer;"><div><div class="l1">\u2139\uFE0F ${appLang()==='nl' ? 'Over Deckhand' : 'About Deckhand'}</div><div class="l2">${appLang()==='nl' ? 'Waarom Deckhand bestaat' : 'Why Deckhand exists'}</div></div>${foldIcoHtml(false)}</div>
     </div>
     <p class="hint" id="appFootNote" style="text-align:center;margin:14px 8px 4px;line-height:1.5;font-size:11.5px;">Deckhand v${APP_VERSION} · ${appLang()==='nl' ? 'kaarten' : 'cards'} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${appLang()==='nl' ? 'thema\u2019s' : 'themes'} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${appLang()==='nl' ? 'prijzen' : 'prices'} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
   </main>`;
@@ -27293,9 +27372,9 @@ function renderModal(){
       });
     });
   } else if(m.type==='newdeck'){
-    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet nd-sheet"><h3>New Deck</h3><input id="newDeckName" placeholder="Deck name" autofocus><div class="otag-wrap" style="margin-bottom:10px;"><button type="button" id="newDeckFmtBtn" class="col-filter-input" style="width:100%;text-align:left;">Commander <span style="float:right;opacity:0.6;">▾</span></button>
+    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet nd-sheet"><h3>New Deck</h3><input id="newDeckName" placeholder="Deck name" autofocus><div class="otag-wrap" style="margin-bottom:10px;"><button type="button" id="newDeckFmtBtn" class="col-filter-input" style="width:100%;text-align:left;">${ndFmtBtnHtml('commander')}</button>
 <div id="newDeckFmtPop" class="otag-pop" hidden>
-${FMT_ORDER.map(f=>`<button type="button" data-ndfmt="${f}">${FMT_LABELS[f]}</button>`).join('')}
+${FMT_ORDER.map(f=>`<button type="button" data-ndfmt="${f}">${FMT_LABELS[f]}${f === 'admiral' ? newAdmiralPill('newAdmiralDecks') : ''}</button>`).join('')}
 </div></div>
 <div class="otag-wrap" id="ndCmdWrap" style="margin-bottom:10px;"><input id="ndCmd" class="col-filter-input" placeholder="Who is your commander? (optional)" autocomplete="off" style="width:100%;"><div id="ndCmdPop" class="otag-pop" hidden></div></div>
 <div class="otag-wrap" id="ndP2Wrap" hidden style="margin-bottom:10px;"><input id="ndCmd2" class="col-filter-input" placeholder="Partner…" autocomplete="off" style="width:100%;"><div id="ndCmd2Pop" class="otag-pop" hidden></div></div><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm" id="createBtn">Create</button></div></div></div>`;
@@ -27322,7 +27401,7 @@ ${FMT_ORDER.map(f=>`<button type="button" data-ndfmt="${f}">${FMT_LABELS[f]}</bu
       if(_ff && FMT_LABELS[_ff]){
         window._ndFmt = _ff;
         const _fb = document.getElementById('newDeckFmtBtn');
-        if(_fb) _fb.innerHTML = `${FMT_LABELS[_ff]} <span style="float:right;opacity:0.6;">▾</span>`;
+        if(_fb) _fb.innerHTML = ndFmtBtnHtml(_ff);
       }
       const fb = document.getElementById('newDeckFmtBtn');
       const fp = document.getElementById('newDeckFmtPop');
@@ -27331,7 +27410,7 @@ ${FMT_ORDER.map(f=>`<button type="button" data-ndfmt="${f}">${FMT_LABELS[f]}</bu
         fp.querySelectorAll('[data-ndfmt]').forEach(o=>o.addEventListener('click', (ev)=>{
           ev.preventDefault(); ev.stopPropagation();   // the pick must never reach the modal backdrop
           window._ndFmt = o.dataset.ndfmt;
-          fb.innerHTML = `${o.textContent} <span style="float:right;opacity:0.6;">▾</span>`;
+          fb.innerHTML = ndFmtBtnHtml(o.dataset.ndfmt);
           fp.hidden = true;
           window._ndPick = null; window._ndPick2 = null;
           const c1 = document.getElementById('ndCmd'); if(c1) c1.value = '';
