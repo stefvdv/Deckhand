@@ -1316,7 +1316,7 @@ img.art-missing::after{
    field blue, matching the Collection bar. */
 #searchName:focus{border-color:var(--field-line);}
 /* Appoint-a-leader popup: a live search that stays on the deck page */
-#appointOverlay, #colImportOverlay{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,0.55);display:flex;align-items:flex-start;justify-content:center;padding:9vh 16px 16px;}
+#appointOverlay, #colImportOverlay, #cutWhyOverlay{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,0.55);display:flex;align-items:flex-start;justify-content:center;padding:9vh 16px 16px;}
 .appoint-sheet{width:100%;max-width:440px;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:14px;padding:14px;box-shadow:0 20px 50px rgba(0,0,0,0.55);max-height:80vh;display:flex;flex-direction:column;}
 .appoint-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:'Cinzel',serif;font-size:15.5px;color:var(--ink-text);margin-bottom:10px;}
 .appoint-results{overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -1751,6 +1751,19 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 .cut-lands-h{flex:none;font-size:12px;color:var(--sub-text);}
 .cut-reset{background:none;border:none;padding:0;color:var(--ink-text);font-family:inherit;font-size:12px;text-decoration:underline;cursor:pointer;}
 .cut-more{width:100%;}
+.cut-grid{display:flex;flex-wrap:wrap-reverse;gap:10px;}
+.cut-grid > .cut-tile{flex:0 0 calc(50% - 5px);min-width:0;}
+.cut-tile{display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:6px;}
+.cut-tile img{width:100%;display:block;aspect-ratio:63/88;object-fit:cover;border-radius:4.75% / 3.5%;background:var(--field);cursor:pointer;}
+.cut-reason{display:flex;align-items:flex-start;gap:4px;width:100%;background:none;border:none;padding:2px 2px;text-align:left;cursor:pointer;color:var(--sub-text);font:inherit;font-size:12px;line-height:1.35;min-height:calc(3 * 1.35em + 4px);}
+.cut-reason-t{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-decoration:underline dotted;text-underline-offset:3px;}
+.cut-reason-i{flex:none;color:var(--ink-text);font-size:15px;line-height:1;}
+.cut-act{width:100%;font-size:13px;padding:8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cut-act .ib{margin-right:6px;}
+.cut-why-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+.cut-why-list li{display:flex;flex-direction:column;gap:3px;border-left:3px solid var(--line);padding-left:10px;}
+.cut-why-list b{font-size:14px;color:var(--ink-text);}
+.cut-why-list span{font-size:13.5px;color:var(--sub-text);line-height:1.45;}
 .cut-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:6px 8px;}
 .cut-row img{width:44px;border-radius:4px;aspect-ratio:63/88;object-fit:cover;flex:none;cursor:pointer;background:var(--field);}
 .cut-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
@@ -6023,15 +6036,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.15';
+const APP_VERSION = '1.16';
 const CHANGELOG_NOTES = {
   en: [
-    'Cuts button now sits above Theme',
-    'Theme and Kindred stay in view'
+    'Cuts as card tiles with buttons',
+    'Tap a reason: the full explanation',
+    'Cuts spot weak, win-more, hard-to-cast'
   ],
   nl: [
-    'Cuts-knop staat nu boven Theme',
-    'Theme en Kindred blijven in beeld'
+    'Cuts als kaarttegels met knoppen',
+    'Tik op de reden: de hele uitleg',
+    'Cuts zien zwak, win-more, lastig casten'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6068,11 +6083,11 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred; zit je deck boven de limiet, dan klap je boven Theme de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred; zit je deck boven de limiet, dan klap je boven Theme de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands; tik op de reden onder een kaart voor de hele uitleg), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
            <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred; when your deck runs over, open <strong>Cuts</strong> above Theme: what can go most easily, weighing Theme, Kindred and your own land count), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred; when your deck runs over, open <strong>Cuts</strong> above Theme: what can go most easily, weighing Theme, Kindred and your own land count; tap the reason under a card for the full story), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
            <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
@@ -20020,6 +20035,42 @@ function inspCutCtx(d){
   });
   return { stats: (main && main.stats) || null, selStats, kin: sel.kindred ? lab(sel.kindred) : '', theme: sel.theme ? lab(sel.theme) : '', lands: (typeof d.landGoal === 'number') ? d.landGoal : null };
 }
+/* Which reasons lead on a tile: the strongest evidence first. */
+const CUT_WHY_ORDER = { land: 1, rate: 2, absent: 2, offtheme: 2, weakest: 3, offtribe: 4, cast: 5, winmore: 6, narrow: 7, antisyn: 8, role: 9, pricey: 10, mv: 11, rank: 12 };
+/* Win-more: pays off only when the board is already yours. Narrow: hits one
+   kind of target, so some games it is a dead draw. */
+const CUT_WINMORE = /creatures you control get \+\d+\/\+\d+|additional combat phase|deals? double (?:that )?damage|double (?:the )?(?:damage|power)|if you control (?:seven|eight|nine|ten|\d{2}) or more|as long as you have (?:\d{2}|forty) or more life/;
+const CUT_NARROW = /(?:destroy|exile) target (?:tapped |attacking |blocking )?(?:artifact|enchantment|planeswalker|creature with (?:power|toughness|mana value) \d or (?:less|greater)|non(?:black|white|blue|red|green|artifact) creature|(?:black|white|blue|red|green) creature|creature with flying)|counter target (?:noncreature|creature|instant|sorcery|activated|triggered|artifact|enchantment)/;
+/* Coloured pips in a card's cost (hybrid counts half, Phyrexian not at all). */
+function cutManaPips(c){
+  const f = (!c.mana_cost && c.card_faces && c.card_faces[0]) ? c.card_faces[0] : c;
+  const mc = String(f.mana_cost || '').split('//')[0];
+  const p = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+  (mc.match(/\{[0-9WUBRGCSXP\/]+\}/gi) || []).forEach(t=>{
+    const x = t.slice(1, -1).toUpperCase();
+    if(p[x] !== undefined) p[x] += 1;
+    else if(/^[WUBRG]\/[WUBRG]$/.test(x)){ p[x[0]] += 0.5; p[x[2]] += 0.5; }
+    else if(/^2\/[WUBRG]$/.test(x)) p[x[2]] += 0.5;
+  });
+  return p;
+}
+/* How many of the deck's lands make each colour. */
+function cutColorSources(lands){
+  const src = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+  const BASIC = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
+  (lands || []).forEach(c=>{
+    let pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || null;
+    if(!pm || !pm.length){
+      pm = [];
+      Object.keys(BASIC).forEach(b=>{ if(new RegExp('\\b' + b + '\\b').test(c.type_line || '')) pm.push(BASIC[b]); });
+      const o = String(c.oracle_text || '');
+      ['W', 'U', 'B', 'R', 'G'].forEach(x=>{ if(o.includes('{' + x + '}')) pm.push(x); });
+      if(/any colou?r/i.test(o)) pm.push('W', 'U', 'B', 'R', 'G');
+    }
+    new Set(pm).forEach(x=>{ if(src[x] !== undefined) src[x]++; });
+  });
+  return src;
+}
 function deckCutPlan(d, stats, o){
   if(!d || deckIsConstructed(d)) return null;
   o = o || {};
@@ -20034,6 +20085,22 @@ function deckCutPlan(d, stats, o){
   const pg = [o.kin, o.theme].filter(Boolean).join(' + ');
   const tribe = o.kin ? kinSingulars(o.kin) : null;
   const look = (S, c)=>S[String(c.name).toLowerCase()] || S[String(c.name).split(' // ')[0].toLowerCase()];
+  // Deeper evidence, the way a deckbuilder argues a cut:
+  //  - the weakest card of its own role (by play data), or a pricey one;
+  //  - hard to cast on this mana base (heavy pips, few sources);
+  //  - win-more (only good when already ahead) or narrow (a dead draw at times);
+  //  - negative EDHREC synergy with this leader.
+  const qS = selStats || (hasStats ? stats : null);
+  const qOf = (c)=>{ if(qS){ const st = look(qS, c); return st ? st[0] : 0; } return typeof c.edhrec_rank === 'number' ? Math.max(0, 1 - c.edhrec_rank / 15000) : null; };
+  const peers = {}, uniq = new Set();
+  d.cards.forEach(c=>{
+    if(!c || !c.name || uniq.has(c.name)) return;
+    uniq.add(c.name);
+    roles.get(c).forEach(k=>{ if(k !== 'land') (peers[k] = peers[k] || []).push({ c, q: qOf(c), mv: Number(c.cmc) || 0 }); });
+  });
+  Object.keys(peers).forEach(k=>peers[k].sort((a, b)=>(a.q == null ? 0.5 : a.q) - (b.q == null ? 0.5 : b.q)));
+  const landCards = d.cards.filter(c=>roles.get(c).has('land'));
+  const src = cutColorSources(landCards);
   const seen = new Set(), list = [];
   d.cards.forEach(c=>{
     if(!c || !c.name || seen.has(c.name)) return;
@@ -20060,10 +20127,41 @@ function deckCutPlan(d, stats, o){
         keep += Math.max(0, 1 - c.edhrec_rank / 15000) * 0.6;
         if(c.edhrec_rank > 8000) why.push({ k: 'rank' });
       }
+      const inTribe = !!tribe && tribeHit(c, tribe);
       if(tribe){
-        if(tribeHit(c, tribe)) keep += 0.45;
+        if(inTribe) keep += 0.45;
         else if(/\bCreature\b/.test(String(c.type_line || '').split('//')[0])){ cut += 0.12; why.push({ k: 'offtribe', pg: o.kin }); }
       }
+      const mv0 = Number(c.cmc) || 0;
+      // weakest of its role, or the slow one
+      for(const k of r){
+        const a = peers[k];
+        if(!a || a.length < 4) continue;
+        const pos = a.findIndex(x=>x.c === c), known = a.filter(x=>x.q != null).length;
+        // (only when it truly stands out: a tie with the next ones proves nothing)
+        if(pos >= 0 && pos < 2 && known >= a.length / 2 && (a[a.length - 1].q || 0) - (a[pos].q || 0) > 0.1 && (a[2].q || 0) > (a[pos].q || 0)){
+          cut += pos === 0 ? 0.1 : 0.06;
+          why.push({ k: 'weakest', role: k, pos: pos + 1, of: a.length, best: a[a.length - 1].c.name });
+          break;
+        }
+        const others = a.filter(x=>x.c !== c), avg = others.reduce((t, x)=>t + x.mv, 0) / (others.length || 1);
+        if(mv0 >= 4 && mv0 >= avg + 1.5){ cut += 0.06; why.push({ k: 'pricey', role: k, mv: mv0, avg: Math.round(avg * 10) / 10 }); break; }
+      }
+      // hard to cast on this mana base
+      if(landCards.length >= 10){
+        const pp = cutManaPips(c); let worst = null;
+        for(const col in pp){
+          const n = pp[col]; if(n < 2) continue;
+          const frac = src[col] / landCards.length;
+          if(((n >= 3 && frac < 0.6) || frac < 0.4 || (n >= 3 && mv0 <= 3 && frac < 0.75)) && (!worst || n > worst.p)) worst = { col, p: n, src: src[col] };
+        }
+        if(worst){ cut += 0.08; why.push({ k: 'cast', col: worst.col, p: worst.p, src: worst.src, lands: landCards.length }); }
+      }
+      const ot = String(((typeof frontFace === 'function' ? frontFace(c) : c) || c).oracle_text || c.oracle_text || '').toLowerCase();
+      if(!inTribe && CUT_WINMORE.test(ot)){ cut += 0.08; why.push({ k: 'winmore' }); }
+      else if(CUT_NARROW.test(ot)){ cut += 0.05; why.push({ k: 'narrow' }); }
+      const stAny = qS ? look(qS, c) : null;
+      if(stAny && stAny[1] < -0.05){ cut += 0.05; why.push({ k: 'antisyn', s: stAny[1] }); }
       for(const k of ['ramp', 'draw', 'removal', 'wipe']){
         if(!r.has(k) || !tpl[k]) continue;
         if(counts[k] > tpl[k]){ cut += Math.min(0.25, (counts[k] - tpl[k]) * 0.05); why.push({ k: 'role', role: k, n: counts[k], t: tpl[k] }); }
@@ -20073,6 +20171,7 @@ function deckCutPlan(d, stats, o){
       if(mv >= 6){ cut += mv >= 7 ? 0.15 : 0.1; why.push({ k: 'mv', mv }); }
       score = 1 - keep + cut;
     }
+    why.sort((a, b)=>(CUT_WHY_ORDER[a.k] || 50) - (CUT_WHY_ORDER[b.k] || 50));
     list.push({ card: c, score, why });
   });
   list.sort((a, b)=>b.score - a.score);
@@ -20092,11 +20191,65 @@ function cutWhyText(w, d){
     case 'rank': return NL ? 'weinig gespeeld in Commander' : 'rarely played in Commander';
     case 'role': return NL ? `al ${w.n}× ${role[w.role]} (richtlijn ~${w.t})` : `${w.n} ${role[w.role]} already (guide ~${w.t})`;
     case 'mv': return NL ? `${w.mv} mana — zwaar bovenin de curve` : `${w.mv} mana — top-heavy curve`;
+    case 'weakest': return w.pos === 1 ? (NL ? `zwakste ${role[w.role]} van je ${w.of}` : `weakest ${role[w.role]} of your ${w.of}`) : (NL ? `op één na zwakste ${role[w.role]}` : `second-weakest ${role[w.role]}`);
+    case 'pricey': return NL ? `duur voor ${role[w.role]} (${w.mv} vs ~${w.avg})` : `pricey for ${role[w.role]} (${w.mv} vs ~${w.avg})`;
+    case 'cast': return NL ? `${w.p}× {${w.col}} — lastig te casten` : `${w.p}× {${w.col}} — hard to cast`;
+    case 'winmore': return 'win-more';
+    case 'narrow': return NL ? 'situationeel' : 'situational';
+    case 'antisyn': return NL ? `lage synergie met ${lead}` : `low synergy with ${lead}`;
     case 'land': return w.mine
       ? (NL ? `${w.n} lands (jouw doel ${w.t})` : `${w.n} lands (your goal ${w.t})`)
       : (NL ? `${w.n} lands (richtlijn ~${w.t})` : `${w.n} lands (guide ~${w.t})`);
   }
   return '';
+}
+/* The long story behind one reason, for the explanation popup. */
+function cutWhyLong(w, d){
+  const NL = appLang() === 'nl';
+  const lead = d.admiral ? String(d.admiral.name).split(',')[0] : (NL ? 'je leider' : 'your leader');
+  const role = { ramp: 'ramp', draw: 'card draw', removal: 'removal', wipe: 'board wipes' };
+  const col = (NL ? { W: 'wit', U: 'blauw', B: 'zwart', R: 'rood', G: 'groen' } : { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green' })[w.col] || w.col;
+  const pct = (p)=>Math.round(p * 100) + '%';
+  switch(w.k){
+    case 'rate': return w.pg
+      ? (NL ? `Decks met ${lead} en ${w.pg} spelen hem maar in ${pct(w.p)} van de gevallen. Spelers met dit plan kiezen meestal iets anders voor deze plek.` : `${lead} decks built around ${w.pg} run it only ${pct(w.p)} of the time. Players on this plan usually pick something else for the slot.`)
+      : (NL ? `Op EDHREC speelt maar ${pct(w.p)} van de ${lead}-decks deze kaart. Wie deze commander bouwt, vindt meestal iets beters voor dezelfde plek.` : `On EDHREC only ${pct(w.p)} of ${lead} decks run this card. People building this commander usually find something better for the slot.`);
+    case 'absent': return NL ? `Hij staat niet op de EDHREC-pagina van ${lead}: bijna niemand speelt hem met deze commander. Dat is geen bewijs dat hij slecht is, maar wel dat hij niet in het bekende plan past.` : `It isn't on ${lead}'s EDHREC page: hardly anyone plays it with this commander. Not proof it's bad, but it sits outside the known plan.`;
+    case 'offtheme': return NL ? `Op de ${w.pg}-pagina van ${lead} komt hij (bijna) niet voor. Voor het thema dat je koos levert hij weinig op.` : `It (almost) never shows up on ${lead}'s ${w.pg} page. For the theme you picked it adds little.`;
+    case 'offtribe': return NL ? `Een creature die geen ${w.pg} is en de stam ook niet helpt. In een kindred-deck telt elke creature-plek voor de lords en tribal payoffs; deze telt niet mee.` : `A creature that isn't ${w.pg} and doesn't help the tribe. In a kindred deck every creature slot feeds the lords and tribal payoffs; this one doesn't count.`;
+    case 'weakest': return NL ? `Van je ${w.of} ${role[w.role]}-kaarten scoort deze ${w.pos === 1 ? 'het laagst' : 'op één na het laagst'} in hoe vaak hij gespeeld wordt. ${w.best} doet hetzelfde werk en wordt veel vaker gekozen. De zwakste in een rol is de makkelijkste cut: de rol blijft gevuld.` : `Of your ${w.of} ${role[w.role]} cards this one scores ${w.pos === 1 ? 'lowest' : 'second-lowest'} on how often it is played. ${w.best} does the same job and is picked far more often. The weakest in a role is the easiest cut: the role stays filled.`;
+    case 'pricey': return NL ? `Hij kost ${w.mv} mana, terwijl je andere ${role[w.role]}-kaarten gemiddeld ${w.avg} kosten. Hetzelfde werk, maar later in het spel.` : `It costs ${w.mv} mana while your other ${role[w.role]} cards average ${w.avg}. The same job, but later in the game.`;
+    case 'cast': return NL ? `Hij vraagt ${w.p}× ${col} mana ({${w.col}}), en maar ${w.src} van je ${w.lands} lands maken ${col}. Grote kans dat je hem op het moment dat je hem wilt spelen niet kunt casten.` : `It asks for ${w.p}× ${col} mana ({${w.col}}), and only ${w.src} of your ${w.lands} lands make ${col}. Good odds you can't cast it when you want to.`;
+    case 'winmore': return NL ? `Win-more: hij doet vooral iets als je al voor staat (een groot bord oppompen, extra combat, dubbele schade). Sta je achter, dan helpt hij je nauwelijks terug in het spel.` : `Win-more: it mostly matters when you're already ahead (pumping a big board, extra combat, double damage). When you're behind it barely helps you back.`;
+    case 'narrow': return NL ? `Situationeel: hij raakt maar één soort doel. Heeft de tafel dat niet, dan is het een dode kaart in je hand.` : `Situational: it only hits one kind of target. When the table has none, it's a dead card in hand.`;
+    case 'antisyn': return NL ? `EDHREC geeft hem een negatieve synergie met ${lead} (${Math.round(w.s * 100)}%): hij wordt vaker in andere decks gespeeld dan in dit soort.` : `EDHREC gives it negative synergy with ${lead} (${Math.round(w.s * 100)}%): it shows up more in other decks than in this kind.`;
+    case 'role': return NL ? `Je hebt al ${w.n} ${role[w.role]}-kaarten; een gangbare richtlijn is ~${w.t}. Eén minder kost je weinig.` : `You already run ${w.n} ${role[w.role]} cards; a common guide is ~${w.t}. One fewer costs you little.`;
+    case 'mv': return NL ? `${w.mv} mana is zwaar. Te veel dure kaarten maken je eerste beurten traag; met te veel kaarten in het deck is de top van de curve een logische plek om te snijden.` : `${w.mv} mana is heavy. Too many expensive cards slow your early turns; with too many cards in the deck, the top of the curve is a natural place to trim.`;
+    case 'land': return w.mine
+      ? (NL ? `Je deck heeft ${w.n} lands en jouw doel is ${w.t}. Een basic land eruit is de goedkoopste cut die er is.` : `Your deck has ${w.n} lands and your goal is ${w.t}. A basic land is the cheapest cut there is.`)
+      : (NL ? `Je deck heeft ${w.n} lands; de gangbare richtlijn is ~${w.t}. Een basic land eruit is de goedkoopste cut die er is.` : `Your deck has ${w.n} lands; the common guide is ~${w.t}. A basic land is the cheapest cut there is.`);
+    case 'rank': return NL ? 'Over heel Commander gezien wordt hij weinig gespeeld (EDHREC-rang).' : 'Across all of Commander it is rarely played (EDHREC rank).';
+  }
+  return '';
+}
+/* Tap the short reason under a tile: the full argument in a popup. */
+function openCutWhy(d, x, i, total){
+  const NL = appLang() === 'nl';
+  document.getElementById('cutWhyOverlay')?.remove();
+  const el = document.createElement('div'); el.id = 'cutWhyOverlay';
+  const items = x.why.map(w=>`<li><b>${escapeHtml(cutWhyText(w, d))}</b><span>${escapeHtml(cutWhyLong(w, d))}</span></li>`).join('')
+    || `<li><span>${NL ? 'Geen opvallende zwakte — hij is gewoon de minst onmisbare van wat er staat.' : 'No single weakness — it is simply the least essential of what is there.'}</span></li>`;
+  el.innerHTML = `
+    <div class="appoint-sheet" style="max-width:460px;">
+      <div class="appoint-head"><span>${escapeHtml(x.card.name)}</span><button class="icon-btn" id="cwClose">${ICONS.close || '✕'}</button></div>
+      <p class="hint" style="margin:0 0 8px;">${NL ? `Cut-kandidaat ${i + 1} van ${total}. Waarom:` : `Cut candidate ${i + 1} of ${total}. Why:`}</p>
+      <ul class="cut-why-list">${items}</ul>
+      <p class="hint" style="margin:10px 0 0;">${NL ? 'Een richtlijn, geen regel — jij kent je deck het best.' : 'A guide, not a rule — you know your deck best.'}</p>
+    </div>`;
+  document.body.appendChild(el);
+  pushOverlay('cutWhy', ()=>{ document.getElementById('cutWhyOverlay')?.remove(); });
+  el.addEventListener('click', e=>{ if(!e.target.closest('.appoint-sheet')) closeTopOverlay(); });
+  document.getElementById('cwClose').addEventListener('click', ()=>closeTopOverlay());
 }
 /* The Cuts row: the top of the Inspiration menus, right above Theme, in
    the same button as Theme and Kindred -- so those two stay in view to pick
@@ -20117,11 +20270,14 @@ function cutsBlockHtml(d, plan){
       <b class="cut-lands-n">${plan.tpl.land}</b>
       <button type="button" class="ghost-btn cut-step" data-cutland="1" aria-label="+">+</button>
       <span class="cut-lands-h">${NL ? 'nu' : 'now'} ${plan.counts.land}${typeof d.landGoal === 'number' ? ` · <button type="button" class="cut-reset" data-cutland="0">${NL ? 'standaard' : 'default'}</button>` : ''}</span></div>` : '';
-  const list = rows.length ? `<div class="cut-list">${rows.map((x, i)=>`<div class="cut-row" data-cut="${i}">
-      <img src="${cardImageMed(x.card) || ''}" alt="" loading="lazy" data-cutimg="${i}">
-      <div class="cut-txt"><b>${escapeHtml(x.card.name)}</b><span>${x.why.slice(0, 2).map(w=>escapeHtml(cutWhyText(w, d))).filter(Boolean).join(' · ') || (NL ? 'minst onmisbaar in dit deck' : 'least essential in this deck')}</span></div>
-      <button type="button" class="ghost-btn cut-btn" data-cutmaybe="${i}" title="${NL ? 'Naar maybeboard' : 'To maybeboard'}">${ICONS.maybe}</button>
-      <button type="button" class="ghost-btn cut-btn danger-ghost" data-cutdel="${i}" title="${NL ? 'Eruit' : 'Remove'}">${ICONS.trash}</button>
+  // Tiles, two across, bottom-up (wrap-reverse): the strongest cut at the
+  // foot, on the left. Under each card: the short reason (tap = the full
+  // argument), then Remove one over To maybeboard -- the card sheet's buttons.
+  const list = rows.length ? `<div class="cut-grid">${rows.map((x, i)=>`<div class="cut-tile" data-cut="${i}" data-name="${escapeHtml(x.card.name)}">
+      <img src="${cardImageMed(x.card) || ''}" alt="${escapeHtml(x.card.name)}" loading="lazy" data-cutimg="${i}">
+      <button type="button" class="cut-reason" data-cutwhy="${i}"><span class="cut-reason-t">${x.why.slice(0, 2).map(w=>escapeHtml(cutWhyText(w, d))).filter(Boolean).join(' · ') || (NL ? 'minst onmisbaar in dit deck' : 'least essential in this deck')}</span><span class="cut-reason-i" aria-hidden="true">›</span></button>
+      <button type="button" class="ghost-btn cut-act" data-cutdel="${i}" style="color:var(--danger);border-color:var(--danger);"><span class="ib">${ICONS.removeOne}</span>${trS('Remove one')}</button>
+      <button type="button" class="ghost-btn cut-act" data-cutmaybe="${i}"><span class="ib">${ICONS.maybe}</span>${trS('To maybeboard')}</button>
     </div>`).join('')}</div>` : '';
   const more = plan.list.length > n ? `<button type="button" class="ghost-btn cut-more">${trS('More')}</button>` : '';
   return `<div class="cut-block">${btn}<div class="cut-body"><div class="cut-set">${lands}${basis}</div>${list}${more}</div></div>`;
@@ -20164,6 +20320,7 @@ function wireCutsBlock(d, plan){
   slot.querySelectorAll('[data-cutdel]').forEach(b=>b.addEventListener('click', ()=>act(+b.dataset.cutdel, false)));
   slot.querySelectorAll('[data-cutmaybe]').forEach(b=>b.addEventListener('click', ()=>act(+b.dataset.cutmaybe, true)));
   slot.querySelectorAll('[data-cutimg]').forEach(im=>im.addEventListener('click', ()=>{ const x = plan.list[+im.dataset.cutimg]; if(x) openCardInfo(x.card); }));
+  slot.querySelectorAll('[data-cutwhy]').forEach(b=>b.addEventListener('click', ()=>{ const i = +b.dataset.cutwhy, x = plan.list[i]; if(x) openCutWhy(d, x, i, plan.list.length); }));
   slot.querySelector('.cut-more')?.addEventListener('click', ()=>{ state._cutsMore = (state._cutsMore || 0) + 8; paintCuts(d); });
   slot.querySelectorAll('[data-cutland]').forEach(b=>b.addEventListener('click', ()=>{
     const step = +b.dataset.cutland;
