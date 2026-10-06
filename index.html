@@ -1243,7 +1243,14 @@ html{--accent-ink:var(--head-ink);}   /* the page's own light accent, computed a
 .topbar .sheet-title{max-width:calc(100% - 200px);font-size:clamp(14px, 4.6vw, 21px);line-height:1.14;}
 .dl-desc-text{font-size:13px;line-height:1.4;color:var(--ink-text);overflow-wrap:anywhere;}
 .dk-type svg{width:14px;height:14px;opacity:0.8;flex:none;}
-.dk-mid:has(.dk-type){gap:4px;}
+/* The type counts are a strip of their own between ⋯ and the chevron: it
+   takes the room that is left, spreads the counts across it, and when they
+   still do not fit (8 types, a narrow phone, a bigger system font) it
+   scrolls sideways -- the chevron never leaves the screen again. */
+.dk-mid:has(.dk-type){display:flex;flex:1 1 auto;min-width:0;align-items:center;justify-content:space-between;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.dk-mid:has(.dk-type)::-webkit-scrollbar{display:none;}
+.dk-mid > .dk-type{flex:0 0 auto;padding:2px 1px;}
+.dk-mid > .dk-type svg{width:1.08em;height:1.08em;}
 .deck-dock .menu-pop{position:absolute;bottom:56px;left:8px;right:auto;top:auto;}
 main.has-dock{padding-bottom:84px;}
 .admiral-tile{max-width:118px;}
@@ -6036,13 +6043,13 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.17';
+const APP_VERSION = '1.18';
 const CHANGELOG_NOTES = {
   en: [
-    'Back closes the open Cuts first'
+    'Deck bar: type counts fit again'
   ],
   nl: [
-    'Terug klapt Cuts eerst dicht'
+    'Deckbalk: kaarttypes passen weer'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -14623,8 +14630,22 @@ function refreshCapDeckCount(d){
     el.textContent = deckCountLabel(dd) + (issues.length ? ' \u26A0' : '');
   }catch(err){}
 }
+/* Type counts wider than their strip (8 types, a big system font): the
+   counts step down a pixel at a time until they fit, never below 9px;
+   anything still left over scrolls sideways. */
+function fitDockTypes(){
+  const strip = document.querySelector('#deckMeterRow .dk-mid');
+  const items = strip ? Array.from(strip.querySelectorAll('.dk-type')) : [];
+  if(!items.length) return;
+  let fs = parseFloat(getComputedStyle(items[0]).fontSize) || 13, n = 0;
+  while(strip.scrollWidth > strip.clientWidth + 1 && fs > 9 && n++ < 10){
+    fs -= 1;
+    items.forEach(b=>{ b.style.fontSize = fs + 'px'; });
+  }
+}
 function wireMeterRow(d){
   try{ document.body.classList.toggle('dl-searching', !!state.dlSearchOpen && state.screen === 'decklist'); }catch(e){}
+  try{ fitDockTypes(); requestAnimationFrame(fitDockTypes); }catch(e){}
   document.getElementById('menuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation();
     if(state.menuOpen){ popDeckMenu(); }
     else { state.menuOpen = true; pushOverlay('deckMenu', ()=>{ state.menuOpen = false; try{ const dd = getDeck(state.activeDeckId); if(dd) updateDeckMeter(dd); }catch(err){} }); }
