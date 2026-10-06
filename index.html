@@ -1736,6 +1736,21 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 .about-txt .about-h{font-family:'Cinzel',serif;font-size:13.5px;color:var(--head-ink);margin:14px 0 4px;text-transform:uppercase;letter-spacing:0.5px;}
 #pasteDeckFileBtn.fb-lead{border-color:var(--brass);color:var(--brass);border-width:2px;}
 .cut-list{display:flex;flex-direction:column-reverse;gap:6px;margin:6px 0;}
+/* Cuts: a row of the Inspiration menus (under Kindred). Bottom-up: the
+   button at the foot, its body opens UPWARD -- settings, then the list. */
+.bs-row.cut-slot{display:block;}
+.cut-block{display:flex;flex-direction:column-reverse;gap:6px;width:100%;}
+.cut-body{display:flex;flex-direction:column-reverse;gap:6px;}
+.cut-body > .cut-list{margin:0;}
+.cut-set{display:flex;flex-direction:column-reverse;gap:6px;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;}
+.cut-basis{font-size:12.5px;color:var(--sub-text);line-height:1.35;}
+.cut-lands{display:flex;align-items:center;gap:8px;}
+.cut-lands-l{flex:1;font-size:14px;color:var(--ink-text);}
+.cut-lands-n{min-width:26px;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--ink-text);font-size:16px;font-weight:700;}
+.cut-step{flex:none;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.cut-lands-h{flex:none;font-size:12px;color:var(--sub-text);}
+.cut-reset{background:none;border:none;padding:0;color:var(--ink-text);font-family:inherit;font-size:12px;text-decoration:underline;cursor:pointer;}
+.cut-more{width:100%;}
 .cut-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:6px 8px;}
 .cut-row img{width:44px;border-radius:4px;aspect-ratio:63/88;object-fit:cover;flex:none;cursor:pointer;background:var(--field);}
 .cut-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
@@ -6008,19 +6023,19 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.12';
+const APP_VERSION = '1.14';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck too big? Inspiration shows cuts',
-    'Paste a list into your collection',
-    'Import no longer jumps to files',
-    'About: where your data lives'
+    'Cuts: a fold-out under Kindred',
+    'Cuts weigh your Theme and Kindred',
+    'Too many cards? Set Theme + Kindred',
+    'Set your land count in Cuts'
   ],
   nl: [
-    'Deck te groot? Inspiration toont cuts',
-    'Plak een lijst in je collectie',
-    'Importeren opent niet meteen bestand',
-    'Over: waar je gegevens staan'
+    'Cuts: uitklapknop onder Kindred',
+    'Cuts houden rekening met Theme/Kindred',
+    'Te veel kaarten? Theme + Kindred samen',
+    'Stel je aantal lands in bij Cuts'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6057,11 +6072,11 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred; zit je deck boven de limiet, dan staan onderaan de <strong>Cuts</strong>: wat er het makkelijkst uit kan), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred; zit je deck boven de limiet, dan klap je onder Kindred de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
            <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred; when your deck runs over, the <strong>Cuts</strong> at its foot show what can go most easily), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred; when your deck runs over, open <strong>Cuts</strong> under Kindred: what can go most easily, weighing Theme, Kindred and your own land count), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
            <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
@@ -6075,11 +6090,11 @@ function tourSteps(){
       t: inlIco('binder', 14) + (NL ? 'Je collectie' : 'Your collection'),
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
-           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. In het ＋-menu plak je ook een hele lijst met <strong>Plakken in collectie</strong>. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
+           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
-           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. The ＋ menu also takes a whole list with <strong>Paste in collection</strong>. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. 🔦 turns on the lamp; tap the picture to focus. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
+           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. 🔦 turns on the lamp; tap the picture to focus. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -9799,8 +9814,7 @@ function wireCollectionPage(){
     openFabMenu([
       ['bfAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
       ['bfScan', mIco('camera') + (appLang() === 'nl' ? 'Kaarten scannen' : 'Scan cards'), ()=>openCardScanner({ binder: bid })],
-      ['bfImport', '⬆ ' + trS('Import'), ()=>openCollectionImport(bid)],
-      ['bfPaste', mIco('clipboard') + trS('Paste a list'), ()=>openBinderPasteSheet(bid)]
+      ['bfImport', '⬆ ' + trS('Import'), ()=>openCollectionImport(bid)]
     ].concat((state.collection.binders || []).some(b=>b.id === bid)
       ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Map-instellingen…' : 'Binder settings…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
       : []));
@@ -9821,7 +9835,6 @@ function wireCollectionPage(){
         });
       }],
       ['fabImport', '⬆ ' + trS('Import'), ()=>openCollectionImport()],
-      ['fabPaste', mIco('clipboard') + (appLang() === 'nl' ? 'Plakken in collectie' : 'Paste in collection'), ()=>openBinderPasteSheet(null, { choose: true })],
     ].concat(ruledBinders().length ? [['fabResort', '↻ ' + (appLang() === 'nl' ? 'Mappen opnieuw sorteren' : 'Re-sort binders'), ()=>binderResort()]] : []).concat([
       ['fabView', folderViewToggleLabel('col'), ()=>{ setFolderView('col', folderView('col') === 'list' ? 'tiles' : 'list'); render(); scrollToPageFoot(); }]
     ]));
@@ -11326,16 +11339,18 @@ function openCollectionImport(presetBinder){
   el.innerHTML = `
     <div class="appoint-sheet" style="max-width:460px;">
       <div class="appoint-head"><span>${appLang()==='nl' ? 'Importeren / exporteren' : 'Import / export'}</span><button class="icon-btn" id="ciClose">${ICONS.close||'✕'}</button></div>
-      <p class="hint" style="margin:0 0 10px;">${appLang() === 'nl'
-        ? 'Kies een CSV-bestand uit Moxfield, Archidekt, ManaBox of Delver Lens. Kies eerst waar de kaarten heen gaan.'
-        : 'Pick a CSV file from Moxfield, Archidekt, ManaBox or Delver Lens. First choose where the cards go.'}</p>
-      <input type="file" id="ciFile" accept=".csv,text/csv" style="display:none;">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+      <p class="hint" style="margin:0 0 8px;">${appLang() === 'nl'
+        ? 'Plak een lijst (één kaart per regel, bv. 1 Sol Ring) of CSV-tekst, of laad een bestand uit Moxfield, Archidekt, ManaBox of Delver Lens.'
+        : 'Paste a list (one card per line, e.g. 1 Sol Ring) or CSV text, or load a file from Moxfield, Archidekt, ManaBox or Delver Lens.'}</p>
+      <input type="file" id="ciFile" accept=".csv,.txt,text/csv,text/plain" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
         <label class="hint" style="flex:none;">${appLang()==='nl' ? 'Naar:' : 'Into:'}</label>
         <select id="ciBinder" class="deck-select" style="flex:1;"></select>
       </div>
-      <button class="ghost-btn" id="ciPick" style="width:100%;margin-bottom:8px;">${appLang()==='nl' ? 'Kies bestand' : 'Choose file'}</button>
-      <div id="ciReport" class="hint" style="margin:4px 0;min-height:18px;"></div>
+      <textarea id="ciText" class="bulk-textarea" style="min-height:160px;" placeholder="1 Sol Ring&#10;2 Arcane Signet&#10;…"></textarea>
+      <button class="ghost-btn" id="ciPick" style="width:100%;margin-top:8px;">${inlIco('file')}${appLang()==='nl' ? 'Laad een bestand (.csv / .txt)' : 'Load a file (.csv / .txt)'}</button>
+      <button class="primary-btn" id="ciGo" style="margin-top:10px;">${appLang()==='nl' ? 'Importeren' : 'Import'}</button>
+      <div id="ciReport" class="hint" style="margin:8px 0 4px;min-height:18px;"></div>
       <div class="hint" style="margin:6px 0 8px;text-align:center;">${appLang()==='nl' ? 'Nog geen bestand? Scan je kaarten met een gratis app:' : 'No file yet? Scan your cards with a free app:'}</div>
       <a class="ghost-btn" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;margin-bottom:8px;" target="_blank" rel="noopener"
          href="${/iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'https://apps.apple.com/app/manabox-mtg/id1460407674' : 'https://play.google.com/store/apps/details?id=skilldevs.com.manabox'}">ManaBox</a>
@@ -11351,11 +11366,22 @@ function openCollectionImport(presetBinder){
   bsel.innerHTML = colImportBinderOptions();
   if(presetBinder) bsel.value = presetBinder;
   document.getElementById('ciPick').addEventListener('click', ()=>document.getElementById('ciFile').click());
+  // A file only fills the box -- nothing is added until Import is tapped,
+  // just like the decklist paste sheet. Its name still suggests a binder.
+  let ciFileName = '';
   document.getElementById('ciFile').addEventListener('change', async (e)=>{
     const file = e.target.files && e.target.files[0]; if(!file) return;
-    let text=''; try{ text = await file.text(); }catch(err){ setCiReport('<span style="color:var(--danger);">Could not read that file.</span>'); return; }
-    await runCsvImport(text, binderNameFromFilename(file.name));
+    let text=''; try{ text = await file.text(); }catch(err){ setCiReport('⚠ ' + (appLang()==='nl' ? 'Kon dat bestand niet lezen.' : 'Could not read that file.')); e.target.value=''; return; }
+    const ta = document.getElementById('ciText'); if(ta){ ta.value = text; ta.scrollTop = 0; }
+    ciFileName = file.name;
+    setCiReport(escapeHtml(file.name) + (appLang()==='nl' ? ' geladen — tik op Importeren.' : ' loaded — tap Import.'));
     e.target.value='';
+  });
+  document.getElementById('ciText').addEventListener('input', ()=>{ if(!document.getElementById('ciText').value.trim()) ciFileName = ''; });
+  document.getElementById('ciGo').addEventListener('click', ()=>{
+    const t = document.getElementById('ciText')?.value || '';
+    if(!t.trim()){ setCiReport(appLang()==='nl' ? 'Plak eerst een lijst of laad een bestand.' : 'Paste a list or load a file first.'); return; }
+    runCsvImport(t, ciFileName ? binderNameFromFilename(ciFileName) : null);
   });
   document.getElementById('ciExport').addEventListener('click', downloadCollectionCsv);
 }
@@ -11366,35 +11392,9 @@ function colImportBinderOptions(){
   const _inl = appLang() === 'nl';
   return (ruledBinders().length ? `<option value="__auto__">✦ ${_inl ? 'Automatisch (map-regels)' : 'Automatic (binder rules)'}</option>` : '') + `<option value="__new__">${_inl ? 'Een map (ik geef hem een naam)…' : 'A binder (I\'ll name it)…'}</option><option value="">${_inl ? 'Mijn hele collectie — geen map' : 'My whole collection — no binder'}</option>` + (state.collection.binders||[]).map(b=>`<option value="${b.id}">${_inl ? 'In map' : 'Into binder'}: ${escapeHtml(b.name)}</option>`).join('');
 }
-function openBinderPasteSheet(binderId, o){
-  o = o || {};
-  const _inl = appLang() === 'nl';
-  document.getElementById('colImportOverlay')?.remove();
-  const el=document.createElement('div'); el.id='colImportOverlay';
-  el.innerHTML = `
-    <div class="appoint-sheet" style="max-width:460px;">
-      <div class="appoint-head"><span>${inlIco('clipboard', 16)}${o.choose ? (_inl ? 'Plakken in collectie' : 'Paste in collection') : trS('Paste a list') + ' — ' + escapeHtml(binderName(binderId)||'')}</span><button class="icon-btn" id="ciClose">${ICONS.close||'✕'}</button></div>
-      ${o.choose ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;"><label class="hint" style="flex:none;">${_inl ? 'Naar:' : 'Into:'}</label><select id="ciBinder" class="deck-select" style="flex:1;">${colImportBinderOptions()}</select></div>` : ''}
-      <p class="hint" style="margin:0 0 8px;">${trS('One card per line, e.g. 1 Sol Ring')} — ${appLang() === 'nl' ? 'CSV-tekst van Moxfield/Archidekt werkt ook.' : 'Moxfield/Archidekt CSV text works too.'}</p>
-      <textarea id="bpText" style="width:100%;box-sizing:border-box;min-height:160px;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:10px;font-size:14px;" placeholder="1 Sol Ring&#10;2 Arcane Signet"></textarea>
-      <div id="ciReport" class="hint" style="margin:8px 0;min-height:18px;"></div>
-      <button class="ghost-btn" id="bpGo" style="width:100%;">${trS('Import')}</button>
-    </div>`;
-  document.body.appendChild(el);
-  pushOverlay('colImport', ()=>{ document.getElementById('colImportOverlay')?.remove(); });
-  el.addEventListener('click', e=>{ if(!e.target.closest('.appoint-sheet')) closeTopOverlay(); });
-  document.getElementById('ciClose').addEventListener('click', ()=>closeTopOverlay());
-  document.getElementById('bpGo').addEventListener('click', ()=>{
-    const t = document.getElementById('bpText')?.value || '';
-    if(!t.trim()) return;
-    const sel = o.choose ? document.getElementById('ciBinder') : null;
-    runCsvImport(t, null, sel ? sel.value : binderId);
-  });
-  if(o.choose && ruledBinders().length){ const sel = document.getElementById('ciBinder'); if(sel) sel.value = '__auto__'; }
-}
 async function runCsvImport(text, suggestedBinderName, forcedBinder){
   const entries = parseCollectionCsv(text);
-  if(!entries.length){ setCiReport('<span style="color:var(--danger);">No cards found — make sure it\'s a Moxfield or Archidekt CSV export.</span>'); return; }
+  if(!entries.length){ setCiReport('⚠ ' + (appLang()==='nl' ? 'Geen kaarten gevonden — één kaart per regel (1 Sol Ring) of een CSV-export.' : 'No cards found — one card per line (1 Sol Ring) or a CSV export.')); return; }
   let binder = (typeof forcedBinder === 'string') ? forcedBinder : (document.getElementById('ciBinder') ? document.getElementById('ciBinder').value : '');
   let binderLabel = '';
   if(binder === '__new__'){
@@ -19694,11 +19694,15 @@ function inspirationPageHtml(){
   const ks = kindredNameSet();
   const isKin = t => !!t.k || ks.has(String(t.label||'').toLowerCase());
   const kinList = themes.filter(isKin), thList = themes.filter(t=>!isKin(t));
+  // Too many cards: Theme AND Kindred can both be set (the cuts weigh both),
+  // and a Cuts row sits at the foot, under Kindred.
+  const over = deckCutOver(d), both = over > 0 || !!(sel.kindred && sel.theme);
   return `
   <main>
     <div class="browse-selects">
-      ${sel.theme ? '' : `<div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>`}
-      ${sel.kindred ? '' : `<div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.theme||'', trS('Theme — none'), {search:true, tiles:true})}</div>`}
+      ${over > 0 ? `<div class="bs-row cut-slot" id="cutSlot"></div>` : ''}
+      ${sel.theme && !both ? '' : `<div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>`}
+      ${sel.kindred && !both ? '' : `<div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.theme||'', trS('Theme — none'), {search:true, tiles:true})}</div>`}
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -19736,9 +19740,12 @@ function wireInspirationPage(){
   hydrateTileArtReady().then((did)=>{ try{ if(did && state.screen === 'inspiration' && state.openCSelect) csRerender(); }catch(e){} });
   // EDHREC serves one theme page at a time: picking a Kindred clears the
   // Theme and the other way round.
-  _csHandlers.inspKindred = v=>{ state.inspireSel = { kindred: v || '', theme: '' }; state._inspShown = {}; render(); };
-  _csHandlers.inspTheme = v=>{ state.inspireSel = { kindred: '', theme: v || '' }; state._inspShown = {}; render(); };
+  // With too many cards both can be set: the cuts weigh Theme and Kindred.
+  _csHandlers.inspKindred = v=>{ const both = deckCutOver(d) > 0; state.inspireSel = { kindred: v || '', theme: both ? (state.inspireSel.theme || '') : '' }; state._inspShown = {}; render(); };
+  _csHandlers.inspTheme = v=>{ const both = deckCutOver(d) > 0; state.inspireSel = { kindred: both ? (state.inspireSel.kindred || '') : '', theme: v || '' }; state._inspShown = {}; render(); };
   wireCSelects();
+  if(state._cutsDeck !== d.id){ state._cutsDeck = d.id; state._cutsOpenFor = null; state._cutsMore = 0; }
+  paintCuts(d);
   loadInspiration(d);
 }
 /* ---- Deck Inspiration on EDHREC's full commander data --------------------
@@ -19817,8 +19824,29 @@ async function inspEdhTheme(d, slug){
     if(names.length < 8) return null;
     const pool = (await inspResolveNames(names)).filter(c=>c.name !== d.admiral.name && (!d.partner || c.name !== d.partner.name));
     if(pool.length < 8) return null;
-    return (state._inspEdhTheme[key] = { pool, sections: tp.sections || [] });
+    return (state._inspEdhTheme[key] = { pool, sections: tp.sections || [], stats: tp.stats || null });
   }catch(e){ return null; }
+}
+/* Kindred AND Theme (only while the deck runs over): both EDHREC pages in
+   one list, cards that both pages play first. */
+async function inspEdhCombo(d, kSlug, tSlug){
+  const key = inspLeaderKey(d) + '/' + kSlug + '+' + tSlug;
+  state._inspEdhTheme = state._inspEdhTheme || {};
+  if(state._inspEdhTheme[key]) return state._inspEdhTheme[key];
+  const [a, b] = await Promise.all([inspEdhTheme(d, kSlug), inspEdhTheme(d, tSlug)]);
+  if(!a || !b) return a || b || null;
+  const inB = new Set(b.pool.map(c=>c.name)), inA = new Set(a.pool.map(c=>c.name));
+  const both = (n)=>inA.has(n) && inB.has(n);
+  const seen = new Set(), pool = [];
+  a.pool.filter(c=>inB.has(c.name)).concat(a.pool, b.pool).forEach(c=>{ if(!seen.has(c.name)){ seen.add(c.name); pool.push(c); } });
+  const secs = [];
+  a.sections.concat(b.sections).forEach(sec=>{
+    let g = secs.find(x=>x.header === sec.header);
+    if(!g){ g = { header: sec.header, names: [] }; secs.push(g); }
+    sec.names.forEach(n=>{ if(!g.names.includes(n)) g.names.push(n); });
+  });
+  secs.forEach(g=>{ g.names = g.names.filter(both).concat(g.names.filter(n=>!both(n))); });
+  return (state._inspEdhTheme[key] = { pool, sections: secs, stats: null });
 }
 /* The menus were drawn before this leader's theme list was known: draw the
    page once more now that it is (the pool keeps loading underneath). */
@@ -19847,15 +19875,17 @@ let _inspSeq = 0;
 async function loadInspiration(d){
   const box = document.getElementById('inspireResults');
   if(!box) return;
-  const slug = state.inspireSel.kindred || state.inspireSel.theme || '';
+  const _sel = state.inspireSel;
+  const slug = (_sel.kindred && _sel.theme) ? _sel.kindred + '+' + _sel.theme : (_sel.kindred || _sel.theme || '');
   const seq = ++_inspSeq;
+  state._inspRepaint = null;
   const current = ()=> seq === _inspSeq && state.screen === 'inspiration' && state.inspireDeckId === d.id && document.getElementById('inspireResults');
   const key = inspLeaderKey(d);
   state._inspPartialPainted = null;
   const ready = slug ? (state._inspEdhTheme || {})[key + '/' + slug] : (state._inspEdh || {})[key];
   if(!ready) box.innerHTML = `<div class="status"><div class="spinner"></div>${slug ? trS('Charting themed recommendations…') : 'Charting recommendations…'}</div>`;
   let entry = null;
-  try{ entry = slug ? await inspEdhTheme(d, slug) : await inspEdhMain(d); }catch(e){}
+  try{ entry = slug ? ((_sel.kindred && _sel.theme) ? await inspEdhCombo(d, _sel.kindred, _sel.theme) : await inspEdhTheme(d, slug)) : await inspEdhMain(d); }catch(e){}
   if(!current()) return;
   if(entry){
     // Other formats than Commander: every card passes that format's own
@@ -19898,9 +19928,17 @@ function placeInspJump(){
   const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 66;
   const min = navH + 14 + _safeBottomPx;
   const sel = document.querySelector('.app > main > .browse-selects');
-  let b = min;
-  if(sel){ const top = sel.getBoundingClientRect().top; if(top > 0) b = Math.max(min, window.innerHeight - top + 5); }
+  let b = min, hide = false;
+  if(sel){
+    const top = sel.getBoundingClientRect().top;
+    if(top > 0) b = Math.max(min, window.innerHeight - top + 5);
+    // Cuts open and the menus fill the screen: no free spot above them, and
+    // at the foot the burger would sit on the Cuts button -- it steps out
+    // until the menus' top is back in view.
+    if(top < 90 && document.querySelector('#cutSlot .cut-body') && sel.getBoundingClientRect().bottom > 0) hide = true;
+  }
   row.style.bottom = Math.round(b) + 'px';
+  row.style.visibility = hide ? 'hidden' : '';
 }
 function bindInspJump(){
   placeInspJump();
@@ -19938,14 +19976,67 @@ function cutRoles(card){
   else if(t.has('removal') || t.has('spot-removal') || t.has('creature-removal') || t.has('counterspell') || /(?:destroy|exile) target|counter target spell/.test(o)) r.add('removal');
   return r;
 }
-function deckCutPlan(d, stats){
+/* How many cards over the format's size (0 when it fits). */
+function deckCutOver(d){
+  if(!d || deckIsConstructed(d)) return 0;
+  return Math.max(0, (d.cards || []).length + deckLeaders(d).length - deckTotal(d));
+}
+/* A Kindred label ("Elves", "Zombies", "Mice") as the creature types and
+   words a card would use for it: elf, zombie, mouse. */
+function kinSingulars(label){
+  const inv = {};
+  Object.keys(KINDRED_PLURAL_IRREGULAR).forEach(k=>{ inv[KINDRED_PLURAL_IRREGULAR[k].toLowerCase()] = k.toLowerCase(); });
+  const out = new Set();
+  String(label || '').toLowerCase().replace(/\b(kindred|tribal|typal)\b/g, ' ').split(/[^a-z]+/).forEach(w=>{
+    if(w.length < 3) return;
+    [w, inv[w], w.replace(/ves$/, 'f'), w.replace(/ies$/, 'y'), w.replace(/es$/, ''), w.replace(/s$/, ''), w.replace(/men$/, 'man')]
+      .forEach(x=>{ if(x && x.length >= 3) out.add(x); });
+  });
+  return out;
+}
+/* Does this card belong to the tribe: the type itself, a changeling, or
+   rules text that names it (lords, payoffs)? */
+function tribeHit(card, S){
+  if(!S || !S.size) return false;
+  const tl = String(card.type_line || '').split('//')[0];
+  const subs = (tl.split('—')[1] || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if(subs.some(s=>S.has(s))) return true;
+  const f = (typeof frontFace === 'function' ? frontFace(card) : card) || card;
+  const o = String(f.oracle_text || card.oracle_text || '').toLowerCase();
+  if(/\bchangeling\b/.test(o)) return true;
+  for(const w of S){ if(new RegExp('\\b' + w + 's?\\b').test(o)) return true; }
+  return false;
+}
+/* Cuts read the page's own choices: the leader's play data, the Theme and
+   Kindred picked above (their EDHREC pages), and the deck's land goal. */
+function inspCutCtx(d){
+  const key = inspLeaderKey(d), sel = state.inspireSel || {};
+  const main = (state._inspEdh || {})[key] || (state._inspPartial || {})[key];
+  const themes = inspEdhThemes(d);
+  const lab = (s)=>{ const t = themes.find(x=>x.slug === s); return t ? String(t.label) : String(s).replace(/-/g, ' '); };
+  let selStats = null;
+  [sel.kindred, sel.theme].filter(Boolean).forEach(s=>{
+    const e = (state._inspEdhTheme || {})[key + '/' + s];
+    const st = e && e.stats; if(!st) return;
+    selStats = selStats || {};
+    for(const k in st){ const o = selStats[k]; selStats[k] = o ? [Math.max(o[0], st[k][0]), Math.max(o[1], st[k][1])] : st[k]; }
+  });
+  return { stats: (main && main.stats) || null, selStats, kin: sel.kindred ? lab(sel.kindred) : '', theme: sel.theme ? lab(sel.theme) : '', lands: (typeof d.landGoal === 'number') ? d.landGoal : null };
+}
+function deckCutPlan(d, stats, o){
   if(!d || deckIsConstructed(d)) return null;
-  const total = (d.cards || []).length + deckLeaders(d).length, over = total - deckTotal(d);
+  o = o || {};
+  const over = deckCutOver(d);
   if(over <= 0) return { over: 0, list: [] };
-  const tpl = CUT_TEMPLATE[deckKind(d) === 'admiral' ? 'admiral' : 'cmdr'];
+  const tpl = Object.assign({}, CUT_TEMPLATE[deckKind(d) === 'admiral' ? 'admiral' : 'cmdr']);
+  if(tpl.land && typeof o.lands === 'number') tpl.land = o.lands;
   const counts = { land: 0, ramp: 0, draw: 0, removal: 0, wipe: 0 }, roles = new Map();
   d.cards.forEach(c=>{ const r = cutRoles(c); roles.set(c, r); r.forEach(k=>{ counts[k] = (counts[k] || 0) + 1; }); });
   const hasStats = !!stats && Object.keys(stats).length > 20;
+  const selStats = (o.selStats && Object.keys(o.selStats).length > 20) ? o.selStats : null;
+  const pg = [o.kin, o.theme].filter(Boolean).join(' + ');
+  const tribe = o.kin ? kinSingulars(o.kin) : null;
+  const look = (S, c)=>S[String(c.name).toLowerCase()] || S[String(c.name).split(' // ')[0].toLowerCase()];
   const seen = new Set(), list = [];
   d.cards.forEach(c=>{
     if(!c || !c.name || seen.has(c.name)) return;
@@ -19956,16 +20047,25 @@ function deckCutPlan(d, stats){
       const excess = counts.land - tpl.land;
       if(!tpl.land || excess <= 0) return;
       score = 0.55 + Math.min(0.3, excess * 0.08) + (/Basic/.test(c.type_line || '') ? 0.1 : 0);
-      why.push({ k: 'land', n: counts.land, t: tpl.land });
+      why.push({ k: 'land', n: counts.land, t: tpl.land, mine: typeof o.lands === 'number' });
     } else {
       let keep = 0, cut = 0;
-      if(hasStats){
-        const st = stats[String(c.name).toLowerCase()] || stats[String(c.name).split(' // ')[0].toLowerCase()];
+      if(selStats){
+        // A Theme or Kindred is picked: what THOSE decks run counts most.
+        const st = look(selStats, c);
+        if(st){ keep += st[0] * 0.8 + Math.max(0, st[1]) * 0.5; if(st[0] < 0.12) why.push({ k: 'rate', p: st[0], pg }); }
+        else { const m = hasStats ? look(stats, c) : null; if(m) keep += m[0] * 0.35; why.push({ k: 'offtheme', pg }); }
+      } else if(hasStats){
+        const st = look(stats, c);
         if(st){ keep += st[0] * 0.8 + Math.max(0, st[1]) * 0.5; if(st[0] < 0.12) why.push({ k: 'rate', p: st[0] }); }
         else why.push({ k: 'absent' });
       } else if(typeof c.edhrec_rank === 'number'){
         keep += Math.max(0, 1 - c.edhrec_rank / 15000) * 0.6;
         if(c.edhrec_rank > 8000) why.push({ k: 'rank' });
+      }
+      if(tribe){
+        if(tribeHit(c, tribe)) keep += 0.45;
+        else if(/\bCreature\b/.test(String(c.type_line || '').split('//')[0])){ cut += 0.12; why.push({ k: 'offtribe', pg: o.kin }); }
       }
       for(const k of ['ramp', 'draw', 'removal', 'wipe']){
         if(!r.has(k) || !tpl[k]) continue;
@@ -19979,43 +20079,76 @@ function deckCutPlan(d, stats){
     list.push({ card: c, score, why });
   });
   list.sort((a, b)=>b.score - a.score);
-  return { over, counts, tpl, list };
+  return { over, counts, tpl, list, pg };
 }
 function cutWhyText(w, d){
   const NL = appLang() === 'nl';
   const lead = d.admiral ? String(d.admiral.name).split(',')[0] : (NL ? 'je leider' : 'your leader');
-  const role = { ramp: 'ramp', draw: NL ? 'card draw' : 'card draw', removal: 'removal', wipe: NL ? 'board wipes' : 'board wipes' };
+  const role = { ramp: 'ramp', draw: 'card draw', removal: 'removal', wipe: 'board wipes' };
   switch(w.k){
-    case 'rate': return NL ? `in ${Math.round(w.p * 100)}% van de ${lead}-decks` : `in ${Math.round(w.p * 100)}% of ${lead} decks`;
+    case 'rate': return w.pg
+      ? (NL ? `in ${Math.round(w.p * 100)}% van de ${w.pg}-decks` : `in ${Math.round(w.p * 100)}% of ${w.pg} decks`)
+      : (NL ? `in ${Math.round(w.p * 100)}% van de ${lead}-decks` : `in ${Math.round(w.p * 100)}% of ${lead} decks`);
     case 'absent': return NL ? `bijna nooit gespeeld met ${lead}` : `hardly ever played with ${lead}`;
+    case 'offtheme': return NL ? `weinig gespeeld in ${w.pg}-decks` : `rarely played in ${w.pg} decks`;
+    case 'offtribe': return NL ? `past niet bij ${w.pg}` : `off-tribe for ${w.pg}`;
     case 'rank': return NL ? 'weinig gespeeld in Commander' : 'rarely played in Commander';
     case 'role': return NL ? `al ${w.n}× ${role[w.role]} (richtlijn ~${w.t})` : `${w.n} ${role[w.role]} already (guide ~${w.t})`;
     case 'mv': return NL ? `${w.mv} mana — zwaar bovenin de curve` : `${w.mv} mana — top-heavy curve`;
-    case 'land': return NL ? `${w.n} lands (richtlijn ~${w.t})` : `${w.n} lands (guide ~${w.t})`;
+    case 'land': return w.mine
+      ? (NL ? `${w.n} lands (jouw doel ${w.t})` : `${w.n} lands (your goal ${w.t})`)
+      : (NL ? `${w.n} lands (richtlijn ~${w.t})` : `${w.n} lands (guide ~${w.t})`);
   }
   return '';
 }
-function cutsSectionHtml(d, plan){
-  if(!plan || !(plan.over > 0) || !plan.list.length) return '';
+/* The Cuts row: the foot of the Inspiration menus, right under Kindred, in
+   the same button as Theme and Kindred. Closed by default; it opens UPWARD
+   (bottom-up): settings right above the button, then the list with the
+   strongest cut lowest, More at the top. */
+function cutsBlockHtml(d, plan){
   const NL = appLang() === 'nl';
+  const open = state._cutsOpenFor === d.id;
+  const btn = `<button type="button" class="cselect-btn cut-toggle" id="cutToggle" aria-expanded="${open}"><span class="cs-label">Cuts — ${plan.over} ${NL ? 'te veel' : 'too many'}</span><span class="cs-car">${open ? '▴' : '▾'}</span></button>`;
+  if(!open) return `<div class="cut-block">${btn}</div>`;
   const n = Math.min(plan.list.length, Math.max(plan.over + 4, 6) + (state._cutsMore || 0));
   const rows = plan.list.slice(0, n);
-  // column-reverse: the strongest cut sits right above the section's label.
-  return `<div class="edh-sec cut-sec" data-isec="cuts">
-    <div class="section-label" style="margin-top:14px;">${NL ? 'Cuts' : 'Cuts'} — ${plan.over} ${NL ? 'te veel' : 'too many'}</div>
-    ${plan.list.length > n ? `<button class="ghost-btn cut-more" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}
-    <div class="cut-list">${rows.map((x, i)=>`<div class="cut-row" data-cut="${i}">
+  const lead = d.admiral ? String(d.admiral.name).split(',')[0] : '';
+  const basis = `<div class="cut-basis">${NL ? 'Op basis van' : 'Based on'} ${escapeHtml(lead)}${plan.pg ? ' · ' + escapeHtml(plan.pg) : ''}${plan.pg ? '' : (NL ? ' — kies hierboven een Theme of Kindred' : ' — pick a Theme or Kindred above')}</div>`;
+  const lands = plan.tpl.land ? `<div class="cut-lands"><span class="cut-lands-l">${NL ? 'Aantal lands' : 'Land count'}</span>
+      <button type="button" class="ghost-btn cut-step" data-cutland="-1" aria-label="−">−</button>
+      <b class="cut-lands-n">${plan.tpl.land}</b>
+      <button type="button" class="ghost-btn cut-step" data-cutland="1" aria-label="+">+</button>
+      <span class="cut-lands-h">${NL ? 'nu' : 'now'} ${plan.counts.land}${typeof d.landGoal === 'number' ? ` · <button type="button" class="cut-reset" data-cutland="0">${NL ? 'standaard' : 'default'}</button>` : ''}</span></div>` : '';
+  const list = rows.length ? `<div class="cut-list">${rows.map((x, i)=>`<div class="cut-row" data-cut="${i}">
       <img src="${cardImageMed(x.card) || ''}" alt="" loading="lazy" data-cutimg="${i}">
       <div class="cut-txt"><b>${escapeHtml(x.card.name)}</b><span>${x.why.slice(0, 2).map(w=>escapeHtml(cutWhyText(w, d))).filter(Boolean).join(' · ') || (NL ? 'minst onmisbaar in dit deck' : 'least essential in this deck')}</span></div>
       <button type="button" class="ghost-btn cut-btn" data-cutmaybe="${i}" title="${NL ? 'Naar maybeboard' : 'To maybeboard'}">${ICONS.maybe}</button>
       <button type="button" class="ghost-btn cut-btn danger-ghost" data-cutdel="${i}" title="${NL ? 'Eruit' : 'Remove'}">${ICONS.trash}</button>
-    </div>`).join('')}</div>
-  </div>`;
+    </div>`).join('')}</div>` : '';
+  const more = plan.list.length > n ? `<button type="button" class="ghost-btn cut-more">${trS('More')}</button>` : '';
+  return `<div class="cut-block">${btn}<div class="cut-body"><div class="cut-set">${lands}${basis}</div>${list}${more}</div></div>`;
 }
-function wireCutsSection(d, plan, repaint){
-  const sec = document.querySelector('.cut-sec');
-  if(!sec || !plan) return;
+function paintCuts(d){
+  const slot = document.getElementById('cutSlot');
+  if(!slot || !d) return;
+  const ctx = inspCutCtx(d);
+  const plan = deckCutPlan(d, ctx.stats, ctx);
+  if(!plan || !(plan.over > 0)){ slot.remove(); placeInspJump(); return; }
+  const fromFoot = document.documentElement.scrollHeight - window.scrollY;
+  slot.innerHTML = cutsBlockHtml(d, plan);
+  wireCutsBlock(d, plan);
+  window.scrollTo(0, document.documentElement.scrollHeight - fromFoot);
+  placeInspJump();
+}
+function wireCutsBlock(d, plan){
+  const slot = document.getElementById('cutSlot');
+  if(!slot) return;
   const NL = appLang() === 'nl';
+  slot.querySelector('#cutToggle')?.addEventListener('click', ()=>{
+    state._cutsOpenFor = state._cutsOpenFor === d.id ? null : d.id;
+    paintCuts(d);
+    scrollToPageFoot();
+  });
   const act = (i, toMaybe)=>{
     const x = plan.list[i]; if(!x) return;
     const idx = d.cards.indexOf(x.card);
@@ -20025,12 +20158,22 @@ function wireCutsSection(d, plan, repaint){
     else logDeckChange(d, { type: 'remove', name: x.card.name, card: x.card });
     scheduleSave(d);
     toast(toMaybe ? (NL ? `${x.card.name} naar de maybeboard.` : `${x.card.name} to the maybeboard.`) : (NL ? `${x.card.name} is eruit.` : `${x.card.name} removed.`));
-    repaint();
+    // Fits now: the page draws again, without the Cuts row and with the
+    // Theme / Kindred menus back to one at a time.
+    if(deckCutOver(d) <= 0){ render(); return; }
+    if(typeof state._inspRepaint === 'function') state._inspRepaint(); else paintCuts(d);
   };
-  sec.querySelectorAll('[data-cutdel]').forEach(b=>b.addEventListener('click', ()=>act(+b.dataset.cutdel, false)));
-  sec.querySelectorAll('[data-cutmaybe]').forEach(b=>b.addEventListener('click', ()=>act(+b.dataset.cutmaybe, true)));
-  sec.querySelectorAll('[data-cutimg]').forEach(im=>im.addEventListener('click', ()=>{ const x = plan.list[+im.dataset.cutimg]; if(x) openCardInfo(x.card); }));
-  sec.querySelector('.cut-more')?.addEventListener('click', ()=>{ state._cutsMore = (state._cutsMore || 0) + 8; repaint(); });
+  slot.querySelectorAll('[data-cutdel]').forEach(b=>b.addEventListener('click', ()=>act(+b.dataset.cutdel, false)));
+  slot.querySelectorAll('[data-cutmaybe]').forEach(b=>b.addEventListener('click', ()=>act(+b.dataset.cutmaybe, true)));
+  slot.querySelectorAll('[data-cutimg]').forEach(im=>im.addEventListener('click', ()=>{ const x = plan.list[+im.dataset.cutimg]; if(x) openCardInfo(x.card); }));
+  slot.querySelector('.cut-more')?.addEventListener('click', ()=>{ state._cutsMore = (state._cutsMore || 0) + 8; paintCuts(d); });
+  slot.querySelectorAll('[data-cutland]').forEach(b=>b.addEventListener('click', ()=>{
+    const step = +b.dataset.cutland;
+    if(!step) delete d.landGoal;
+    else d.landGoal = Math.max(20, Math.min(50, plan.tpl.land + step));
+    scheduleSave(d);
+    paintCuts(d);
+  }));
 }
 function renderInspEdh(d, entry, keepScroll, partial, okSet){
   const box = document.getElementById('inspireResults');
@@ -20038,12 +20181,10 @@ function renderInspEdh(d, entry, keepScroll, partial, okSet){
   if(okSet) entry._ok = okSet;
   const pool = inspEdhFilter(d, entry.pool, entry._ok || null);
   const fromFoot = document.documentElement.scrollHeight - window.scrollY;
-  const _main = (state._inspEdh || {})[inspLeaderKey(d)];
-  const cutPlan = deckCutPlan(d, (_main && _main.stats) || entry.stats || null);
-  const repaintCuts = ()=>renderInspEdh(d, entry, true, partial);
+  state._inspRepaint = ()=>renderInspEdh(d, entry, true, partial);
+  paintCuts(d);
   if(!pool.length){
-    box.innerHTML = `<div class="empty-note">${trS('Nothing left to recommend here — every pick is already in your deck.')}</div>` + cutsSectionHtml(d, cutPlan);
-    wireCutsSection(d, cutPlan, repaintCuts);
+    box.innerHTML = `<div class="empty-note">${trS('Nothing left to recommend here — every pick is already in your deck.')}</div>`;
     if(!keepScroll) scrollToPageFoot();
     return;
   }
@@ -20063,14 +20204,12 @@ function renderInspEdh(d, entry, keepScroll, partial, okSet){
     // recommendations page.
     return `<div class="edh-sec" data-isec="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > n ? `<button class="ghost-btn edh-more" data-si="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid">${cards.map(c=>searchRowHtml(c, d)).join('')}</div></div>`;
   }).join('')
-    + cutsSectionHtml(d, cutPlan)
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="inspJump" title="${trS('Jump to section')}">☰</button></div>`;
   bindInspJump();
-  wireCutsSection(d, cutPlan, repaintCuts);
   document.getElementById('inspJump')?.addEventListener('click', (e)=>{
     e.stopPropagation();
     const items = groups.map((g, i)=>({ label: g.title, fn: ()=>{ document.querySelector(`.edh-sec[data-isec="${i}"]`)?.scrollIntoView({ behavior:'smooth', block:'end' }); } }));
-    if(document.querySelector('.cut-sec')) items.push({ label: 'Cuts', fn: ()=>{ document.querySelector('.cut-sec')?.scrollIntoView({ behavior:'smooth', block:'end' }); } });
+    if(document.getElementById('cutSlot')) items.push({ label: 'Cuts', fn: ()=>{ state._cutsOpenFor = d.id; paintCuts(d); scrollToPageFoot(); } });
     openTileMenu(e.currentTarget, items);
   });
   box.querySelectorAll('.edh-more').forEach(btn=>btn.addEventListener('click', ()=>{
@@ -23852,7 +23991,7 @@ async function edhrecCommanderPage(card){
 }
 async function edhrecThemePage(card, themeSlug){
   const data = await edhrecFetchJson('/pages/commanders/' + edhrecSlug(card.name) + '/' + themeSlug + '.json');
-  return data ? { names: edhrecNamesFrom(data), sections: edhrecSectionsFrom(data) } : { names: [], sections: [] };
+  return data ? { names: edhrecNamesFrom(data), sections: edhrecSectionsFrom(data), stats: edhrecStatsFrom(data) } : { names: [], sections: [] };
 }
 async function edhrecPairThemePage(a, b, themeSlug){
   // The pairing's own theme page, both slug orders; the lead card's solo page
@@ -23861,7 +24000,7 @@ async function edhrecPairThemePage(a, b, themeSlug){
     const data = await edhrecFetchJson('/pages/commanders/' + sl + '/' + themeSlug + '.json');
     if(data){
       const names = edhrecNamesFrom(data);
-      if(names.length) return { names, sections: edhrecSectionsFrom(data) };
+      if(names.length) return { names, sections: edhrecSectionsFrom(data), stats: edhrecStatsFrom(data) };
     }
   }
   return edhrecThemePage(a, themeSlug);
