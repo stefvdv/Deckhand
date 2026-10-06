@@ -6036,17 +6036,13 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.16';
+const APP_VERSION = '1.17';
 const CHANGELOG_NOTES = {
   en: [
-    'Cuts as card tiles with buttons',
-    'Tap a reason: the full explanation',
-    'Cuts spot weak, win-more, hard-to-cast'
+    'Back closes the open Cuts first'
   ],
   nl: [
-    'Cuts als kaarttegels met knoppen',
-    'Tik op de reden: de hele uitleg',
-    'Cuts zien zwak, win-more, lastig casten'
+    'Terug klapt Cuts eerst dicht'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -28867,6 +28863,15 @@ function appBackStep(viaHistory){
   // A page-level dropdown consumes the back press: close it and stay put.
   if(state.openCSelect){
     state.openCSelect = null; try{ csRerender(); }catch(err){}
+    rearm({screen: state.screen, folder: state.folderNav||null}, '#'+state.screen);
+    return true;
+  }
+  // The Cuts fold on deck Inspiration works like Theme and Kindred: an open
+  // fold eats the back press and closes, the page stays where it is.
+  if(state.screen === 'inspiration' && state._cutsOpenFor && document.querySelector('#cutSlot .cut-body')){
+    const dc = getDeck(state.inspireDeckId);
+    state._cutsOpenFor = null;
+    try{ if(dc) paintCuts(dc); scrollToPageFoot(); }catch(err){}
     rearm({screen: state.screen, folder: state.folderNav||null}, '#'+state.screen);
     return true;
   }
