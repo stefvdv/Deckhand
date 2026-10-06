@@ -1736,7 +1736,7 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 .about-txt .about-h{font-family:'Cinzel',serif;font-size:13.5px;color:var(--head-ink);margin:14px 0 4px;text-transform:uppercase;letter-spacing:0.5px;}
 #pasteDeckFileBtn.fb-lead{border-color:var(--brass);color:var(--brass);border-width:2px;}
 .cut-list{display:flex;flex-direction:column-reverse;gap:6px;margin:6px 0;}
-/* Cuts: a row of the Inspiration menus (under Kindred). Bottom-up: the
+/* Cuts: the top row of the Inspiration menus (above Theme). Bottom-up: the
    button at the foot, its body opens UPWARD -- settings, then the list. */
 .bs-row.cut-slot{display:block;}
 .cut-block{display:flex;flex-direction:column-reverse;gap:6px;width:100%;}
@@ -6023,19 +6023,15 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.14';
+const APP_VERSION = '1.15';
 const CHANGELOG_NOTES = {
   en: [
-    'Cuts: a fold-out under Kindred',
-    'Cuts weigh your Theme and Kindred',
-    'Too many cards? Set Theme + Kindred',
-    'Set your land count in Cuts'
+    'Cuts button now sits above Theme',
+    'Theme and Kindred stay in view'
   ],
   nl: [
-    'Cuts: uitklapknop onder Kindred',
-    'Cuts houden rekening met Theme/Kindred',
-    'Te veel kaarten? Theme + Kindred samen',
-    'Stel je aantal lands in bij Cuts'
+    'Cuts-knop staat nu boven Theme',
+    'Theme en Kindred blijven in beeld'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6072,11 +6068,11 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred; zit je deck boven de limiet, dan klap je onder Kindred de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred; zit je deck boven de limiet, dan klap je boven Theme de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
            <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred; when your deck runs over, open <strong>Cuts</strong> under Kindred: what can go most easily, weighing Theme, Kindred and your own land count), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred; when your deck runs over, open <strong>Cuts</strong> above Theme: what can go most easily, weighing Theme, Kindred and your own land count), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
            <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
@@ -19695,14 +19691,15 @@ function inspirationPageHtml(){
   const isKin = t => !!t.k || ks.has(String(t.label||'').toLowerCase());
   const kinList = themes.filter(isKin), thList = themes.filter(t=>!isKin(t));
   // Too many cards: Theme AND Kindred can both be set (the cuts weigh both),
-  // and a Cuts row sits at the foot, under Kindred.
+  // and a Cuts row sits ABOVE Theme (DOM-last in the reversed stack): opened,
+  // its list grows upward and Theme / Kindred stay in view beneath it.
   const over = deckCutOver(d), both = over > 0 || !!(sel.kindred && sel.theme);
   return `
   <main>
     <div class="browse-selects">
-      ${over > 0 ? `<div class="bs-row cut-slot" id="cutSlot"></div>` : ''}
       ${sel.theme && !both ? '' : `<div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>`}
       ${sel.kindred && !both ? '' : `<div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.theme||'', trS('Theme — none'), {search:true, tiles:true})}</div>`}
+      ${over > 0 ? `<div class="bs-row cut-slot" id="cutSlot"></div>` : ''}
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -20101,8 +20098,9 @@ function cutWhyText(w, d){
   }
   return '';
 }
-/* The Cuts row: the foot of the Inspiration menus, right under Kindred, in
-   the same button as Theme and Kindred. Closed by default; it opens UPWARD
+/* The Cuts row: the top of the Inspiration menus, right above Theme, in
+   the same button as Theme and Kindred -- so those two stay in view to pick
+   from while the cuts are open. Closed by default; it opens UPWARD
    (bottom-up): settings right above the button, then the list with the
    strongest cut lowest, More at the top. */
 function cutsBlockHtml(d, plan){
@@ -20113,7 +20111,7 @@ function cutsBlockHtml(d, plan){
   const n = Math.min(plan.list.length, Math.max(plan.over + 4, 6) + (state._cutsMore || 0));
   const rows = plan.list.slice(0, n);
   const lead = d.admiral ? String(d.admiral.name).split(',')[0] : '';
-  const basis = `<div class="cut-basis">${NL ? 'Op basis van' : 'Based on'} ${escapeHtml(lead)}${plan.pg ? ' · ' + escapeHtml(plan.pg) : ''}${plan.pg ? '' : (NL ? ' — kies hierboven een Theme of Kindred' : ' — pick a Theme or Kindred above')}</div>`;
+  const basis = `<div class="cut-basis">${NL ? 'Op basis van' : 'Based on'} ${escapeHtml(lead)}${plan.pg ? ' · ' + escapeHtml(plan.pg) : ''}${plan.pg ? '' : (NL ? ' — kies hieronder een Theme of Kindred' : ' — pick a Theme or Kindred below')}</div>`;
   const lands = plan.tpl.land ? `<div class="cut-lands"><span class="cut-lands-l">${NL ? 'Aantal lands' : 'Land count'}</span>
       <button type="button" class="ghost-btn cut-step" data-cutland="-1" aria-label="−">−</button>
       <b class="cut-lands-n">${plan.tpl.land}</b>
