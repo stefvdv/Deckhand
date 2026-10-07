@@ -6104,13 +6104,13 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.22';
+const APP_VERSION = '1.23';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration title: deck and theme'
+    'Inspiration: every tile shows price'
   ],
   nl: [
-    'Inspiratie-titel: deck en thema'
+    'Inspiratie: elke tegel toont prijs'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -20526,7 +20526,11 @@ function renderInspEdh(d, entry, keepScroll, partial, okSet){
     renderInspEdh(d, entry, true, partial);
   }));
   wireResultButtons(shown, d, ()=>renderInspEdh(d, entry, true, partial));
-  loadTilePrices(shown.slice(0, 60));
+  // EVERY tile on the page gets its price. The list reads bottom-up, so the
+  // best sections (Top Cards, Game Changers…) are LAST in `shown` -- the old
+  // first-60 cut left exactly those on "…" forever. Filling prices is a
+  // lookup in what is already known (no network), so no cap is needed.
+  loadTilePrices(shown);
   if(keepScroll) window.scrollTo(0, document.documentElement.scrollHeight - fromFoot);
   else scrollToPageFoot();
 }
@@ -20619,7 +20623,7 @@ function renderInspireFromCache(cacheKey, d, keepScroll){
   });
   document.getElementById('inspRetryEdh')?.addEventListener('click', ()=>{ loadInspiration(d); });
   wireResultButtons(display, d, ()=>renderInspireFromCache(cacheKey, d, true));
-  loadTilePrices(display.slice(0, 36));
+  loadTilePrices(display);   // every tile, not just the first 36
   if(!keepScroll) scrollToPageFoot();
 }
 async function refillInspireCache(cacheKey, d){
@@ -23434,7 +23438,7 @@ async function loadCardReco(card, themes, forDeck, comboKey){
   box.insertAdjacentHTML('beforeend', groups.map((g, i)=>({ g, i })).reverse().map(x=>secHtml(x.g, x.i)).join('')
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="crJump" title="${trS('Jump to section')}">☰</button></div>`);
   wireResultButtons(pool, forDeck, rewire);
-  loadTilePrices(groups.flatMap(g=>g.cards.slice(0, CAP)).slice(0, 36));
+  loadTilePrices(groups.flatMap(g=>g.cards.slice(0, CAP)));   // every shown tile (bottom-up: the first section is drawn last)
   box.querySelectorAll('.edh-more[data-csec]').forEach(btn=>btn.addEventListener('click', ()=>{
     const g = groups[+btn.dataset.csec]; const gr = box.querySelector(`.sr-grid[data-csg="${btn.dataset.csec}"]`);
     if(!g || !gr) return;
@@ -24782,7 +24786,7 @@ function renderRecoBody(){
         return `<div class="edh-sec" data-si="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > n ? `<button class="ghost-btn edh-more" data-si="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid" data-sg="${i}">${g.cards.slice(0, n).map(recoTile).join('')}</div></div>`;
       }).join(''));
     wireRecoChunk();
-    loadTilePrices(groups.flatMap(g=>g.cards.slice(0, CAP)).slice(0, 36));
+    loadTilePrices(groups.flatMap(g=>g.cards.slice(0, shownOf(g))));   // every shown tile, More included
     const jb = box.querySelector('#recoJump');
     if(jb) jb.addEventListener('click', (e)=>{
       e.stopPropagation();
