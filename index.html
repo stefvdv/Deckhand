@@ -917,11 +917,11 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .pt-scry-c.down{opacity:.55;}
 .pt-sum{margin:8px 0 0;padding-left:18px;font-size:13.5px;line-height:1.6;color:var(--ink-text);}
 .scan-wrap{max-width:700px;}
-.scan-cam{position:relative;flex:0 0 52vh;background:#000;overflow:hidden;}
+.scan-cam{position:relative;flex:1 1 auto;min-height:0;background:#000;overflow:hidden;}
 .scan-cam video{width:100%;height:100%;object-fit:cover;display:block;}
 .scan-guide{position:absolute;left:50%;top:50%;height:86%;aspect-ratio:63/88;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,0.75);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,0.38);pointer-events:none;}
 .scan-band{position:absolute;left:4%;right:18%;top:2%;height:10%;border:2px solid var(--gold);border-radius:6px;background:rgba(255,255,255,0.10);}
-.scan-torch{position:absolute;top:10px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;}
+.scan-torch{position:absolute;top:58px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;}
 .scan-torch.on{background:var(--gold);}
 .scan-quad{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
 .scan-quad polygon{fill:rgba(46,204,113,0.10);stroke:#2ecc71;stroke-width:3;stroke-linejoin:round;}
@@ -935,15 +935,16 @@ html.native-cam #scanOverlay{background:transparent;}
 html.native-cam #scanOverlay .scan-cam{background:transparent;box-shadow:0 0 0 200vmax var(--ink);}
 html.native-cam #scanOverlay .scan-list, html.native-cam #scanOverlay .scan-bar{position:relative;}
 html.native-cam #scanVideo, html.native-cam #scanOverlay .scan-uv{display:none;}
-.scan-uv{position:absolute;top:58px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+.scan-uv{position:absolute;top:106px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
 .scan-uv.on{background:var(--gold);color:#000;}
 .scan-cam.uv-fix video{filter:url(#scanUvSwap);}
 .scan-focus{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border:2px solid var(--gold);border-radius:50%;pointer-events:none;animation:scanFocus .7s ease-out forwards;}
 @keyframes scanFocus{from{transform:scale(1.4);opacity:1;}to{transform:scale(.8);opacity:0;}}
-.scan-x{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;}
+.scan-x{position:absolute;top:10px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;}
 .scan-status{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);max-width:90%;background:rgba(0,0,0,0.72);color:#fff;font-size:13px;padding:6px 12px;border-radius:14px;text-align:center;}
 .scan-status.ok{background:#1f7a3d;}
-.scan-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:6px;padding:8px 10px;}
+.scan-list{flex:0 0 158px;height:158px;min-height:0;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:6px;padding:8px 10px;box-sizing:border-box;}
+.scan-row{flex:none;}
 .scan-row{display:flex;align-items:center;gap:8px;background:var(--ink-2);border:1.5px solid var(--line);border-radius:10px;padding:6px;}
 .scan-row img{width:38px;aspect-ratio:63/88;object-fit:cover;border-radius:3px;flex:none;}
 .scan-txt{flex:1;min-width:0;cursor:pointer;}
@@ -953,10 +954,11 @@ html.native-cam #scanVideo, html.native-cam #scanOverlay .scan-uv{display:none;}
 .scan-foil{opacity:.45;}
 .scan-foil.on{opacity:1;border-color:var(--gold);}
 .scan-n{flex:none;min-width:26px;text-align:center;font-size:13px;color:var(--ink-text);}
-.scan-empty{font-size:13px;line-height:1.5;color:var(--sub-text);text-align:center;padding:10px 6px;}
-.scan-bar{display:flex;flex-direction:column;gap:8px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));border-top:1.5px solid var(--line);}
-.scan-btns{display:flex;gap:8px;}
-.scan-btns > button{flex:1;margin:0;}
+.scan-bar{display:flex;flex-direction:row;align-items:stretch;gap:8px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));border-top:1.5px solid var(--line);}
+/* the binder choice is drawn as the app's own field (.nsel-btn) beside the hidden select */
+.scan-bar .col-select, .scan-bar .nsel-btn{flex:1 1 0;min-width:0;width:auto;}
+.scan-btns{display:flex;gap:8px;flex:none;}
+.scan-btns > button{flex:none;width:auto;margin:0;padding-left:12px;padding-right:12px;white-space:nowrap;}
 .bk-hint{font-size:13px;line-height:1.5;color:var(--sub-text);}
 .bk-sheet .br-title span{display:block;}
 .bk-sheet .br-title span + span{margin-top:6px;font-size:12px;}
@@ -6128,15 +6130,15 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.28';
+const APP_VERSION = '1.29';
 const CHANGELOG_NOTES = {
   en: [
-    'App 5.0: scanner reads like Delver',
-    'Sharp camera, true colours, lamp'
+    'Bigger scan area, list 2 rows high',
+    'Buttons on 1 row, X and lamp on left'
   ],
   nl: [
-    'App 5.0: scanner leest als Delver',
-    'Scherpe camera, echte kleuren, lamp'
+    'Groter scanvlak, lijst 2 regels hoog',
+    'Knoppen op 1 regel, X en lamp links'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6191,11 +6193,11 @@ function tourSteps(){
       t: inlIco('binder', 14) + (NL ? 'Je collectie' : 'Your collection'),
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
-           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. hij vindt zelf de randen van de kaart (groene lijn), dus scheef of klein mag. In de Android-app (5.0+) leest Google\u2019s tekstherkenning mee: sneller en scherper. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen; lijkt blauw oranje, tik dan op de ronde kleurknop eronder. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
+           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. hij vindt zelf de randen van de kaart (groene lijn), dus scheef of klein mag. In de Android-app (5.0+) leest Google\u2019s tekstherkenning mee: sneller en scherper. Je gescande kaarten staan onderin, twee in beeld (scroll voor meer). 🔦 zet de lamp aan, tik op het beeld om scherp te stellen; lijkt blauw oranje, tik dan op de ronde kleurknop eronder. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
-           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. it finds the card's edges itself (green line), so tilted or small is fine. In the Android app (5.0+) Google\u2019s text reading does the work: faster and sharper. 🔦 turns on the lamp; tap the picture to focus; if blue looks orange, tap the round colour button below it. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
+           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. it finds the card's edges itself (green line), so tilted or small is fine. In the Android app (5.0+) Google\u2019s text reading does the work: faster and sharper. Your scanned cards sit at the foot, two in view (scroll for more). 🔦 turns on the lamp; tap the picture to focus; if blue looks orange, tap the round colour button below it. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -27341,7 +27343,7 @@ function openCardScanner(opts){
   // 1.28: the Android app (5.0+) brings its own camera and Google's text
   // reader; the page then shows the camera through a hole (html.native-cam).
   const NATIVE = !!(window.DeckhandScan && typeof window.DeckhandScan.start === 'function');
-  let NF = null, hiddenUnder = [], onResize = null;
+  let NF = null, hiddenUnder = [], onResize = null, camRO = null;
   let prev = null, lastAdded = null, blanks = 0, AH = null;
   // The last five looks (a name, or null for a look that read nothing): a
   // card counts once two of them agree, a blurry look in between no longer
@@ -27395,6 +27397,7 @@ function openCardScanner(opts){
       document.documentElement.classList.remove('native-cam');
       hiddenUnder.forEach(([n, o])=>{ n.style.opacity = o; }); hiddenUnder = [];
       if(onResize) window.removeEventListener('resize', onResize);
+      if(camRO){ try{ camRO.disconnect(); }catch(e){} camRO = null; }
     }
     try{ (stream && stream.getTracks() || []).forEach(t=>t.stop()); }catch(e){}
     _scanWorkerP && _scanWorkerP.then(w=>{ try{ w.terminate(); }catch(e){} }).catch(()=>{});
@@ -27412,7 +27415,7 @@ function openCardScanner(opts){
         <div class="scan-txt" data-sprint="${i}"><b>${escapeHtml(r.card.name)}</b><span>${escapeHtml(String(r.card.set || '').toUpperCase())}${r.card.collector_number ? ' #' + escapeHtml(r.card.collector_number) : ''}${eur(r.card)} · ${T('tik: printing', 'tap: printing')}</span></div>
         <button type="button" class="scan-foil${r.foil ? ' on' : ''}" data-sfoil="${i}" aria-label="Foil">✨</button>
         <button type="button" class="scan-q" data-sminus="${i}">−</button><b class="scan-n">×${r.qty}</b><button type="button" class="scan-q" data-splus="${i}">＋</button>
-      </div>`).join('') : `<div class="scan-empty">${T('Hou een kaart in beeld: de app zoekt zelf de randen (groene lijn), ook als hij scheef of klein ligt, en de kaart komt vanzelf in de lijst. Ziet hij geen rand, leg de kaart dan in het kader. Tik op het beeld om scherp te stellen.', 'Hold a card in view: the app finds its edges by itself (green line), even tilted or small, and the card joins the list by itself. No edge found? Lay the card in the frame. Tap the picture to focus.')}</div>`;
+      </div>`).join('') : '';
     const done = el.querySelector('#scDone');
     done.disabled = !n; done.textContent = T('Toevoegen', 'Add') + ' (' + n + ')';
     box.querySelectorAll('[data-sfoil]').forEach(b=>b.addEventListener('click', ()=>{ const r = rows[+b.dataset.sfoil]; r.foil = !r.foil; paintList(); }));
@@ -27713,6 +27716,7 @@ function openCardScanner(opts){
     });
     onResize = ()=>{ try{ if(alive) S.place(camBox()); }catch(e){} };
     window.addEventListener('resize', onResize);
+    try{ camRO = new ResizeObserver(()=>onResize()); camRO.observe(el.querySelector('#scanCam')); }catch(e){}
     artHashReady().then(d=>{ AH = d; }).catch(()=>{});
     // after the overlay has its final place; once more when any opening
     // animation is surely done
