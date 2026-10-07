@@ -1,0 +1,105 @@
+# Builds the Android app (Deckhand.apk) from deckhand-android.zip and puts it
+# in the root of the repo, where the site serves it and the app's update
+# check finds it. Runs by itself when deckhand-android.zip changes; can also
+# be started by hand (Actions -> Android app -> Run workflow).
+#
+# Needs ONE secret: DECKHAND_KEY (Settings -> Secrets and variables ->
+# Actions). It unlocks signing.enc inside the zip, which holds the app's
+# signing key. Same key as every earlier Deckhand.apk, so the update installs
+# over the old app and nothing is lost.
+name: Android app
+
+on:
+  push:
+    paths:
+      - 'deckhand-android.zip'
+      - '.github/workflows/apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack the app source
+        run: |
+          rm -rf android-build && mkdir android-build
+          unzip -q deckhand-android.zip -d android-build
+          # the zip may hold the files directly or inside one folder
+          if [ ! -f android-build/settings.gradle ]; then
+            inner=$(dirname "$(find android-build -maxdepth 3 -name settings.gradle | head -1)")
+            [ -n "$inner" ] && [ "$inner" != "." ] || { echo "::error::settings.gradle niet gevonden in deckhand-android.zip"; exit 1; }
+            echo "DH_SRC=$inner" >> "$GITHUB_ENV"
+          else
+            echo "DH_SRC=android-build" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Unlock the signing key
+        env:
+          DECKHAND_KEY: ${{ secrets.DECKHAND_KEY }}
+        run: |
+          if [ -z "$DECKHAND_KEY" ]; then
+            echo "::error::Secret DECKHAND_KEY ontbreekt (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/sign"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:DECKHAND_KEY \
+            -in "$DH_SRC/signing.enc" | tar -xzf - -C "$RUNNER_TEMP/sign" \
+            || { echo "::error::DECKHAND_KEY klopt niet: de sleutel gaat niet open."; exit 1; }
+          pass=$(cat "$RUNNER_TEMP/sign/store-pass")
+          echo "::add-mask::$pass"
+          echo "DH_KS_FILE=$RUNNER_TEMP/sign/release.keystore" >> "$GITHUB_ENV"
+          echo "DH_KS_PASS=$pass" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: ${{ env.DH_SRC }}
+        run: gradle --no-daemon --stacktrace assembleRelease
+
+      - name: Check the signature (must be the old key)
+        run: |
+          APK="$DH_SRC/app/build/outputs/apk/release/app-release.apk"
+          BT=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          "$ANDROID_HOME/build-tools/$BT/apksigner" verify --print-certs "$APK" | tee certs.txt
+          grep -qi "SHA-256 digest: 85ea59f3ee44a523d41f0b49e715ae0470e06bfa1a06583f11f7f30c16ea3bb0" certs.txt \
+            || { echo "::error::Verkeerde handtekening: deze APK zou niet over de oude heen installeren."; exit 1; }
+          cp "$APK" Deckhand.apk
+          ls -l Deckhand.apk
+          VER=$(grep -o "versionName '[^']*'" "$DH_SRC/app/build.gradle" | cut -d"'" -f2)
+          echo "DH_VER=$VER" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Deckhand-${{ env.DH_VER }}
+          path: Deckhand.apk
+
+      - name: Put Deckhand.apk in the repo
+        run: |
+          rm -rf android-build certs.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Deckhand.apk
+          if git diff --cached --quiet; then echo "Deckhand.apk unchanged"; exit 0; fi
+          git commit -m "Deckhand.apk $DH_VER (built on GitHub)"
+          for i in 1 2 3 4 5; do
+            git pull --rebase && git push && exit 0
+            sleep 10
+          done
+          echo "::error::Push failed"; exit 1
