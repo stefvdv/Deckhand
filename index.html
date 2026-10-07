@@ -805,6 +805,16 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .folder-crumb .fc-cur{color:var(--ink-text);}
 .folder-crumb .fc-sep,.fp-crumbs .fc-sep{color:var(--sub-text);}
 .fp-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin:2px 0 10px;font-size:13.5px;}
+/* Move picker: the page's own folder tiles, two across, bottom-up. */
+.fp-scroll{max-height:52vh;overflow-y:auto;margin:0 -2px 10px;padding:2px;}
+.fp-grid{display:flex;flex-wrap:wrap-reverse;gap:10px;}
+.fp-grid > .fp-tile{flex:0 0 calc(50% - 5px);min-width:0;min-height:118px;padding:12px 8px 10px;}
+.fp-tile .folder-face{margin-bottom:6px;}
+.fp-tile .folder-face svg{width:40px;height:40px;}
+.fp-tile .folder-name{font-size:14px;}
+.fp-tile .folder-sub{font-size:11.5px;}
+.fp-tile.fp-new{border-style:dashed;font:inherit;color:inherit;}
+.fp-tile.fp-new .folder-face svg{width:34px;height:34px;}
 .fp-crumb{background:none;border:none;color:var(--brass);cursor:pointer;font-size:13.5px;padding:2px;font-family:'Inter';}
 .deck-tile:hover{border-color:var(--brass-dim);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.3);}
 .deck-tile .art{height:96px;background-size:cover;background-position:center 20%;background-color:var(--ink-2);display:flex;align-items:center;justify-content:center;border-bottom:2px solid var(--line);}
@@ -1929,6 +1939,10 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
 .card-preview-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:150;display:flex;align-items:center;justify-content:center;padding:10px;}
 .card-preview-backdrop img{max-width:96vw;max-height:90vh;border-radius:4.75% / 3.5%;box-shadow:0 20px 50px rgba(0,0,0,0.6);}
+.card-preview-backdrop .pv-card{position:relative;display:inline-block;line-height:0;}
+.card-preview-backdrop .pv-card > img{display:block;}
+.card-preview-backdrop .dfc-flip{width:52px;height:52px;}
+.card-preview-backdrop .dfc-flip svg{width:26px;height:26px;}
 
 /* ---------- life counter v2 ---------- */
 .player-count{display:flex;gap:6px;margin-bottom:10px;}
@@ -2538,6 +2552,12 @@ html[data-main="W"] .dice-opt{color:var(--ink-text);}   /* dice grid rides the l
    spread shadow dims the table behind them; long histories scroll. */
 .life-panel{position:fixed;inset:0;margin:auto;z-index:257;width:min(92vw,520px);height:max-content;max-height:72vh;overflow-y:auto;box-shadow:0 0 0 100vmax rgba(0,0,0,0.45), 0 12px 40px rgba(0,0,0,0.6);}
 main.card-detail{zoom:0.9;}
+/* The card page only ever scrolls up and down. On a phone with a bigger
+   system font something on it could poke out a few pixels, which gave the
+   page a sideways scrollbar -- the "thicker" green line above the nav bar
+   (with a white square where the two scrollbars met). */
+.overlay main.card-detail, main.card-detail{overflow-x:hidden;}
+::-webkit-scrollbar-corner{background:transparent;}
 .nopr{cursor:pointer;font-family:'JetBrains Mono',monospace;}
 /* ── Surfaces the heading tint was never meant for ──────────────────────
    The heading treatment paints text in the page-ink tint. Two places do not
@@ -3245,10 +3265,51 @@ document.addEventListener('click', async (e)=>{
     if(!btn.dataset.back) return;
   }
   const toBack = btn.dataset.showing !== 'back';
+  // Remembered per card for the session: the card page, the full view and
+  // every tile of that card show the face you turned to.
+  const key = dfcKey(btn.dataset.front);
+  if(toBack) _dfcBack.add(key); else _dfcBack.delete(key);
+  dfcPaint(btn, toBack);
+  document.querySelectorAll('.dfc-flip').forEach(b=>{ if(b !== btn && dfcKey(b.dataset.front) === key && (b.dataset.showing === 'back') !== toBack) dfcPaint(b, toBack); });
+}, true);
+/* Which two-faced cards are turned over right now (by card id). */
+const _dfcBack = new Set();
+function dfcKey(u){ const m = String(u || '').match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i); return m ? m[1].toLowerCase() : String(u || '').split('?')[0]; }
+function dfcPaint(btn, toBack){
+  const host = btn.closest('.dfc-flip-box') && btn.closest('.dfc-flip-box').parentElement;
+  const img = host && host.querySelector('img');
+  if(!img || (toBack && !btn.dataset.back)) return;
   img.src = toBack ? btn.dataset.back : btn.dataset.front;
+  img.dataset.dfcBack = toBack ? '1' : '';
   btn.dataset.showing = toBack ? 'back' : 'front';
   btn.classList.toggle('flipped', toBack);
-}, true);
+}
+// A card drawn anew (the card page opening, a tile re-rendered, the full
+// view) turns to the remembered face before it is painted.
+try{
+  new MutationObserver((muts)=>{
+    if(!_dfcBack.size) return;
+    for(const m of muts) for(const n of m.addedNodes){
+      if(n.nodeType !== 1) continue;
+      const btns = n.matches && n.matches('.dfc-flip') ? [n] : (n.querySelectorAll ? n.querySelectorAll('.dfc-flip') : []);
+      btns.forEach(b=>{ if(b.dataset.showing !== 'back' && _dfcBack.has(dfcKey(b.dataset.front))) dfcPaint(b, true); });
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+}catch(e){}
+/* The full view of a card: a two-faced card opens on the face that is
+   showing, and carries the same flip button at the same spot on the card. */
+function showCardPreview(card, src){
+  const d = card ? dfcBackFace(card) : null;
+  if(!d){ showPreview(src, card && card.border_color === 'white'); return; }
+  const big = (u)=>String(u).replace('/normal/', '/large/');
+  // The card's own two faces (its printing), large; the id in their paths
+  // ties this view to the remembered face.
+  const front = big(d.front);
+  state.preview = null;
+  showPreview(front, card.border_color === 'white');
+  state.preview.flip = { front, back: big(d.back), key: dfcKey(d.front) };
+  renderPreview();
+}
 /* An unfolded Extras accordion joins the overlay ladder, so hardware back
    folds it instead of leaving Extras. Folding by tap drops its entry the
    dismissAll way (history entry left inert; the ladder re-arms). */
@@ -6043,13 +6104,13 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.18';
+const APP_VERSION = '1.22';
 const CHANGELOG_NOTES = {
   en: [
-    'Deck bar: type counts fit again'
+    'Inspiration title: deck and theme'
   ],
   nl: [
-    'Deckbalk: kaarttypes passen weer'
+    'Inspiratie-titel: deck en thema'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6077,29 +6138,29 @@ function tourSteps(){
       t: NL ? '⚔ My Stuff — je decks' : '⚔ My Stuff — your decks',
       b: NL
         ? `<p style="margin:6px 0;">Al je decks op één plek. Ze sorteren zichzelf in <strong>automatische format-mappen</strong>: elk format krijgt zijn eigen map.</p>
-           <p style="margin:6px 0;">De <strong>＋</strong>-knop opent een menu: nieuw deck, nieuwe map, een lijst plakken of een bestand importeren — en onderaan <strong>List view</strong>, om je mappen en decks als lijst te zien in plaats van tegels. ★ favorieten kunnen ook.</p>
+           <p style="margin:6px 0;">De <strong>＋</strong>-knop opent een menu: nieuw deck, nieuwe map, <strong>Importeren</strong> (plak een lijst of laad een bestand) — en onderaan <strong>List view</strong>, om je mappen en decks als lijst te zien in plaats van tegels. ★ favorieten kunnen ook.</p>
            <p style="margin:6px 0;">Naast de prijs van een Commander-deck staat de 🧂 <strong>gemiddelde salt score</strong> van zijn kaarten (EDHREC).</p>`
         : `<p style="margin:6px 0;">All your decks in one place. They sort themselves into <strong>automatic format folders</strong>: every format gets its own.</p>
-           <p style="margin:6px 0;">The <strong>＋</strong> button opens a menu: new deck, new folder, paste a list or import a file — and at its foot <strong>List view</strong>, to see folders and decks as rows instead of tiles. ★ favorites work too.</p>
+           <p style="margin:6px 0;">The <strong>＋</strong> button opens a menu: new deck, new folder, <strong>Import</strong> (paste a list or load a file) — and at its foot <strong>List view</strong>, to see folders and decks as rows instead of tiles. ★ favorites work too.</p>
            <p style="margin:6px 0;">Next to a Commander deck's price sits the 🧂 <strong>average salt score</strong> of its cards (EDHREC).</p>` },
     { k:'decklist', go:()=>{ const d = d0(); if(d){ state.activeDeckId = d.id; state.builderTab = 'list'; switchPage('decklist'); } },
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred; zit je deck boven de limiet, dan klap je boven Theme de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands; tik op de reden onder een kaart voor de hele uitleg), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred, en de naam bovenaan zegt welk deck en thema je bekijkt; zit je deck boven de limiet, dan klap je boven Theme de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands; tik op de reden onder een kaart voor de hele uitleg), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
            <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred; when your deck runs over, open <strong>Cuts</strong> above Theme: what can go most easily, weighing Theme, Kindred and your own land count; tap the reason under a card for the full story), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred, and the name on top tells which deck and theme you are looking at; when your deck runs over, open <strong>Cuts</strong> above Theme: what can go most easily, weighing Theme, Kindred and your own land count; tap the reason under a card for the full story), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
            <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
       t: inlIco('cardview', 14) + (NL ? 'De kaart-detailpagina' : 'The card detail view'),
       b: soon + (NL
         ? `<p style="margin:6px 0;">Tik op een kaart en je ziet alles: Oracle text, prijs (tik erop voor de <strong>prijsgeschiedenis</strong>) en de 🧂 <strong>salt score</strong>.</p>
-           <p style="margin:6px 0;"><strong>Recommendations</strong> toont wat het meest met deze kaart gespeeld wordt, <strong>Similar cards</strong> kaarten met dezelfde rol, en via <strong>Change printing</strong> kies je een andere versie/art. <strong>Tags</strong> en <strong>∞ combo's</strong> staan naast elkaar; veeg opzij naar de volgende kaart.</p>`
+           <p style="margin:6px 0;"><strong>Recommendations</strong> toont wat het meest met deze kaart gespeeld wordt, <strong>Similar cards</strong> kaarten met dezelfde rol, en via <strong>Change printing</strong> kies je een andere versie/art. <strong>Tags</strong> en <strong>∞ combo's</strong> staan naast elkaar; veeg opzij naar de volgende kaart. Een dubbelzijdige kaart draai je om met de ronde knop; de kaartpagina en het volledige beeld (tik op de kaart) tonen dan de kant die je omdraaide.</p>`
         : `<p style="margin:6px 0;">Tap any card and everything is here: oracle text, price (tap it for the <strong>price history</strong>) and the 🧂 <strong>salt score</strong>.</p>
-           <p style="margin:6px 0;"><strong>Recommendations</strong> shows what people play alongside it, <strong>Similar cards</strong> finds cards with the same job, and <strong>Change printing</strong> picks another version/art. <strong>Tags</strong> and <strong>∞ combos</strong> sit side by side; swipe sideways to the next card.</p>`) },
+           <p style="margin:6px 0;"><strong>Recommendations</strong> shows what people play alongside it, <strong>Similar cards</strong> finds cards with the same job, and <strong>Change printing</strong> picks another version/art. <strong>Tags</strong> and <strong>∞ combos</strong> sit side by side; swipe sideways to the next card. Turn a double-faced card with its round button; the card page and the full view (tap the card) then show the face you turned to.</p>`) },
     { k:'collection', go:()=>switchPage('collection'),
       t: inlIco('binder', 14) + (NL ? 'Je collectie' : 'Your collection'),
       b: NL
@@ -7498,6 +7559,23 @@ function browseCapSelHtml(){
     return `<span class="cap-sel">${icons}${icons && wHtml ? '<span class="cs-dot">·</span>' : ''}${wHtml}</span>`;
   }catch(e){ return ''; }
 }
+function inspirationCapTitle(){
+  try{
+    const d = getDeck(state.inspireDeckId);
+    if(!d || deckIsConstructed(d)) return '';
+    const word = appLang() === 'nl' ? 'Inspiratie' : 'Inspiration';
+    const parts = [word, d.name || 'Untitled deck'];
+    if(d.admiral){
+      const sel = state.inspireSel || {};
+      const themes = inspEdhThemes(d);
+      const lab = (sl)=>{ const t = themes.find(x=>x.slug === sl); return t ? String(t.label) : String(sl).replace(/-/g, ' ').replace(/\b\w/g, ch=>ch.toUpperCase()); };
+      const picked = [sel.kindred, sel.theme].filter(Boolean).map(lab);
+      if(picked.length) parts.push(picked.join(' + '));
+    }
+    // A no-break space keeps each "-" on the line of the part before it.
+    return parts.join('\u00a0- ');
+  }catch(e){ return ''; }
+}
 function navHtml(){
   const items = [
     {k:'decks', l:'Decks', i:ICONS.decks},
@@ -7512,6 +7590,10 @@ function navHtml(){
     const _p = isFmtFolder(state.folderNav) ? [{name: fmtLabelOf(fmtOfFolder(state.folderNav))}] : folderPath(state.folderNav);
     if(_p.length) title = _p[_p.length - 1].name;
   }
+  // A deck's Inspiration says what you are looking at while you scroll:
+  // "Inspiration - <deck> - <Kindred + Theme>". The cap wraps to two lines
+  // and shrinks to fit like every page name (fitBrandTitle).
+  if(state.screen === 'inspiration'){ const _it = inspirationCapTitle(); if(_it) title = _it; }
   let editable = false;
   if(state.screen === 'decklist'){
     const d = getDeck(state.activeDeckId);
@@ -7575,7 +7657,8 @@ function fitBrandTitle(){
     ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${px}px ${cs.fontFamily}`;
     return ctx.measureText(t).width + ls * Math.max(0, t.length - 1);
   };
-  const words = text.split(/\s+/).filter(Boolean);
+  // Break where the browser breaks: ordinary spaces, never a no-break one.
+  const words = text.split(/[^\S\u00a0]+/).filter(Boolean);
   let size = 18;
   for(; size >= 8.5; size -= 0.5){
     if(words.some(w0 => measure(w0, size) > avail)) continue;   // a word can never break
@@ -8341,8 +8424,8 @@ function wireHome(){
       openFabMenu([
         ['fabNewDeck', '⚔ New deck', ()=>openModal('newdeck')],
         ['fabNewFolder', `<span class="ib">${ICONS.decks}</span>New folder`, ()=>openNewFolderPrompt(state.folderNav||null)],
-        ['fabImportDeck', mIco('clipboard') + trS('Paste in decklist'), ()=>openPasteListSheet()],
-        ['fabImportFile', mIco('file') + trS('Import from file'), ()=>openPasteListSheet({ pickFile: true })],   // sheet opens with the phone's file picker
+        // One Import: the sheet takes a pasted list AND loads a .txt file.
+        ['fabImportDeck', mIco('file') + trS('Import'), ()=>openPasteListSheet()],
         ['fabView', folderViewToggleLabel('decks'), ()=>{ setFolderView('decks', folderView('decks') === 'list' ? 'tiles' : 'list'); render(); scrollToPageFoot(); }]
       ]);
     });
@@ -8473,17 +8556,20 @@ function openDeckTileMenu(id, anchorEl){
 function openFolderMenu(id, anchorEl){
   const f = (state.folders||[]).find(x=>x.id===id); if(!f) return;
   openTileMenu(anchorEl, [
-    {label:mIco('edit') + trS('Rename'), fn:()=>openInAppPrompt('Rename folder','Folder name',f.name,(v)=>{ if(v&&v.trim()){ f.name=v.trim(); saveFolders(); render(); } })},
-    {label: modeGlyph()+' Change icon', fn:()=>openFolderIconPicker(f)},
-    {label:mIco('folderPlus') + trS('New subfolder'), fn:()=>openNewFolderPrompt(f.id)},
+    // One order for every long-press menu (deck, folder, binder): Move to…
+    // first, then the name / format, then the picture, then the extras, and
+    // Delete last behind its rule.
     {label:mIco('folder') + trS('Move to…'), fn:()=>openFolderPicker(f, {folder:true})},
+    {label:mIco('edit') + trS('Rename'), fn:()=>openInAppPrompt('Rename folder','Folder name',f.name,(v)=>{ if(v&&v.trim()){ f.name=v.trim(); saveFolders(); render(); } })},
+    {label: modeGlyph()+' '+(appLang() === 'nl' ? 'Icoon wijzigen' : 'Change icon'), fn:()=>openFolderIconPicker(f)},
+    {label:mIco('folderPlus') + trS('New subfolder'), fn:()=>openNewFolderPrompt(f.id)},
     {label:mIco('trash') + trS('Delete folder'), danger:true, fn:()=>{ openModal('deleteFolder', {folderId:f.id}); }}
   ]);
 }
 function openFolderIconPicker(f){
   let el = document.getElementById('iconPicker');
   if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='iconPicker'; }
-  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
+  brSheetOpen(el, 'iconPicker');   // back closes it (and it rises above anything opened before)
   el.style.alignItems='center';
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
     <h4>Folder icon</h4>
@@ -8492,7 +8578,7 @@ function openFolderIconPicker(f){
     </div>
     <button class="dp-cancel" id="icCancel" style="margin:0;">Close</button>
   </div>`;
-  const close=()=>el.remove();
+  const close=()=>brSheetClose('iconPicker');
   document.getElementById('icCancel').addEventListener('click', close);
   el.addEventListener('click', e=>{ if(e.target===el) close(); });
   el.querySelectorAll('[data-ic]').forEach(b=>b.addEventListener('click', ()=>{ f.icon=b.dataset.ic; saveFolders(); close(); render(); }));
@@ -8518,7 +8604,7 @@ function setDeckFormat(d, fmt){
 function openFormatPicker(d){
   let el = document.getElementById('formatPicker');
   if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='formatPicker'; }
-  document.body.appendChild(el);
+  brSheetOpen(el, 'formatPicker');
   el.style.alignItems='center';
   const cur = deckFormat(d);
   el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
@@ -8530,7 +8616,7 @@ function openFormatPicker(d){
       <button class="dp-cancel" id="fmtpCancel" style="flex:1;margin:0;">Cancel</button>
     </div>
   </div>`;
-  const close=()=>el.remove();
+  const close=()=>brSheetClose('formatPicker');
   document.getElementById('fmtpCancel').addEventListener('click', close);
   el.addEventListener('click', e=>{ if(e.target===el) close(); });
   el.querySelectorAll('[data-setfmt]').forEach(b=>b.addEventListener('click', ()=>{ close(); setDeckFormat(d, b.dataset.setfmt); }));
@@ -8546,11 +8632,22 @@ function folderDescendantIds(id){
   while(grew){ grew = false; (state.folders||[]).forEach(f=>{ if(f.parentId && out.has(f.parentId) && !out.has(f.id)){ out.add(f.id); grew = true; } }); }
   return out;
 }
+/* The Move picker shows the same tiles as My Decks -- format folders with
+   their glyph, your folders with their own icon and counts -- two across,
+   bottom-up like the page (first tile at the foot, the list opens at its
+   foot). Tap a tile to step into it; "Move to …" commits at the level shown.
+   The first tile makes a new folder right here. Back closes the picker. */
+function fpTileHtml(kind, id){
+  const t = kind === 'fmt' ? fmtFolderTileHtml(id) : folderTileHtml((state.folders || []).find(f=>f.id === id));
+  // Same face, own wiring: the page's .folder-tile handlers look for data-folder.
+  return t.replace(/class="folder-tile"/, 'class="folder-tile fp-tile"').replace(/ data-folder="([^"]+)"( data-fmtfolder="[^"]+")?/, ' data-fpinto="$1"');
+}
 function renderFolderPicker(){
   const d = state._fpDeck; if(!d) return;
+  const NL = appLang() === 'nl';
   let el = document.getElementById('folderPicker');
   if(!el){ el = document.createElement('div'); el.className='deckpick-scrim'; el.id='folderPicker'; }
-  document.body.appendChild(el);   // (re)append — a reused overlay must rise above ones opened after it
+  brSheetOpen(el, 'folderPicker', ()=>{ state._fpDeck = null; });   // back closes the picker
   el.style.alignItems='center';
   const nav = state._fpNav;
   const mvFolder = state._fpIsFolder;
@@ -8560,27 +8657,26 @@ function renderFolderPicker(){
   const fmtAnc = fmtAncestorOf(nav);
   const crumb = `<button class="fp-crumb" data-fp="root">${modeGlyph()} Top</button>` + (fmtAnc ? `<span class="fc-sep">›</span><button class="fp-crumb" data-fp="${fmtFolderId(fmtAnc)}">${fmtLabelOf(fmtAnc)}</button>` : '') + path.map(f=>`<span class="fc-sep">›</span><button class="fp-crumb" data-fp="${f.id}">${escapeHtml(f.name)}</button>`).join('');
   const curName = isFmtFolder(nav) ? fmtLabelOf(fmtOfFolder(nav)) : nav ? (folderPath(nav).slice(-1)[0].name) : (mvFolder ? 'Top level' : 'Top level (auto-filed by format)');
-  el.innerHTML = `<div class="deckpick" style="border-radius:16px;margin:auto;max-width:340px;">
+  const newTile = `<button type="button" class="folder-tile fp-tile fp-new" id="fpNewSub"><div class="folder-face">${ICONS.folderPlus || '＋'}</div><div class="folder-name">${NL ? 'Nieuwe map' : 'New folder'}</div><div class="folder-sub">${NL ? 'hier' : 'here'}</div></button>`;
+  const tiles = newTile + (!nav ? FMT_ORDER.map(f=>fpTileHtml('fmt', f)).join('') : '') + here.map(f=>fpTileHtml('folder', f.id)).join('');
+  el.innerHTML = `<div class="deckpick fp-sheet" style="border-radius:16px;margin:auto;max-width:400px;">
     <h4>Move “${escapeHtml(d.name)}”</h4>
     <div class="fp-crumbs">${crumb}</div>
-    <div class="deckpick-list" style="max-height:46vh;">
-      ${!nav ? FMT_ORDER.map(f=>`<button class="dp-row" data-intofmt="${f}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${fmtFolderGlyph(f, 20)}</span><span class="dp-txt" style="display:inline;">${fmtLabelOf(f)} <span style="color:var(--sub-text);">· auto folder</span>${childFolders(fmtFolderId(f)).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : ''}
-      ${here.length ? here.map(f=>`<button class="dp-row" data-into="${f.id}"><span style="color:var(--brass);display:inline-flex;vertical-align:middle;margin-right:8px;">${folderIconSvg(f.icon,22,folderIsNaval(f))}</span><span class="dp-txt" style="display:inline;">${escapeHtml(f.name)}${childFolders(f.id).length?` <span style="color:var(--sub-text);">›</span>`:''}</span></button>`).join('') : `<p class="hint" style="padding:6px 2px;">No subfolders here.</p>`}
-    </div>
-    <button class="ghost-btn fp-newsub" id="fpNewSub">＋ Subfolder</button>
+    <div class="fp-scroll"><div class="fp-grid">${tiles}</div></div>
     <div class="fp-actions">
       <button class="dp-cancel" id="fpCancel">Cancel</button>
       <button class="primary-btn" id="fpHere">Move to ${escapeHtml(curName)}</button>
     </div>
   </div>`;
-  const close=()=>{ el.remove(); state._fpDeck=null; };
+  // Bottom-up: the grid opens at its foot, where the first tiles are.
+  const sc = el.querySelector('.fp-scroll'); if(sc) sc.scrollTop = sc.scrollHeight;
+  const close=()=>brSheetClose('folderPicker');
   document.getElementById('fpCancel').addEventListener('click', close);
   el.addEventListener('click', e=>{ if(e.target===el) close(); });
-  el.querySelectorAll('[data-into]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = b.dataset.into; renderFolderPicker(); }));
-  el.querySelectorAll('[data-intofmt]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = fmtFolderId(b.dataset.intofmt); renderFolderPicker(); }));
+  el.querySelectorAll('[data-fpinto]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = b.dataset.fpinto; renderFolderPicker(); }));
   el.querySelectorAll('[data-fp]').forEach(b=>b.addEventListener('click', ()=>{ state._fpNav = b.dataset.fp==='root'?null:b.dataset.fp; renderFolderPicker(); }));
   document.getElementById('fpNewSub').addEventListener('click', ()=>{
-    openInAppPrompt('New subfolder','Folder name','',(name)=>{ if(name&&name.trim()){ const f=createFolder(name.trim(), state._fpNav||null); state._fpNav=f.id; renderFolderPicker(); } });
+    openInAppPrompt(NL ? 'Nieuwe map' : 'New folder', NL ? 'Naam van de map' : 'Folder name', '', (name)=>{ if(name&&name.trim()){ const f=createFolder(name.trim(), state._fpNav||null); state._fpNav=f.id; renderFolderPicker(); } });
   });
   document.getElementById('fpHere').addEventListener('click', ()=>{
     const dest = state._fpNav || null;
@@ -8605,9 +8701,9 @@ function renderFolderPicker(){
     d.folderId = dest;
     const _now = deckFormat(d);            // the folder's format takes over
     persistDeck(d);
+    const where = dest ? folderPath(dest).slice(-1)[0].name : fmtLabelOf(deckFormat(d)) + ' (auto folder)';
     close();
     if(_now !== _was) setTimeout(()=>{ try{ toast(`${d.name}: ${fmtLabelOf(_now)}`); }catch(e){} }, 1200);
-    const where = state._fpNav ? folderPath(state._fpNav).slice(-1)[0].name : fmtLabelOf(deckFormat(d)) + ' (auto folder)';
     toast(`Moved to ${where}.`);
     render();
   });
@@ -8721,7 +8817,7 @@ function openPasteListSheet(opts){
     el.id = 'appointOverlay';
     el.innerHTML = `
       <div class="appoint-sheet" style="max-width:480px;">
-        <div class="appoint-head"><span>${modeGlyph()} Paste in decklist</span><button class="icon-btn" id="appointClose" style="flex:none;">${ICONS.close||'✕'}</button></div>
+        <div class="appoint-head"><span>${modeGlyph()} ${trS('Import')}</span><button class="icon-btn" id="appointClose" style="flex:none;">${ICONS.close||'✕'}</button></div>
         <p class="hint" style="margin:0 0 8px;">${appLang() === 'nl'
           ? `Een eerste regel <span style="font-family:'JetBrains Mono',monospace;">${leaderLineLabel({format: 'commander'})}: Kaartnaam</span> wijst de leider aan — anders kies je er later een uit het deck.`
           : `A first line <span style="font-family:'JetBrains Mono',monospace;">${leaderLineLabel({format: 'commander'})}: Card Name</span> appoints the leader — otherwise appoint one later from the deck.`}</p>
@@ -9136,7 +9232,7 @@ function applyLocalizedSheetImage(card, imgId){
     if(!loc) return;
     if(loc.img){
       const el = document.getElementById(imgId);
-      if(el && el === imgAnchor && el.alt !== undefined) el.src = loc.img;
+      if(el && el === imgAnchor && el.alt !== undefined && el.dataset.dfcBack !== '1') el.src = loc.img;
     }
     // Printed Oracle text replaces the English text ONLY when this card was
     // actually printed in the chosen language with text to show.
@@ -9741,7 +9837,7 @@ function openBinderLongMenu(binder, x, y){
   const pop = document.createElement('div');
   pop.id = 'binderLongPop';
   pop.style.cssText = 'position:fixed;z-index:120;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;min-width:200px;';
-  pop.innerHTML = `<button data-a="art">${mIco('image')}${trS('Choose cover art')}</button><button data-a="ren">${mIco('edit')}${trS('Rename')}</button><button data-a="del" style="color:var(--danger);">${mIco('trash')}${trS('Delete binder')}</button>`;
+  pop.innerHTML = `<button data-a="ren">${mIco('edit')}${trS('Rename')}</button><button data-a="art">${mIco('image')}${trS('Choose cover art')}</button><button data-a="del" style="color:var(--danger);">${mIco('trash')}${trS('Delete binder')}</button>`;
   pop.querySelectorAll('button').forEach(b=>b.style.cssText += ';background:none;border:none;color:inherit;padding:12px 16px;font-size:15px;text-align:left;cursor:pointer;border-bottom:2px solid var(--line);');
   document.body.appendChild(pop);
   pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, x - pop.offsetWidth/2)) + 'px';
@@ -9828,7 +9924,7 @@ function wireCollectionPage(){
     openFabMenu([
       ['bfAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
       ['bfScan', mIco('camera') + (appLang() === 'nl' ? 'Kaarten scannen' : 'Scan cards'), ()=>openCardScanner({ binder: bid })],
-      ['bfImport', '⬆ ' + trS('Import'), ()=>openCollectionImport(bid)]
+      ['bfImport', mIco('file') + trS('Import'), ()=>openCollectionImport(bid)]
     ].concat((state.collection.binders || []).some(b=>b.id === bid)
       ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Map-instellingen…' : 'Binder settings…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
       : []));
@@ -9848,7 +9944,7 @@ function wireCollectionPage(){
           }
         });
       }],
-      ['fabImport', '⬆ ' + trS('Import'), ()=>openCollectionImport()],
+      ['fabImport', mIco('file') + trS('Import'), ()=>openCollectionImport()],
     ].concat(ruledBinders().length ? [['fabResort', '↻ ' + (appLang() === 'nl' ? 'Mappen opnieuw sorteren' : 'Re-sort binders'), ()=>binderResort()]] : []).concat([
       ['fabView', folderViewToggleLabel('col'), ()=>{ setFolderView('col', folderView('col') === 'list' ? 'tiles' : 'list'); render(); scrollToPageFoot(); }]
     ]));
@@ -13761,7 +13857,7 @@ function wireStatsTab(d){
         img.addEventListener('click', ()=>{
           const nm = decodeURIComponent(img.closest('[data-name]').dataset.name);
           const card = d.cards.find(x=>x.name===nm);
-          if(card){ showPreview(cardImageLarge(card), card.border_color==='white'); }
+          if(card){ showCardPreview(card, cardImageLarge(card)); }
         });
       });
     });
@@ -13817,7 +13913,7 @@ function wireStatsTab(d){
         img.addEventListener('click', ()=>{
           const nm = decodeURIComponent(img.closest('[data-name]').dataset.name);
           const card = list.find(x=>x.name===nm);
-          if(card) showPreview(cardImageLarge(card), card.border_color==='white');
+          if(card) showCardPreview(card, cardImageLarge(card));
         });
       });
     };
@@ -14899,7 +14995,7 @@ function renderCardSheet(d, card, loc, idx){
 
   pinSheetToFoot(el);
   requestAnimationFrame(()=>fitSheetTitle(el.querySelector('.topbar .sheet-title')));
-  document.getElementById('dcImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
+  document.getElementById('dcImg')?.addEventListener('click', ()=>showCardPreview(card, cardImageLarge(card)));
   wireCombosButton(el, card);
   { const pr = el.querySelector('#csPrice'); if(pr){ pr.style.cursor = 'pointer'; pr.title = 'Price history'; pr.addEventListener('click', ()=>openPriceHistory(card)); } }
   applyLocalizedSheetImage(card, 'dcImg');
@@ -15576,7 +15672,7 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   // leader's seat. Only leader-ELIGIBLE cards keep it: if the guess doesn't
   // hold up at resolution, the card quietly joins the main list instead.
   const rawLines = raw.split(/\r?\n/).map(l=>l.trim());
-  let isoLeaderNames = [];
+  let isoLeaderNames = [], isoTailSection = null;
   {
     let i = 0; while(i < rawLines.length && !rawLines[i]) i++;
     let j = i; while(j < rawLines.length && rawLines[j]) j++;
@@ -15594,6 +15690,27 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
       if(names.every(Boolean)){
         isoLeaderNames = names;
         rawLines.splice(i, j - i);   // consumed — the loop below never sees them
+      }
+    }
+    // Moxfield's plain export puts the commander at the very END, after the
+    // sideboard, apart from it by a blank line: "…\n\n1 Elsha of the Infinite".
+    // The same lone block at the foot claims the seat (unless the list
+    // already names a leader); a guess that doesn't hold returns to the
+    // section it was standing in.
+    if(!isoLeaderNames.length && !rawLines.some(l=>/^(ADMIRAL|COMMANDER|PARTNER):/i.test(l) || headerOf(l) === 'leader')){
+      let e = rawLines.length - 1; while(e >= 0 && !rawLines[e]) e--;
+      let s0 = e; while(s0 >= 0 && rawLines[s0]) s0--;
+      const tail = rawLines.slice(s0 + 1, e + 1);
+      const before = rawLines.slice(0, s0 + 1).filter(Boolean);
+      if(s0 >= 0 && tail.length >= 1 && tail.length <= 2 && before.length >= 5){
+        const names = tail.map(plainName);
+        if(names.every(Boolean)){
+          isoLeaderNames = names;
+          // which section would have held them: the last header above
+          isoTailSection = 'main';
+          before.forEach(l=>{ const h = headerOf(l.replace(/^[-\u2022*]\s+/, '')); if(h) isoTailSection = h; });
+          rawLines.splice(s0 + 1, e - s0);
+        }
       }
     }
   }
@@ -15630,9 +15747,13 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
         if(!partnerName){ partnerName = isoLeaderNames[1]; partnerIsGuess = true; }
         else cardNames.unshift(isoLeaderNames[1]);
       }
-    } else cardNames.unshift(...isoLeaderNames);
+    } else (isoTailSection === 'maybe' ? maybeNames : cardNames).unshift(...isoLeaderNames);
   }
-  document.getElementById(reportElId).innerHTML = `<div class="status"><div class="spinner"></div>Resolving ${cardNames.length+(admiralName?1:0)} cards…</div>`;
+  // ONE count for everything this list brings: leader(s), main deck AND
+  // the sideboard / maybeboard -- the number on screen is the number added.
+  const allN = cardNames.length + maybeNames.length + (admiralName ? 1 : 0) + (partnerName ? 1 : 0);
+  const _resolving = (done)=>{ const el = document.getElementById(reportElId); if(el) el.innerHTML = `<div class="status"><div class="spinner"></div>Resolving ${done}/${allN} cards…</div>`; };
+  document.getElementById(reportElId).innerHTML = `<div class="status"><div class="spinner"></div>Resolving ${allN} cards…</div>`;
   // The report grows at the panel's foot — keep that foot in view (the
   // cover scrolls only when taller than the free viewport).
   const _pinFoot = ()=>{ try{ const b = document.getElementById('dlPanelBox'); if(b) b.scrollTop = b.scrollHeight; }catch(e){} };
@@ -15653,27 +15774,39 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   const leaderOk = (c)=> deckFormat(d)==='admiral'
     ? (isLegendary(c) && isNonlandFront(c) && !isBanned(c, d) && (hasPowerToughness(c) || (pairAbility(c)||{}).kind==='background'))
     : ((leaderFitsFormat(c, deckFormat(d)) || (pairAbility(c)||{}).kind==='background') && !isBanned(c, d));
+  // A GUESSED leader (a lone card at the top or the foot of the list) must
+  // truly be able to lead -- a legendary creature, "can be your commander",
+  // or a Background -- or it simply stays a card in the list.
+  const guessOk = (c)=>{
+    const tl = String(((typeof frontFace === 'function' ? frontFace(c) : c) || c).type_line || c.type_line || '');
+    if((pairAbility(c)||{}).kind === 'background') return true;
+    if(/can be your commander/i.test(c.oracle_text || '')) return true;
+    if(deckFormat(d) === 'paupercommander') return /Creature/.test(tl);
+    return isLegendary(c) && /Creature/.test(tl);
+  };
   if(admiralName){
     const r = await resolveCardByName(admiralName, deckFormat(d));
-    if(r && r.found && r.legalPrint && leaderOk(r.card) && (deckFormat(d)==='admiral' ? hasPowerToughness(r.card) : true)){
+    if(r && r.found && r.legalPrint && leaderOk(r.card) && (!admiralIsGuess || guessOk(r.card)) && (deckFormat(d)==='admiral' ? hasPowerToughness(r.card) : true)){
       newAdmiral = r.card; report.push({name:r.card.name,status:'ok',msg:fmtName(d)+' set'});
-    } else if(admiralIsGuess){ cardNames.unshift(admiralName); admiralName = null; }
+    } else if(admiralIsGuess){ (isoTailSection === 'maybe' ? maybeNames : cardNames).unshift(admiralName); admiralName = null; }
     else report.push({name:admiralName,status:'bad',msg:'Not usable as '+fmtName(d)});
   }
   if(partnerName){
     const r = await resolveCardByName(partnerName, deckFormat(d));
     const lead = newAdmiral || d.admiral;
-    if(r && r.found && r.legalPrint && leaderOk(r.card) && lead && canPair(lead, r.card)){
+    if(r && r.found && r.legalPrint && leaderOk(r.card) && (!partnerIsGuess || guessOk(r.card)) && lead && canPair(lead, r.card)){
       newPartner = r.card; report.push({name:r.card.name,status:'ok',msg:'Second '+fmtName(d)+' set'});
-    } else if(partnerIsGuess){ cardNames.unshift(partnerName); partnerName = null; }
+    } else if(partnerIsGuess){ (isoTailSection === 'maybe' ? maybeNames : cardNames).unshift(partnerName); partnerName = null; }
     else report.push({name:partnerName,status:'bad',msg: lead ? ("Can't pair with "+lead.name) : 'No first leader to pair with'});
   }
   const effLead = { admiral: newAdmiral || d.admiral, partner: (newPartner!==undefined ? newPartner : d.partner) || null, format: d.format };
   if(effLead.partner && (!effLead.admiral || !canPair(effLead.admiral, effLead.partner))) effLead.partner = null;
   const leaderNames = new Set(deckLeaders(effLead).map(c=>c.name));
-  const results = await resolveManyByName(cardNames, (done, all)=>{
-    const el = document.getElementById(reportElId);
-    if(el) el.innerHTML = `<div class="status"><div class="spinner"></div>Resolving ${done}/${all} cards…</div>`;
+  // Leaders are done by now; whatever they handed back is counted below.
+  const _leadDone = allN - cardNames.length - maybeNames.length;
+  _resolving(_leadDone);
+  const results = await resolveManyByName(cardNames, (done)=>{
+    _resolving(_leadDone + done);
     _pinFoot();
   });
   _bt.resolve = Date.now();
@@ -15730,7 +15863,9 @@ async function applyTextToDeck(d, raw, reportElId, isImport){
   // MAYBEBOARD sections land here.
   let newMaybe = [];
   if(maybeNames.length){
-    const mres = await resolveManyByName(maybeNames, null, deckFormat(d));
+    const _mOff = allN - maybeNames.length;
+    _resolving(_mOff);
+    const mres = await resolveManyByName(maybeNames, (done)=>{ _resolving(_mOff + done); _pinFoot(); }, deckFormat(d));
     const collected = [];
     mres.forEach(r=>{
       if(r && r.found && r.card){
@@ -16917,9 +17052,10 @@ function openFolderPickPopup(d, onPick){
     </div>
     <button class="dp-cancel" id="fpCancel">Skip</button>
   </div>`;
-  document.body.appendChild(el);
   let settled = false;
-  const done = (fid)=>{ if(settled) return; settled = true; el.remove(); onPick(fid||null); };
+  // Back = Skip: the flow continues without a folder.
+  brSheetOpen(el, 'folderPickScrim', ()=>{ if(settled) return; settled = true; setTimeout(()=>onPick(null), 0); });
+  const done = (fid)=>{ if(settled) return; settled = true; closeOverlayThen(()=>onPick(fid||null)); };
   el.addEventListener('click', e=>{ if(e.target===el) done(null); });
   document.getElementById('fpCancel').addEventListener('click', ()=>done(null));
   el.querySelectorAll('.dp-row').forEach(b=>b.addEventListener('click', ()=>done(b.dataset.fid||null)));
@@ -17431,7 +17567,7 @@ function openCardInfo(card, opts){
   </div>`;
   pinSheetToFoot(el);
   requestAnimationFrame(()=>fitSheetTitle(el.querySelector('.topbar .sheet-title')));
-  document.getElementById('ciImg').addEventListener('click', ()=>showPreview(colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card), card.border_color==='white'));
+  document.getElementById('ciImg').addEventListener('click', ()=>showCardPreview(card, colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)));
   wireCombosButton(el, card);
   { const pr = el.querySelector('#csPrice'); if(pr){ pr.style.cursor = 'pointer'; pr.title = 'Price history'; pr.addEventListener('click', ()=>openPriceHistory(card)); } }
   applyLocalizedSheetImage(card, 'ciImg');
@@ -19489,7 +19625,7 @@ async function openSimilarCards(card, colorScope){
     ${overlayNavHtml()}
   </div>`;
   wireOverlayNav(el);
-  document.getElementById('simCardImg')?.addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
+  document.getElementById('simCardImg')?.addEventListener('click', ()=>showCardPreview(card, cardImageLarge(card)));
   try{
     const f = frontFace(card);
     const isLand = /\bLand\b/.test(f.type_line||'');
@@ -23227,7 +23363,7 @@ function openCardReco(card, forDeck, comboKey){
     ${overlayNavHtml()}
   </div>`;
   wireOverlayNav(el);
-  document.getElementById('crImg').addEventListener('click', ()=>showPreview(cardImageLarge(card), card.border_color==='white'));
+  document.getElementById('crImg').addEventListener('click', ()=>showCardPreview(card, cardImageLarge(card)));
   loadCardReco(card, themes, forDeck || null, comboKey || null);
 }
 async function loadCardReco(card, themes, forDeck, comboKey){
@@ -26444,7 +26580,7 @@ function openPlaytest(d){
     if(!x.c.token) opts.push(['top', T('Bovenop de bibliotheek', 'Top of library')], ['bottom', T('Onderop de bibliotheek', 'Bottom of library')]);
     if(x.c.token) opts.push(['gone', T('Token weg', 'Remove token')]);
     ptMenu(x.c.name, opts, (k)=>{
-      if(k === 'view'){ try{ showPreview(cardImageLarge(x.c), x.c.border_color === 'white'); }catch(e){} return; }
+      if(k === 'view'){ try{ showCardPreview(x.c, cardImageLarge(x.c)); }catch(e){} return; }
       if(k === 'gone'){ take(x.id); paint(); return; }
       moveTo(x, k); paint();
     });
@@ -28164,7 +28300,8 @@ function showPreview(src, wb){
    so the browser never claims the gesture. A tap that did not move and did
    not zoom closes the preview, as it always has. */
 function _wirePreviewZoom(bd){
-  const img = bd.querySelector('img');
+  // A two-faced card zooms as one piece: the card and its flip button.
+  const img = bd.querySelector('.pv-card') || bd.querySelector('img');
   if(!img) return;
   const pts = new Map();
   let scale = 1, tx = 0, ty = 0;
@@ -28181,6 +28318,8 @@ function _wirePreviewZoom(bd){
   const dist = ()=>{ const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
   const mid  = ()=>{ const [a, b] = [...pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
   bd.addEventListener('pointerdown', (e)=>{
+    // The flip button is a button: it flips, it never closes or zooms.
+    if(e.target.closest && e.target.closest('.dfc-flip')) return;
     bd.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     moved = false;
@@ -28227,6 +28366,11 @@ function renderPreview(){
   let el = document.getElementById('previewRoot');
   if(!state.preview){ if(el) el.remove(); return; }
   if(!el){ el=document.createElement('div'); el.id='previewRoot'; document.body.appendChild(el); }
+  const fl = state.preview.flip;
+  if(fl){
+    // data-front carries the card id too, so the remembered face applies here.
+    el.innerHTML = `<div class="card-preview-backdrop" id="pbd" style="touch-action:none;"><span class="pv-card" style="transform-origin:center center;will-change:transform;"><img class="${state.preview.wb?'wb-card':''}" src="${fl.front}"><span class="dfc-flip-box"><button class="dfc-flip" title="Flip to the other face" data-front="${escapeHtml(fl.front)}" data-back="${escapeHtml(fl.back)}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6l5 4V7c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 13c0-4.42-3.58-8-8-8zm-5.3 2.74L5.24 6.28A7.93 7.93 0 0 0 4 13c0 4.42 3.58 8 8 8v3l5-4-5-4v3c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8z"/></svg></button></span></span></div>`;
+  } else
   el.innerHTML = `<div class="card-preview-backdrop" id="pbd" style="touch-action:none;"><img class="${state.preview.wb?'wb-card':''}" src="${state.preview.src}" style="transform-origin:center center;will-change:transform;"></div>`;
   _wirePreviewZoom(document.getElementById('pbd'));
   // A dead image URL must not strand the person behind a dim scrim with a
@@ -28759,6 +28903,25 @@ function appBackStep(viaHistory){
     rearm({screen: state.screen, folder: state.folderNav||null}, '#'+state.screen);
     return true;
   }
+  // The guided tour: back steps to the previous tip (the first one stays).
+  if(document.getElementById('tourScrim')){
+    if((state._tourI | 0) > 0){ state._tourI = (state._tourI | 0) - 1; try{ showTourStep(); }catch(err){} }
+    rearm({screen: state.screen, folder: state.folderNav||null}, '#'+state.screen);
+    return true;
+  }
+  // A dice / coin result over the life counter: back clears it first.
+  const diceRes = document.getElementById('diceResultPop');
+  if(diceRes){ diceRes.click(); rearm({screen: state.screen}, '#'+(state.screen||'home')); return true; }
+  // The life counter's round menu closes before the life counter does.
+  if(state.lifeOpen && state.life && state.life.menuOpen){
+    state.life.menuOpen = false;
+    try{ renderLifeOverlay(); }catch(err){}
+    rearm({screen: state.screen}, '#'+(state.screen||'home'));
+    return true;
+  }
+  // A binder's long-press menu goes like any other tile menu.
+  const binderLong = document.getElementById('binderLongPop');
+  if(binderLong){ binderLong.remove(); rearm({screen: state.screen, folder: state.folderNav||null}, '#'+state.screen); return true; }
   const tileMenu = document.getElementById('tileMenuPop');
   const deckPick = document.getElementById('deckPickScrim');
   const fabMenu = document.getElementById('fabMenu');
