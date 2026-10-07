@@ -471,7 +471,17 @@ main.card-detail > div:nth-child(2){order:10;}
 /* Bottom-up: content packs at the FOOT even when a deck search leaves the
    list nearly empty — the min-height keeps the bridge (and any open tool
    panel) anchored down by the dock instead of drifting to the top. */
-#builderBody{display:flex;flex-direction:column-reverse;justify-content:flex-start;min-height:calc(100vh - var(--nav-h) - 290px);}
+#builderBody{display:flex;flex-direction:column-reverse;justify-content:flex-start;min-height:calc(100vh - var(--nav-h) - 290px);flex:1 0 auto;}
+/* A short deck (only its leader) rests on the dock like a full one: the
+   body fills the free height; the list box takes the room above the
+   leader strip, and the big + sits in its middle. */
+#builderBody > #decklistBox:has(> .dl-empty-add){flex:1 1 auto;justify-content:center;}
+.dl-empty-add{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 16px;text-align:center;}
+.dl-empty-plus{width:96px;height:96px;border-radius:50%;border:2px solid var(--line);background:var(--panel);color:var(--icon-pl, var(--main-lt));display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 8px 22px rgba(0,0,0,0.35);}
+.dl-empty-plus svg{width:48px;height:48px;}
+.dl-empty-plus:active{transform:scale(0.95);}
+.dl-empty-t{font-family:'Cinzel',serif;font-size:19px;font-weight:700;color:var(--ink-text);letter-spacing:0.04em;margin-top:4px;}
+.dl-empty-s{font-size:13.5px;color:var(--sub-text);}
 #decklistBox{display:flex;flex-direction:column-reverse;}
 main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bottom)) !important;}
 main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(safe-area-inset-bottom)) !important;}
@@ -914,6 +924,9 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .scan-band{position:absolute;left:4%;right:18%;top:2%;height:10%;border:2px solid var(--gold);border-radius:6px;background:rgba(255,255,255,0.10);}
 .scan-torch{position:absolute;top:10px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;}
 .scan-torch.on{background:var(--gold);}
+.scan-uv{position:absolute;top:58px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+.scan-uv.on{background:var(--gold);color:#000;}
+.scan-cam.uv-fix video{filter:url(#scanUvSwap);}
 .scan-focus{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border:2px solid var(--gold);border-radius:50%;pointer-events:none;animation:scanFocus .7s ease-out forwards;}
 @keyframes scanFocus{from{transform:scale(1.4);opacity:1;}to{transform:scale(.8);opacity:0;}}
 .scan-x{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;}
@@ -6104,13 +6117,15 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.23';
+const APP_VERSION = '1.25';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration: every tile shows price'
+    'Empty deck: big + to add cards',
+    'Commander rests at the foot again'
   ],
   nl: [
-    'Inspiratie: elke tegel toont prijs'
+    'Leeg deck: grote + voor kaarten',
+    'Commander staat weer onderaan'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6147,11 +6162,11 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred, en de naam bovenaan zegt welk deck en thema je bekijkt; zit je deck boven de limiet, dan klap je boven Theme de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands; tik op de reden onder een kaart voor de hele uitleg), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred, en de naam bovenaan zegt welk deck en thema je bekijkt; zit je deck boven de limiet, dan klap je boven Theme de <strong>Cuts</strong> open: wat er het makkelijkst uit kan, met Theme, Kindred en je eigen aantal lands; tik op de reden onder een kaart voor de hele uitleg), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>. Is het deck nog leeg, dan tik je op de grote <strong>＋</strong> en zoek je kaarten die direct in het deck gaan.</p>
            <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred, and the name on top tells which deck and theme you are looking at; when your deck runs over, open <strong>Cuts</strong> above Theme: what can go most easily, weighing Theme, Kindred and your own land count; tap the reason under a card for the full story), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred, and the name on top tells which deck and theme you are looking at; when your deck runs over, open <strong>Cuts</strong> above Theme: what can go most easily, weighing Theme, Kindred and your own land count; tap the reason under a card for the full story), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>. While the deck is still empty, tap the big <strong>＋</strong> to search cards that go straight into it.</p>
            <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
@@ -6165,11 +6180,11 @@ function tourSteps(){
       t: inlIco('binder', 14) + (NL ? 'Je collectie' : 'Your collection'),
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
-           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
+           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen; lijkt blauw oranje, tik dan op de ronde kleurknop eronder. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
-           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. 🔦 turns on the lamp; tap the picture to focus. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
+           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. 🔦 turns on the lamp; tap the picture to focus; if blue looks orange, tap the round colour button below it. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -13285,6 +13300,24 @@ function groupPriceLabel(cards){
   });
   return complete ? fmtEur(total) : '';
 }
+function dlEmptyAddHtml(d){
+  const NL = appLang() === 'nl';
+  return `<div class="dl-empty-add">
+    <button type="button" class="dl-empty-plus" id="dlEmptyAdd" aria-label="${NL ? 'Kaarten toevoegen' : 'Add cards'}">${ICONS.plus}</button>
+    <div class="dl-empty-t">${NL ? 'Voeg kaarten toe' : 'Add some cards'}</div>
+    <div class="dl-empty-s">${NL ? 'Zoeken voegt ze direct toe aan' : 'Search adds them straight to'} <strong>${escapeHtml(d.name || '')}</strong></div>
+  </div>`;
+}
+/* Search, pinned to this deck: every card added there goes straight in. */
+function openAddCardsFor(d){
+  if(!d) return;
+  // Pin: every card added during *this* visit to Search goes straight into
+  // this deck. The pin dissolves as soon as the user navigates elsewhere.
+  state.searchPinnedDeckId = d.id;
+  state._pinArm = true;
+  state.searchFormat = deckFormat(d);   // search pre-filters on this deck's format
+  switchPage('search');
+}
 function categorizedListHtml(d){
   ensureMaybeboard(d);
   // Instant deck search from the dock: an active query narrows every group
@@ -13301,10 +13334,12 @@ function categorizedListHtml(d){
     if(_fPred && !_fPred(c)) return false;
     return true;
   });
-  if(!d.cards.length && !d.admiral && !d.maybeboard.length) return deckIsConstructed(d)
-    ? `<div class="empty-note">${trS('No cards yet. Add them from Search, copy a meta deck from Inspiration, or paste a list with Bulk Edit / Import.')}</div>`
-    : `<div class="empty-note">No cards yet. Go to Search to find a ${fmtName(d)} and add cards, or use Bulk Edit / Import above to paste a whole list.</div>`;
-  let html='';
+  // An empty main deck: one big + in the free room (DOM-first in the
+  // reversed box = right above the leader strip), the same errand as the
+  // dock's small + -- Search, adding straight into this deck.
+  const _emptyAdd = (!d.cards.length && !_dlLive) ? dlEmptyAddHtml(d) : '';
+  if(!d.cards.length && !d.admiral && !d.maybeboard.length) return _emptyAdd;
+  let html = _emptyAdd;
 
   const grouped = state.sortMode==='type-cmc-name' || state.sortMode==='type-name' || !state.sortMode;
   if(state.sortMode==='tags'){
@@ -14629,6 +14664,7 @@ function openPartnerSearch(d, onDone, opts){
   input.addEventListener('input', draw);
 }
 function wireDecklistInteractions(d){
+  document.getElementById('dlEmptyAdd')?.addEventListener('click', ()=>openAddCardsFor(d));
   document.getElementById('pairAddBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); openPartnerSearch(d); });
   document.getElementById('findAdmiralBtn')?.addEventListener('click', ()=>{
     openAppointSearch(d);
@@ -14773,14 +14809,7 @@ function wireMeterRow(d){
     open();
   });
   document.getElementById('dockInspire')?.addEventListener('click', ()=>{ state.inspireDeckId = d.id; switchPage('inspiration'); });
-  document.getElementById('dockAddCards')?.addEventListener('click', ()=>{
-    // Pin: every card added during *this* visit to Search goes straight into
-    // this deck. The pin dissolves as soon as the user navigates elsewhere.
-    state.searchPinnedDeckId = d.id;
-    state._pinArm = true;
-    state.searchFormat = deckFormat(d);   // search pre-filters on this deck's format
-    switchPage('search');
-  });
+  document.getElementById('dockAddCards')?.addEventListener('click', ()=>openAddCardsFor(d));
   document.querySelectorAll('.dk-type').forEach(b=>b.addEventListener('click', ()=>{
     // A tap on a type count JUMPS to that category and names it — the map
     // also repairs the old "Sorcerys" toast.
@@ -26959,12 +26988,22 @@ async function scanFuzzy(text){
   }catch(e){}
   return null;
 }
+/* Swap the camera's two colour channels back (U <-> V in YUV), as one
+   matrix on sRGB: grey stays grey, blue <-> orange. */
+const SCAN_UV_SWAP = '0.0624 0.1226 0.815 0 0  0.2474 0.9677 -0.2151 0 0  1.185 -0.1549 -0.0301 0 0  0 0 0 1 0';
+function scanUvFixOn(){ try{ return localStorage.getItem(LS_PREFIX + 'scanUvFix') === '1'; }catch(e){ return false; } }
+/* Two of the last five looks agreeing on a name is enough (1.24). */
+function scanVotes(looks, name){ return looks.filter(n=>n === name).length; }
 function openCardScanner(opts){
   opts = opts || {};
   const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
   const rows = [];                        // { card, foil, qty }
   let stream = null, track = null, timer = null, busy = false, alive = true, torchOn = false;
   let prev = null, lastAdded = null, blanks = 0, AH = null;
+  // The last five looks (a name, or null for a look that read nothing): a
+  // card counts once two of them agree, a blurry look in between no longer
+  // starts the count over. bestPick: the closest art per name among them.
+  let looks = [], bestPick = {}, tickN = 0;
   const fuzzyCache = new Map();
   document.getElementById('scanOverlay')?.remove();
   const el = document.createElement('div');
@@ -26981,6 +27020,8 @@ function openCardScanner(opts){
       <div class="scan-guide" id="scanGuide"><div class="scan-band"></div></div>
       <button type="button" class="scan-x" id="scanClose" aria-label="${T('Sluiten', 'Close')}">✕</button>
       <button type="button" class="scan-torch" id="scanTorch" hidden aria-label="${T('Lamp', 'Torch')}">🔦</button>
+      <button type="button" class="scan-uv${scanUvFixOn() ? ' on' : ''}" id="scanUv" aria-label="${T('Kleuren herstellen', 'Fix colours')}" title="${T('Blauw lijkt oranje? Tik om de kleuren te herstellen.', 'Blue looks orange? Tap to fix the colours.')}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg></button>
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="scanUvSwap" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${SCAN_UV_SWAP}"/></filter></svg>
       <div class="scan-status" id="scanStatus">${T('Camera starten…', 'Starting the camera…')}</div>
     </div>
     <div class="scan-list" id="scanList"></div>
@@ -26993,6 +27034,14 @@ function openCardScanner(opts){
     </div>
   </div>`;
   document.body.appendChild(el);
+  // Colours: some phones hand the browser camera frames with the two colour
+  // channels the wrong way round (blue shows orange, a wooden table blue).
+  // Reading happens in grey, which that swap leaves untouched; this only
+  // puts the picture right, and the phone remembers the choice.
+  const uvBtn = el.querySelector('#scanUv');
+  const paintUv = ()=>{ el.querySelector('#scanCam').classList.toggle('uv-fix', scanUvFixOn()); uvBtn.classList.toggle('on', scanUvFixOn()); };
+  uvBtn.addEventListener('click', (e)=>{ e.stopPropagation(); try{ localStorage.setItem(LS_PREFIX + 'scanUvFix', scanUvFixOn() ? '' : '1'); }catch(err){} paintUv(); });
+  paintUv();
   const stop = ()=>{
     alive = false;
     clearInterval(timer);
@@ -27062,7 +27111,9 @@ function openCardScanner(opts){
     cx.putImageData(img, 0, 0);
     return cv;
   };
-  const nameBand = ()=>{ const cv = grab(0.05, 0.025, 0.80, 0.115, 520); return cv ? forOcr(cv) : null; };
+  // Every other look reads a slightly roomier band: a card held a little
+  // high, low or skewed in the frame still gets its name read.
+  const nameBand = (wide)=>{ const cv = wide ? grab(0.02, 0.005, 0.86, 0.14, 560) : grab(0.05, 0.025, 0.80, 0.115, 520); return cv ? forOcr(cv) : null; };
   const footBand = ()=>{ const cv = grab(0.03, 0.885, 0.50, 0.975, 900); return cv ? forOcr(cv) : null; };
   const artHash = ()=>{
     const cv = grab(AH_REGION[0], AH_REGION[1], AH_REGION[2], AH_REGION[3], 96);
@@ -27098,7 +27149,7 @@ function openCardScanner(opts){
   let lastIdx = null;   // the printing just added, by its place in the fingerprints
   const tick = async ()=>{
     if(!alive || busy) return;
-    const band = nameBand();
+    const band = nameBand((tickN++ % 2) === 1);
     if(!band) return;
     busy = true;
     try{
@@ -27116,8 +27167,16 @@ function openCardScanner(opts){
       }
       // 3. a steady line the phone does not know: Scryfall's fuzzy lookup
       if(!hit && text && prev && prev.text === text) hit = await resolve(text, true);
-      if(!hit){ prev = text ? { text } : null; if(++blanks >= 3) lastAdded = null; return; }   // card gone: the same one may count again
+      const look = (n)=>{ looks.push(n); if(looks.length > 5) looks.shift(); };
+      if(!hit){
+        look(null);
+        prev = text ? { text, name: prev && prev.name, pick: prev && prev.pick } : (prev && prev.name ? { name: prev.name, pick: prev.pick } : null);
+        if(++blanks >= 3){ lastAdded = null; }   // card gone: the same one may count again
+        if(blanks >= 6){ looks = []; bestPick = {}; prev = null; if(blanks === 6) status(T('Richt op de kaart…', 'Aim at the card…')); }   // long gone: start fresh
+        return;
+      }
       blanks = 0;
+      look(hit.name);
       let pick = artPick(hit.name, art);
       const sameName = !!lastAdded && lastAdded.split('|')[0] === hit.name;
       // The same card still in view: its art still matches the printing just
@@ -27131,11 +27190,16 @@ function openCardScanner(opts){
       //  - a rough read counts when the next look gives the same name;
       //  - another printing of the card just added still needs two looks.
       const artAgrees = !!pick && pick.dist <= 12;
+      // A fair read the art backs up (a printing of THIS name within 16)
+      // is as good as a clean read.
+      const artBacks = !!pick && pick.dist <= 16 && hit.score >= 0.8;
       let sure;
       if(sameName) sure = !!(prev && prev.pick && pick && prev.pick.i === pick.i);
-      else sure = hit.score >= 0.92 || artAgrees || !!(prev && prev.name === hit.name);
+      else sure = hit.score >= 0.92 || artAgrees || artBacks || scanVotes(looks, hit.name) >= 2;
       // The printing: the closest art match over the looks that agreed.
-      if(!sameName && prev && prev.name === hit.name && prev.pick && (!pick || prev.pick.dist < pick.dist)) pick = prev.pick;
+      const bp = bestPick[hit.name];
+      if(pick && (!bp || pick.dist < bp.dist)) bestPick[hit.name] = pick;
+      if(!sameName && bestPick[hit.name] && (!pick || bestPick[hit.name].dist < pick.dist)) pick = bestPick[hit.name];
       const key = hit.name + '|' + (pick ? pick.set + '/' + pick.cn : '');
       prev = { key, text, name: hit.name, pick };
       if(!sure){ status(T('Lezen… ', 'Reading… ') + hit.name); return; }
@@ -27147,7 +27211,7 @@ function openCardScanner(opts){
         try{ const fb = footBand(); if(fb){ const r = await scanRead(fb, 'line'); const pc = scanParseCollector(r.text); if(pc) card = await scanPrinting(pc.set, pc.cn, hit.name); } }catch(e){}
       }
       if(!card) card = await scanCardFor(hit.name);
-      if(card && alive){ addCard(card); lastAdded = key; lastIdx = pick ? pick.i : null; }
+      if(card && alive){ addCard(card); lastAdded = key; lastIdx = pick ? pick.i : null; looks = []; bestPick = {}; }
     }catch(e){
       status(T('Tekstherkenning lukt niet — controleer je internet (eenmalig nodig).', 'Text reading failed — check your connection (needed once).'));
     }finally{ busy = false; }
