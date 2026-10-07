@@ -477,8 +477,7 @@ main.card-detail > div:nth-child(2){order:10;}
    leader strip, and the big + sits in its middle. */
 #builderBody > #decklistBox:has(> .dl-empty-add){flex:1 1 auto;justify-content:center;}
 .dl-empty-add{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 16px;text-align:center;}
-.dl-empty-plus{width:96px;height:96px;border-radius:50%;border:2px solid var(--line);background:var(--panel);color:var(--icon-pl, var(--main-lt));display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 8px 22px rgba(0,0,0,0.35);}
-.dl-empty-plus svg{width:48px;height:48px;}
+.dl-empty-plus.deck-fab{position:static;right:auto;bottom:auto;z-index:auto;flex:none;}   /* exactly the gold ＋ (size, gold, glyph, shadow), just not pinned to the corner */
 .dl-empty-plus:active{transform:scale(0.95);}
 .dl-empty-t{font-family:'Cinzel',serif;font-size:19px;font-weight:700;color:var(--ink-text);letter-spacing:0.04em;margin-top:4px;}
 .dl-empty-s{font-size:13.5px;color:var(--sub-text);}
@@ -924,6 +923,18 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .scan-band{position:absolute;left:4%;right:18%;top:2%;height:10%;border:2px solid var(--gold);border-radius:6px;background:rgba(255,255,255,0.10);}
 .scan-torch{position:absolute;top:10px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;}
 .scan-torch.on{background:var(--gold);}
+.scan-quad{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+.scan-quad polygon{fill:rgba(46,204,113,0.10);stroke:#2ecc71;stroke-width:3;stroke-linejoin:round;}
+.scan-cam.locked .scan-guide{opacity:0.3;}
+/* 1.28: in the Android app (5.0+) the camera is the app's own, BEHIND the
+   page. The page goes see-through and the camera box is a hole: its shadow
+   paints the ink everywhere else, the list and bar sit above that shadow. */
+html.native-cam, html.native-cam body{background:transparent !important;}
+html.native-cam body::before{display:none;}
+html.native-cam #scanOverlay{background:transparent;}
+html.native-cam #scanOverlay .scan-cam{background:transparent;box-shadow:0 0 0 200vmax var(--ink);}
+html.native-cam #scanOverlay .scan-list, html.native-cam #scanOverlay .scan-bar{position:relative;}
+html.native-cam #scanVideo, html.native-cam #scanOverlay .scan-uv{display:none;}
 .scan-uv{position:absolute;top:58px;left:10px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
 .scan-uv.on{background:var(--gold);color:#000;}
 .scan-cam.uv-fix video{filter:url(#scanUvSwap);}
@@ -6117,15 +6128,15 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.25';
+const APP_VERSION = '1.28';
 const CHANGELOG_NOTES = {
   en: [
-    'Empty deck: big + to add cards',
-    'Commander rests at the foot again'
+    'App 5.0: scanner reads like Delver',
+    'Sharp camera, true colours, lamp'
   ],
   nl: [
-    'Leeg deck: grote + voor kaarten',
-    'Commander staat weer onderaan'
+    'App 5.0: scanner leest als Delver',
+    'Scherpe camera, echte kleuren, lamp'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6180,11 +6191,11 @@ function tourSteps(){
       t: inlIco('binder', 14) + (NL ? 'Je collectie' : 'Your collection'),
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
-           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen; lijkt blauw oranje, tik dan op de ronde kleurknop eronder. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
+           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. hij vindt zelf de randen van de kaart (groene lijn), dus scheef of klein mag. In de Android-app (5.0+) leest Google\u2019s tekstherkenning mee: sneller en scherper. 🔦 zet de lamp aan, tik op het beeld om scherp te stellen; lijkt blauw oranje, tik dan op de ronde kleurknop eronder. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
-           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. 🔦 turns on the lamp; tap the picture to focus; if blue looks orange, tap the round colour button below it. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
+           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. it finds the card's edges itself (green line), so tilted or small is fine. In the Android app (5.0+) Google\u2019s text reading does the work: faster and sharper. 🔦 turns on the lamp; tap the picture to focus; if blue looks orange, tap the round colour button below it. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -13303,7 +13314,7 @@ function groupPriceLabel(cards){
 function dlEmptyAddHtml(d){
   const NL = appLang() === 'nl';
   return `<div class="dl-empty-add">
-    <button type="button" class="dl-empty-plus" id="dlEmptyAdd" aria-label="${NL ? 'Kaarten toevoegen' : 'Add cards'}">${ICONS.plus}</button>
+    <button type="button" class="deck-fab dl-empty-plus" id="dlEmptyAdd" aria-label="${NL ? 'Kaarten toevoegen' : 'Add cards'}">＋</button>
     <div class="dl-empty-t">${NL ? 'Voeg kaarten toe' : 'Add some cards'}</div>
     <div class="dl-empty-s">${NL ? 'Zoeken voegt ze direct toe aan' : 'Search adds them straight to'} <strong>${escapeHtml(d.name || '')}</strong></div>
   </div>`;
@@ -25009,7 +25020,7 @@ const DECKHAND_SITE = 'https://deckhandcompanion.netlify.app/';
    4.3 the app downloads it and opens Android's installer itself; an older
    app hands the download to the browser. Android always asks the person to
    confirm, and the same signature means every deck and card stays. */
-const APK_LATEST = '4.4';
+const APK_LATEST = '5.0';
 function apkVerCmp(a, b){
   const x = String(a || '0').split('.').map(Number), y = String(b || '0').split('.').map(Number);
   for(let i = 0; i < Math.max(x.length, y.length); i++){ const d = (x[i] || 0) - (y[i] || 0); if(d) return d < 0 ? -1 : 1; }
@@ -25066,8 +25077,8 @@ function openApkUpdateSheet(){
       : (nl ? 'Je browser downloadt de nieuwe versie. Tik op de download en daarna op <b>Installeren</b>. Android vraagt misschien eerst of de browser apps mag installeren.' : 'Your browser downloads the new version. Tap the download, then <b>Install</b>. Android may first ask whether the browser may install apps.')}
       ${nl ? ' Je decks, collectie en instellingen blijven gewoon staan.' : ' Your decks, collection and settings stay as they are.'}</div>
     <div class="br-title"><b>${inlIco('phone', 16)}${nl ? 'Nieuwe Android-app' : 'New Android app'} — ${APK_LATEST}</b><span>${nl
-      ? `Je hebt versie ${escapeHtml(cur)}. De nieuwe versie is nodig voor de camerascanner, prijsmeldingen en back-up naar je cloud, en werkt zichzelf voortaan met één tik bij.`
-      : `You have version ${escapeHtml(cur)}. The new version is needed for the camera scanner, price alerts and backup to your cloud, and from now on updates itself with one tap.`}</span></div>
+      ? `Je hebt versie ${escapeHtml(cur)}. Nieuw in 5.0: de kaartscanner gebruikt de eigen camera van je telefoon en Google\u2019s tekstherkenning — sneller, scherper, echte kleuren en een lamp.`
+      : `You have version ${escapeHtml(cur)}. New in 5.0: the card scanner uses your phone\u2019s own camera and Google\u2019s text reading — faster, sharper, true colours and a lamp.`}</span></div>
   </div>`;
   let after = null;
   brSheetOpen(el, 'apkSheet', ()=>{ if(after){ const f = after; after = null; setTimeout(f, 0); } }, true);
@@ -26988,17 +26999,349 @@ async function scanFuzzy(text){
   }catch(e){}
   return null;
 }
+/* ---- Card edges (1.27): find the card in the picture, like Delver Lens ----
+   The scanner no longer needs the card lined up in the frame. Every look:
+   1. scanFindCard: on a small grey copy of the camera picture, Sobel edges,
+      then a Hough vote for near-vertical and near-horizontal straight lines
+      (the card may lean up to 20 degrees). Two of each that close into a
+      four-sided shape with a card's proportions (63:88, a little give for
+      perspective), whose sides are backed by real edges along their whole
+      length, make the card; the biggest well-backed shape wins (so the
+      outer black border beats the inner art frame).
+   2. scanQuadMap: the corners give a perspective map from the card's own
+      coordinates (0..1 across, 0..1 down) to the picture.
+   3. scanWarp: the name bar, the art and the collector line are cut out of
+      the straightened card -- tilted, small or off-centre no longer matters.
+   No card found: the on-screen guide is used as before. */
+function scanFindCard(g0, w, h){
+  const n = w * h, mag = new Float32Array(n), ang = new Float32Array(n);
+  // a light 3x3 blur first: sensor noise and jagged edges give the edge
+  // directions some wobble, and the vote below trusts those directions
+  const g = new Float32Array(n);
+  for(let y = 1; y < h - 1; y++) for(let x = 1; x < w - 1; x++){
+    const i = y * w + x;
+    g[i] = (g0[i - w - 1] + g0[i - w] + g0[i - w + 1] + g0[i - 1] + g0[i] + g0[i + 1] + g0[i + w - 1] + g0[i + w] + g0[i + w + 1]) / 9;
+  }
+  const hist = new Uint32Array(256);
+  // (2 px clear of the picture's rim: the blur leaves that rim empty)
+  for(let y = 2; y < h - 2; y++){
+    for(let x = 2; x < w - 2; x++){
+      const i = y * w + x;
+      const gx = (g[i - w + 1] + 2 * g[i + 1] + g[i + w + 1]) - (g[i - w - 1] + 2 * g[i - 1] + g[i + w - 1]);
+      const gy = (g[i + w - 1] + 2 * g[i + w] + g[i + w + 1]) - (g[i - w - 1] + 2 * g[i - w] + g[i - w + 1]);
+      const m = Math.sqrt(gx * gx + gy * gy);
+      mag[i] = m; ang[i] = Math.atan2(gy, gx);
+      hist[Math.min(255, m >> 2)]++;
+    }
+  }
+  // edge threshold: the strongest ~12% of the picture, never below a floor
+  let thr = 60;
+  { let acc = 0; const want = n * 0.12; for(let b = 255; b >= 0; b--){ acc += hist[b]; if(acc >= want){ thr = Math.max(60, b * 4); break; } } }
+  const D = Math.ceil(Math.hypot(w, h)), R = 2 * D + 1, NT = 41;
+  const accV = new Float32Array(NT * R), accH = new Float32Array(NT * R);
+  const cV = new Float32Array(NT), sV = new Float32Array(NT), cH = new Float32Array(NT), sH = new Float32Array(NT);
+  for(let t = 0; t < NT; t++){
+    const a = (t - 20) * Math.PI / 180, b = (t - 20 + 90) * Math.PI / 180;
+    cV[t] = Math.cos(a); sV[t] = Math.sin(a); cH[t] = Math.cos(b); sH[t] = Math.sin(b);
+  }
+  for(let y = 1; y < h - 1; y++){
+    for(let x = 1; x < w - 1; x++){
+      const i = y * w + x, m = mag[i];
+      if(m < thr) continue;
+      let p = ang[i] * 180 / Math.PI; p = ((p % 180) + 180) % 180;   // the edge's normal, 0..180
+      const dv = p > 90 ? p - 180 : p, dh = p - 90;
+      if(Math.abs(dv) <= 26){
+        const c = Math.round(dv);
+        for(let t = Math.max(-20, c - 4); t <= Math.min(20, c + 4); t++){ const k = t + 20; accV[k * R + Math.round(x * cV[k] + y * sV[k]) + D] += m; }
+      }
+      if(Math.abs(dh) <= 26){
+        const c = Math.round(dh);
+        for(let t = Math.max(-20, c - 4); t <= Math.min(20, c + 4); t++){ const k = t + 20; accH[k * R + Math.round(x * cH[k] + y * sH[k]) + D] += m; }
+      }
+    }
+  }
+  const peaks = (acc, off)=>{
+    let max = 0; for(let i = 0; i < acc.length; i++) if(acc[i] > max) max = acc[i];
+    if(!max) return [];
+    const out = [];
+    for(let t = 0; t < NT; t++){
+      for(let r = 1; r < R - 1; r++){
+        const v = acc[t * R + r];
+        if(v < max * 0.2) continue;
+        let isMax = true;
+        // a narrow window: a card's outer edge and its inner frame are only
+        // a border's width apart, and both must survive as separate lines
+        for(let dt = -1; dt <= 1 && isMax; dt++){
+          const tt = t + dt; if(tt < 0 || tt >= NT) continue;
+          for(let dr = -1; dr <= 1; dr++){
+            const rr = r + dr; if(rr < 0 || rr >= R || (dt === 0 && dr === 0)) continue;
+            const u = acc[tt * R + rr];
+            if(u > v || (u === v && (dt < 0 || (dt === 0 && dr < 0)))){ isMax = false; break; }
+          }
+        }
+        if(isMax) out.push({ th: (t - 20 + off) * Math.PI / 180, rho: r - D, s: v });
+      }
+    }
+    out.sort((a, b)=>b.s - a.s);
+    // One straight edge votes for a whole ridge of (angle, distance) pairs;
+    // keep only the strongest of each real line. Two lines are the same when
+    // they run within 2.5 px of each other across the picture -- the outer
+    // and inner edge of the border are further apart and both stay.
+    const vert = off === 0, keep = [];
+    const at = (l, q)=>vert ? (l.rho - q * Math.sin(l.th)) / Math.cos(l.th) : (l.rho - q * Math.cos(l.th)) / Math.sin(l.th);
+    const span = vert ? h : w;
+    for(const l of out){
+      if(keep.some(k=>Math.abs(at(k, span * 0.2) - at(l, span * 0.2)) < 2.5 && Math.abs(at(k, span * 0.8) - at(l, span * 0.8)) < 2.5)) continue;
+      keep.push(l);
+      if(keep.length >= 14) break;
+    }
+    return keep;
+  };
+  const V = peaks(accV, 0), H = peaks(accH, 90);
+  if(V.length < 2 || H.length < 2) return null;
+  const cross = (l1, l2)=>{
+    const a1 = Math.cos(l1.th), b1 = Math.sin(l1.th), a2 = Math.cos(l2.th), b2 = Math.sin(l2.th);
+    const det = a1 * b2 - a2 * b1;
+    if(Math.abs(det) < 1e-6) return null;
+    return [(l1.rho * b2 - l2.rho * b1) / det, (a1 * l2.rho - a2 * l1.rho) / det];
+  };
+  const dist = (p, q)=>Math.hypot(p[0] - q[0], p[1] - q[1]);
+  // A side counts as backed where a strong edge runs ALONG it: the edge's
+  // normal must match the side's own normal (within 12 degrees). Wood grain
+  // or text that merely crosses the side does not back it.
+  const strong = (x, y, nx, ny)=>{
+    const xi = Math.round(x), yi = Math.round(y);
+    for(let dy = -1; dy <= 1; dy++) for(let dx = -1; dx <= 1; dx++){
+      const xx = xi + dx, yy = yi + dy;
+      if(xx <= 0 || yy <= 0 || xx >= w - 1 || yy >= h - 1) continue;
+      const i = yy * w + xx;
+      if(mag[i] < thr) continue;
+      if(Math.abs(Math.cos(ang[i]) * nx + Math.sin(ang[i]) * ny) >= 0.978) return true;
+    }
+    return false;
+  };
+  const support = (p, q)=>{
+    let hit = 0, all = 0;
+    const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, nx = -(q[1] - p[1]) / L, ny = (q[0] - p[0]) / L;
+    for(let k = 0; k < 32; k++){
+      const t = 0.08 + 0.84 * k / 31, x = p[0] + (q[0] - p[0]) * t, y = p[1] + (q[1] - p[1]) * t;
+      if(x < 1 || y < 1 || x > w - 2 || y > h - 2) continue;   // off the picture: no say either way
+      all++; if(strong(x, y, nx, ny)) hit++;
+    }
+    return all >= 8 ? hit / all : 0;
+  };
+  let best = null;
+  const all = [];
+  const lineX = (l)=>l.rho / Math.cos(l.th);   // where a near-vertical line crosses y = 0
+  const lineY = (l)=>l.rho / Math.sin(l.th);
+  for(let a = 0; a < V.length; a++) for(let b = 0; b < V.length; b++){
+    if(a === b) continue;
+    const L = V[a], Rr = V[b];
+    if(lineX(Rr) - lineX(L) < w * 0.2 || Math.abs(L.th - Rr.th) > 0.21) continue;
+    for(let c = 0; c < H.length; c++) for(let d = 0; d < H.length; d++){
+      if(c === d) continue;
+      const T = H[c], B = H[d];
+      if(lineY(B) - lineY(T) < h * 0.2 || Math.abs(T.th - B.th) > 0.21) continue;
+      const tl = cross(L, T), tr = cross(Rr, T), br = cross(Rr, B), bl = cross(L, B);
+      if(!tl || !tr || !br || !bl) continue;
+      const pad = 0.08;
+      if([tl, tr, br, bl].some(p=>p[0] < -w * pad || p[0] > w * (1 + pad) || p[1] < -h * pad || p[1] > h * (1 + pad))) continue;
+      const wd = (dist(tl, tr) + dist(bl, br)) / 2, ht = (dist(tl, bl) + dist(tr, br)) / 2;
+      if(wd < 10) continue;
+      const ratio = ht / wd;
+      if(ratio < 1.22 || ratio > 1.62) continue;
+      const area = wd * ht;
+      if(area < w * h * 0.08) continue;
+      const sp = [support(tl, tr), support(tr, br), support(br, bl), support(bl, tl)];
+      const lo = Math.min(...sp);
+      if(lo < 0.45) continue;
+      const score = sp.reduce((x, y)=>x + y, 0) + 1.2 * Math.sqrt(area / (w * h)) - Math.abs(ratio - 1.397) * 1.5;
+      const cand = { pts: [tl, tr, br, bl], score, support: lo, ratio, area };
+      all.push(cand);
+      if(!best || score > best.score) best = cand;
+    }
+  }
+  if(!best) return null;
+  // The black border has two edges: against the table (outside) and
+  // against the art frame (inside), a border's width apart, and the inner
+  // one is often the stronger. When a backed shape wraps the winner snugly
+  // on all four sides, that one is the card's real outline.
+  const cx = best.pts.reduce((t, p)=>t + p[0], 0) / 4, cy = best.pts.reduce((t, p)=>t + p[1], 0) / 4;
+  const bw = Math.hypot(best.pts[1][0] - best.pts[0][0], best.pts[1][1] - best.pts[0][1]);
+  let outer = best;
+  for(const c of all){
+    if(c === best || c.area <= outer.area) continue;
+    const snug = c.pts.every((p, i)=>{
+      const q = best.pts[i];
+      const dOut = Math.hypot(p[0] - cx, p[1] - cy) - Math.hypot(q[0] - cx, q[1] - cy);
+      return dOut > 0 && Math.hypot(p[0] - q[0], p[1] - q[1]) <= bw * 0.14;
+    });
+    if(snug && c.support >= 0.5) outer = c;
+  }
+  return scanGrowToBorder(outer, g, mag, ang, w, h);
+}
+/* On a dark table the card's black border hardly stands out, and the shape
+   found is the frame INSIDE the border. Each side then looks outward, over
+   a border's width (2-8% of the card), for a weaker edge running the same
+   way with a dark band between -- the border -- and moves out to it. A side
+   that already is the outer edge finds table there, not a dark band, and
+   stays. */
+function scanGrowToBorder(best, g, mag, ang, w, h){
+  if(!best) return best;
+  const P = best.pts, cx = P.reduce((t, p)=>t + p[0], 0) / 4, cy = P.reduce((t, p)=>t + p[1], 0) / 4;
+  const cw = (Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]) + Math.hypot(P[2][0] - P[3][0], P[2][1] - P[3][1])) / 2;
+  const val = (x, y)=>{ const xi = Math.round(x), yi = Math.round(y); return (xi > 1 && yi > 1 && xi < w - 2 && yi < h - 2) ? g[yi * w + xi] : -1; };
+  const sides = [], moved = [false, false, false, false];
+  for(let s = 0; s < 4; s++){
+    let a = P[s], b = P[(s + 1) % 4];
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L;
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    if((mx - cx) * nx + (my - cy) * ny < 0){ nx = -nx; ny = -ny; }   // point the normal outward
+    // the edge strength along the side, shifted out by d: M[d]
+    const d0 = Math.max(2, Math.round(cw * 0.02)), d1 = Math.round(cw * 0.08) + 1;
+    const M = [], DK = [], IN = [];
+    for(let d = d0 - 1; d <= d1; d++){
+      let m = 0, dark = 0, inside = 0, n = 0;
+      for(let k = 0; k < 24; k++){
+        const t = 0.12 + 0.76 * k / 23, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t;
+        const vIn = val(x - nx * 3, y - ny * 3), vMid = val(x + nx * d * 0.5, y + ny * d * 0.5);
+        const xi = Math.round(x + nx * d), yi = Math.round(y + ny * d);
+        if(vIn < 0 || vMid < 0 || xi <= 0 || yi <= 0 || xi >= w - 1 || yi >= h - 1) continue;
+        const i2 = yi * w + xi;
+        n++; dark += vMid; inside += vIn;
+        m += mag[i2] * Math.abs(Math.cos(ang[i2]) * nx + Math.sin(ang[i2]) * ny);
+      }
+      M[d] = n >= 8 ? m / n : 0; DK[d] = n >= 8 ? dark / n : 255; IN[d] = n >= 8 ? inside / n : 0;
+    }
+    // the outer edge: a real peak of that strength (not the tail of the
+    // edge we stand on), with a dark band -- the border -- in between
+    let bestD = 0, bestM = 0;
+    for(let d = d0; d < d1; d++){
+      if(!(M[d] >= M[d - 1] && M[d] >= M[d + 1])) continue;
+      if(M[d] < 24 || DK[d] >= 70 || DK[d] >= IN[d] * 0.7) continue;
+      if(M[d] > bestM){ bestM = M[d]; bestD = d; }
+    }
+    if(bestD){ a = [a[0] + nx * bestD, a[1] + ny * bestD]; b = [b[0] + nx * bestD, b[1] + ny * bestD]; moved[s] = true; }
+    sides.push([a, b]);
+  }
+  if(!moved.some(Boolean)) return best;
+  const meet = (s1, s2)=>{
+    const [p1, p2] = s1, [p3, p4] = s2;
+    const d = (p1[0] - p2[0]) * (p3[1] - p4[1]) - (p1[1] - p2[1]) * (p3[0] - p4[0]);
+    if(Math.abs(d) < 1e-6) return null;
+    const t = ((p1[0] - p3[0]) * (p3[1] - p4[1]) - (p1[1] - p3[1]) * (p3[0] - p4[0])) / d;
+    return [p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])];
+  };
+  // corner k sits where side k-1 (coming in) meets side k (going out)
+  const pts = [0, 1, 2, 3].map(k=>meet(sides[(k + 3) % 4], sides[k]));
+  if(pts.some(p=>!p)) return best;
+  return Object.assign({}, best, { pts, grown: moved });
+}
+/* The card's own coordinates (u across, v down, both 0..1) to the picture:
+   unit square -> the four corners (TL, TR, BR, BL), perspective included. */
+function scanQuadMap(p){
+  const [x0, y0] = p[0], [x1, y1] = p[1], [x2, y2] = p[2], [x3, y3] = p[3];
+  const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+  let a, b, c, d, e, f, g = 0, hh = 0;
+  if(Math.abs(dx3) < 1e-9 && Math.abs(dy3) < 1e-9){
+    a = x1 - x0; b = x3 - x0; c = x0; d = y1 - y0; e = y3 - y0; f = y0;
+  } else {
+    const den = dx1 * dy2 - dx2 * dy1;
+    g = (dx3 * dy2 - dx2 * dy3) / den; hh = (dx1 * dy3 - dx3 * dy1) / den;
+    a = x1 - x0 + g * x1; b = x3 - x0 + hh * x3; c = x0;
+    d = y1 - y0 + g * y1; e = y3 - y0 + hh * y3; f = y0;
+  }
+  return (u, v)=>{ const q = g * u + hh * v + 1; return [(a * u + b * v + c) / q, (d * u + e * v + f) / q]; };
+}
+/* One region of the straightened card, sampled out of an RGBA picture. */
+function scanWarp(src, sw, sh, map, fx0, fy0, fx1, fy1, ow, oh){
+  const out = new Uint8ClampedArray(ow * oh * 4);
+  for(let j = 0; j < oh; j++){
+    const v = fy0 + (j + 0.5) / oh * (fy1 - fy0);
+    for(let i = 0; i < ow; i++){
+      const u = fx0 + (i + 0.5) / ow * (fx1 - fx0);
+      const [x, y] = map(u, v);
+      const o = (j * ow + i) * 4;
+      if(!(x >= 0 && y >= 0 && x < sw - 1 && y < sh - 1)){ out[o] = out[o + 1] = out[o + 2] = 0; out[o + 3] = 255; continue; }
+      const xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi;
+      const p00 = (yi * sw + xi) * 4, p10 = p00 + 4, p01 = p00 + sw * 4, p11 = p01 + 4;
+      for(let ch = 0; ch < 3; ch++){
+        const top = src[p00 + ch] + (src[p10 + ch] - src[p00 + ch]) * fx;
+        const bot = src[p01 + ch] + (src[p11 + ch] - src[p01 + ch]) * fx;
+        out[o + ch] = top + (bot - top) * fy;
+      }
+      out[o + 3] = 255;
+    }
+  }
+  return out;
+}
 /* Swap the camera's two colour channels back (U <-> V in YUV), as one
    matrix on sRGB: grey stays grey, blue <-> orange. */
 const SCAN_UV_SWAP = '0.0624 0.1226 0.815 0 0  0.2474 0.9677 -0.2151 0 0  1.185 -0.1549 -0.0301 0 0  0 0 0 1 0';
 function scanUvFixOn(){ try{ return localStorage.getItem(LS_PREFIX + 'scanUvFix') === '1'; }catch(e){ return false; } }
 /* Two of the last five looks agreeing on a name is enough (1.24). */
 function scanVotes(looks, name){ return looks.filter(n=>n === name).length; }
+/* 1.28: the way back from picture to card -- the inverse of scanQuadMap.
+   (x, y) in the picture -> [u, v] on the card (0..1 inside it). */
+function scanQuadInv(p){
+  const [x0, y0] = p[0], [x1, y1] = p[1], [x2, y2] = p[2], [x3, y3] = p[3];
+  const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+  let a, b, c, d, e, f, g = 0, hh = 0;
+  if(Math.abs(dx3) < 1e-9 && Math.abs(dy3) < 1e-9){
+    a = x1 - x0; b = x3 - x0; c = x0; d = y1 - y0; e = y3 - y0; f = y0;
+  } else {
+    const den = dx1 * dy2 - dx2 * dy1;
+    g = (dx3 * dy2 - dx2 * dy3) / den; hh = (dx1 * dy3 - dx3 * dy1) / den;
+    a = x1 - x0 + g * x1; b = x3 - x0 + hh * x3; c = x0;
+    d = y1 - y0 + g * y1; e = y3 - y0 + hh * y3; f = y0;
+  }
+  // inverse of [[a b c][d e f][g hh 1]] by its adjugate
+  const A = e - f * hh, B = c * hh - b, C = b * f - c * e;
+  const D = f * g - d, E = a - c * g, F = c * d - a * f;
+  const G = d * hh - e * g, H = b * g - a * hh, I = a * e - b * d;
+  return (x, y)=>{ const w = G * x + H * y + I; return [(A * x + B * y + C) / w, (D * x + E * y + F) / w]; };
+}
+/* 1.28: what the app's text reader (ML Kit) saw, sorted out for the scanner.
+   fr.L = [[line, corners, [[word, corners]...]]...]; corners clockwise from
+   top-left in thousandths of the frame. quad = the card's corners in the
+   grey copy (fr.tw x fr.th), or null.
+   With the card's edges known, the name is the words in the name bar (left
+   of the mana cost) and the foot is the collector lines bottom-left. Without
+   them: the top lines, tried in order, and every line for the foot. */
+function scanNativeRead(fr, quad){
+  const L = (fr && Array.isArray(fr.L)) ? fr.L : [];
+  const mid = (b)=>[(b[0] + b[2] + b[4] + b[6]) / 4000, (b[1] + b[3] + b[5] + b[7]) / 4000];
+  if(quad){
+    const inv = scanQuadInv(quad), toCard = (b)=>{ const m = mid(b); return inv(m[0] * fr.tw, m[1] * fr.th); };
+    const words = [], foot = [];
+    for(const ln of L){
+      for(const w of (ln[2] || [])){
+        const [u, v] = toCard(w[1]);
+        if(v >= -0.02 && v <= 0.15 && u >= -0.02 && u <= 0.80) words.push([u, v, String(w[0] || '')]);
+      }
+      const [u, v] = toCard(ln[1]);
+      if(v >= 0.85 && v <= 1.04 && u <= 0.70) foot.push([v, String(ln[0] || '')]);
+    }
+    // the name bar's own row: the words level with the leftmost one
+    words.sort((p, q)=>p[0] - q[0]);
+    const row = words.length ? words.filter(w=>Math.abs(w[1] - words[0][1]) < 0.035) : [];
+    return { name: row.map(w=>w[2]).join(' ').trim(), names: [], foot: foot.sort((p, q)=>p[0] - q[0]).map(x=>x[1]).join('\n') };
+  }
+  const lines = L.map(ln=>({ t: String(ln[0] || ''), y: mid(ln[1])[1] }))
+    .filter(x=>(x.t.match(/[A-Za-z\u00C0-\u024F]/g) || []).length >= 3)
+    .sort((p, q)=>p.y - q.y);
+  return { name: lines.length ? lines[0].t : '', names: lines.slice(0, 3).map(x=>x.t), foot: L.map(ln=>String(ln[0] || '')).join('\n') };
+}
 function openCardScanner(opts){
   opts = opts || {};
   const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
   const rows = [];                        // { card, foil, qty }
   let stream = null, track = null, timer = null, busy = false, alive = true, torchOn = false;
+  // 1.28: the Android app (5.0+) brings its own camera and Google's text
+  // reader; the page then shows the camera through a hole (html.native-cam).
+  const NATIVE = !!(window.DeckhandScan && typeof window.DeckhandScan.start === 'function');
+  let NF = null, hiddenUnder = [], onResize = null;
   let prev = null, lastAdded = null, blanks = 0, AH = null;
   // The last five looks (a name, or null for a look that read nothing): a
   // card counts once two of them agree, a blurry look in between no longer
@@ -27018,6 +27361,7 @@ function openCardScanner(opts){
     <div class="scan-cam" id="scanCam">
       <video id="scanVideo" playsinline muted autoplay></video>
       <div class="scan-guide" id="scanGuide"><div class="scan-band"></div></div>
+      <svg class="scan-quad" id="scanQuad" aria-hidden="true"><polygon points=""/></svg>
       <button type="button" class="scan-x" id="scanClose" aria-label="${T('Sluiten', 'Close')}">✕</button>
       <button type="button" class="scan-torch" id="scanTorch" hidden aria-label="${T('Lamp', 'Torch')}">🔦</button>
       <button type="button" class="scan-uv${scanUvFixOn() ? ' on' : ''}" id="scanUv" aria-label="${T('Kleuren herstellen', 'Fix colours')}" title="${T('Blauw lijkt oranje? Tik om de kleuren te herstellen.', 'Blue looks orange? Tap to fix the colours.')}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg></button>
@@ -27045,6 +27389,13 @@ function openCardScanner(opts){
   const stop = ()=>{
     alive = false;
     clearInterval(timer);
+    if(NATIVE){
+      try{ window.DeckhandScan.stop(); }catch(e){}
+      window.dhScanNative = null;
+      document.documentElement.classList.remove('native-cam');
+      hiddenUnder.forEach(([n, o])=>{ n.style.opacity = o; }); hiddenUnder = [];
+      if(onResize) window.removeEventListener('resize', onResize);
+    }
     try{ (stream && stream.getTracks() || []).forEach(t=>t.stop()); }catch(e){}
     _scanWorkerP && _scanWorkerP.then(w=>{ try{ w.terminate(); }catch(e){} }).catch(()=>{});
     _scanWorkerP = null;
@@ -27061,7 +27412,7 @@ function openCardScanner(opts){
         <div class="scan-txt" data-sprint="${i}"><b>${escapeHtml(r.card.name)}</b><span>${escapeHtml(String(r.card.set || '').toUpperCase())}${r.card.collector_number ? ' #' + escapeHtml(r.card.collector_number) : ''}${eur(r.card)} · ${T('tik: printing', 'tap: printing')}</span></div>
         <button type="button" class="scan-foil${r.foil ? ' on' : ''}" data-sfoil="${i}" aria-label="Foil">✨</button>
         <button type="button" class="scan-q" data-sminus="${i}">−</button><b class="scan-n">×${r.qty}</b><button type="button" class="scan-q" data-splus="${i}">＋</button>
-      </div>`).join('') : `<div class="scan-empty">${T('Richt de camera op een kaart, met de hele kaart in het kader en de naam in het lichte vak; de kaart komt vanzelf in de lijst. Tik op het beeld om scherp te stellen.', 'Point the camera at a card, the whole card inside the frame and the name in the bright box; the card joins the list by itself. Tap the picture to focus.')}</div>`;
+      </div>`).join('') : `<div class="scan-empty">${T('Hou een kaart in beeld: de app zoekt zelf de randen (groene lijn), ook als hij scheef of klein ligt, en de kaart komt vanzelf in de lijst. Ziet hij geen rand, leg de kaart dan in het kader. Tik op het beeld om scherp te stellen.', 'Hold a card in view: the app finds its edges by itself (green line), even tilted or small, and the card joins the list by itself. No edge found? Lay the card in the frame. Tap the picture to focus.')}</div>`;
     const done = el.querySelector('#scDone');
     done.disabled = !n; done.textContent = T('Toevoegen', 'Add') + ' (' + n + ')';
     box.querySelectorAll('[data-sfoil]').forEach(b=>b.addEventListener('click', ()=>{ const r = rows[+b.dataset.sfoil]; r.foil = !r.foil; paintList(); }));
@@ -27121,6 +27472,64 @@ function openCardScanner(opts){
     const px = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data;
     return ahHash(ahGray32(px, cv.width, cv.height, [0, 0, 1, 1]));
   };
+  // ---- The card's own edges (1.27) ----
+  // Each look: the picture at up to 1280 px, a 240 px grey copy for the
+  // edge search, then the name bar / art / collector line cut out of the
+  // STRAIGHTENED card. The outline is steadied over looks and drawn green.
+  const FR = { big: null, bx: null, small: null, sx: null };
+  let quadS = null;
+  const findCard = ()=>{
+    const v = el.querySelector('#scanVideo');
+    if(!v || !v.videoWidth) return null;
+    const vw = v.videoWidth, vh = v.videoHeight, k = Math.min(1, 1280 / Math.max(vw, vh));
+    const BW = Math.round(vw * k), BH = Math.round(vh * k);
+    if(!FR.big){ FR.big = document.createElement('canvas'); FR.small = document.createElement('canvas'); }
+    if(FR.big.width !== BW || FR.big.height !== BH || !FR.bx){ FR.big.width = BW; FR.big.height = BH; FR.bx = FR.big.getContext('2d', { willReadFrequently: true }); }
+    FR.bx.drawImage(v, 0, 0, BW, BH);
+    const SW = 240, SH = Math.max(40, Math.round(BH * SW / BW));
+    if(FR.small.width !== SW || FR.small.height !== SH || !FR.sx){ FR.small.width = SW; FR.small.height = SH; FR.sx = FR.small.getContext('2d', { willReadFrequently: true }); }
+    FR.sx.drawImage(FR.big, 0, 0, SW, SH);
+    const sp = FR.sx.getImageData(0, 0, SW, SH).data, gray = new Float32Array(SW * SH);
+    for(let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = sp[j] * 0.299 + sp[j + 1] * 0.587 + sp[j + 2] * 0.114;
+    const r = scanFindCard(gray, SW, SH);
+    if(!r){ quadS = null; return null; }
+    let pts = r.pts;
+    if(quadS && pts.every((p, i)=>Math.hypot(p[0] - quadS[i][0], p[1] - quadS[i][1]) < SW * 0.03)) pts = pts.map((p, i)=>[(p[0] + quadS[i][0]) / 2, (p[1] + quadS[i][1]) / 2]);
+    quadS = pts;
+    const f = BW / SW, big = pts.map(p=>[p[0] * f, p[1] * f]);
+    // only the card's own patch of the picture is read out
+    const xs = big.map(p=>p[0]), ys = big.map(p=>p[1]);
+    const ox = Math.max(0, Math.floor(Math.min(...xs)) - 2), oy = Math.max(0, Math.floor(Math.min(...ys)) - 2);
+    const ex = Math.min(BW, Math.ceil(Math.max(...xs)) + 2), ey = Math.min(BH, Math.ceil(Math.max(...ys)) + 2);
+    if(ex - ox < 20 || ey - oy < 20) return null;
+    const data = FR.bx.getImageData(ox, oy, ex - ox, ey - oy).data;
+    const m0 = scanQuadMap(big);
+    return { map: (u, v2)=>{ const p = m0(u, v2); return [p[0] - ox, p[1] - oy]; }, data, BW: ex - ox, BH: ey - oy, vid: big.map(p=>[p[0] / k, p[1] / k]) };
+  };
+  // A region of the straightened card, in the card's own proportions.
+  const cut = (q, fx0, fy0, fx1, fy1, outW)=>{
+    const outH = Math.max(8, Math.round(outW * ((fy1 - fy0) * 88) / ((fx1 - fx0) * 63)));
+    const px = scanWarp(q.data, q.BW, q.BH, q.map, fx0, fy0, fx1, fy1, outW, outH);
+    const cv = document.createElement('canvas'); cv.width = outW; cv.height = outH;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    const im = cx.createImageData(outW, outH); im.data.set(px); cx.putImageData(im, 0, 0);
+    return cv;
+  };
+  const hashOf = (cv)=>ahHash(ahGray32(cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, [0, 0, 1, 1]));
+  // The green outline over the picture (video px -> screen px, object-fit: cover).
+  const showQuad = (q)=>{
+    const cam = el.querySelector('#scanCam'), svg = el.querySelector('#scanQuad'), v = el.querySelector('#scanVideo');
+    if(!cam || !svg || !v) return;
+    cam.classList.toggle('locked', !!q);
+    const poly = svg.querySelector('polygon');
+    // the app's camera fills the whole box (centre crop), like object-fit: cover
+    const cr = cam.getBoundingClientRect(), vr = NATIVE ? cr : v.getBoundingClientRect();
+    const fw = NATIVE ? (NF && NF.fw) : v.videoWidth, fh = NATIVE ? (NF && NF.fh) : v.videoHeight;
+    if(!q || !fw){ poly.setAttribute('points', ''); return; }
+    const sc = Math.max(vr.width / fw, vr.height / fh);
+    const offX = (vr.width - fw * sc) / 2 + (vr.left - cr.left), offY = (vr.height - fh * sc) / 2 + (vr.top - cr.top);
+    poly.setAttribute('points', q.vid.map(p=>(offX + p[0] * sc).toFixed(1) + ',' + (offY + p[1] * sc).toFixed(1)).join(' '));
+  };
   // OCR text -> { name, score }; the local card names first, Scryfall's
   // fuzzy lookup only for a stable, longer line the names did not know.
   const resolve = async (text, allowFuzzy)=>{
@@ -27147,16 +27556,31 @@ function openCardScanner(opts){
   // How far the camera's art is from one known printing.
   const artDist = (art, i)=>(!AH || !art || i == null) ? 99 : ahPop((AH.h1[i] ^ art[0]) >>> 0) + ahPop((AH.h2[i] ^ art[1]) >>> 0);
   let lastIdx = null;   // the printing just added, by its place in the fingerprints
+  let lastQ = null;     // the straightened card of this look (if its edges were found)
   const tick = async ()=>{
     if(!alive || busy) return;
-    const band = nameBand((tickN++ % 2) === 1);
+    const wide = (tickN++ % 2) === 1;
+    let q = null;
+    try{ q = findCard(); }catch(e){ q = null; }
+    showQuad(q);
+    const band = q ? forOcr(wide ? cut(q, 0.03, 0.015, 0.84, 0.13, 560) : cut(q, 0.05, 0.025, 0.80, 0.115, 520)) : nameBand(wide);
     if(!band) return;
     busy = true;
     try{
       const data = await scanRead(band, 'name');
       if(!alive) return;
       const text = scanCleanOcr(data.text);
-      const art = AH ? artHash() : null;
+      const art = AH ? (q ? hashOf(cut(q, AH_REGION[0], AH_REGION[1], AH_REGION[2], AH_REGION[3], 96)) : artHash()) : null;
+      lastQ = q;
+      await judge(text, art, null, q);
+    }catch(e){
+      status(T('Tekstherkenning lukt niet — controleer je internet (eenmalig nodig).', 'Text reading failed — check your connection (needed once).'));
+    }finally{ busy = false; }
+  };
+  // One look's verdict. foot: the collector lines as the app's reader saw
+  // them (1.28), or null (Tesseract: read the foot band only when needed).
+  const judge = async (text, art, foot, q)=>{
+    {
       // 1. the name line against the card names on the phone
       let hit = text ? await resolve(text, false) : null, byArt = false;
       // 2. no readable name: the art alone, only when one card stands out
@@ -27170,6 +27594,7 @@ function openCardScanner(opts){
       const look = (n)=>{ looks.push(n); if(looks.length > 5) looks.shift(); };
       if(!hit){
         look(null);
+        if(q) status(T('Kaart gevonden, naam lezen…', 'Card found, reading the name…'));
         prev = text ? { text, name: prev && prev.name, pick: prev && prev.pick } : (prev && prev.name ? { name: prev.name, pick: prev.pick } : null);
         if(++blanks >= 3){ lastAdded = null; }   // card gone: the same one may count again
         if(blanks >= 6){ looks = []; bestPick = {}; prev = null; if(blanks === 6) status(T('Richt op de kaart…', 'Aim at the card…')); }   // long gone: start fresh
@@ -27205,16 +27630,97 @@ function openCardScanner(opts){
       if(!sure){ status(T('Lezen… ', 'Reading… ') + hit.name); return; }
       status((byArt ? T('Herkend aan de afbeelding: ', 'Known by its art: ') : T('Gevonden: ', 'Found: ')) + hit.name);
       let card = null;
-      if(pick) card = await scanPrinting(pick.set, pick.cn, hit.name);
-      if(!card && !AH){
+      // 1.28: the collector line read by the app names the exact printing
+      if(foot){ const pc = scanParseCollector(foot); if(pc) card = await scanPrinting(pc.set, pc.cn, hit.name); }
+      if(!card && pick) card = await scanPrinting(pick.set, pick.cn, hit.name);
+      if(!card && !AH && foot == null){
         // No fingerprints on this phone: the collector line at the foot.
-        try{ const fb = footBand(); if(fb){ const r = await scanRead(fb, 'line'); const pc = scanParseCollector(r.text); if(pc) card = await scanPrinting(pc.set, pc.cn, hit.name); } }catch(e){}
+        try{ const fb = lastQ ? forOcr(cut(lastQ, 0.03, 0.885, 0.50, 0.975, 900)) : footBand(); if(fb){ const r = await scanRead(fb, 'line'); const pc = scanParseCollector(r.text); if(pc) card = await scanPrinting(pc.set, pc.cn, hit.name); } }catch(e){}
       }
       if(!card) card = await scanCardFor(hit.name);
       if(card && alive){ addCard(card); lastAdded = key; lastIdx = pick ? pick.i : null; looks = []; bestPick = {}; }
+    }
+  };
+  // ---- 1.28: a frame from the Android app (camera + ML Kit) ----
+  // fr: { fw, fh: the frame; tw, th, g: its grey copy (base64); L: the
+  // lines and words read, see scanNativeRead }. The app sends the next frame
+  // once this one says DeckhandScan.next().
+  const nativeFrame = async (fr)=>{
+    if(!alive || !fr) return;
+    busy = true;
+    try{
+      NF = fr;
+      const bin = atob(fr.g || ''), n = Math.min(bin.length, fr.tw * fr.th);
+      const gray = new Float32Array(fr.tw * fr.th), rgba = new Uint8ClampedArray(fr.tw * fr.th * 4);
+      for(let i = 0, j = 0; i < n; i++, j += 4){ const g2 = bin.charCodeAt(i); gray[i] = g2; rgba[j] = rgba[j + 1] = rgba[j + 2] = g2; rgba[j + 3] = 255; }
+      let q = null, r = null;
+      try{ r = scanFindCard(gray, fr.tw, fr.th); }catch(e){ r = null; }
+      if(r){
+        let pts = r.pts;
+        if(quadS && pts.every((p, i)=>Math.hypot(p[0] - quadS[i][0], p[1] - quadS[i][1]) < fr.tw * 0.03)) pts = pts.map((p, i)=>[(p[0] + quadS[i][0]) / 2, (p[1] + quadS[i][1]) / 2]);
+        quadS = pts;
+        q = { map: scanQuadMap(pts), data: rgba, BW: fr.tw, BH: fr.th, pts, vid: pts.map(p=>[p[0] * fr.fw / fr.tw, p[1] * fr.fh / fr.th]) };
+      } else quadS = null;
+      showQuad(q);
+      const rd = scanNativeRead(fr, q ? q.pts : null);
+      let text = scanCleanOcr(rd.name);
+      if(!q && rd.names.length > 1){
+        // no edges: the first of the top lines that is a card name
+        for(const t of rd.names){ const c = scanCleanOcr(t); if(c && await resolve(c, false)){ text = c; break; } }
+      }
+      const art = (AH && q) ? hashOf(cut(q, AH_REGION[0], AH_REGION[1], AH_REGION[2], AH_REGION[3], 96)) : null;
+      lastQ = null;
+      await judge(text, art, rd.foot || '', q);
     }catch(e){
-      status(T('Tekstherkenning lukt niet — controleer je internet (eenmalig nodig).', 'Text reading failed — check your connection (needed once).'));
-    }finally{ busy = false; }
+      console.warn('scan frame', e);
+    }finally{
+      busy = false;
+      try{ if(alive) window.DeckhandScan.next(); }catch(e){}
+    }
+  };
+  const camBox = ()=>{
+    const r = el.querySelector('#scanCam').getBoundingClientRect();
+    return JSON.stringify({ x: r.left, y: r.top, w: r.width, h: r.height, vw: window.innerWidth });
+  };
+  const startNative = ()=>{
+    const S = window.DeckhandScan;
+    document.documentElement.classList.add('native-cam');
+    // what lies under the scanner must not show through the camera's hole
+    hiddenUnder = Array.from(document.body.children)
+      .filter(n=>n !== el && n.id !== 'toast' && (n.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING))
+      .map(n=>{ const o = n.style.opacity; n.style.opacity = '0'; return [n, o]; });
+    window.dhScanNative = (kind, d)=>{
+      if(!alive) return;
+      if(kind === 'frame'){ if(busy){ try{ S.next(); }catch(e){} return; } nativeFrame(d); }
+      else if(kind === 'ready'){
+        status(T('Richt op de kaart…', 'Aim at the card…'));
+        const tb = el.querySelector('#scanTorch');
+        if(d && d.torch && tb.hidden){
+          tb.hidden = false;
+          tb.addEventListener('click', (e)=>{ e.stopPropagation(); torchOn = !torchOn; try{ S.torch(torchOn); }catch(err){} tb.classList.toggle('on', torchOn); });
+        }
+      }
+      else if(kind === 'denied') status(T('Geen toegang tot de camera. Sta de camera toe voor Deckhand in de instellingen van Android.', 'No camera access. Allow the camera for Deckhand in Android\u2019s settings.'));
+      else if(kind === 'error') status(T('De camera start niet. Sluit de scanner en probeer opnieuw.', 'The camera does not start. Close the scanner and try again.'));
+    };
+    el.querySelector('#scanCam').addEventListener('click', (e)=>{
+      if(e.target.closest('button')) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      const ring = document.createElement('i'); ring.className = 'scan-focus';
+      ring.style.left = (e.clientX - r.left) + 'px'; ring.style.top = (e.clientY - r.top) + 'px';
+      e.currentTarget.appendChild(ring); setTimeout(()=>ring.remove(), 700);
+      try{ S.focus((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); }catch(err){}
+    });
+    onResize = ()=>{ try{ if(alive) S.place(camBox()); }catch(e){} };
+    window.addEventListener('resize', onResize);
+    artHashReady().then(d=>{ AH = d; }).catch(()=>{});
+    // after the overlay has its final place; once more when any opening
+    // animation is surely done
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      if(!alive) return;
+      try{ S.start(camBox()); }catch(e){ status(T('De camera start niet.', 'The camera does not start.')); }
+      setTimeout(onResize, 450);
+    }));
   };
   // The lamp, and a tap on the picture to focus -- where the camera allows.
   const wireCameraControls = ()=>{
@@ -27301,7 +27807,8 @@ function openCardScanner(opts){
     setTimeout(()=>{ render(); toast(T(`${n} kaart${n === 1 ? '' : 'en'} toegevoegd aan je collectie.`, `${n} card${n === 1 ? '' : 's'} added to your collection.`)); }, 60);
   });
   paintList();
-  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+  if(NATIVE) startNative();
+  else if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
     status(T('Deze browser geeft geen camera. Zelf typen kan wel.', 'This browser offers no camera. Typing works.'));
   } else startCamera();
 }
