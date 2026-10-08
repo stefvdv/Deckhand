@@ -403,6 +403,10 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    straight off the screen. */
 #recoOverlay .cselect-panel, .overlay .reco-themes .cselect-panel{top:auto;bottom:calc(100% + 4px);}
 .app > main > .pin-pill{order:96;}
+/* 1.32: on Search the "Adding straight to" bar rides just above the search
+   bar (where the explanation text used to be): order 99 sits between the
+   results (98) and the bar (100). */
+.app > main:has(> #searchResultsBox) > .pin-pill{order:99;margin:8px 0 0;}
 .app > main > .sp-jump{order:99;}
 /* (1) Home packs downward — the foot gap closes. */
 .app > main.home-page{justify-content:flex-end;padding-bottom:calc(var(--nav-h) - 14px + env(safe-area-inset-bottom));}
@@ -6130,15 +6134,15 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.31';
+const APP_VERSION = '1.32';
 const CHANGELOG_NOTES = {
   en: [
-    'Colour page no longer jumps',
-    'Combo picker hides Top Commanders'
+    'Search: no explanation text',
+    'Deck bar sits right above search'
   ],
   nl: [
-    'Kleurpagina verspringt niet meer',
-    'Combinatiekeuze verbergt Top Commanders'
+    'Zoeken: geen uitlegtekst meer',
+    'Deckbalk staat direct boven zoeken'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -15988,7 +15992,7 @@ function searchPageHtml(){
       : ''}
     <div class="searchbar"><input id="searchName" enterkeyhint="search" placeholder="Card name…" value="${escapeHtml(state.searchName)}" style="padding-right:36px;"><button class="in-chev" id="qChev" title="${trS('Advanced filters')}">${state.advOpen?'▴':'▾'}</button><button id="srSortBtn" class="ghost-btn${state.searchSort !== 'name' ? ' active' : ''}" title="${trS('Sort')}" style="padding:0 11px;flex:none;">${SORT_ICON}</button><button id="spoilersBtn" class="ghost-btn" title="Spoilers from upcoming sets" style="padding:0 13px;font-size:17px;flex:none;"${state.searchSel && state.searchSel.size ? ' hidden' : ''}>🔮</button><button id="srSelFab" class="sel-fab" title="${trS('Add to deck…')}"${state.searchSel && state.searchSel.size ? '' : ' hidden'}>${selFabLabel(state.searchSel ? state.searchSel.size : 0)}</button></div>
     <div id="advSlot">${state.advOpen ? advancedPanelHtml() : ''}</div>
-    <div id="searchResultsBox">${state.searchRan ? '' : `<div class="empty-note">Search by name, or open Advanced filters for colors, mana value, type, and Oracle text.</div>`}</div>
+    <div id="searchResultsBox"></div>
     <div class="cotd" id="cotdBox" ${(state.searchRan || state.advOpen)?'style="display:none;"':''}></div>
   </main>`;
 }
