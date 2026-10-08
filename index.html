@@ -6130,17 +6130,15 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.30';
+const APP_VERSION = '1.31';
 const CHANGELOG_NOTES = {
   en: [
-    'Colour pick: Staples + Mana Staples',
-    'More buttons instead of endless list',
-    'Menu button stays above search bar'
+    'Colour page no longer jumps',
+    'Combo picker hides Top Commanders'
   ],
   nl: [
-    'Kleurkeuze: Staples + Mana Staples',
-    'More-knoppen i.p.v. eindeloze lijst',
-    'Menuknop blijft boven zoekbalk'
+    'Kleurpagina verspringt niet meer',
+    'Combinatiekeuze verbergt Top Commanders'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -22737,6 +22735,10 @@ function wireBrowsePage(){
     state.browseTypal = null;
     state.openCSelect = 'bsCombo';    // flow straight into picking the combination
     render();
+    // 1.31: this opening skips csRerender, so the page did not know a sheet
+    // was open and the Top Commanders feed showed behind the picker.
+    try{ const m = document.querySelector('.app > main'); if(m) m.classList.add('cs-open'); }catch(e){}
+    csFitBrowsePanel();
   };
   _csHandlers.bsCombo = v=>{
     sfDropQueuedFor('browse');
@@ -23066,8 +23068,43 @@ async function loadColorStaples(key, combo){
   state.browseCache[sk] = (res.staples.length || res.mana.length) ? res : false;
   if(key === browseKey() && state.browseCache[key]) renderBrowseResults(key, true);
 }
+/* 1.31: hold the reader's view while the page grows above them. Prices,
+   deck counts and pictures arrive late and make tiles taller; on a page that
+   is read from the foot upward, every taller tile ABOVE the reader pushed
+   the view (the page jumped to Mana Staples). The browser's own scroll
+   anchoring is off app-wide, so this page keeps its own: the lowest tile in
+   view is the anchor, and after every change in size it is put back exactly
+   where it was. */
+function holdBrowseView(box){
+  if(!box || box._holdView || !window.ResizeObserver) return;
+  box._holdView = true;
+  const se = ()=>document.scrollingElement || document.documentElement;
+  let anc = null, top = 0, raf = 0;
+  const pick = ()=>{
+    const vh = window.innerHeight;
+    let best = null, bestB = -Infinity;
+    box.querySelectorAll('.sr-grid > *, .section-label').forEach(el=>{
+      const r = el.getBoundingClientRect();
+      if(r.height > 0 && r.bottom > 0 && r.top < vh && r.bottom > bestB){ best = el; bestB = r.bottom; }
+    });
+    anc = best; top = best ? best.getBoundingClientRect().top : 0;
+  };
+  const onScroll = ()=>{ if(raf) return; raf = requestAnimationFrame(()=>{ raf = 0; pick(); }); };
+  const ro = new ResizeObserver(()=>{
+    if(!box.isConnected){ ro.disconnect(); window.removeEventListener('scroll', onScroll); return; }
+    if(anc && anc.isConnected){
+      const dy = anc.getBoundingClientRect().top - top;
+      if(Math.abs(dy) > 0.5) se().scrollTop += dy;
+    }
+    pick();
+  });
+  ro.observe(box);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  pick();
+}
 /* cmd = { items, tile(it, idx) -> html, after(chunk) } for the commanders. */
 function renderColorBrowse(box, key, cmd, keepScroll){
+  holdBrowseView(box);
   const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
   const CAP = 10;
   const shownK = key + '::shown';
