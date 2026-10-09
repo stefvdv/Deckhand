@@ -1771,6 +1771,22 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 .dr-past b{color:var(--brass);margin:0 4px;font-family:'JetBrains Mono',monospace;}
 .dr-champ{font-family:'Cinzel',serif;font-size:28px;font-weight:700;color:var(--brass);margin:4px 0;}
 .settings-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;cursor:pointer;}
+/* 1.35: Extras as tiles, three to a row, read from the foot up (wrap-reverse:
+   the first tile in the markup sits bottom-left). A tile that unfolds (About,
+   Format rules, Ban lists, Color scheme, Notifications, Backup) spans the
+   whole row while open; About always does, as the banner on top. */
+.app > main.settings-main.xt-tiles{flex-direction:row;flex-wrap:wrap-reverse;align-content:flex-start;gap:10px;}
+.xt-tiles > .settings-section{flex:0 0 calc((100% - 20px) / 3);min-width:0;margin:0;}
+.xt-tiles > .settings-section.xt-wide,
+.xt-tiles > .settings-section:has(> .xt-body:not([hidden])){flex-basis:100%;}
+.xt-tiles > #appFootNote{flex:0 0 100%;}
+.xt-tiles .settings-row.xt-tile{flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:16px 6px;min-height:104px;}
+.xt-tiles .xt-wide > .settings-row.xt-tile{flex-direction:row;min-height:0;padding:14px;}
+.settings-row.xt-tile .l1{font-size:15.5px;font-weight:700;line-height:1.2;hyphens:manual;overflow-wrap:normal;}
+.xt-ico{display:inline-flex;align-items:center;justify-content:center;gap:2px;width:auto;min-width:30px;height:30px;color:var(--brass);}
+.xt-ico svg{width:30px;height:30px;}
+.xt-tile .seg-inline button{padding:5px 9px;font-size:12.5px;}
+.xt-tile #apkNote:empty{display:none;}
 .settings-row .l1{font-size:14.5px;font-weight:600;}
 .settings-row .l2{font-size:12px;color:var(--sub-text);margin-top:2px;}
 /* New! -- flat gold, dark ink (kleurenwet: gold is the seventh colour). */
@@ -1833,7 +1849,7 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
    screen, unfolding upward out of the row like every other sheet. */
 .guild-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 10px 8px;border-bottom:2px solid var(--line);}
 .guild-list[hidden]{display:none;}
-#guildRow{justify-content:space-between;}
+#guildRow:not(.xt-tile){justify-content:space-between;}
 #guildRow .guild-cur{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
 .guild-opt{display:flex;align-items:center;gap:8px;min-width:0;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;padding:8px 10px;color:var(--ink-text);font-family:'Inter';font-size:14px;cursor:pointer;text-align:left;}
 .guild-opt .mana-ic{flex:none;}
@@ -2060,7 +2076,22 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .cr-title{font-family:'Cinzel',serif;font-size:17px;color:var(--brass);letter-spacing:.04em;}
 .cr-bar{display:flex;gap:8px;padding:8px 14px 10px;position:relative;}
 /* 1.33: the judge */
-.cr-judge{flex:none;width:auto;padding:0 14px;font-size:18px;}
+.cr-bar textarea{flex:1;min-width:0;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:10px 12px;font-size:15px;line-height:1.35;resize:none;font-family:inherit;}
+.cr-side{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;}
+.cr-judge{flex:none;width:56px;height:56px;padding:0;display:flex;align-items:center;justify-content:center;}
+.cr-judge svg{width:28px;height:28px;}
+.cr-count{font-size:11px;color:var(--sub-text);font-family:'JetBrains Mono',monospace;}
+#crOverlay.cr-mode-rules .cr-side{display:none;}
+.cj-hero{text-align:center;padding:18px 18px 8px;}
+.cj-hero .cj-ico{display:inline-flex;width:64px;height:64px;align-items:center;justify-content:center;border:2px solid var(--brass);border-radius:50%;color:var(--brass);}
+.cj-hero .cj-ico svg{width:34px;height:34px;}
+.cj-hero h3{margin:12px 0 6px;font-size:22px;color:var(--head-ink);}
+.cj-hero p{margin:4px 0;font-size:14.5px;line-height:1.5;color:var(--ink-text);}
+.cj-hero p.cj-sub{color:var(--sub-text);font-size:13px;}
+.cj-try{padding:4px 12px 10px;display:flex;flex-direction:column-reverse;gap:8px;}
+.cj-try .cj-ex{text-align:left;padding:10px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--ink-2);color:var(--ink-text);font-size:14px;font-style:italic;cursor:pointer;}
+.cj-try .cj-lab{font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sub-text);margin:2px 2px 0;}
+.cj-rules{margin:6px 12px 2px;}
 .cr-tagpop{position:absolute;left:14px;right:14px;bottom:calc(100% + 4px);z-index:20;display:flex;flex-direction:column-reverse;max-height:240px;overflow-y:auto;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .cr-tagpop[hidden]{display:none;}
 .cr-tagpop button{flex:none;text-align:left;padding:10px 12px;background:none;border:none;border-top:1px solid var(--line);color:var(--ink-text);font-size:14px;cursor:pointer;}
@@ -3433,7 +3464,7 @@ document.addEventListener('click', (e)=>{
       applyTheme(); persistSettings();
       document.querySelectorAll('[data-guild]').forEach(x=>x.classList.toggle('sel', x.dataset.guild===g.k));
       const cur = document.getElementById('guildCur');
-      if(cur) cur.innerHTML = manaIconSvg(g.main,16) + manaIconSvg(g.side,16) + ' ' + g.n + ' ' + foldIcoHtml(false);
+      if(cur) cur.innerHTML = manaIconSvg(g.main,22) + manaIconSvg(g.side,22);
       const b = document.getElementById('guildBody');
       if(b && !b.hidden) toggleAccordionBody(b, 'guild');
     }
@@ -6146,17 +6177,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.34';
+const APP_VERSION = '1.35';
 const CHANGELOG_NOTES = {
   en: [
-    'Judge finds named cards without @',
-    'Judge reads the key rules first',
-    'Answer shows which cards were read'
+    'Ask AI judge: its own page',
+    'Rules behind a button on that page',
+    'Extras as tiles with icons'
   ],
   nl: [
-    'Judge vindt kaartnamen zonder @',
-    'Judge leest eerst de kernregels',
-    'Antwoord toont welke kaarten gelezen'
+    'Vraag de AI-judge: eigen pagina',
+    'Regels achter een knop op die pagina',
+    'Extra-pagina als tegels met iconen'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6239,12 +6270,14 @@ function tourSteps(){
     { k:'extras', go:()=>switchPage('settings'),
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
-        ? `<p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
-           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (die klappen naar beneden open, om rustig te lezen), de <strong>officiële regels</strong> (Comprehensive Rules, met <strong>⚖ vraag de judge</strong>: typ je vraag en noem de kaarten (of tag ze met @), en een AI antwoordt met de regels erbij), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Zet je hier de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal onderaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
-        : `<p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
-           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (they unfold downward, for an easy read), the complete <strong>Comprehensive Rules</strong> (with <strong>⚖ ask the judge</strong>: type your question and name the cards (or tag them with @), and an AI answers with the rules attached), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. Turn on <strong>spoiler alerts</strong> here (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very bottom, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
+        ? `<p style="margin:6px 0;">Alles staat hier in <strong>tegels</strong>; onderaan, bij je duim, <strong>Vraag de AI-judge</strong>: stel je regelvraag en noem de kaarten (of tag ze met @); een AI antwoordt met de officiële regels erbij, en elke geciteerde regel wordt gecontroleerd. Op die pagina staan ook de complete <strong>Comprehensive Rules</strong>, achter een knop.</p>
+           <p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
+           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (die klappen naar beneden open, om rustig te lezen), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. Zet je bij <strong>Meldingen</strong> de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
+        : `<p style="margin:6px 0;">Everything here is a <strong>tile</strong>; at the foot, by your thumb, <strong>Ask AI judge</strong>: ask your rules question and name the cards (or tag them with @); an AI answers with the official rules attached, and every cited rule is checked. The complete <strong>Comprehensive Rules</strong> sit behind a button on that page.</p>
+           <p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
+           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (they unfold downward, for an easy read), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. Turn on <strong>spoiler alerts</strong> under <strong>Notifications</strong> (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
   ];
 }
 function startAppTour(){
@@ -6885,6 +6918,11 @@ function identityStripCss(colors){
   return stops.length===1 ? stops[0] : `linear-gradient(90deg, ${stops.join(', ')})`;
 }
 const ICONS = {
+  gavel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 12.5l-8 8a2.1 2.1 0 0 1-3-3l8-8"/><path d="M16 16l6-6"/><path d="M8 8l6-6"/><path d="M9 7l8 8"/><path d="M21 11l-8-8"/></svg>`,
+  heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7.5 2.7C19.5 15.4 12 20 12 20z"/></svg>`,
+  draft: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="6.5" width="9" height="13" rx="1.5" transform="rotate(-10 8.5 13)"/><rect x="11" y="4.5" width="9" height="13" rx="1.5" transform="rotate(10 15.5 11)"/></svg>`,
+  ban: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.7" fill="currentColor"/></svg>`,
   tag: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.6"/></svg>`,
   decks: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="9.5" rx="1.6"/><path d="M7 10.5V6.5h5v4"/><path d="M11 10.5V8.2h5.5v2.3"/></svg>`,
   binder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="1.8"/><path d="M8.6 3.5v17"/><circle cx="6.8" cy="8" r="0.9"/><circle cx="6.8" cy="12" r="0.9"/><circle cx="6.8" cy="16" r="0.9"/><rect x="11.2" y="7" width="5.2" height="4.6" rx="0.8"/></svg>`,
@@ -8091,27 +8129,27 @@ function judgeAnswerHtml(res, rules, q, NL){
     + ' — ' + (NL ? 'de regels hieronder zijn de officiële tekst; die gaat altijd voor.' : 'the rules below are the official text; they always win.')
     + (res._cards && res._cards.length ? ' ' + (NL ? 'Gelezen kaarten: ' : 'Cards read: ') + res._cards.join(', ') + '.' : ' ' + (NL ? 'Geen kaart herkend \u2014 tag kaarten met @.' : 'No card recognised \u2014 tag cards with @.'))
     + (res.model ? ' (' + res.provider + ' · ' + res.model + ')' : '');
-  return `<div class="cja" data-notr><div class="cja-a">${lnk(res.answer)}</div><div class="cja-meta">⚖ ${escapeHtml(meta)}</div></div>`
+  return `<div class="cja" data-notr><div class="cja-a">${lnk(res.answer)}</div><div class="cja-meta">${escapeHtml(meta)}</div></div>`
     + (res.reasoning ? `<div class="cja-why" data-notr>${lnk(res.reasoning)}</div>` : '')
     + (v.ok.length || v.bad.length ? `<div class="cja-h">${NL ? 'Geciteerde regels' : 'Rules cited'}</div>` : '')
     + v.ok.map(r=>crRuleHtml(r, [])).join('')
     + v.bad.map(n=>`<div class="cr-rule"><div class="cr-num">⚠ ${escapeHtml(n)}</div><div class="cr-txt">${NL ? 'Deze regel bestaat niet in de officiële regels \u2014 dat deel van het antwoord is niet te controleren.' : 'This rule does not exist in the official rules \u2014 that part of the answer cannot be checked.'}</div></div>`).join('')
     + `<div class="cja-q" data-notr>\u201c${escapeHtml(q)}\u201d</div>`;
 }
-function openCROverlay(){
+function openCROverlay(startMode){
   document.getElementById('crOverlay')?.remove();
   const el = document.createElement('div');
   el.id = 'crOverlay';
   el.className = 'overlay';
-  const NL = appLang() === 'nl';
-  // Like every page: the cap on top, the text growing up from the search
-  // field, the search field right above the app's own nav bar.
+  const NL = appLang() === 'nl', T = (a, b)=>NL ? a : b;
+  // 1.35: the judge first; the Comprehensive Rules behind a button.
+  let mode = startMode === 'rules' ? 'rules' : 'judge';
   el.innerHTML = `
-    ${overlayCapHtml(NL ? 'Officiële regels' : 'Comprehensive Rules')}
-    <div id="crBody"><div class="empty-note" style="padding:14px;">${NL ? 'Regels laden\u2026' : 'Loading the rules\u2026'}</div></div>
+    ${overlayCapHtml(T('Vraag de AI-judge', 'Ask AI judge'))}
+    <div id="crBody"></div>
     <div class="cr-bar">
-      <input id="crQ" type="search" placeholder="${NL ? 'Vraag, woorden of regel (601.2)\u2026 @ voor een kaart' : 'Question, words or rule (601.2)\u2026 @ for a card'}" autocomplete="off">
-      <button type="button" class="ghost-btn cr-judge" id="crJudge" title="${NL ? 'Vraag de judge' : 'Ask the judge'}" aria-label="${NL ? 'Vraag de judge' : 'Ask the judge'}">⚖</button>
+      <textarea id="crQ" rows="3" maxlength="500" enterkeyhint="send" autocomplete="off" spellcheck="false"></textarea>
+      <div class="cr-side"><button type="button" class="primary-btn cr-judge" id="crJudge" title="${T('Vraag de judge', 'Ask the judge')}" aria-label="${T('Vraag de judge', 'Ask the judge')}">${ICONS.gavel}</button><span class="cr-count" id="crCount">0/500</span></div>
       <div class="cr-tagpop" id="crTagPop" hidden></div>
     </div>
     ${overlayNavHtml()}`;
@@ -8119,25 +8157,36 @@ function openCROverlay(){
   wireOverlayNav(el);
   const body = el.querySelector('#crBody');
   const q = el.querySelector('#crQ');
+  const count = el.querySelector('#crCount');
+  const title = el.querySelector('.ov-title');
   // TWO-stage back, the app's blessed way: every level pushes its own history
-  // entry at the moment of a real user gesture. Opening the Rules pushes the
-  // close-entry; RUNNING a search pushes a clear-entry on top. Back then pops
-  // one level at a time — search cleared first, Rules closed second — and no
-  // pushState ever happens inside popstate (Chrome skips gesture-less entries,
-  // which previously made the second back exit the app entirely).
+  // entry at the moment of a real user gesture. Opening pushes the close-
+  // entry; the rules pushes a back-to-the-judge entry; an answer or a search
+  // pushes a clear-entry on top. Back pops one level at a time.
   state._crqArmed = false;
   function crClearStep(){
     state._crqArmed = false;
-    const host = document.getElementById('crOverlay');
-    if(!host) return;
-    q.value = '';
-    run();
+    if(!document.getElementById('crOverlay')) return;
+    q.value = ''; count.textContent = '0/500';
+    home();
   }
+  const arm = ()=>{ if(!state._crqArmed){ state._crqArmed = true; pushOverlay('crq', crClearStep); } };
   pushOverlay('cr', ()=>{ state._crqArmed = false; document.getElementById('crOverlay')?.remove(); });
+  const examples = NL
+    ? ['Werkt indestructible tegen -1/-1 counters?', 'Kan ik met Counterspell een triggered ability counteren?', 'Gaat trample-damage door een blocker met protection?']
+    : ['How does indestructible interact with -1/-1 counters?', 'Can I counter a triggered ability with Counterspell?', 'Does trample carry damage through a blocker with protection?'];
+  // The judge's empty page, bottom-up (#crBody is column-reverse: the first
+  // thing written sits at the foot, by the question field).
+  const judgeHome = ()=>{
+    body.innerHTML = `<div class="cj-try">${examples.map(x=>`<button type="button" class="cj-ex" data-cjex="${escapeHtml(x)}">${escapeHtml(x)}</button>`).join('')}<div class="cj-lab">${T('Probeer', 'Try one')}</div></div>
+      <div class="cj-rules"><button type="button" class="ghost-btn" id="crOpenRules" style="width:100%;">${inlIco('library', 16)}${T('Comprehensive Rules lezen', 'Read the Comprehensive Rules')}</button></div>
+      <div class="cj-hero"><span class="cj-ico">${ICONS.gavel}</span><h3>${T('Vraag de AI-judge', 'Ask AI judge')}</h3>
+        <p>${T('Elk antwoord komt met de officiële regels erbij, en elke geciteerde regel wordt gecontroleerd.', 'Every answer comes with the official rules attached, and every cited rule is checked.')}</p>
+        <p class="cj-sub">${T('Noem kaarten gewoon bij naam, of tag ze met @. Gratis, 20 vragen per dag.', 'Just name the cards, or tag them with @. Free, 20 questions a day.')}</p></div>`;
+    body.scrollTop = 0;
+  };
   const showToc = (rules)=>{
-    // Chapters: one per three-digit number. The source does not always carry
-    // the chapter headings as rules of their own ("100." vs "100"), so the
-    // list is built from the numbers themselves -- it can never come out empty.
+    // Chapters: one per three-digit number, built from the numbers themselves.
     const byChap = new Map();
     rules.forEach(r=>{
       const m = /^(\d{3})(\.?)(\d*)/.exec(r.n || '');
@@ -8147,39 +8196,71 @@ function openCROverlay(){
       if(!cur || (own && !cur.own)) byChap.set(m[1], { n: m[1], t: r.t, own });
     });
     const chapters = Array.from(byChap.values()).sort((a, b)=>+a.n - +b.n);
-    body.innerHTML = `<p class="hint" style="margin:4px 12px 10px;">${appLang() === 'nl'
-      ? `${rules.length} regels geladen, een week bewaard om offline te lezen. Tik op een hoofdstuk, typ woorden als "commander damage trample" of stel een hele vraag — het antwoord is de officiële tekst zelf (in het Engels).`
-      : `${rules.length} rules loaded, kept a week for offline reading. Tap a section, type words like "commander damage trample", or ask a whole question — the answer is the official text itself.`}</p>
+    body.innerHTML = `<p class="hint" style="margin:4px 12px 10px;">${T(
+        `${rules.length} regels geladen, een week bewaard om offline te lezen. Tik op een hoofdstuk of zoek op woorden of een regelnummer (601.2).`,
+        `${rules.length} rules loaded, kept a week for offline reading. Tap a section, or search by words or a rule number (601.2).`)}</p>
       <div class="cr-toc">${chapters.map(r=>`<button class="cr-toc-row" data-crjump="${r.n}"><span class="cr-num">${r.n}</span><span>${escapeHtml(r.t.slice(0,70))}${r.t.length>70?'…':''}</span></button>`).join('')}</div>`;
+    body.scrollTop = 0;
+  };
+  const home = ()=>{
+    if(mode === 'judge'){ judgeHome(); return; }
+    if(state._cr) showToc(state._cr);
+    else body.innerHTML = `<div class="empty-note" style="padding:14px;">${T('Regels laden…', 'Loading the rules…')}</div>`;
+  };
+  const setMode = (m)=>{
+    mode = m;
+    el.classList.toggle('cr-mode-rules', m === 'rules');
+    title.textContent = m === 'rules' ? T('Officiële regels', 'Comprehensive Rules') : T('Vraag de AI-judge', 'Ask AI judge');
+    q.rows = m === 'rules' ? 1 : 3;
+    q.placeholder = m === 'rules' ? T('Woorden of regel (601.2)…', 'Words or rule (601.2)…') : T('Stel je regelvraag… noem de kaarten, of tag ze met @', 'Ask your rules question… name the cards, or tag them with @');
+    state._crqArmed = false;
+    q.value = ''; count.textContent = '0/500';
+    home();
+  };
+  const openRules = ()=>{
+    pushOverlay('crrules', ()=>{ if(document.getElementById('crOverlay')) setMode('judge'); });
+    setMode('rules');
+    ensureCR().then(r=>{ if(r && mode === 'rules' && !q.value.trim()) showToc(r); });
   };
   const run = ()=>{
     const rules = state._cr;
     if(!rules) return;
     const query = q.value.trim();
     if(!query){ showToc(rules); return; }
-    if(!state._crqArmed){
-      state._crqArmed = true;
-      pushOverlay('crq', crClearStep);
-    }
+    arm();
     const toks = crTokens(query);
     const hits = crSearch(rules, query, 14);
-    const NLq = appLang() === 'nl';
-    // Bottom-up (#crBody is column-reverse): the hint sits at the foot, the
-    // most relevant rule right above it, less relevant ones climbing upward.
     body.innerHTML = hits.length
-      ? `<p class="hint" style="margin:4px 12px 8px;">${NLq ? 'De officiële regels die dat beantwoorden, de beste onderaan (in het Engels):' : 'The official rules answering that, best match at the bottom:'}</p>` + hits.map(r=>crRuleHtml(r, toks)).join('')
-      : `<div class="empty-note" style="padding:14px;">${NLq ? 'Geen regel met die woorden \u2014 probeer minder of andere woorden, of een regelnummer zoals 903 voor Commander.' : 'No rule matches those words — try fewer or different terms, or a rule number like 903 for Commander.'}</div>`;
+      ? `<p class="hint" style="margin:4px 12px 8px;">${T('De officiële regels die dat beantwoorden, de beste onderaan (in het Engels):', 'The official rules answering that, best match at the bottom:')}</p>` + hits.map(r=>crRuleHtml(r, toks)).join('')
+      : `<div class="empty-note" style="padding:14px;">${T('Geen regel met die woorden — probeer minder of andere woorden, of een regelnummer zoals 903 voor Commander.', 'No rule matches those words — try fewer or different terms, or a rule number like 903 for Commander.')}</div>`;
     body.scrollTop = 0;
   };
   el.addEventListener('click', (e)=>{
+    if(e.target.closest('#crOpenRules')){ openRules(); return; }
+    const ex = e.target.closest('[data-cjex]');
+    if(ex){ q.value = ex.dataset.cjex; count.textContent = q.value.length + '/500'; askJudge(); return; }
     const j = e.target.closest('[data-crjump]');
-    if(j){ q.value = j.dataset.crjump; run(); }
+    if(j){
+      // in an answer: the cited rule is right there -- go to it
+      if(mode === 'judge'){
+        const there = Array.from(body.querySelectorAll('.cr-rule .cr-num')).find(n=>n.textContent.trim() === j.dataset.crjump);
+        if(there){ there.closest('.cr-rule').scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+        openRules();
+      }
+      q.value = j.dataset.crjump; run();
+    }
   });
-  q.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); tagPop.hidden = true; run(); } });
-  // ---- 1.33: @-tags and the judge ----
+  q.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter' || e.shiftKey) return;
+    e.preventDefault(); tagPop.hidden = true;
+    if(mode === 'rules') run(); else askJudge();
+  });
+  // ---- @-tags and the judge ----
   const tagPop = el.querySelector('#crTagPop');
   const picked = [];
   q.addEventListener('input', async ()=>{
+    count.textContent = q.value.length + '/500';
+    if(mode !== 'judge'){ tagPop.hidden = true; return; }
     const before = q.value.slice(0, q.selectionStart == null ? q.value.length : q.selectionStart);
     const m = before.match(/@([^@\n]{2,40})$/);
     if(!m){ tagPop.hidden = true; return; }
@@ -8197,6 +8278,7 @@ function openCROverlay(){
     const pos = q.selectionStart == null ? q.value.length : q.selectionStart;
     const before = q.value.slice(0, pos).replace(/@([^@\n]{2,40})$/, '@' + name + ' ');
     q.value = before + q.value.slice(pos);
+    count.textContent = q.value.length + '/500';
     if(picked.indexOf(name) < 0) picked.push(name);
     tagPop.hidden = true;
     q.focus();
@@ -8210,11 +8292,11 @@ function openCROverlay(){
     if(query.length < 4){ toast(NLj ? 'Typ eerst je vraag.' : 'Type your question first.'); q.focus(); return; }
     if(judgeBusy) return;
     const rules = state._cr || await ensureCR();
-    if(!rules) return;
-    if(!state._crqArmed){ state._crqArmed = true; pushOverlay('crq', crClearStep); }
+    if(!rules){ toast(NLj ? 'De regels konden niet worden opgehaald — controleer je verbinding.' : 'The rules could not be loaded — check your connection.'); return; }
+    arm();
     judgeBusy = true;
     try{ q.blur(); }catch(e){}
-    body.innerHTML = `<div class="status" style="margin:16px 0;"><div class="spinner"></div>${NLj ? 'De judge leest de regels\u2026' : 'The judge is reading the rules\u2026'}</div><div class="cja-q">\u201c${escapeHtml(query)}\u201d</div>`;
+    body.innerHTML = `<div class="status" style="margin:16px 0;"><div class="spinner"></div>${NLj ? 'De judge leest de regels…' : 'The judge is reading the rules…'}</div><div class="cja-q" data-notr>“${escapeHtml(query)}”</div>`;
     body.scrollTop = 0;
     let tagged = judgeTagsIn(query, picked);
     try{
@@ -8225,7 +8307,7 @@ function openCROverlay(){
     const g = await judgeGather(query, tagged, rules);
     const res = await judgeAsk({ q: query, lang: NLj ? 'nl' : 'en', cards: g.cards, rules: g.rules.map(r=>({ n: r.n, t: r.t })), device: judgeDevice() });
     judgeBusy = false;
-    if(!document.getElementById('crOverlay')) return;
+    if(!document.getElementById('crOverlay') || mode !== 'judge') return;
     if(res && res.ok){ res._cards = g.cards.map(k=>k.name); body.innerHTML = judgeAnswerHtml(res, rules, query, NLj); body.scrollTop = 0; return; }
     // no judge: say why, and show what the app found itself
     const why = res && res.error === 'limit' ? (NLj ? `Je hebt vandaag je ${res.limit || ''} vragen aan de judge gesteld. Morgen kan het weer. Hieronder wat de regels zelf zeggen.` : `You have asked the judge your ${res.limit || ''} questions for today. More tomorrow. Below, what the rules themselves say.`)
@@ -8237,11 +8319,12 @@ function openCROverlay(){
     body.scrollTop = 0;
   };
   el.querySelector('#crJudge').addEventListener('click', askJudge);
+  setMode(mode);
+  // the rules load in the background: the judge needs them, the rules page shows them
   ensureCR().then(rules=>{
     if(!document.getElementById('crOverlay')) return;
-    if(!rules){ body.innerHTML = `<div class="empty-note" style="padding:14px;">${appLang() === 'nl' ? 'De regels konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw \u2014 na de eerste keer blijven ze een week offline beschikbaar.' : 'The rules service could not be reached. Check your connection and try again — after the first load they stay available offline for a week.'}</div>`; return; }
-    showToc(rules);
-    q.focus();
+    if(!rules && mode === 'rules'){ body.innerHTML = `<div class="empty-note" style="padding:14px;">${T('De regels konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw — na de eerste keer blijven ze een week offline beschikbaar.', 'The rules service could not be reached. Check your connection and try again — after the first load they stay available offline for a week.')}</div>`; return; }
+    if(rules && mode === 'rules' && !q.value.trim()) showToc(rules);
   });
 }
 function wireHomePage(){
@@ -25639,73 +25722,65 @@ function dropReveal(row){
    the 60-card formats. */
 const EXTRAS_FMT_ORDER = ['admiral', 'commander', 'paupercommander', 'duel', 'predh', 'standard', 'pauper', 'modern', 'legacy', 'vintage', 'premodern'];
 function settingsPageHtml(){
+  const NL = appLang() === 'nl', T = (a, b)=>NL ? a : b;
+  // A tile: icon + title, nothing else -- the title says what it does.
+  const tile = (id, ico, title, extra)=>`<div class="settings-row xt-tile" id="${id}"><span class="xt-ico">${ico}</span><div class="l1">${title}</div>${extra || ''}</div>`;
+  const g = GUILDS.find(x=>x.k===state.guild) || GUILDS[0];
+  const browser = !(window.matchMedia('(display-mode: standalone)').matches || inAndroidApp());
+  const _pp = pushPrefs();
+  // column-reverse thinking, tile edition: the first tile in the markup is
+  // bottom-left, by the thumb; About comes last = the banner on top.
   return `
-  <main class="settings-main">
+  <main class="settings-main xt-tiles">
+    <div class="settings-section">${tile('crRow', ICONS.gavel, T('Vraag de AI-judge', 'Ask AI judge'))}</div>
+    <div class="settings-section">${tile('lifeRow', ICONS.heart, 'Life Counter')}</div>
+    <div class="settings-section">${tile('draftRow', ICONS.draft, 'Draft tools')}</div>
     <div class="settings-section">
-      <div class="settings-row" id="aboutRow" style="cursor:pointer;"><div><div class="l1">${appLang()==='nl' ? 'Over Deckhand' : 'About Deckhand'}</div><div class="l2">${appLang()==='nl' ? 'Waarom Deckhand bestaat' : 'Why Deckhand exists'}</div></div>${foldIcoHtml(false)}</div>
-      <div id="aboutBody" class="acc-down" hidden style="padding:0 14px 4px;">${aboutHtml()}</div>
-    </div>
-    <div class="settings-section"><div class="settings-row" id="lifeRow"><div><div class="l1">Life Counter</div><div class="l2">Multiplayer life tracker</div></div><span class="dr-row-chev">›</span></div></div>
-    <div class="settings-section"><div class="settings-row" id="draftRow"><div><div class="l1">Draft tools</div><div class="l2">${appLang()==='nl' ? 'Spelers, plaatsen, timers, pairings en stand' : 'Players, seats, timers, pairings and standings'}</div></div><span class="dr-row-chev">›</span></div></div>
-    <div class="settings-section"><div class="settings-row" id="crRow"><div><div class="l1">${appLang()==='nl' ? 'Officiële regels' : 'Comprehensive Rules'}</div><div class="l2">${appLang()==='nl' ? 'Comprehensive Rules — lees, zoek of stel een regelvraag' : 'Read, search, or ask a rules question'}</div></div><span class="dr-row-chev">›</span></div></div>
-    <div class="settings-section">
-      <div class="settings-row" id="fmtRulesRow" style="cursor:pointer;"><div><div class="l1">Format rules${newAdmiralPill()}</div><div class="l2">Deckbuilding and play, per format</div></div>${foldIcoHtml(false)}</div>
-      <div id="fmtRulesBody" class="acc-down" hidden style="padding:0 12px 6px;"></div>
+      ${tile('fmtRulesRow', ICONS.library, T('Format&shy;regels', 'Format rules') + newAdmiralPill())}
+      <div id="fmtRulesBody" class="acc-down xt-body" hidden style="padding:0 12px 6px;"></div>
     </div>
     <div class="settings-section">
-      <div class="settings-row" id="banListsRow" style="cursor:pointer;"><div><div class="l1">Ban lists</div><div class="l2">Banned cards per format</div></div>${foldIcoHtml(false)}</div>
-      <div id="banListsBody" class="acc-down" hidden style="padding:0 12px 6px;"></div>
+      ${tile('banListsRow', ICONS.ban, T('Banlijsten', 'Ban lists'))}
+      <div id="banListsBody" class="acc-down xt-body" hidden style="padding:0 12px 6px;"></div>
     </div>
-
+    <div class="settings-section">${tile('langRow', ICONS.globe, T('Taal', 'Language'), `<div class="seg seg-inline">${APP_LANGS.map(L=>`<button data-lang-choice="${L.code}" class="${appLang()===L.code?'active':''}">${L.code.toUpperCase()}</button>`).join('')}</div>`)}</div>
     <div class="settings-section">
-      <div class="settings-row"><div><div class="l1">Language</div><div class="l2">Interface and card images</div></div>
-        <div class="seg seg-inline">
-          ${APP_LANGS.map(L=>`<button data-lang-choice="${L.code}" class="${appLang()===L.code?'active':''}">${L.label}</button>`).join('')}
-        </div>
-      </div>
+      <div id="guildBody" class="guild-list xt-body" hidden>${GUILDS.map(x=>`<button type="button" class="guild-opt ${x.k===state.guild?'sel':''}" data-guild="${x.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[x.main][0]};--gs:${GUILD_SWATCH[x.side][1]};"></span>${manaIconSvg(x.main,16)}${manaIconSvg(x.side,16)}<span>${x.n}</span></button>`).join('')}</div>
+      <div class="settings-row xt-tile" id="guildRow"><span class="xt-ico" id="guildCur">${manaIconSvg(g.main,22)}${manaIconSvg(g.side,22)}</span><div class="l1">${T('Kleuren&shy;schema', 'Color scheme')}</div></div>
     </div>
     <div class="settings-section">
-      <div id="guildBody" class="guild-list" hidden>${GUILDS.map(g=>`<button type="button" class="guild-opt ${g.k===state.guild?'sel':''}" data-guild="${g.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[g.main][0]};--gs:${GUILD_SWATCH[g.side][1]};"></span>${manaIconSvg(g.main,16)}${manaIconSvg(g.side,16)}<span>${g.n}</span></button>`).join('')}</div>
-      <div class="settings-row" id="guildRow" style="cursor:pointer;"><div class="l1">${trS('Color scheme')}</div>${(()=>{ const g = GUILDS.find(x=>x.k===state.guild) || GUILDS[0]; return `<span class="l2 guild-cur" id="guildCur">${manaIconSvg(g.main,16)}${manaIconSvg(g.side,16)} ${g.n} ${foldIcoHtml(false)}</span>`; })()}</div>
+      <div id="notifBody" class="acc-up xt-body" hidden style="padding:4px 12px 0;">${!nativeNotify()
+        ? `<div class="l2" style="padding:6px 2px 10px;">${T('Meldingen komen via de Android-app, tussen 09:00 en 21:00.', 'Notifications come through the Android app, between 09:00 and 21:00.')}</div>`
+        : `<div class="settings-row"><div class="l1">Spoilers</div><div class="otag-wrap" id="pushSpoilWrap"><button type="button" id="pushSpoilBtn" class="col-filter-input">${escapeHtml(spoilEveryLabel(_pp.spoilerEvery))} <span style="float:right;opacity:0.6;">▾</span></button><div id="pushSpoilPop" class="otag-pop" hidden>${SPOIL_EVERY_CHOICES.map(v=>`<button type="button" data-spoilevery="${v}">${escapeHtml(spoilEveryLabel(v))}</button>`).join('')}</div></div></div>
+      <div class="settings-row" style="border-top:2px solid var(--line);"><div class="l1">${T('App-updates', 'App updates')}</div><label class="toggle-switch"><input type="checkbox" id="pushUpdToggle" ${_pp.updates?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
+      <div class="settings-body" style="padding:10px 2px;"><div style="font-size:12px;color:var(--sub-text);">${T('Meldingen komen tussen 09:00 en 21:00.', 'Notifications arrive between 09:00 and 21:00.')}</div><div style="font-size:12px;color:var(--sub-text);margin-top:4px;" id="pushStatus"></div></div>`}</div>
+      ${tile('notifRow', ICONS.bell, T('Meldingen', 'Notifications'))}
     </div>
-    ${(()=>{ const _pp = pushPrefs(); const _nl = appLang()==='nl'; if(!nativeNotify()) return `
     <div class="settings-section">
-      <div class="settings-row" id="notifRow"><div><div class="l1">${_nl ? 'Meldingen' : 'Notifications'}</div><div class="l2">${_nl ? 'Meldingen komen via de Android-app, tussen 09:00 en 21:00.' : 'Notifications come through the Android app, between 09:00 and 21:00.'}</div></div></div>
-    </div>`; return `
-    <div class="settings-section">
-      <div class="settings-row"><div class="l1">Spoilers</div><div class="otag-wrap" id="pushSpoilWrap"><button type="button" id="pushSpoilBtn" class="col-filter-input">${escapeHtml(spoilEveryLabel(_pp.spoilerEvery))} <span style="float:right;opacity:0.6;">▾</span></button><div id="pushSpoilPop" class="otag-pop" hidden>${SPOIL_EVERY_CHOICES.map(v=>`<button type="button" data-spoilevery="${v}">${escapeHtml(spoilEveryLabel(v))}</button>`).join('')}</div></div></div>
-      <div class="settings-row" style="border-top:2px solid var(--line);"><div class="l1">${_nl ? 'App-updates' : 'App updates'}</div><label class="toggle-switch"><input type="checkbox" id="pushUpdToggle" ${_pp.updates?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
-      <div class="settings-body" style="padding-top:10px;"><div style="font-size:12px;color:var(--sub-text);">${_nl ? 'Meldingen komen tussen 09:00 en 21:00.' : 'Notifications arrive between 09:00 and 21:00.'}</div><div style="font-size:12px;color:var(--sub-text);margin-top:4px;" id="pushStatus"></div></div>
-    </div>`; })()}
-    <div class="settings-section">
-      <div class="settings-row" style="flex-wrap:wrap;"><div style="flex:1 1 100%;min-width:0;"><div class="l1">${appLang()==='nl' ? 'Back-up &amp; terugzetten' : 'Backup &amp; Restore'}</div><div class="l2">${appLang()==='nl' ? 'Decks, collectie en instellingen in één bestand — bewaar het in je eigen cloud' : 'Decks, collection and settings in one file — keep it in your own cloud'}</div><div class="l2" id="lastBackupLine" style="margin-top:5px;">${backupAgeLabel()}</div><div class="l2" style="margin-top:5px;">${state._persisted === true
-        ? inlIco('shield', 14) + (appLang()==='nl' ? 'Opslag beschermd' : 'Storage protected')
-        : state._persisted === false
-        ? inlIco('warn', 14) + (appLang()==='nl' ? 'Opslag onbeschermd — installeer de app en maak back-ups' : 'Storage unprotected — install the app and back up')
-        : (appLang()==='nl' ? 'Opslag controleren\u2026' : 'Checking storage\u2026')}</div></div>
-        <div style="display:flex;gap:8px;flex:1 1 100%;margin-top:10px;">
-          <button class="ghost-btn" id="backupBtn" style="padding:9px 12px;font-size:13px;">${inlIco('save')}${appLang()==='nl' ? 'Back-up maken' : 'Make a backup'}</button>
-          <button class="ghost-btn" id="restoreBtn" style="padding:9px 12px;font-size:13px;">${inlIco('restore')}${appLang()==='nl' ? 'Terugzetten' : 'Restore'}</button>
+      <div id="backupBody" class="acc-up xt-body" hidden style="padding:4px 14px 2px;">
+        <div class="l2">${T('Decks, collectie en instellingen in één bestand — bewaar het in je eigen cloud.', 'Decks, collection and settings in one file — keep it in your own cloud.')}</div>
+        <div class="l2" id="lastBackupLine" style="margin-top:5px;">${backupAgeLabel()}</div>
+        <div class="l2" style="margin-top:5px;">${state._persisted === true
+          ? inlIco('shield', 14) + T('Opslag beschermd', 'Storage protected')
+          : state._persisted === false
+          ? inlIco('warn', 14) + T('Opslag onbeschermd — installeer de app en maak back-ups', 'Storage unprotected — install the app and back up')
+          : T('Opslag controleren…', 'Checking storage…')}</div>
+        <div style="display:flex;gap:8px;margin:10px 0 4px;">
+          <button class="ghost-btn" id="backupBtn" style="padding:9px 12px;font-size:13px;">${inlIco('save')}${T('Back-up maken', 'Make a backup')}</button>
+          <button class="ghost-btn" id="restoreBtn" style="padding:9px 12px;font-size:13px;">${inlIco('restore')}${T('Terugzetten', 'Restore')}</button>
         </div>
         <input type="file" id="restoreFile" accept="application/json,.json,application/octet-stream,text/plain" style="display:none;">
       </div>
+      ${tile('backupRow', ICONS.shield, T('Back-up', 'Backup'))}
     </div>
-    ${apkInstalled() ? `<div class="settings-section" id="apkRow">
-      <div class="settings-row"><div style="flex:1;min-width:0;"><div class="l1">${appLang()==='nl' ? 'Android-app' : 'Android app'}</div><div class="l2">${appLang()==='nl' ? 'Versie' : 'Version'} ${escapeHtml(apkInstalled())}${apkOutdated() ? (appLang()==='nl' ? ` — nieuwe versie ${APK_LATEST} staat klaar` : ` — version ${APK_LATEST} is ready`) : (appLang()==='nl' ? ' — de nieuwste' : ' — the latest')}</div></div>
-        ${apkOutdated() ? `<button class="ghost-btn" id="apkUpdBtn" style="padding:9px 12px;font-size:13px;color:var(--brass);border-color:var(--brass);">${appLang()==='nl' ? 'Bijwerken' : 'Update'}</button>` : ''}</div>
-    </div>` : ''}
-    <div class="settings-section">
-      <div id="dataSourcesBody" class="l2 acc-up" hidden style="padding:10px 12px 0;">${dataSourcesHtml()}</div>
-      <div class="settings-row" id="dataSourcesRow" style="cursor:pointer;"><div><div class="l1">${trS('Data Sources')}</div><div class="l2">${appLang()==='nl' ? 'Kaarten, prijzen en thema\u2019s \u2014 verversen vanzelf' : 'Cards, prices and themes \u2014 refresh on their own'}</div></div>${foldIcoHtml(false)}</div>
+    ${browser && /Android/i.test(navigator.userAgent) ? `<div class="settings-section" id="apkRow">${tile('apkBtn', ICONS.phone, T('Android-app', 'Android app'), '<div class="l2" id="apkNote"></div>')}</div>` : ''}
+    ${browser ? `<div class="settings-section">${tile('installAppRow', ICONS.imp, T('Installeer als app', 'Install as an app'))}</div>` : ''}
+    <div class="settings-section">${tile('shareAppRow', ICONS.share, T('Deel de app', 'Share the app'))}</div>
+    <div class="settings-section xt-wide">
+      <div class="settings-row xt-tile" id="aboutRow" style="cursor:pointer;"><span class="xt-ico">${ICONS.info}</span><div class="l1">${T('Over Deckhand', 'About Deckhand')}</div></div>
+      <div id="aboutBody" class="acc-down xt-body" hidden style="padding:0 14px 4px;">${aboutHtml()}</div>
     </div>
-    ${(window.matchMedia('(display-mode: standalone)').matches || inAndroidApp()) ? '' : `<div class="settings-section">
-      ${/Android/i.test(navigator.userAgent) ? `<div class="settings-row" id="apkRow"><div style="flex:1;min-width:0;"><div class="l1">${appLang()==='nl' ? 'Download de Android-app' : 'Download the Android app'}</div><div class="l2">${appLang()==='nl' ? 'Buiten de Play Store om, ook zonder Google. Updates komen vanzelf.' : 'No Play Store, Google-free phones too. Updates arrive on their own.'}</div><div class="l2" id="apkNote" style="margin-top:4px;"></div></div><button type="button" class="ghost-btn" id="apkBtn" style="flex:0 0 auto;margin-left:auto;padding:7px 12px;font-size:13px;">${inlIco('save')}APK</button></div>` : ''}
-      <div class="settings-row" id="installAppRow"><div><div class="l1">Install as an app</div><div class="l2">Home-screen icon, full screen, offline</div></div></div>
-    </div>`}
-    <div class="settings-section">
-      <div class="settings-row" id="shareAppRow"><div><div class="l1">${trS('Share this app with a friend')}</div><div class="l2">${appLang()==='nl' ? 'Stuurt een link, plus de Android-app' : 'Sends a link, plus the Android app'}</div></div></div>
-    </div>
-    <p class="hint" id="appFootNote" style="text-align:center;margin:14px 8px 4px;line-height:1.5;font-size:11.5px;">Deckhand v${APP_VERSION} · ${appLang()==='nl' ? 'kaarten' : 'cards'} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${appLang()==='nl' ? 'thema\u2019s' : 'themes'} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${appLang()==='nl' ? 'prijzen' : 'prices'} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
+    <p class="hint" id="appFootNote" style="text-align:center;margin:14px 8px 4px;line-height:1.5;font-size:11.5px;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
   </main>`;
 }
 function commanderQuickRulesHtml(){
@@ -26086,6 +26161,13 @@ function wireSettingsPage(){
       document.querySelectorAll('[data-theme-choice]').forEach(x=>x.classList.toggle('active', x===b));
     });
   });
+  [['notifRow', 'notifBody'], ['backupRow', 'backupBody']].forEach(([r, b])=>{
+    const row = document.getElementById(r), body = document.getElementById(b);
+    if(row && body) row.addEventListener('click', (e)=>{
+      if(e.target.closest('button, input, label, select')) return;
+      keepAnchored(row, ()=>foldToggle(body, null, row), ()=>row.isConnected ? row : null);
+    });
+  });
   document.getElementById('lifeRow').addEventListener('click', openLifeOverlay);
   document.getElementById('draftRow')?.addEventListener('click', ()=>switchPage('draft'));
   document.getElementById('tourRow')?.addEventListener('click', startAppTour);
@@ -26153,6 +26235,7 @@ function wireSettingsPage(){
   });
   document.getElementById('apkBtn')?.addEventListener('click', async ()=>{
     const note = document.getElementById('apkNote');
+    if(note && note.textContent && /\u2026$/.test(note.textContent)) return;   // already checking
     const nl = appLang() === 'nl';
     if(note) note.textContent = nl ? 'Even kijken of het bestand er staat\u2026' : 'Checking the file is there\u2026';
     let ok = false, ct = '';
