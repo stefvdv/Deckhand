@@ -1775,17 +1775,24 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
    the first tile in the markup sits bottom-left). A tile that unfolds (About,
    Format rules, Ban lists, Color scheme, Notifications, Backup) spans the
    whole row while open; About always does, as the banner on top. */
-.app > main.settings-main.xt-tiles{flex-direction:row;flex-wrap:wrap-reverse;align-content:flex-start;gap:10px;}
-.xt-tiles > .settings-section{flex:0 0 calc((100% - 20px) / 3);min-width:0;margin:0;}
-.xt-tiles > .settings-section.xt-wide,
-.xt-tiles > .settings-section:has(> .xt-body:not([hidden])){flex-basis:100%;}
-.xt-tiles > #appFootNote{flex:0 0 100%;}
-.xt-tiles .settings-row.xt-tile{flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:16px 6px;min-height:104px;}
-.xt-tiles .xt-wide > .settings-row.xt-tile{flex-direction:row;min-height:0;padding:14px;}
-.settings-row.xt-tile .l1{font-size:15.5px;font-weight:700;line-height:1.2;hyphens:manual;overflow-wrap:normal;}
-.xt-ico{display:inline-flex;align-items:center;justify-content:center;gap:2px;width:auto;min-width:30px;height:30px;color:var(--brass);}
-.xt-ico svg{width:30px;height:30px;}
+.app > main.settings-main.xt-tiles{flex-direction:row;flex-wrap:wrap-reverse;align-content:flex-start;gap:12px;}
+/* 1.36: two square tiles to a row; the credits sit loose beside About. */
+.xt-tiles > .settings-section{flex:0 0 calc((100% - 12px) / 2);min-width:0;margin:0;aspect-ratio:1 / 1;display:flex;}
+.xt-tiles > .settings-section > .settings-row.xt-tile{flex:1 1 auto;min-width:0;}
+.xt-tiles > #appFootNote{flex:0 0 calc((100% - 12px) / 2);margin:0;padding:0 4px;align-self:center;}
+/* an invisible full-width break: its own line, and its margin cancels the
+   extra row gap that line would add */
+.xt-tiles > .xt-break{flex:0 0 100%;height:0;margin:-12px 0 0;padding:0;border:0;}
+.xt-tiles .settings-row.xt-tile{flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:16px 8px;min-height:0;}
+.settings-row.xt-tile .l1{font-size:18px;font-weight:700;line-height:1.2;hyphens:manual;overflow-wrap:normal;}
+.xt-ico{display:inline-flex;align-items:center;justify-content:center;gap:2px;width:auto;min-width:38px;height:38px;color:var(--brass);}
+.xt-ico svg{width:38px;height:38px;}
+/* A tile's fold floats over the tiles (placed by xtSync next to its tile,
+   on the side with the most room); a dimmed scrim behind it closes it. */
+.xt-tiles .xt-body:not([hidden]){position:fixed;z-index:1201;margin:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--panel);border:2px solid var(--brass);border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,0.6);box-sizing:border-box;}
+.xt-tiles > .xt-scrim{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.45);touch-action:none;}
 .xt-tile .seg-inline button{padding:5px 9px;font-size:12.5px;}
+.xt-tiles .xt-tile .seg-inline{margin-left:auto;margin-right:auto;align-self:center;}
 .xt-tile #apkNote:empty{display:none;}
 .settings-row .l1{font-size:14.5px;font-weight:600;}
 .settings-row .l2{font-size:12px;color:var(--sub-text);margin-top:2px;}
@@ -1984,6 +1991,9 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:var(--panel-2);border:2px solid var(--brass-dim);color:var(--ink-text);padding:9px 16px;border-radius:20px;font-size:13.5px;z-index:200;box-shadow:0 6px 18px rgba(0,0,0,0.4); opacity:0; pointer-events:none;transition:opacity 0.25s, transform 0.25s;white-space:pre-line;max-width:min(86vw,420px);text-align:left;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
 .card-preview-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:150;display:flex;align-items:center;justify-content:center;padding:10px;}
+/* 1.36: a card opened from the judge page (z 9600) or from a floating
+   Extras panel (z 1201) shows on top of them */
+body:has(#crOverlay) .card-preview-backdrop, body:has(main.xt-tiles > .xt-scrim) .card-preview-backdrop{z-index:9700;}
 .card-preview-backdrop img{max-width:96vw;max-height:90vh;border-radius:4.75% / 3.5%;box-shadow:0 20px 50px rgba(0,0,0,0.6);}
 .card-preview-backdrop .pv-card{position:relative;display:inline-block;line-height:0;}
 .card-preview-backdrop .pv-card > img{display:block;}
@@ -2077,6 +2087,21 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .cr-bar{display:flex;gap:8px;padding:8px 14px 10px;position:relative;}
 /* 1.33: the judge */
 .cr-bar textarea{flex:1;min-width:0;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:10px 12px;font-size:15px;line-height:1.35;resize:none;font-family:inherit;}
+/* 1.36: tagged cards underlined IN the field -- a mirror of the text behind
+   the (transparent) field draws only the underlines. */
+.cr-qwrap{flex:1;min-width:0;position:relative;display:flex;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;}
+.cr-qwrap textarea, .cr-qmirror{margin:0;padding:10px 12px;font-size:15px;line-height:1.35;font-family:inherit;letter-spacing:normal;word-spacing:normal;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;box-sizing:border-box;}
+.cr-bar .cr-qwrap textarea{background:transparent;border:none;border-radius:8px;position:relative;z-index:1;scrollbar-width:none;}
+.cr-qwrap textarea::-webkit-scrollbar{display:none;}
+.cr-qmirror{position:absolute;inset:0;overflow:hidden;color:transparent;pointer-events:none;}
+.cr-qmirror .cr-tagu{text-decoration:underline;text-decoration-color:var(--brass);text-decoration-thickness:2px;text-underline-offset:3px;}
+.cr-count.cr-count-off{visibility:hidden;}
+.cr-tagpop .cr-tagnote{padding:10px 12px;font-size:13.5px;font-style:italic;color:var(--sub-text);}
+.cj-card{text-decoration:underline;text-decoration-color:var(--brass);text-decoration-thickness:2px;text-underline-offset:3px;cursor:pointer;}
+.cja-whyt{display:block;margin:10px 0 0;padding:8px 0 2px;width:100%;text-align:left;background:none;border:none;border-top:1.5px solid var(--line);color:var(--ink-text);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;}
+.cja-whyt .fold-ico{font-size:12px;margin-left:4px;}
+.cja .cja-why{margin:6px 0 0;}
+.cja .cja-why[hidden]{display:none;}
 .cr-side{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;}
 .cr-judge{flex:none;width:56px;height:56px;padding:0;display:flex;align-items:center;justify-content:center;}
 .cr-judge svg{width:28px;height:28px;}
@@ -2092,15 +2117,16 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .cj-try .cj-ex{text-align:left;padding:10px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--ink-2);color:var(--ink-text);font-size:14px;font-style:italic;cursor:pointer;}
 .cj-try .cj-lab{font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sub-text);margin:2px 2px 0;}
 .cj-rules{margin:6px 12px 2px;}
-.cr-tagpop{position:absolute;left:14px;right:14px;bottom:calc(100% + 4px);z-index:20;display:flex;flex-direction:column-reverse;max-height:240px;overflow-y:auto;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
+.cr-tagpop{position:absolute;left:14px;right:14px;bottom:calc(100% + 4px);z-index:20;display:flex;flex-direction:column-reverse;max-height:260px;overflow-y:auto;overscroll-behavior:contain;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .cr-tagpop[hidden]{display:none;}
-.cr-tagpop button{flex:none;text-align:left;padding:10px 12px;background:none;border:none;border-top:1px solid var(--line);color:var(--ink-text);font-size:14px;cursor:pointer;}
+.cr-tagpop button{flex:none;text-align:left;padding:10px 12px;background:none;border:none;border-top:1px solid var(--line);color:var(--ink-text);font-family:inherit;font-size:14.5px;cursor:pointer;}
 .cr-tagpop button:last-child{border-top:none;}
 .cja{margin:8px 8px 4px;padding:12px 14px;border:2px solid var(--brass);border-radius:12px;background:var(--ink-2);}
 .cja-a{font-size:17px;font-weight:700;line-height:1.35;color:var(--ink-text);}
 .cja-meta{margin-top:8px;font-size:12px;line-height:1.4;color:var(--sub-text);}
 .cja-why{margin:6px 12px;font-size:14px;line-height:1.55;color:var(--ink-text);}
 .cja-q{margin:12px 12px 4px;font-size:13.5px;font-style:italic;color:var(--sub-text);}
+.cja > .cja-q{margin:0 0 8px;padding-bottom:8px;border-bottom:1.5px solid var(--line);font-size:14px;}
 .cja-h{margin:10px 12px 2px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sub-text);}
 .cr-bar input{flex:1;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:10px 12px;font-size:15px;min-width:0;}
 #crBody{padding:0 6px 30px;}
@@ -3524,7 +3550,8 @@ document.addEventListener('click', (e)=>{
       foldToggle(wbox, (open)=>{ bw.innerHTML = foldIcoHtml(open) + ' ' + trS('About this ban list'); }, bw);
     });
     // A long read, top to bottom: once open, its first line sits just under
-    // the page title.
+    // the page title (inside a floating Extras fold: at the fold's top).
+    if(!wbox.hidden && bw.closest('main.xt-tiles .xt-body')){ dropReveal(bw); return; }
     if(!wbox.hidden) requestAnimationFrame(()=>{
       try{
         // The page title bar is the element at the very top of the screen.
@@ -6177,17 +6204,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.35';
+const APP_VERSION = '1.36';
 const CHANGELOG_NOTES = {
   en: [
-    'Ask AI judge: its own page',
-    'Rules behind a button on that page',
-    'Extras as tiles with icons'
+    'Extras: two columns, floating popups',
+    'Judge: tag cards with @ from a list',
+    'Answer: tap a card to see it'
   ],
   nl: [
-    'Vraag de AI-judge: eigen pagina',
-    'Regels achter een knop op die pagina',
-    'Extra-pagina als tegels met iconen'
+    'Extra\u2019s: 2 kolommen, zwevende vensters',
+    'Judge: tag kaarten met @ uit een lijst',
+    'Antwoord: tik een kaart om te bekijken'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6270,13 +6297,13 @@ function tourSteps(){
     { k:'extras', go:()=>switchPage('settings'),
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
-        ? `<p style="margin:6px 0;">Alles staat hier in <strong>tegels</strong>; onderaan, bij je duim, <strong>Vraag de AI-judge</strong>: stel je regelvraag en noem de kaarten (of tag ze met @); een AI antwoordt met de officiële regels erbij, en elke geciteerde regel wordt gecontroleerd. Op die pagina staan ook de complete <strong>Comprehensive Rules</strong>, achter een knop.</p>
+        ? `<p style="margin:6px 0;">Alles staat hier in <strong>tegels</strong>, twee naast elkaar; heeft een tegel meer opties, dan zweeft er een venster boven de rest (tik ernaast om het te sluiten). Bij je duim <strong>Draft tools</strong> en de <strong>Life Counter</strong>, daarboven <strong>Vraag de AI-judge</strong>: stel je regelvraag en tag de kaarten met @ — er verschijnt meteen een lijst om uit te kiezen, en een getagde kaart wordt onderstreept. Een AI antwoordt met de officiële regels erbij, elke geciteerde regel wordt gecontroleerd, en een kaart in het antwoord tik je aan om hem te bekijken. Op die pagina staan ook de complete <strong>Comprehensive Rules</strong>, achter een knop.</p>
            <p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
-           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (die klappen naar beneden open, om rustig te lezen), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
+           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (in een zwevend venster, om rustig te lezen), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
            <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. Zet je bij <strong>Meldingen</strong> de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
-        : `<p style="margin:6px 0;">Everything here is a <strong>tile</strong>; at the foot, by your thumb, <strong>Ask AI judge</strong>: ask your rules question and name the cards (or tag them with @); an AI answers with the official rules attached, and every cited rule is checked. The complete <strong>Comprehensive Rules</strong> sit behind a button on that page.</p>
+        : `<p style="margin:6px 0;">Everything here is a <strong>tile</strong>, two to a row; when a tile has more options, a window floats over the rest (tap beside it to close). By your thumb sit <strong>Draft tools</strong> and the <strong>Life Counter</strong>, above them <strong>Ask AI judge</strong>: ask your rules question and tag the cards with @ — a list to pick from appears right away, and a tagged card is underlined. An AI answers with the official rules attached, every cited rule is checked, and you tap a card in the answer to see it. The complete <strong>Comprehensive Rules</strong> sit behind a button on that page.</p>
            <p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
-           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (they unfold downward, for an easy read), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
+           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (in a floating window, for an easy read), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
            <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. Turn on <strong>spoiler alerts</strong> under <strong>Notifications</strong> (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
   ];
 }
@@ -8066,9 +8093,42 @@ function judgeConceptRules(text, rules){
   JUDGE_CONCEPTS.forEach(([re, nums])=>{ if(re.test(text)) nums.forEach(n=>{ const r = by.get(n); if(r && out.indexOf(r) < 0) out.push(r); }); });
   return out;
 }
-// The cards tagged in the text: every "@Name" whose name was picked.
+// The cards tagged in the text: every "@Name" whose name was picked, as a
+// whole name ("@Opt" in "@Optimus" is not a tag of Opt).
 function judgeTagsIn(text, picked){
-  return (picked || []).filter(n=>String(text || '').includes('@' + n));
+  const t = String(text || '');
+  return (picked || []).filter(n=>{
+    let i = -1;
+    while((i = t.indexOf('@' + n, i + 1)) >= 0){ if(!/[A-Za-z0-9]/.test(t.charAt(i + n.length + 1))) return true; }
+    return false;
+  });
+}
+/* 1.36: the cards' names in a piece of (already escaped) text -> underlined
+   and tappable (the card view). The short name before the comma counts too
+   ("Ketramose"); an "@" in front is dropped. */
+function judgeMarkCards(h, names){
+  const alts = [];
+  (names || []).forEach(n=>{
+    alts.push([escapeHtml(n), n]);
+    const cut = n.indexOf(',');
+    if(cut >= 4) alts.push([escapeHtml(n.slice(0, cut)), n]);
+  });
+  if(!alts.length) return h;
+  alts.sort((a, b)=>b[0].length - a[0].length);
+  const esc = (x)=>x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('(?<![A-Za-z0-9])@?(' + alts.map(a=>esc(a[0])).join('|') + ')(?![A-Za-z0-9])', 'gi');
+  return String(h).replace(re, (m, nm)=>{
+    const hit = alts.find(a=>a[0].toLowerCase() === nm.toLowerCase());
+    return hit ? `<span class="cj-card" role="button" data-jcard="${escapeHtml(hit[1])}">${nm}</span>` : m;
+  });
+}
+// A card in the answer -> the card view (pinch to zoom), from the phone's
+// own card database first.
+async function judgeOpenCard(name){
+  let card = null;
+  try{ card = await scanCardFor(name); }catch(e){}
+  if(!card){ toast(appLang() === 'nl' ? 'Kaart niet gevonden.' : 'Card not found.'); return; }
+  showCardPreview(card, cardImageLarge(card));
 }
 // Rule numbers the AI cited -> the real rules, and the ones that do not exist.
 function judgeVerify(cites, rules){
@@ -8121,20 +8181,25 @@ async function judgeAsk(payload){
 }
 // The judge's answer, bottom-up for #crBody (column-reverse: DOM-first = foot).
 function judgeAnswerHtml(res, rules, q, NL){
-  const lnk = (txt)=>escapeHtml(txt).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')
+  const cards = res._cards || [];
+  const lnk = (txt)=>judgeMarkCards(escapeHtml(txt), cards).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')
     .replace(/\b(\d{3}\.\d+[a-z]?)\b/g, (m)=>`<button class="cr-jump" data-crjump="${m}">${m}</button>`);
   const v = judgeVerify(res.cites, rules);
   const meta = (NL ? 'AI-antwoord' : 'AI answer') + (res.cached ? (NL ? ' · eerder gesteld' : ' · asked before') : '')
     + (res.confident === false ? (NL ? ' · de AI twijfelt' : ' · the AI is not sure') : '')
     + ' — ' + (NL ? 'de regels hieronder zijn de officiële tekst; die gaat altijd voor.' : 'the rules below are the official text; they always win.')
-    + (res._cards && res._cards.length ? ' ' + (NL ? 'Gelezen kaarten: ' : 'Cards read: ') + res._cards.join(', ') + '.' : ' ' + (NL ? 'Geen kaart herkend \u2014 tag kaarten met @.' : 'No card recognised \u2014 tag cards with @.'))
+    + (cards.length ? ' ' + (NL ? 'Gelezen kaarten: ' : 'Cards read: ') + cards.join(', ') + '.' : ' ' + (NL ? 'Geen kaart getagd \u2014 tag kaarten met @.' : 'No card tagged \u2014 tag cards with @.'))
+    + (typeof res.left === 'number' ? ' ' + (NL ? 'Nog ' + res.left + ' vragen vandaag.' : res.left + ' questions left today.') : '')
     + (res.model ? ' (' + res.provider + ' · ' + res.model + ')' : '');
-  return `<div class="cja" data-notr><div class="cja-a">${lnk(res.answer)}</div><div class="cja-meta">${escapeHtml(meta)}</div></div>`
-    + (res.reasoning ? `<div class="cja-why" data-notr>${lnk(res.reasoning)}</div>` : '')
-    + (v.ok.length || v.bad.length ? `<div class="cja-h">${NL ? 'Geciteerde regels' : 'Rules cited'}</div>` : '')
+  // 1.36, bottom-up (DOM-first = foot): the answer card at the foot -- your
+  // question on top of it, the bold answer, and the AI's reasoning folded
+  // under its own button; above the card the cited rules, their heading on top.
+  return `<div class="cja" data-notr><div class="cja-q">\u201c${judgeMarkCards(escapeHtml(q), cards)}\u201d</div><div class="cja-a">${lnk(res.answer)}</div><div class="cja-meta">${escapeHtml(meta)}</div>`
+    + (res.reasoning ? `<button type="button" class="cja-whyt" data-cjwhy aria-expanded="false">${NL ? 'Uitleg van de AI' : 'The AI\u2019s reasoning'} <span class="fold-ico">\u25BE</span></button><div class="cja-why" hidden>${lnk(res.reasoning)}</div>` : '')
+    + `</div>`
     + v.ok.map(r=>crRuleHtml(r, [])).join('')
     + v.bad.map(n=>`<div class="cr-rule"><div class="cr-num">⚠ ${escapeHtml(n)}</div><div class="cr-txt">${NL ? 'Deze regel bestaat niet in de officiële regels \u2014 dat deel van het antwoord is niet te controleren.' : 'This rule does not exist in the official rules \u2014 that part of the answer cannot be checked.'}</div></div>`).join('')
-    + `<div class="cja-q" data-notr>\u201c${escapeHtml(q)}\u201d</div>`;
+    + (v.ok.length || v.bad.length ? `<div class="cja-h">${NL ? 'Geciteerde regels' : 'Rules cited'}</div>` : '');
 }
 function openCROverlay(startMode){
   document.getElementById('crOverlay')?.remove();
@@ -8148,7 +8213,7 @@ function openCROverlay(startMode){
     ${overlayCapHtml(T('Vraag de AI-judge', 'Ask AI judge'))}
     <div id="crBody"></div>
     <div class="cr-bar">
-      <textarea id="crQ" rows="3" maxlength="500" enterkeyhint="send" autocomplete="off" spellcheck="false"></textarea>
+      <div class="cr-qwrap"><div class="cr-qmirror" id="crQMirror" aria-hidden="true"></div><textarea id="crQ" rows="3" maxlength="500" enterkeyhint="send" autocomplete="off" spellcheck="false"></textarea></div>
       <div class="cr-side"><button type="button" class="primary-btn cr-judge" id="crJudge" title="${T('Vraag de judge', 'Ask the judge')}" aria-label="${T('Vraag de judge', 'Ask the judge')}">${ICONS.gavel}</button><span class="cr-count" id="crCount">0/500</span></div>
       <div class="cr-tagpop" id="crTagPop" hidden></div>
     </div>
@@ -8158,6 +8223,9 @@ function openCROverlay(startMode){
   const body = el.querySelector('#crBody');
   const q = el.querySelector('#crQ');
   const count = el.querySelector('#crCount');
+  const mirror = el.querySelector('#crQMirror');
+  // the count only shows near the limit (500 characters per question)
+  const setCount = ()=>{ count.textContent = q.value.length + '/500'; count.classList.toggle('cr-count-off', q.value.length < 400); };
   const title = el.querySelector('.ov-title');
   // TWO-stage back, the app's blessed way: every level pushes its own history
   // entry at the moment of a real user gesture. Opening pushes the close-
@@ -8167,7 +8235,7 @@ function openCROverlay(startMode){
   function crClearStep(){
     state._crqArmed = false;
     if(!document.getElementById('crOverlay')) return;
-    q.value = ''; count.textContent = '0/500';
+    q.value = ''; setCount(); paintQ(null);
     home();
   }
   const arm = ()=>{ if(!state._crqArmed){ state._crqArmed = true; pushOverlay('crq', crClearStep); } };
@@ -8182,7 +8250,7 @@ function openCROverlay(startMode){
       <div class="cj-rules"><button type="button" class="ghost-btn" id="crOpenRules" style="width:100%;">${inlIco('library', 16)}${T('Comprehensive Rules lezen', 'Read the Comprehensive Rules')}</button></div>
       <div class="cj-hero"><span class="cj-ico">${ICONS.gavel}</span><h3>${T('Vraag de AI-judge', 'Ask AI judge')}</h3>
         <p>${T('Elk antwoord komt met de officiële regels erbij, en elke geciteerde regel wordt gecontroleerd.', 'Every answer comes with the official rules attached, and every cited rule is checked.')}</p>
-        <p class="cj-sub">${T('Noem kaarten gewoon bij naam, of tag ze met @. Gratis, 20 vragen per dag.', 'Just name the cards, or tag them with @. Free, 20 questions a day.')}</p></div>`;
+        <p class="cj-sub">${T('Tag kaarten met @ en kies ze uit de lijst \u2014 de judge leest alleen getagde kaarten. Gratis, 20 vragen per dag.', 'Tag cards with @ and pick them from the list \u2014 the judge only reads tagged cards. Free, 20 questions a day.')}</p></div>`;
     body.scrollTop = 0;
   };
   const showToc = (rules)=>{
@@ -8212,9 +8280,9 @@ function openCROverlay(startMode){
     el.classList.toggle('cr-mode-rules', m === 'rules');
     title.textContent = m === 'rules' ? T('Officiële regels', 'Comprehensive Rules') : T('Vraag de AI-judge', 'Ask AI judge');
     q.rows = m === 'rules' ? 1 : 3;
-    q.placeholder = m === 'rules' ? T('Woorden of regel (601.2)…', 'Words or rule (601.2)…') : T('Stel je regelvraag… noem de kaarten, of tag ze met @', 'Ask your rules question… name the cards, or tag them with @');
+    q.placeholder = m === 'rules' ? T('Woorden of regel (601.2)…', 'Words or rule (601.2)…') : T('Stel je regelvraag… tag kaarten met @', 'Ask your rules question… tag cards with @');
     state._crqArmed = false;
-    q.value = ''; count.textContent = '0/500';
+    q.value = ''; setCount(); paintQ(null); tagPop.hidden = true;
     home();
   };
   const openRules = ()=>{
@@ -8238,7 +8306,15 @@ function openCROverlay(startMode){
   el.addEventListener('click', (e)=>{
     if(e.target.closest('#crOpenRules')){ openRules(); return; }
     const ex = e.target.closest('[data-cjex]');
-    if(ex){ q.value = ex.dataset.cjex; count.textContent = q.value.length + '/500'; askJudge(); return; }
+    if(ex){ q.value = ex.dataset.cjex; setCount(); paintQ(null); askJudge(); return; }
+    const jc = e.target.closest('[data-jcard]');
+    if(jc){ judgeOpenCard(jc.dataset.jcard); return; }
+    const wt = e.target.closest('[data-cjwhy]');
+    if(wt){
+      const w = wt.nextElementSibling;
+      if(w){ w.hidden = !w.hidden; wt.setAttribute('aria-expanded', String(!w.hidden)); const ic = wt.querySelector('.fold-ico'); if(ic) ic.textContent = w.hidden ? '\u25BE' : '\u25B4'; }
+      return;
+    }
     const j = e.target.closest('[data-crjump]');
     if(j){
       // in an answer: the cited rule is right there -- go to it
@@ -8256,33 +8332,125 @@ function openCROverlay(startMode){
     if(mode === 'rules') run(); else askJudge();
   });
   // ---- @-tags and the judge ----
+  // 1.36: a tag is the only way a card reaches the judge. Typing @ opens a
+  // list right above the @, filtered live; a tap completes the name. A name
+  // typed out in full is recognised by itself. Tagged cards are underlined
+  // in the field (the mirror behind it).
   const tagPop = el.querySelector('#crTagPop');
   const picked = [];
-  q.addEventListener('input', async ()=>{
-    count.textContent = q.value.length + '/500';
-    if(mode !== 'judge'){ tagPop.hidden = true; return; }
-    const before = q.value.slice(0, q.selectionStart == null ? q.value.length : q.selectionStart);
-    const m = before.match(/@([^@\n]{2,40})$/);
-    if(!m){ tagPop.hidden = true; return; }
-    const names = await scanNameList();
-    const hits = judgeTagMatches(m[1], names, 6);
-    if(!hits.length){ tagPop.hidden = true; return; }
-    // column-reverse: the best match first in the DOM = nearest the field
-    tagPop.innerHTML = hits.map(n=>`<button type="button" data-tagname="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('');
+  let nameMap = null, tagSeq = 0;
+  function paintQ(atIdx){
+    const v = q.value, spans = [];
+    picked.forEach(n=>{
+      const t = '@' + n;
+      let i = -1;
+      while((i = v.indexOf(t, i + 1)) >= 0){ if(!/[A-Za-z0-9]/.test(v.charAt(i + t.length))) spans.push([i, i + t.length]); }
+    });
+    spans.sort((a, b)=>a[0] - b[0]);
+    let out = '', pos = 0;
+    const plain = (a, b)=>{
+      if(atIdx != null && atIdx >= a && atIdx < b) out += escapeHtml(v.slice(a, atIdx)) + '<span class="cr-at">@</span>' + escapeHtml(v.slice(atIdx + 1, b));
+      else out += escapeHtml(v.slice(a, b));
+    };
+    spans.forEach(([a, b])=>{ if(a < pos) return; plain(pos, a); out += '<span class="cr-tagu">' + escapeHtml(v.slice(a, b)) + '</span>'; pos = b; });
+    plain(pos, v.length);
+    mirror.innerHTML = out + '\u200b';
+    mirror.scrollTop = q.scrollTop;
+  }
+  // the @-fragment at the caret, or null (a finished tag + more words is not one)
+  const tagAt = ()=>{
+    const pos = q.selectionStart == null ? q.value.length : q.selectionStart;
+    const m = q.value.slice(0, pos).match(/@([^@\n]{0,40})$/);
+    if(!m) return null;
+    const at = pos - m[0].length, frag = m[1];
+    if(picked.some(n=>frag.startsWith(n) && q.value.startsWith('@' + n, at) && (frag.length === n.length || !/[A-Za-z0-9]/.test(frag.charAt(n.length))))) return null;
+    return { at, frag, pos };
+  };
+  // put the canonical name in for the typed part, and tag it
+  const tagIt = (at, typedLen, name, tail)=>{
+    const head = q.value.slice(0, at) + '@' + name + (tail || '');
+    q.value = head + q.value.slice(at + 1 + typedLen);
+    if(picked.indexOf(name) < 0) picked.push(name);
+    setCount();
+    return head.length;
+  };
+  const placeTagPop = ()=>{
+    const bar = el.querySelector('.cr-bar'), at = mirror.querySelector('.cr-at');
+    const br = bar.getBoundingClientRect();
+    const w = Math.round(Math.min(320, br.width - 28));
+    let left = 14;
+    if(at){
+      const ar = at.getBoundingClientRect();
+      left = Math.round(Math.max(14, Math.min(ar.left - br.left - 10, br.width - 14 - w)));
+      tagPop.style.bottom = Math.round(br.bottom - ar.top + 4) + 'px';
+    } else tagPop.style.bottom = '';
+    tagPop.style.left = left + 'px'; tagPop.style.right = 'auto'; tagPop.style.width = w + 'px';
+  };
+  const showTags = async ()=>{
+    const my = ++tagSeq;
+    let t = mode === 'judge' ? tagAt() : null;
+    paintQ(t ? t.at : null);
+    if(!t){ tagPop.hidden = true; return; }
+    const NLt = appLang() === 'nl';
+    const f = t.frag.trim();
+    let html;
+    if(f.length < 2) html = `<div class="cr-tagnote">${NLt ? 'Typ de kaartnaam\u2026' : 'Type the card name\u2026'}</div>`;
+    else {
+      const names = await scanNameList();
+      if(my !== tagSeq) return;
+      if(!nameMap && names) nameMap = new Map(names);
+      const hits = judgeTagMatches(f, names, 30);
+      const key = scanNorm(f);
+      // typed out in full (and no longer name starts with it): tagged by itself
+      const exact = nameMap && nameMap.get(key);
+      if(exact && !hits.some(n=>n !== exact && scanNorm(n).startsWith(key + ' '))){
+        const end = tagIt(t.at, t.frag.length, exact, '');
+        try{ q.setSelectionRange(end, end); }catch(e){}
+        tagPop.hidden = true; paintQ(null); return;
+      }
+      if(!hits.length && nameMap){
+        // the name ended a few words back ("@shock does it ..."): tag that part
+        const words = t.frag.split(' ');
+        for(let k = words.length - 1; k >= 1; k--){
+          const part = words.slice(0, k).join(' ');
+          const nm = nameMap.get(scanNorm(part));
+          if(nm){
+            const shift = nm.length - part.length;
+            tagIt(t.at, part.length, nm, '');
+            try{ q.setSelectionRange(t.pos + shift, t.pos + shift); }catch(e){}
+            tagPop.hidden = true; paintQ(null); return;
+          }
+        }
+      }
+      // column-reverse: the best match first in the DOM = nearest the @
+      html = hits.length ? hits.map(n=>`<button type="button" data-tagname="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')
+        : `<div class="cr-tagnote">${NLt ? 'Geen kaart met die naam' : 'No card by that name'}</div>`;
+    }
+    tagPop.innerHTML = html;
     tagPop.hidden = false;
-  });
+    placeTagPop();
+    tagPop.scrollTop = tagPop.scrollHeight;
+  };
+  q.addEventListener('input', ()=>{ setCount(); showTags(); });
+  q.addEventListener('click', showTags);
+  q.addEventListener('keyup', (e)=>{ if(/^Arrow|^Home$|^End$/.test(e.key)) showTags(); });
+  q.addEventListener('scroll', ()=>{ mirror.scrollTop = q.scrollTop; if(!tagPop.hidden) placeTagPop(); });
+  // a tap in the list keeps the keyboard up (no focus change), and still scrolls
+  tagPop.addEventListener('pointerdown', (e)=>{ if(e.target.closest('[data-tagname]')) e.preventDefault(); });
+  tagPop.addEventListener('mousedown', (e)=>e.preventDefault());
+  el.addEventListener('pointerdown', (e)=>{ if(!tagPop.hidden && !e.target.closest('#crTagPop, #crQ')) tagPop.hidden = true; }, true);
   tagPop.addEventListener('click', (e)=>{
     const b = e.target.closest('[data-tagname]');
     if(!b) return;
-    const name = b.dataset.tagname;
+    const t = tagAt();
     const pos = q.selectionStart == null ? q.value.length : q.selectionStart;
-    const before = q.value.slice(0, pos).replace(/@([^@\n]{2,40})$/, '@' + name + ' ');
-    q.value = before + q.value.slice(pos);
-    count.textContent = q.value.length + '/500';
-    if(picked.indexOf(name) < 0) picked.push(name);
+    const at = t ? t.at : q.value.lastIndexOf('@', pos - 1);
+    if(at < 0) return;
+    const end = tagIt(at, pos - at - 1, b.dataset.tagname, ' ');
     tagPop.hidden = true;
     q.focus();
-    try{ q.setSelectionRange(before.length, before.length); }catch(err){}
+    try{ q.setSelectionRange(end, end); }catch(err){}
+    paintQ(null);
   });
   let judgeBusy = false;
   const askJudge = async ()=>{
@@ -8296,14 +8464,10 @@ function openCROverlay(startMode){
     arm();
     judgeBusy = true;
     try{ q.blur(); }catch(e){}
-    body.innerHTML = `<div class="status" style="margin:16px 0;"><div class="spinner"></div>${NLj ? 'De judge leest de regels…' : 'The judge is reading the rules…'}</div><div class="cja-q" data-notr>“${escapeHtml(query)}”</div>`;
+    // 1.36: only tagged cards go to the judge
+    const tagged = judgeTagsIn(query, picked).slice(0, 5);
+    body.innerHTML = `<div class="status" style="margin:16px 0;"><div class="spinner"></div>${NLj ? 'De judge leest de regels…' : 'The judge is reading the rules…'}</div><div class="cja-q" data-notr>“${judgeMarkCards(escapeHtml(query), tagged)}”</div>`;
     body.scrollTop = 0;
-    let tagged = judgeTagsIn(query, picked);
-    try{
-      if(!state._judgeIdx) state._judgeIdx = judgeNameIndex(await scanNameList(), rules);
-      judgeFindCards(query.replace(/@/g, ' '), state._judgeIdx).forEach(n=>{ if(tagged.indexOf(n) < 0) tagged.push(n); });
-    }catch(e){}
-    tagged = tagged.slice(0, 5);
     const g = await judgeGather(query, tagged, rules);
     const res = await judgeAsk({ q: query, lang: NLj ? 'nl' : 'en', cards: g.cards, rules: g.rules.map(r=>({ n: r.n, t: r.t })), device: judgeDevice() });
     judgeBusy = false;
@@ -14849,6 +15013,8 @@ async function ensureDeckPriced(d){
 function scrollParentOf(el){
   let p = el && el.parentElement;
   while(p && p !== document.body){
+    // a floating Extras fold scrolls on its own, never the page behind it
+    if(p.classList && p.classList.contains('xt-body') && p.closest('main.xt-tiles')) return p;
     const cs = getComputedStyle(p);
     if(/(auto|scroll)/.test(cs.overflowY) && p.scrollHeight > p.clientHeight + 4) return p;
     p = p.parentElement;
@@ -25703,10 +25869,75 @@ function ndFmtBtnHtml(f){
 /* An icon inline with text: the app's line icons at text size, in the
    text's own ink -- never a coloured emoji. */
 function inlIco(name, px){ return `<span class="inl-ico" style="--ii:${px || 15}px;">${ICONS[name] || ''}</span>`; }
+/* 1.36: a fold of an Extras tile floats over the tiles. One at a time; it
+   sits above its tile when there is more room above, else below; a scrim
+   behind it closes it on a tap (back closes it too, like every fold). The
+   observer in wireSettingsPage calls this whenever a fold opens or shuts. */
+function xtPlace(body){
+  const main = body.closest('main'), sec = body.parentElement;
+  const tile = (sec && sec.querySelector('.xt-tile')) || sec;
+  if(!main || !tile) return;
+  const r = tile.getBoundingClientRect();
+  let left = Infinity, right = -Infinity;
+  main.querySelectorAll(':scope > .settings-section').forEach(x=>{ const q = x.getBoundingClientRect(); left = Math.min(left, q.left); right = Math.max(right, q.right); });
+  const cap = document.querySelector('.page-cap'), nav = document.querySelector('.brand-banner');
+  const topLim = cap ? Math.max(0, cap.getBoundingClientRect().bottom) : 0;
+  const botLim = nav ? Math.min(window.innerHeight, nav.getBoundingClientRect().top) : window.innerHeight;
+  const gap = 8;
+  const tTop = Math.min(Math.max(r.top, topLim), botLim), tBot = Math.max(Math.min(r.bottom, botLim), topLim);
+  const above = tTop - topLim - 2 * gap, below = botLim - tBot - 2 * gap;
+  body.style.left = Math.round(left) + 'px';
+  body.style.width = Math.round(right - left) + 'px';
+  if(above >= below){
+    body.style.top = 'auto';
+    body.style.bottom = Math.round(window.innerHeight - tTop + gap) + 'px';
+    body.style.maxHeight = Math.max(160, Math.round(above)) + 'px';
+    body.dataset.side = 'up';
+  } else {
+    body.style.bottom = 'auto';
+    body.style.top = Math.round(tBot + gap) + 'px';
+    body.style.maxHeight = Math.max(160, Math.round(below)) + 'px';
+    body.dataset.side = 'down';
+  }
+}
+function xtCloseAll(){
+  document.querySelectorAll('main.xt-tiles > .settings-section > .xt-body:not([hidden])').forEach(b=>foldSet(b, false));
+}
+function xtSync(){
+  const main = document.querySelector('main.xt-tiles');
+  if(!main) return;
+  const open = Array.from(main.querySelectorAll(':scope > .settings-section > .xt-body:not([hidden])'));
+  if(open.length > 1){
+    let keep = null;
+    for(let i = _folds.length - 1; i >= 0 && !keep; i--) if(open.indexOf(_folds[i].body) >= 0) keep = _folds[i].body;
+    keep = keep || open[open.length - 1];
+    open.forEach(b=>{ if(b !== keep) foldSet(b, false); });
+    return;
+  }
+  let scrim = main.querySelector(':scope > .xt-scrim');
+  if(!open.length){ if(scrim) scrim.remove(); return; }
+  if(!scrim){
+    scrim = document.createElement('div');
+    scrim.className = 'xt-scrim';
+    scrim.addEventListener('click', (e)=>{ e.stopPropagation(); xtCloseAll(); });
+    // position:fixed -- its place among the reversed tiles does not matter
+    main.appendChild(scrim);
+  }
+  xtPlace(open[0]);
+}
+window.addEventListener('resize', ()=>{ try{ xtSync(); }catch(e){} });
 /* Extras: the folds that hold long reading (format rules, ban lists, About)
    open DOWNWARD and read top to bottom. Once open, the row moves up to sit
-   just under the page title, so the text runs down the screen from there. */
+   just under the page title, so the text runs down the screen from there.
+   1.36: a tile's fold floats instead -- nothing to move; inside a floating
+   fold the fold itself scrolls the opened part to its top. */
 function dropReveal(row){
+  if(row && row.classList && row.classList.contains('xt-tile')) return;
+  const pop = row && row.closest ? row.closest('main.xt-tiles .xt-body') : null;
+  if(pop){
+    requestAnimationFrame(()=>{ try{ pop.scrollTop += row.getBoundingClientRect().top - pop.getBoundingClientRect().top - 6; }catch(e){} });
+    return;
+  }
   requestAnimationFrame(()=>{
     try{
       const top = document.elementFromPoint(window.innerWidth / 2, 4);
@@ -25728,22 +25959,25 @@ function settingsPageHtml(){
   const g = GUILDS.find(x=>x.k===state.guild) || GUILDS[0];
   const browser = !(window.matchMedia('(display-mode: standalone)').matches || inAndroidApp());
   const _pp = pushPrefs();
-  // column-reverse thinking, tile edition: the first tile in the markup is
-  // bottom-left, by the thumb; About comes last = the banner on top.
+  // 1.36: two columns, wrap-reverse -- the first tile in the markup is
+  // bottom-left, by the thumb, and each pair is one row: Draft|Life,
+  // Language|Judge, Ban lists|Format rules, Colour|Notifications,
+  // Share|Backup, (Install|Android app), the credits|About on top.
+  // A tile's fold floats over the tiles (xtSync), nothing is pushed aside.
   return `
   <main class="settings-main xt-tiles">
-    <div class="settings-section">${tile('crRow', ICONS.gavel, T('Vraag de AI-judge', 'Ask AI judge'))}</div>
-    <div class="settings-section">${tile('lifeRow', ICONS.heart, 'Life Counter')}</div>
     <div class="settings-section">${tile('draftRow', ICONS.draft, 'Draft tools')}</div>
-    <div class="settings-section">
-      ${tile('fmtRulesRow', ICONS.library, T('Format&shy;regels', 'Format rules') + newAdmiralPill())}
-      <div id="fmtRulesBody" class="acc-down xt-body" hidden style="padding:0 12px 6px;"></div>
-    </div>
+    <div class="settings-section">${tile('lifeRow', ICONS.heart, 'Life Counter')}</div>
+    <div class="settings-section">${tile('langRow', ICONS.globe, T('Taal', 'Language'), `<div class="seg seg-inline">${APP_LANGS.map(L=>`<button data-lang-choice="${L.code}" class="${appLang()===L.code?'active':''}">${L.code.toUpperCase()}</button>`).join('')}</div>`)}</div>
+    <div class="settings-section">${tile('crRow', ICONS.gavel, T('Vraag de AI-judge', 'Ask AI judge'))}</div>
     <div class="settings-section">
       ${tile('banListsRow', ICONS.ban, T('Banlijsten', 'Ban lists'))}
       <div id="banListsBody" class="acc-down xt-body" hidden style="padding:0 12px 6px;"></div>
     </div>
-    <div class="settings-section">${tile('langRow', ICONS.globe, T('Taal', 'Language'), `<div class="seg seg-inline">${APP_LANGS.map(L=>`<button data-lang-choice="${L.code}" class="${appLang()===L.code?'active':''}">${L.code.toUpperCase()}</button>`).join('')}</div>`)}</div>
+    <div class="settings-section">
+      ${tile('fmtRulesRow', ICONS.library, T('Format&shy;regels', 'Format rules') + newAdmiralPill())}
+      <div id="fmtRulesBody" class="acc-down xt-body" hidden style="padding:0 12px 6px;"></div>
+    </div>
     <div class="settings-section">
       <div id="guildBody" class="guild-list xt-body" hidden>${GUILDS.map(x=>`<button type="button" class="guild-opt ${x.k===state.guild?'sel':''}" data-guild="${x.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[x.main][0]};--gs:${GUILD_SWATCH[x.side][1]};"></span>${manaIconSvg(x.main,16)}${manaIconSvg(x.side,16)}<span>${x.n}</span></button>`).join('')}</div>
       <div class="settings-row xt-tile" id="guildRow"><span class="xt-ico" id="guildCur">${manaIconSvg(g.main,22)}${manaIconSvg(g.side,22)}</span><div class="l1">${T('Kleuren&shy;schema', 'Color scheme')}</div></div>
@@ -25756,6 +25990,7 @@ function settingsPageHtml(){
       <div class="settings-body" style="padding:10px 2px;"><div style="font-size:12px;color:var(--sub-text);">${T('Meldingen komen tussen 09:00 en 21:00.', 'Notifications arrive between 09:00 and 21:00.')}</div><div style="font-size:12px;color:var(--sub-text);margin-top:4px;" id="pushStatus"></div></div>`}</div>
       ${tile('notifRow', ICONS.bell, T('Meldingen', 'Notifications'))}
     </div>
+    <div class="settings-section">${tile('shareAppRow', ICONS.share, T('Deel de app', 'Share the app'))}</div>
     <div class="settings-section">
       <div id="backupBody" class="acc-up xt-body" hidden style="padding:4px 14px 2px;">
         <div class="l2">${T('Decks, collectie en instellingen in één bestand — bewaar het in je eigen cloud.', 'Decks, collection and settings in one file — keep it in your own cloud.')}</div>
@@ -25773,14 +26008,14 @@ function settingsPageHtml(){
       </div>
       ${tile('backupRow', ICONS.shield, T('Back-up', 'Backup'))}
     </div>
-    ${browser && /Android/i.test(navigator.userAgent) ? `<div class="settings-section" id="apkRow">${tile('apkBtn', ICONS.phone, T('Android-app', 'Android app'), '<div class="l2" id="apkNote"></div>')}</div>` : ''}
     ${browser ? `<div class="settings-section">${tile('installAppRow', ICONS.imp, T('Installeer als app', 'Install as an app'))}</div>` : ''}
-    <div class="settings-section">${tile('shareAppRow', ICONS.share, T('Deel de app', 'Share the app'))}</div>
-    <div class="settings-section xt-wide">
+    ${browser && /Android/i.test(navigator.userAgent) ? `<div class="settings-section" id="apkRow">${tile('apkBtn', ICONS.phone, T('Android-app', 'Android app'), '<div class="l2" id="apkNote"></div>')}</div>` : ''}
+    <div class="xt-break" aria-hidden="true"></div>
+    <p class="hint" id="appFootNote" style="text-align:center;line-height:1.45;font-size:11px;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
+    <div class="settings-section">
       <div class="settings-row xt-tile" id="aboutRow" style="cursor:pointer;"><span class="xt-ico">${ICONS.info}</span><div class="l1">${T('Over Deckhand', 'About Deckhand')}</div></div>
       <div id="aboutBody" class="acc-down xt-body" hidden style="padding:0 14px 4px;">${aboutHtml()}</div>
     </div>
-    <p class="hint" id="appFootNote" style="text-align:center;margin:14px 8px 4px;line-height:1.5;font-size:11.5px;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
   </main>`;
 }
 function commanderQuickRulesHtml(){
@@ -26120,6 +26355,8 @@ async function restoreFromFile(file){
 }
 function wireSettingsPage(){
   wireDataSources();
+  { const main = document.querySelector('main.xt-tiles');
+    if(main){ new MutationObserver(()=>{ try{ xtSync(); }catch(e){} }).observe(main, { subtree: true, attributes: true, attributeFilter: ['hidden'] }); xtSync(); } }
   // A long press on the credits copies the diagnostics (no button needed).
   { const fn = document.getElementById('appFootNote');
     if(fn) wireTapHold(fn, ()=>{}, ()=>{ document.getElementById('sfDiagCopy')?.click(); }, 900); }
