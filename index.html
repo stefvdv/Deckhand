@@ -1862,6 +1862,22 @@ button.cl-head{background:none;border:none;padding:10px 2px;font-family:inherit;
 .cut-btn{flex:none;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;}
 .cut-btn svg{width:19px;height:19px;}
 .about-txt .about-gh{display:block;text-align:center;text-decoration:none;padding:10px 8px;}
+/* 1.0: feedback */
+.about-txt .about-fb-hint{font-size:13px;color:var(--sub-text);margin:0 0 8px;}
+.about-txt .about-fb{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:0 0 10px;}
+.fb-sheet{gap:8px;}
+.fb-sheet h4{margin:0;}
+.fb-sheet .fb-hint{font-size:13px;line-height:1.45;color:var(--sub-text);margin:0;}
+.fb-sheet textarea, .fb-sheet input[type=email]{width:100%;box-sizing:border-box;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:10px 12px;font-size:15px;font-family:inherit;}
+.fb-sheet textarea{resize:none;min-height:110px;}
+.fb-shots{display:flex;gap:8px;}
+.fb-shot{position:relative;flex:0 0 74px;height:96px;border-radius:8px;border:1.5px dashed var(--line);background:var(--ink-2);color:var(--sub-text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11.5px;font-family:inherit;cursor:pointer;overflow:hidden;padding:0;}
+.fb-shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.fb-shot .fb-x{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;font-size:13px;line-height:22px;text-align:center;z-index:2;}
+.fb-sheet .fb-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;}
+.fb-sheet .fb-actions{display:flex;gap:8px;margin-top:4px;}
+.fb-sheet .fb-actions button{flex:1;margin:0;}
+.fb-sheet .fb-count{font-size:11px;color:var(--sub-text);text-align:right;margin-top:-4px;}
 .settings-body{padding:0 14px 14px;border-top:2px solid var(--line);}
 .settings-body.collapsed{display:none;}
 .toggle-switch{position:relative;width:42px;height:24px;flex:0 0 auto;}
@@ -2701,6 +2717,12 @@ main.card-detail{zoom:0.9;}
 </style>
 </head>
 <body>
+<!-- Feedback (Netlify Forms): detected at deploy time; the app posts to it
+     with fetch from the About sheet. Never shown. -->
+<form name="feedback" method="POST" data-netlify="true" netlify-honeypot="bot-field" enctype="multipart/form-data" hidden>
+  <input type="text" name="bot-field"><textarea name="message"></textarea><input type="email" name="email"><input type="text" name="context">
+  <input type="file" name="screenshot1"><input type="file" name="screenshot2"><input type="file" name="screenshot3">
+</form>
 </div>
 <script>
 document.documentElement.setAttribute('data-mode','commander');
@@ -6234,46 +6256,34 @@ const LS_PREFIX = 'admiral_app:';
    VERSION string in sw.js so phones fetch the new build.
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
-   resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.41';
+   resets the dot (1.8 -> 2.0).
+   FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
+   1.0, the version shared with friends. A device that last saw a higher
+   number simply adopts 1.0 (see maybeShowChangelog). */
+const APP_VERSION = '1.0';
 const CHANGELOG_NOTES = {
   en: [
-    'All updates since your last visit',
-    'Shown again after an app update',
-    'Extras: What\u2019s new, past month'
+    'Deckhand 1.0 \u2014 welcome aboard',
+    'Send feedback from About Deckhand'
   ],
   nl: [
-    'Alle updates sinds je laatste bezoek',
-    'Ook na een app-update te lezen',
-    'Extra\u2019s: Wat is nieuw, afgelopen maand'
+    'Deckhand 1.0 \u2014 welkom aan boord',
+    'Feedback sturen via Over Deckhand'
   ]
 };
-/* 1.41: the history. PUBLISHER, every release: move the previous
-   CHANGELOG_NOTES to the top of CHANGELOG_HISTORY (with its date), then
-   write the new notes above and set APP_DATE. The start-up note shows every
-   release since the player's last visit; Extras -> What's new shows the
-   past month. (1.0-1.27 predate this list.) */
+/* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
+   to the top of CHANGELOG_HISTORY (with its date), then write the new notes
+   above and set APP_DATE. The start-up note shows every release since the
+   player's last visit; Extras -> What's new shows the past month (the
+   button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-09';
 const CHANGELOG_HISTORY = [
-  { v: '1.40', d: '2026-10-09', en: ['Salt score on Admiral decks too'], nl: ['Salt score ook bij Admiral-decks'] },
-  { v: '1.39', d: '2026-10-09', en: ['Each deck keeps its own printing', 'Life: only cards by the cog are cut', 'First-player mark bigger, always seen'], nl: ['Elk deck houdt zijn eigen printing', 'Life: alleen snijden bij het tandwiel', 'Beginner-teken groter, altijd zichtbaar'] },
-  { v: '1.38', d: '2026-10-09', en: ['Extras stays put after the judge', 'Judge: notice at 5 questions left', 'Judge reads keyword rules in full'], nl: ['Extra\u2019s verspringt niet na de judge', 'Judge: seintje bij nog 5 vragen', 'Judge leest keywordregels volledig'] },
-  { v: '1.37', d: '2026-10-09', en: ['Judge: rules cited above the answer', 'Judge: questions left by the button', 'Extras: popups open as one sheet'], nl: ['Judge: geciteerde regels weer erboven', 'Judge: vragen over staat bij de knop', 'Extra\u2019s: vensters altijd onderaan'] },
-  { v: '1.36', d: '2026-10-09', en: ['Extras: two columns, floating popups', 'Judge: tag cards with @ from a list', 'Answer: tap a card to see it'], nl: ['Extra\u2019s: 2 kolommen, zwevende vensters', 'Judge: tag kaarten met @ uit een lijst', 'Antwoord: tik een kaart om te bekijken'] },
-  { v: '1.35', d: '2026-10-09', en: ['Ask AI judge: its own page', 'Rules behind a button on that page', 'Extras as tiles with icons'], nl: ['Vraag de AI-judge: eigen pagina', 'Regels achter een knop op die pagina', 'Extra-pagina als tegels met iconen'] },
-  { v: '1.34', d: '2026-10-09', en: ['Judge finds named cards without @', 'Judge reads the key rules first', 'Answer shows which cards were read'], nl: ['Judge vindt kaartnamen zonder @', 'Judge leest eerst de kernregels', 'Antwoord toont welke kaarten gelezen'] },
-  { v: '1.33', d: '2026-10-08', en: ['Rules: ask the judge (AI, free)', 'Tag cards with @ in your question', 'Every cited rule checked for real'], nl: ['Regels: vraag de judge (AI, gratis)', 'Tag kaarten met @ in je vraag', 'Elke geciteerde regel gecontroleerd'] },
-  { v: '1.32', d: '2026-10-08', en: ['Search: no explanation text', 'Deck bar sits right above search'], nl: ['Zoeken: geen uitlegtekst meer', 'Deckbalk staat direct boven zoeken'] },
-  { v: '1.31', d: '2026-10-08', en: ['Colour page no longer jumps', 'Combo picker hides Top Commanders'], nl: ['Kleurpagina verspringt niet meer', 'Combinatiekeuze verbergt Top Commanders'] },
-  { v: '1.30', d: '2026-10-08', en: ['Colour pick: Staples + Mana Staples', 'More buttons instead of endless list', 'Menu button stays above search bar'], nl: ['Kleurkeuze: Staples + Mana Staples', 'More-knoppen i.p.v. eindeloze lijst', 'Menuknop blijft boven zoekbalk'] },
-  { v: '1.29', d: '2026-10-07', en: ['Bigger scan area, list 2 rows high', 'Buttons on 1 row, X and lamp on left'], nl: ['Groter scanvlak, lijst 2 regels hoog', 'Knoppen op 1 regel, X en lamp links'] },
-  { v: '1.28', d: '2026-10-07', en: ['App 5.0: scanner reads like Delver', 'Sharp camera, true colours, lamp'], nl: ['App 5.0: scanner leest als Delver', 'Scherpe camera, echte kleuren, lamp'] }
 ];
 /* The Android app's own news, per APK version: shown in the update sheet
    before installing, and again at the first start after the install (people
    tap Install without reading). */
 const APK_NOTES = {
-  '5.0': { en: ['Scanner uses your phone\u2019s camera', 'Reads cards faster and sharper', 'True colours and a lamp'],
+  '1.0': { en: ['Scanner uses your phone\u2019s camera', 'Reads cards faster and sharper', 'True colours and a lamp'],
            nl: ['Scanner gebruikt je eigen camera', 'Leest kaarten sneller en scherper', 'Echte kleuren en een lamp'] }
 };
 function changelogAll(){ return [{ v: APP_VERSION, d: APP_DATE, en: CHANGELOG_NOTES.en, nl: CHANGELOG_NOTES.nl }].concat(CHANGELOG_HISTORY); }
@@ -6363,11 +6373,11 @@ function tourSteps(){
       t: inlIco('binder', 14) + (NL ? 'Je collectie' : 'Your collection'),
       b: NL
         ? `<p style="margin:6px 0;">Je hele verzameling plus <strong>Gezocht</strong> (je verlanglijst, met per kaart voor welk deck hij nodig is). Kaarten vallen vanzelf in <strong>automatische mappen</strong> per kleur; eigen mappen maken kan ook.</p>
-           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. hij vindt zelf de randen van de kaart (groene lijn), dus scheef of klein mag. In de Android-app (5.0+) leest Google\u2019s tekstherkenning mee: sneller en scherper. Je gescande kaarten staan onderin, twee in beeld (scroll voor meer). 🔦 zet de lamp aan, tik op het beeld om scherp te stellen; lijkt blauw oranje, tik dan op de ronde kleurknop eronder. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
+           <p style="margin:6px 0;">Een map kan <strong>automatisch vullen</strong>: geef hem regels (rarity, kleur, kaarttype, prijs) bij het maken, of later via de gouden ＋ in de map. Kleur is de kleur van de kaart zelf, dus een land is kleurloos. Ook <strong>foil</strong> kan een regel zijn: kies bij toevoegen ✨ Foil, of via Change printing de foil-versie. Nieuwe kaarten gaan dan vanzelf naar de juiste map; past een kaart in meer mappen, dan kies jij. Pas je de regels aan, dan gaat wat niet meer past eruit en komt wat wel past erin. In de map-instellingen kies je ook hoe de kaarten erin staan: <strong>groeperen</strong> op kleur, rarity, foil of kaarttype, en <strong>sorteren</strong> op naam, mana value of prijs. De <strong>i</strong> op de tegel toont de instellingen, en je kiest zelf de <strong>iconen</strong> op de tegel. <strong>Mappen opnieuw sorteren</strong> zet alles weer goed als prijzen veranderd zijn. Bij <strong>Importeren</strong> plak je een hele lijst, of laad je een bestand. Met <strong>📷 Kaarten scannen</strong> in het ＋-menu lees je kaarten met je camera in: hij herkent ook de printing aan de afbeelding, en buitenlandse kaarten. hij vindt zelf de randen van de kaart (groene lijn), dus scheef of klein mag. In de Android-app leest Google\u2019s tekstherkenning mee: sneller en scherper. Je gescande kaarten staan onderin, twee in beeld (scroll voor meer). 🔦 zet de lamp aan, tik op het beeld om scherp te stellen; lijkt blauw oranje, tik dan op de ronde kleurknop eronder. In <strong>Gezocht</strong> zet de bel een prijsalert, en de gouden ＋ linksonder op een kaart (of Toevoegen aan…) zet hem in je collectie: kies de printing, en hij gaat naar de juiste map.</p>
            <p style="margin:6px 0;">De <strong>＋</strong> opent hetzelfde menu als bij je decks: kaart toevoegen, nieuwe map, importeren en <strong>List view</strong>. De zoekbalk zoekt door al je mappen tegelijk en toont per kaart in welke map hij zit. Lang indrukken selecteert kaarten; het gouden getal toont hoeveel.</p>
            <p style="margin:6px 0;">Tik op het <strong>€-totaal</strong> in de balk bovenin voor de <strong>waardegrafiek</strong>: het verloop per dag, met de grootste stijgers en dalers.</p>`
         : `<p style="margin:6px 0;">Your whole collection plus <strong>Wants</strong> (each card says which deck wants it). Cards file themselves into <strong>automatic folders</strong> by color; your own binders work too.</p>
-           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. it finds the card's edges itself (green line), so tilted or small is fine. In the Android app (5.0+) Google\u2019s text reading does the work: faster and sharper. Your scanned cards sit at the foot, two in view (scroll for more). 🔦 turns on the lamp; tap the picture to focus; if blue looks orange, tap the round colour button below it. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
+           <p style="margin:6px 0;">A binder can <strong>auto-fill</strong>: give it rules (rarity, color, card type, price) when you make it, or later via the gold ＋ inside it. Color means the card's own color, so a land is colorless. <strong>Foil</strong> can be a rule too: tick ✨ Foil when adding, or pick the foil version via Change printing. New cards then go to the right binder by themselves; if one fits more binders, you choose. Change the rules and what no longer fits leaves, while what fits moves in. The binder settings also set how the cards sit inside: <strong>group</strong> by color, rarity, foil or card type, and <strong>sort</strong> by name, mana value or price. The <strong>i</strong> on a tile shows its settings, and you pick the tile's own <strong>icons</strong>. <strong>Re-sort binders</strong> puts everything right again after prices change. <strong>Import</strong> takes a pasted list, or a file. <strong>📷 Scan cards</strong> in the ＋ menu reads cards with your camera: it knows the printing by its art, and foreign cards too. it finds the card's edges itself (green line), so tilted or small is fine. In the Android app Google\u2019s text reading does the work: faster and sharper. Your scanned cards sit at the foot, two in view (scroll for more). 🔦 turns on the lamp; tap the picture to focus; if blue looks orange, tap the round colour button below it. In <strong>Wants</strong> the bell sets a price alert, and the gold ＋ at the bottom left of a card (or Add to…) adds it to your collection: pick the printing and it goes to the right binder.</p>
            <p style="margin:6px 0;">The <strong>＋</strong> opens the same menu as your decks: add card, new binder, import and <strong>List view</strong>. The search bar looks through every binder at once and shows which binder holds each card. Long-press selects cards; the gold number shows how many.</p>
            <p style="margin:6px 0;">Tap the <strong>€ total</strong> in the top bar for the <strong>value chart</strong>: day-by-day history with the biggest risers and fallers.</p>` },
     { k:'search', go:()=>switchPage('search'),
@@ -6394,11 +6404,11 @@ function tourSteps(){
         ? `<p style="margin:6px 0;">Alles staat hier in <strong>tegels</strong>, twee naast elkaar; heeft een tegel meer opties, dan schuift er onderaan een venster over de rest, met de naam van de tegel erboven (tik ernaast om het te sluiten). Bij je duim <strong>Draft tools</strong> en de <strong>Life Counter</strong>, daarboven <strong>Vraag de AI-judge</strong>: stel je regelvraag en tag de kaarten met @ — er verschijnt meteen een lijst om uit te kiezen, en een getagde kaart wordt onderstreept. Een AI antwoordt met de officiële regels erboven, elke geciteerde regel wordt gecontroleerd, en een kaart in het antwoord tik je aan om hem te bekijken. Onder de hamer zie je hoeveel vragen je vandaag nog hebt; bij nog 5 krijg je een seintje. Op die pagina staan ook de complete <strong>Comprehensive Rules</strong>, achter een knop.</p>
            <p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
            <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (in een venster, om rustig te lezen), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. Zet je bij <strong>Meldingen</strong> de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame. Ernaast staat <strong>Wat is nieuw</strong>: alle updates van de afgelopen maand, per update uit te klappen.</p>`
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. Zet je bij <strong>Meldingen</strong> de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.${CHANGELOG_HISTORY.length ? ' Ernaast staat <strong>Wat is nieuw</strong>: alle updates van de afgelopen maand, per update uit te klappen.' : ''} Onder Over Deckhand stuur je ook <strong>feedback</strong>: een bug of idee, met screenshots.</p>`
         : `<p style="margin:6px 0;">Everything here is a <strong>tile</strong>, two to a row; when a tile has more options, a window slides up over the rest at the foot, with the tile's name on top (tap beside it to close). By your thumb sit <strong>Draft tools</strong> and the <strong>Life Counter</strong>, above them <strong>Ask AI judge</strong>: ask your rules question and tag the cards with @ — a list to pick from appears right away, and a tagged card is underlined. An AI answers with the official rules above it, every cited rule is checked, and you tap a card in the answer to see it. Under the gavel you see how many questions you have left today; at 5 left you get a notice. The complete <strong>Comprehensive Rules</strong> sit behind a button on that page.</p>
            <p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
            <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (in a window, for an easy read), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. Turn on <strong>spoiler alerts</strong> under <strong>Notifications</strong> (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads. Beside it, <strong>What’s new</strong>: every update of the past month, each one to unfold.</p>` }
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. Turn on <strong>spoiler alerts</strong> under <strong>Notifications</strong> (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.${CHANGELOG_HISTORY.length ? ' Beside it, <strong>What\u2019s new</strong>: every update of the past month, each one to unfold.' : ''} Under About you can also send <strong>feedback</strong>: a bug or an idea, with screenshots.</p>` }
   ];
 }
 function startAppTour(){
@@ -6607,10 +6617,14 @@ function maybeShowChangelog(){
     const apkCur = apkInstalled();
     let apkSeen = null; try{ apkSeen = localStorage.getItem(LS_PREFIX+'apkSeen'); }catch(e){}
     if(apkCur && !apkSeen){ try{ localStorage.setItem(LS_PREFIX+'apkSeen', apkCur); }catch(e){} apkSeen = apkCur; }
-    const apkNew = !!(apkCur && apkSeen && apkVerCmp(apkCur, apkSeen) > 0);
+    const apkNew = !!(apkCur && apkSeen && apkCmp(apkCur, apkSeen) > 0);
     if(!seen && !force){ localStorage.setItem(LS_PREFIX+'seenVersion', APP_VERSION); return; }   // brand-new user: the welcome note covers them, no popup
+    // the fresh start: a device that last saw a higher number (the old line
+    // up to 1.41, or 2.51.x) takes 1.0 as its new starting point, quietly
+    let seen2 = seen;
+    if(seen && apkVerCmp(seen, APP_VERSION) > 0){ try{ localStorage.setItem(LS_PREFIX+'seenVersion', APP_VERSION); }catch(e){} seen2 = APP_VERSION; }
     // everything since the last visit, however many releases that is
-    const entries = seen === APP_VERSION ? (force ? changelogAll().slice(0, 1) : []) : changelogSince(seen);
+    const entries = seen2 === APP_VERSION ? (force ? changelogAll().slice(0, 1) : []) : changelogSince(seen2);
     if(!entries.length && !apkNew) return;
     const NL = appLang() === 'nl';
     const apkPart = apkNew ? (()=>{
@@ -25900,6 +25914,119 @@ function createDeckFromReco(){
    link installs straight on Android; iPhone gets the web app via Safari. Always
    the public site -- inside the APK, location is not the website. */
 const DECKHAND_SITE = 'https://deckhandcompanion.netlify.app/';
+/* ---- Feedback (1.0) ----
+   A short message and up to three screenshots, mailed to the maker through
+   Netlify Forms (the form "feedback" in the page; Netlify mails each
+   submission). Spam guards: a hidden honeypot field, Netlify's own spam
+   filter, at least 4 seconds between opening and sending, one send per
+   minute and five per day from a device. Screenshots are shrunk on the
+   phone first (max 1600 px, JPEG) so they travel light. */
+const FB_LOG = LS_PREFIX + 'fbLog';
+function fbSentToday(){
+  try{ const t = Date.now(); return (JSON.parse(localStorage.getItem(FB_LOG) || '[]') || []).filter(x=>t - x < 864e5); }catch(e){ return []; }
+}
+function fbShrink(file){
+  return new Promise((res)=>{
+    try{
+      const url = URL.createObjectURL(file), img = new Image();
+      img.onload = ()=>{
+        const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob((b)=>res(b || file), 'image/jpeg', 0.82);
+      };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); res(file); };
+      img.src = url;
+    }catch(e){ res(file); }
+  });
+}
+function fbMailto(text){
+  const to = ['stefvandervelden', 'gmail.com'].join('@');   // assembled here, never written whole in the page
+  return 'mailto:' + to + '?subject=' + encodeURIComponent('Deckhand feedback') + '&body=' + encodeURIComponent(text || '');
+}
+function openFeedbackSheet(){
+  const NL = appLang() === 'nl', T = (a, b)=>NL ? a : b;
+  document.getElementById('fbSheet')?.remove();
+  const opened = Date.now(), shots = [null, null, null];
+  const el = document.createElement('div');
+  el.className = 'deckpick-scrim'; el.id = 'fbSheet';
+  el.style.zIndex = 1300; el.style.alignItems = 'flex-end';
+  el.innerHTML = `<div class="deckpick fb-sheet" role="dialog" aria-label="Feedback">
+    <h4>${T('Feedback sturen', 'Send feedback')}</h4>
+    <p class="fb-hint">${T('Wat gebeurde er, en waar in de app? Een screenshot helpt enorm: maak er een (meestal aan/uit + volume omlaag tegelijk) en voeg hem hieronder toe, tot 3. Je appversie en telefoontype gaan vanzelf mee.',
+      'What happened, and where in the app? A screenshot helps a lot: take one (usually power + volume down together) and add it below, up to 3. Your app version and phone type come along by themselves.')}</p>
+    <textarea id="fbMsg" rows="5" maxlength="2000" placeholder="${T('Je bericht\u2026', 'Your message\u2026')}"></textarea>
+    <div class="fb-count" id="fbCount">0/2000</div>
+    <div class="fb-shots">${[0, 1, 2].map(i=>`<button type="button" class="fb-shot" data-fbshot="${i}">${inlIco('camera', 18)}<span>${T('Screenshot', 'Screenshot')}</span></button>`).join('')}</div>
+    <input type="file" id="fbFile" accept="image/*" hidden>
+    <input type="email" id="fbEmail" maxlength="120" autocomplete="email" placeholder="${T('Je e-mail (alleen als je antwoord wilt)', 'Your email (only if you want a reply)')}">
+    <input type="text" class="fb-hp" id="fbHp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="fb-actions"><button type="button" class="ghost-btn" id="fbCancel">${T('Annuleren', 'Cancel')}</button><button type="button" class="primary-btn" id="fbSend">${T('Versturen', 'Send')}</button></div>
+  </div>`;
+  document.body.appendChild(el);
+  const close = ()=>{ el.remove(); };
+  pushOverlay('feedback', close);
+  const done = ()=>{ close(); const st = state.overlayStack; if(st.length && st[st.length - 1].id === 'feedback') st.pop(); };
+  el.addEventListener('click', (e)=>{ if(e.target === el) done(); });
+  el.querySelector('#fbCancel').addEventListener('click', done);
+  const msg = el.querySelector('#fbMsg'), cnt = el.querySelector('#fbCount'), file = el.querySelector('#fbFile');
+  msg.addEventListener('input', ()=>{ cnt.textContent = msg.value.length + '/2000'; });
+  let slot = 0;
+  const paintShot = (i)=>{
+    const b = el.querySelector(`[data-fbshot="${i}"]`);
+    if(shots[i]) b.innerHTML = `<img src="${URL.createObjectURL(shots[i])}" alt=""><span class="fb-x" data-fbx="${i}">\u2715</span>`;
+    else b.innerHTML = `${inlIco('camera', 18)}<span>${T('Screenshot', 'Screenshot')}</span>`;
+  };
+  el.querySelectorAll('[data-fbshot]').forEach(b=>b.addEventListener('click', (e)=>{
+    const i = +b.dataset.fbshot;
+    if(e.target.closest('[data-fbx]')){ shots[i] = null; paintShot(i); return; }
+    slot = i; file.value = ''; file.click();
+  }));
+  file.addEventListener('change', async ()=>{
+    const f = file.files && file.files[0]; if(!f) return;
+    if(!/^image\//.test(f.type)){ toast(T('Alleen afbeeldingen.', 'Images only.')); return; }
+    shots[slot] = await fbShrink(f); paintShot(slot);
+  });
+  el.querySelector('#fbSend').addEventListener('click', async ()=>{
+    const text = msg.value.trim();
+    if(el.querySelector('#fbHp').value) { done(); return; }                         // a bot filled the trap
+    if(text.length < 10){ toast(T('Schrijf iets meer (minstens 10 tekens).', 'Write a little more (at least 10 characters).')); msg.focus(); return; }
+    if(Date.now() - opened < 4000){ toast(T('Even rustig \u2014 probeer het zo nog eens.', 'Easy \u2014 try again in a moment.')); return; }
+    const log = fbSentToday();
+    if(log.length && Date.now() - log[log.length - 1] < 60000){ toast(T('Je stuurde net al iets \u2014 wacht een minuutje.', 'You just sent one \u2014 wait a minute.')); return; }
+    if(log.length >= 5){ toast(T('Vandaag al 5 berichten gestuurd \u2014 morgen weer.', 'Five messages sent today \u2014 more tomorrow.')); return; }
+    const ctx = 'Deckhand ' + APP_VERSION + (apkInstalled() ? ' · app ' + apkInstalled() : ' · browser') + ' · ' + appLang() + ' · ' + window.innerWidth + 'x' + window.innerHeight + ' · ' + navigator.userAgent;
+    const fd = new FormData();
+    fd.append('form-name', 'feedback');
+    fd.append('bot-field', '');
+    fd.append('message', text);
+    fd.append('email', el.querySelector('#fbEmail').value.trim());
+    fd.append('context', ctx);
+    shots.forEach((b, i)=>{ if(b) fd.append('screenshot' + (i + 1), new File([b], 'screenshot' + (i + 1) + '.jpg', { type: 'image/jpeg' })); });
+    const btn = el.querySelector('#fbSend'); btn.disabled = true; btn.textContent = T('Versturen\u2026', 'Sending\u2026');
+    let ok = false;
+    try{
+      const same = location.origin === DECKHAND_SITE.replace(/\/$/, '');
+      const r = await fetch(same ? '/' : DECKHAND_SITE, same ? { method: 'POST', body: fd } : { method: 'POST', body: fd, mode: 'no-cors' });
+      ok = same ? r.ok : true;
+    }catch(e){ ok = false; }
+    if(ok){
+      try{ localStorage.setItem(FB_LOG, JSON.stringify(log.concat([Date.now()]))); }catch(e){}
+      done();
+      toast(T('Bedankt! Je bericht is verstuurd.', 'Thank you! Your message was sent.'));
+      return;
+    }
+    btn.disabled = false; btn.textContent = T('Versturen', 'Send');
+    openInAppConfirm(T('Versturen lukte niet. Openen in je mail-app? Screenshots voeg je daar zelf toe.', 'Sending failed. Open it in your mail app? Add screenshots there yourself.'), (yes)=>{
+      if(yes){ try{ location.href = fbMailto(text + '\n\n' + ctx); }catch(e){} }
+    }, { ok: T('Mail-app', 'Mail app'), cancel: T('Annuleren', 'Cancel') });
+    const ic = document.getElementById('inAppConfirm'); if(ic) ic.style.zIndex = 1400;   // above this sheet
+  });
+  setTimeout(()=>{ try{ msg.focus(); }catch(e){} }, 60);
+}
+document.addEventListener('click', (e)=>{ if(e.target.closest && e.target.closest('#feedbackBtn')){ e.stopPropagation(); openFeedbackSheet(); } });
 /* ---- The Android app keeps itself current ----
    APK_LATEST is the Deckhand.apk that sits next to this page on the site:
    raise it whenever a new APK goes into the repo. Inside an older app the
@@ -25907,7 +26034,15 @@ const DECKHAND_SITE = 'https://deckhandcompanion.netlify.app/';
    4.3 the app downloads it and opens Android's installer itself; an older
    app hands the download to the browser. Android always asks the person to
    confirm, and the same signature means every deck and card stays. */
-const APK_LATEST = '5.0';
+const APK_LATEST = '1.0';
+/* The APK line restarted at 1.0 too (it was 3.0 ... 5.0). An app from the old
+   line is always older than any app from the new one. */
+function apkCmp(a, b){
+  const line = (v)=>(+String(v || '0').split('.')[0] >= 3 ? 0 : 1);
+  const la = line(a), lb = line(b);
+  if(la !== lb) return la < lb ? -1 : 1;
+  return apkVerCmp(a, b);
+}
 function apkVerCmp(a, b){
   const x = String(a || '0').split('.').map(Number), y = String(b || '0').split('.').map(Number);
   for(let i = 0; i < Math.max(x.length, y.length); i++){ const d = (x[i] || 0) - (y[i] || 0); if(d) return d < 0 ? -1 : 1; }
@@ -25926,7 +26061,7 @@ function apkInstalled(){
     return '3.0';
   }catch(e){ return null; }
 }
-function apkOutdated(){ const v = apkInstalled(); return !!(v && apkVerCmp(v, APK_LATEST) < 0); }
+function apkOutdated(){ const v = apkInstalled(); return !!(v && apkCmp(v, APK_LATEST) < 0); }
 function apkUpdateNow(){
   const nl = appLang() === 'nl', url = DECKHAND_SITE + 'Deckhand.apk?v=' + APK_LATEST;
   const n = window.DeckhandNotify;
@@ -26067,6 +26202,7 @@ function aboutHtml(){
     ['Alles op je eigen telefoon', 'je decks, collectie, Gezocht, prijsalerts, potjes en instellingen staan in de opslag van de app op dit toestel. Er is geen Deckhand-server die ze bewaart of meeleest.'],
     ['Kaartgegevens worden gedownload', 'de kaartendatabase, prijzen en scan-vingerafdrukken komen eens per dag of week van de Deckhand-site en blijven op je telefoon staan. Zoek je iets wat er niet in staat, dan vraagt de app het rechtstreeks aan Scryfall of EDHREC; die zien dat er een vraag komt, maar niet van wie.'],
     ['Meldingen zonder account', 'de Android-app kijkt zelf op je telefoon of er spoilers of updates zijn. Er wordt niets over jou opgeslagen om je een melding te kunnen sturen.'],
+    ['Feedback', 'wat je via Over Deckhand stuurt, gaat via de Deckhand-site (Netlify) als e-mail naar de maker, met je appversie en telefoontype. Je e-mailadres alleen als je het zelf invult.'],
     ['De AI-judge', 'je vraag gaat met de officiële regels en de tekst van de kaarten die je tagt via de Deckhand-site naar een AI-dienst (Groq), die antwoordt. Zonder naam of account: alleen een willekeurig toestelnummer, om de 20 vragen per dag te tellen. Voor een antwoord is dus internet nodig.'],
     ['Wis je de app, dan is alles weg', 'app-gegevens wissen, de app verwijderen of je telefoon resetten haalt alles mee. Daarom de back-up in Extra\u2019s: één bestand met alles, dat je in je eigen cloud zet en op elk toestel terugzet.'],
     ['Beschermde opslag', 'de app vraagt Android of zijn opslag beschermd mag blijven, zodat het systeem hem niet opruimt als je telefoon vol raakt. In Extra\u2019s → Back-up zie je of dat gelukt is.']
@@ -26074,6 +26210,7 @@ function aboutHtml(){
     ['Everything on your own phone', 'your decks, collection, Wants, price alerts, games and settings live in the app\u2019s storage on this device. There is no Deckhand server that keeps or reads them.'],
     ['Card data is downloaded', 'the card database, prices and scanner fingerprints come from the Deckhand site once a day or week and stay on your phone. Look up something that is not in it and the app asks Scryfall or EDHREC directly; they see a request arrive, not who sent it.'],
     ['Notifications without an account', 'the Android app checks for spoilers and updates on your phone itself. Nothing about you is stored to be able to notify you.'],
+    ['Feedback', 'what you send from About Deckhand goes through the Deckhand site (Netlify) as an email to the maker, with your app version and phone type. Your email address only if you fill it in.'],
     ['The AI judge', 'your question goes, with the official rules and the text of the cards you tag, through the Deckhand site to an AI service (Groq), which answers. No name, no account: only a random device number, to count the 20 questions a day. So an answer needs an internet connection.'],
     ['Clear the app and it is all gone', 'clearing app data, uninstalling or resetting your phone takes everything with it. That is why there is the backup in Extras: one file with everything, kept in your own cloud and restored on any device.'],
     ['Protected storage', 'the app asks Android to keep its storage protected, so the system does not clean it up when your phone runs full. Extras → Backup shows whether that worked.']
@@ -26083,6 +26220,9 @@ function aboutHtml(){
     <ul>${items.map(([k, v])=>`<li><strong>${k}</strong> — ${v}</li>`).join('')}</ul>
     <h4 class="about-h">${NL ? 'Waar je gegevens staan' : 'Where your data lives'}</h4>
     <ul>${data.map(([k, v])=>`<li><strong>${k}</strong> — ${v}</li>`).join('')}</ul>
+    <h4 class="about-h">${NL ? 'Feedback' : 'Feedback'}</h4>
+    <p class="about-fb-hint">${NL ? 'Een bug gezien, iets wat niet klopt, of een idee? Laat het weten \u2014 met een screenshot erbij is het meteen duidelijk.' : 'Spotted a bug, something off, or have an idea? Let us know \u2014 with a screenshot it is clear at once.'}</p>
+    <button type="button" class="primary-btn about-fb" id="feedbackBtn">${inlIco('edit', 16)}${NL ? 'Stuur feedback' : 'Send feedback'}</button>
     <a class="ghost-btn about-gh" href="https://github.com/stefvdv/Deckhand" target="_blank" rel="noopener">${NL ? 'De code op GitHub' : 'The code on GitHub'} ↗</a>
   </div>`;
 }
@@ -26234,8 +26374,8 @@ function settingsPageHtml(){
     ${(browser ? 1 : 0) + (browser && /Android/i.test(navigator.userAgent) ? 1 : 0) === 1 ? '<div class="xt-spacer" aria-hidden="true"></div>' : ''}
     <div class="settings-section xt-note" id="appFootCell">
     <p class="hint" id="appFootNote" style="text-align:center;line-height:1.45;font-size:11px;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
-      <button type="button" class="xt-mini" id="changelogBtn">${inlIco('spark', 14)}${T('Wat is nieuw', 'What\u2019s new')}</button>
-      <div id="changelogBody" class="acc-down xt-body cl-month" data-xt-title="${T('Wat is nieuw', 'What\u2019s new')}" hidden></div>
+      ${CHANGELOG_HISTORY.length ? `<button type="button" class="xt-mini" id="changelogBtn">${inlIco('spark', 14)}${T('Wat is nieuw', 'What\u2019s new')}</button>
+      <div id="changelogBody" class="acc-down xt-body cl-month" data-xt-title="${T('Wat is nieuw', 'What\u2019s new')}" hidden></div>` : ''}
     </div>
     <div class="settings-section">
       <div class="settings-row xt-tile" id="aboutRow" style="cursor:pointer;"><span class="xt-ico">${ICONS.info}</span><div class="l1">${T('Over Deckhand', 'About Deckhand')}</div></div>
