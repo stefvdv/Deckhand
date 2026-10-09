@@ -30,6 +30,9 @@ export function systemPrompt(lang){
     'You are a certified Magic: The Gathering rules judge answering a player at the table.',
     'Use ONLY the Comprehensive Rules excerpts and card texts/rulings given in the user message. Do not rely on memory of other rules or cards.',
     'Card texts are the official Oracle text. Official rulings for a card outrank your own reading.',
+    'Read every card text word for word. Words such as card, token, permanent, spell, creature and player have exact rules meanings (for example 108.2: a token is not a card). A trigger only happens when the event matches its wording exactly.',
+    'Work it out in order: 1) what each card text says exactly, 2) what event happens in the question, 3) whether that event matches the wording, 4) the result.',
+    'If the question names a card whose text is not given, say that you need that card and do not guess what it does.',
     'Cite the rule numbers you rely on (for example 603.2 or 702.19b). Only cite numbers that appear in the excerpts.',
     'If the excerpts do not settle the question, say so plainly, give your best reading and set "confident" to false.',
     nl ? 'Write the answer and reasoning in Dutch. Keep card names, rule numbers and quoted rule text in English.'
@@ -116,7 +119,7 @@ export async function askProviders(env, fetchImpl, sys, user){
   for(const ln of lanes) for(const m of ln.models){
     try{
       const out = parseReply(await chat(fetchImpl, ln.url, ln.key, m, sys, user));
-      if(out) return Object.assign(out, { provider: ln.name });
+      if(out) return Object.assign(out, { provider: ln.name, model: m });
       last = 'shape';
     }catch(e){
       last = e && e.status === 429 ? 'quota' : 'down';
@@ -135,7 +138,7 @@ export async function handle(body, deps){
   const c = clean(body);
   if(c.q.length < 4) return { status: 400, json: { ok: false, error: 'empty' } };
   const dev = sha(String(body && body.device || '') + '|' + (deps.ip || '')).slice(0, 24);
-  const cacheKey = sha(JSON.stringify([c.lang, c.q.toLowerCase().replace(/\s+/g, ' '), c.cards.map(k=>k.name.toLowerCase()).sort()]));
+  const cacheKey = sha(JSON.stringify(['v2', c.lang, c.q.toLowerCase().replace(/\s+/g, ' '), c.cards.map(k=>k.name.toLowerCase()).sort()]));
   const cache = deps.store ? deps.store('judge-cache') : null;
   const count = deps.store ? deps.store('judge-count') : null;
   // 1. asked before: free and instant
@@ -162,7 +165,8 @@ export async function handle(body, deps){
       await count.setJSON('d|' + day + '|' + dev, { n: devN + 1 });
       await count.setJSON('g|' + day, { n: allN + 1 });
     }
-    if(cache) await cache.setJSON(cacheKey, { answer: out.answer, reasoning: out.reasoning, cites: out.cites, confident: out.confident, provider: out.provider, t: Date.now() });
+    // only answers the AI is sure of are kept for the next player
+    if(cache && out.confident) await cache.setJSON(cacheKey, { answer: out.answer, reasoning: out.reasoning, cites: out.cites, confident: out.confident, provider: out.provider, model: out.model, t: Date.now() });
   }catch(e){}
   return { status: 200, json: Object.assign({ ok: true, cached: false, left: Math.max(0, perDev - devN - 1) }, out) };
 }
