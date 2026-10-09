@@ -2103,9 +2103,11 @@ body:has(#crOverlay) .card-preview-backdrop, body:has(main.xt-tiles > .xt-scrim)
 .cr-qmirror .cr-tagu{text-decoration:underline;text-decoration-color:var(--brass);text-decoration-thickness:2px;text-underline-offset:3px;}
 .cr-count.cr-left{font-family:inherit;font-size:12px;font-weight:700;color:var(--ink-text);white-space:nowrap;}
 /* 1.37: the page behind the judge never scrolls along (no wobble) */
-html:has(#crOverlay), body:has(#crOverlay){overflow:hidden;}
+html:has(#crOverlay){overflow:hidden;}
 #crOverlay #crBody{overscroll-behavior:contain;}
 .cj-hero .cj-ico[hidden], .cj-try .cj-ex[hidden]{display:none;}
+.cj-notice{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.55);}
+.cj-notice .deckpick{border-radius:16px;max-width:320px;width:100%;margin:auto;text-align:center;}
 .cr-tagpop .cr-tagnote{padding:10px 12px;font-size:13.5px;font-style:italic;color:var(--sub-text);}
 .cj-card{text-decoration:underline;text-decoration-color:var(--brass);text-decoration-thickness:2px;text-underline-offset:3px;cursor:pointer;}
 .cja-whyt{display:block;margin:10px 0 0;padding:8px 0 2px;width:100%;text-align:left;background:none;border:none;border-top:1.5px solid var(--line);color:var(--ink-text);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;}
@@ -6214,17 +6216,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.37';
+const APP_VERSION = '1.38';
 const CHANGELOG_NOTES = {
   en: [
-    'Judge: rules cited above the answer',
-    'Judge: questions left by the button',
-    'Extras: popups open as one sheet'
+    'Extras stays put after the judge',
+    'Judge: notice at 5 questions left',
+    'Judge reads keyword rules in full'
   ],
   nl: [
-    'Judge: geciteerde regels weer erboven',
-    'Judge: vragen over staat bij de knop',
-    'Extra\u2019s: vensters altijd onderaan'
+    'Extra\u2019s verspringt niet na de judge',
+    'Judge: seintje bij nog 5 vragen',
+    'Judge leest keywordregels volledig'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6307,11 +6309,11 @@ function tourSteps(){
     { k:'extras', go:()=>switchPage('settings'),
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
-        ? `<p style="margin:6px 0;">Alles staat hier in <strong>tegels</strong>, twee naast elkaar; heeft een tegel meer opties, dan schuift er onderaan een venster over de rest, met de naam van de tegel erboven (tik ernaast om het te sluiten). Bij je duim <strong>Draft tools</strong> en de <strong>Life Counter</strong>, daarboven <strong>Vraag de AI-judge</strong>: stel je regelvraag en tag de kaarten met @ — er verschijnt meteen een lijst om uit te kiezen, en een getagde kaart wordt onderstreept. Een AI antwoordt met de officiële regels erboven, elke geciteerde regel wordt gecontroleerd, en een kaart in het antwoord tik je aan om hem te bekijken. Onder de hamer zie je hoeveel vragen je vandaag nog hebt. Op die pagina staan ook de complete <strong>Comprehensive Rules</strong>, achter een knop.</p>
+        ? `<p style="margin:6px 0;">Alles staat hier in <strong>tegels</strong>, twee naast elkaar; heeft een tegel meer opties, dan schuift er onderaan een venster over de rest, met de naam van de tegel erboven (tik ernaast om het te sluiten). Bij je duim <strong>Draft tools</strong> en de <strong>Life Counter</strong>, daarboven <strong>Vraag de AI-judge</strong>: stel je regelvraag en tag de kaarten met @ — er verschijnt meteen een lijst om uit te kiezen, en een getagde kaart wordt onderstreept. Een AI antwoordt met de officiële regels erboven, elke geciteerde regel wordt gecontroleerd, en een kaart in het antwoord tik je aan om hem te bekijken. Onder de hamer zie je hoeveel vragen je vandaag nog hebt; bij nog 5 krijg je een seintje. Op die pagina staan ook de complete <strong>Comprehensive Rules</strong>, achter een knop.</p>
            <p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
            <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (in een venster, om rustig te lezen), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
            <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. Zet je bij <strong>Meldingen</strong> de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
-        : `<p style="margin:6px 0;">Everything here is a <strong>tile</strong>, two to a row; when a tile has more options, a window slides up over the rest at the foot, with the tile's name on top (tap beside it to close). By your thumb sit <strong>Draft tools</strong> and the <strong>Life Counter</strong>, above them <strong>Ask AI judge</strong>: ask your rules question and tag the cards with @ — a list to pick from appears right away, and a tagged card is underlined. An AI answers with the official rules above it, every cited rule is checked, and you tap a card in the answer to see it. Under the gavel you see how many questions you have left today. The complete <strong>Comprehensive Rules</strong> sit behind a button on that page.</p>
+        : `<p style="margin:6px 0;">Everything here is a <strong>tile</strong>, two to a row; when a tile has more options, a window slides up over the rest at the foot, with the tile's name on top (tap beside it to close). By your thumb sit <strong>Draft tools</strong> and the <strong>Life Counter</strong>, above them <strong>Ask AI judge</strong>: ask your rules question and tag the cards with @ — a list to pick from appears right away, and a tagged card is underlined. An AI answers with the official rules above it, every cited rule is checked, and you tap a card in the answer to see it. Under the gavel you see how many questions you have left today; at 5 left you get a notice. The complete <strong>Comprehensive Rules</strong> sit behind a button on that page.</p>
            <p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
            <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (in a window, for an easy read), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
            <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. Turn on <strong>spoiler alerts</strong> under <strong>Notifications</strong> (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
@@ -8096,8 +8098,36 @@ const JUDGE_CONCEPTS = [
   [/\btrample\b/i, ['702.19b', '702.19c']],
   [/\b(state-based|legend rule)\b/i, ['704.3', '704.5j']],
   [/\b(replace|instead)\b/i, ['614.1']],
-  [/\b(stack|respond|in response)\b/i, ['405.1', '117.3']]
+  [/\b(stack|respond|in response)\b/i, ['405.1', '117.3']],
+  [/\bindestructible\b/i, ['702.12b', '704.5f', '704.5g']],
+  [/\btoughness\b|-1\/-1/i, ['704.5f']],
+  [/-1\/-1|\+1\/\+1/, ['122.1', '704.5q']]
 ];
+/* 1.38: a keyword (702) or keyword action (701) named in the question or on
+   a tagged card brings its WHOLE rule: the heading ("702.12 Indestructible")
+   and every sub-rule (702.12a, 702.12b ...). A heading alone says nothing --
+   that is why "indestructible vs -1/-1 counters" got no answer. */
+function judgeKeywordRules(text, rules){
+  const t = ' ' + String(text || '').toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ') + ' ';
+  const out = [];
+  (rules || []).forEach(h=>{
+    if(!/^70[12]\.\d+$/.test(h.n) || !h.t || h.t.length > 40) return;
+    const k = h.t.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim();
+    if(k.length < 4) return;
+    const re = new RegExp('[\\s-]' + k.replace(/-/g, '\\-') + '(s|es|d|ed|ing)?[\\s-]');
+    if(!re.test(t)) return;
+    (rules || []).forEach(r=>{
+      if(out.length >= 30) return;
+      if(r.n === h.n || (r.n.startsWith(h.n) && /^[a-z]$/.test(r.n.slice(h.n.length)))) out.push(r);
+    });
+  });
+  return out;
+}
+// ... and the state-based actions (704.5x) that speak to the question
+function judgeSbaRules(text, rules){
+  if(!/\b(dies?|died|toughness|damage|destroy\w*|indestructible|counters?|life|legend\w*|graveyard)\b|-\d\/-\d/i.test(String(text || ''))) return [];
+  return crSearch((rules || []).filter(r=>/^704\.5[a-z]$/.test(r.n)), text, 3);
+}
 function judgeConceptRules(text, rules){
   const by = new Map((rules || []).map(r=>[r.n, r])), out = [];
   JUDGE_CONCEPTS.forEach(([re, nums])=>{ if(re.test(text)) nums.forEach(n=>{ const r = by.get(n); if(r && out.indexOf(r) < 0) out.push(r); }); });
@@ -8167,7 +8197,10 @@ async function judgeGather(q, tagged, rules){
   if(nw.size) plain = scanNorm(plain).split(' ').filter(x=>!nw.has(x)).join(' ');
   const pool = new Map();
   const add = (list)=>list.forEach(r=>{ if(!pool.has(r.n)) pool.set(r.n, r); });
-  add(judgeConceptRules(q + ' ' + cards.map(k=>k.oracle).join(' '), rules));
+  const all = q + ' ' + cards.map(k=>k.oracle).join(' ');
+  add(judgeKeywordRules(all, rules));
+  add(judgeConceptRules(all, rules));
+  add(judgeSbaRules(String(q || ''), rules));
   add(crSearch(rules, plain, 22));
   cards.forEach(k=>add(crSearch(rules, (k.type + ' ' + k.oracle).slice(0, 400), 7)));
   return { cards, rules: Array.from(pool.values()).slice(0, 36) };
@@ -8268,18 +8301,28 @@ function openCROverlay(startMode){
     home();
   }
   const arm = ()=>{ if(!state._crqArmed){ state._crqArmed = true; pushOverlay('crq', crClearStep); } };
-  pushOverlay('cr', ()=>{ state._crqArmed = false; document.getElementById('crOverlay')?.remove(); });
+  // 1.38: the page under the judge keeps its place -- back on Extras you are
+  // exactly where you left it (the root is locked while the judge is open)
+  const keepY = window.scrollY, keepScreen = state.screen;
+  pushOverlay('cr', ()=>{
+    state._crqArmed = false;
+    document.getElementById('crOverlay')?.remove();
+    if(state.screen === keepScreen){
+      try{ window.scrollTo({ top: keepY, behavior: 'instant' }); }catch(e){ window.scrollTo(0, keepY); }
+      requestAnimationFrame(()=>{ if(state.screen === keepScreen && Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY); });
+    }
+  });
+  // 1.38: examples that have a real answer -- the card is tagged, so its text
+  // goes along; the rest is answered by the keyword rules themselves
   const examples = NL
-    ? ['Werkt indestructible tegen -1/-1 counters?', 'Kan ik met Counterspell een triggered ability counteren?', 'Gaat trample-damage door een blocker met protection?']
-    : ['How does indestructible interact with -1/-1 counters?', 'Can I counter a triggered ability with Counterspell?', 'Does trample carry damage through a blocker with protection?'];
+    ? [{ q: 'Sterft een indestructible creature met 0 toughness?', tags: [] }, { q: 'Kan @Counterspell een triggered ability counteren?', tags: ['Counterspell'] }, { q: 'Gaat trample-damage door een blocker met protection?', tags: [] }]
+    : [{ q: 'Does an indestructible creature with 0 toughness die?', tags: [] }, { q: 'Can @Counterspell counter a triggered ability?', tags: ['Counterspell'] }, { q: 'Does trample carry damage through a blocker with protection?', tags: [] }];
   // The judge's empty page, bottom-up (#crBody is column-reverse: the first
   // thing written sits at the foot, by the question field).
   const judgeHome = ()=>{
-    body.innerHTML = `<div class="cj-try">${examples.map(x=>`<button type="button" class="cj-ex" data-cjex="${escapeHtml(x)}">${escapeHtml(x)}</button>`).join('')}<div class="cj-lab">${T('Probeer', 'Try one')}</div></div>
+    body.innerHTML = `<div class="cj-try">${examples.map(x=>`<button type="button" class="cj-ex" data-cjex="${escapeHtml(x.q)}" data-cjtags="${escapeHtml(x.tags.join('|'))}">${escapeHtml(x.q)}</button>`).join('')}<div class="cj-lab">${T('Probeer', 'Try one')}</div></div>
       <div class="cj-rules"><button type="button" class="ghost-btn" id="crOpenRules" style="width:100%;">${inlIco('library', 16)}${T('Comprehensive Rules lezen', 'Read the Comprehensive Rules')}</button></div>
-      <div class="cj-hero"><span class="cj-ico">${ICONS.gavel}</span><h3>${T('Vraag de AI-judge', 'Ask AI judge')}</h3>
-        <p>${T('Elk antwoord komt met de officiële regels erbij, en elke geciteerde regel wordt gecontroleerd.', 'Every answer comes with the official rules attached, and every cited rule is checked.')}</p>
-        <p class="cj-sub">${T('Tag kaarten met @ en kies ze uit de lijst \u2014 de judge leest alleen getagde kaarten. Gratis, 20 vragen per dag.', 'Tag cards with @ and pick them from the list \u2014 the judge only reads tagged cards. Free, 20 questions a day.')}</p></div>`;
+      <div class="cj-hero"><span class="cj-ico">${ICONS.gavel}</span><h3>${T('Vraag de AI-judge', 'Ask AI judge')}</h3></div>`;
     body.scrollTop = 0;
     // no scrolling on the empty page: drop examples from the top until it fits
     requestAnimationFrame(()=>{
@@ -8343,7 +8386,10 @@ function openCROverlay(startMode){
   el.addEventListener('click', (e)=>{
     if(e.target.closest('#crOpenRules')){ openRules(); return; }
     const ex = e.target.closest('[data-cjex]');
-    if(ex){ q.value = ex.dataset.cjex; setCount(); paintQ(null); askJudge(); return; }
+    if(ex){
+      (ex.dataset.cjtags || '').split('|').filter(Boolean).forEach(n=>{ if(picked.indexOf(n) < 0) picked.push(n); });
+      q.value = ex.dataset.cjex; setCount(); paintQ(null); askJudge(); return;
+    }
     const jc = e.target.closest('[data-jcard]');
     if(jc){ judgeOpenCard(jc.dataset.jcard); return; }
     const wt = e.target.closest('[data-cjwhy]');
@@ -8489,6 +8535,17 @@ function openCROverlay(startMode){
     try{ q.setSelectionRange(end, end); }catch(err){}
     paintQ(null);
   });
+  // a one-button notice inside the judge page (the house confirm sits under it)
+  const judgeNotice = (msg)=>{
+    el.querySelector('.cj-notice')?.remove();
+    const n = document.createElement('div');
+    n.className = 'cj-notice';
+    n.innerHTML = `<div class="deckpick" role="alertdialog"><div class="iac-ico">${ICONS.gavel}</div><div class="iac-msg">${escapeHtml(msg)}</div><button type="button" class="primary-btn" id="cjNoticeOk" style="width:100%;margin:14px 0 0;">OK</button></div>`;
+    el.appendChild(n);
+    const shut = ()=>n.remove();
+    n.querySelector('#cjNoticeOk').addEventListener('click', shut);
+    n.addEventListener('click', (e)=>{ if(e.target === n) shut(); });
+  };
   let judgeBusy = false;
   const askJudge = async ()=>{
     const NLj = appLang() === 'nl';
@@ -8509,7 +8566,10 @@ function openCROverlay(startMode){
     const res = await judgeAsk({ q: query, lang: NLj ? 'nl' : 'en', cards: g.cards, rules: g.rules.map(r=>({ n: r.n, t: r.t })), device: judgeDevice() });
     judgeBusy = false;
     if(!document.getElementById('crOverlay') || mode !== 'judge') return;
-    if(res && typeof res.left === 'number') judgeLeftSet(res.left);
+    if(res && typeof res.left === 'number'){
+      judgeLeftSet(res.left);
+      if(res.left === 5) judgeNotice(NLj ? 'Nog 5 vragen voor vandaag. Morgen kun je er weer 20 stellen.' : '5 questions left for today. Tomorrow you get 20 again.');
+    }
     if(res && res.error === 'limit') judgeLeftSet(0);
     setCount();
     if(res && res.ok){ res._cards = g.cards.map(k=>k.name); res._read = g.rules; body.innerHTML = judgeAnswerHtml(res, rules, query, NLj); body.scrollTop = 0; return; }
