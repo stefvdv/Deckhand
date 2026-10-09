@@ -26026,7 +26026,8 @@ function openFeedbackSheet(){
   });
   setTimeout(()=>{ try{ msg.focus(); }catch(e){} }, 60);
 }
-document.addEventListener('click', (e)=>{ if(e.target.closest && e.target.closest('#feedbackBtn')){ e.stopPropagation(); openFeedbackSheet(); } });
+// About's button and the small one under the credits in Extras
+document.addEventListener('click', (e)=>{ if(e.target.closest && e.target.closest('#feedbackBtn, [data-feedback]')){ e.stopPropagation(); openFeedbackSheet(); } });
 /* ---- The Android app keeps itself current ----
    APK_LATEST is the Deckhand.apk that sits next to this page on the site:
    raise it whenever a new APK goes into the repo. Inside an older app the
@@ -26376,6 +26377,7 @@ function settingsPageHtml(){
     <p class="hint" id="appFootNote" style="text-align:center;line-height:1.45;font-size:11px;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
       ${CHANGELOG_HISTORY.length ? `<button type="button" class="xt-mini" id="changelogBtn">${inlIco('spark', 14)}${T('Wat is nieuw', 'What\u2019s new')}</button>
       <div id="changelogBody" class="acc-down xt-body cl-month" data-xt-title="${T('Wat is nieuw', 'What\u2019s new')}" hidden></div>` : ''}
+      <button type="button" class="xt-mini" id="footFeedbackBtn" data-feedback>${inlIco('edit', 14)}${T('Stuur feedback', 'Send feedback')}</button>
     </div>
     <div class="settings-section">
       <div class="settings-row xt-tile" id="aboutRow" style="cursor:pointer;"><span class="xt-ico">${ICONS.info}</span><div class="l1">${T('Over Deckhand', 'About Deckhand')}</div></div>
