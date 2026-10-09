@@ -6146,17 +6146,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.33';
+const APP_VERSION = '1.34';
 const CHANGELOG_NOTES = {
   en: [
-    'Rules: ask the judge (AI, free)',
-    'Tag cards with @ in your question',
-    'Every cited rule checked for real'
+    'Judge finds named cards without @',
+    'Judge reads the key rules first',
+    'Answer shows which cards were read'
   ],
   nl: [
-    'Regels: vraag de judge (AI, gratis)',
-    'Tag kaarten met @ in je vraag',
-    'Elke geciteerde regel gecontroleerd'
+    'Judge vindt kaartnamen zonder @',
+    'Judge leest eerst de kernregels',
+    'Antwoord toont welke kaarten gelezen'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6240,10 +6240,10 @@ function tourSteps(){
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
         ? `<p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
-           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (die klappen naar beneden open, om rustig te lezen), de <strong>officiële regels</strong> (Comprehensive Rules, met <strong>⚖ vraag de judge</strong>: typ je vraag, tag kaarten met @, en een AI antwoordt met de regels erbij), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
+           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (die klappen naar beneden open, om rustig te lezen), de <strong>officiële regels</strong> (Comprehensive Rules, met <strong>⚖ vraag de judge</strong>: typ je vraag en noem de kaarten (of tag ze met @), en een AI antwoordt met de regels erbij), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
            <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Zet je hier de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal onderaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
         : `<p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
-           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (they unfold downward, for an easy read), the complete <strong>Comprehensive Rules</strong> (with <strong>⚖ ask the judge</strong>: type your question, tag cards with @, and an AI answers with the rules attached), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
+           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (they unfold downward, for an easy read), the complete <strong>Comprehensive Rules</strong> (with <strong>⚖ ask the judge</strong>: type your question and name the cards (or tag them with @), and an AI answers with the rules attached), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
            <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. Turn on <strong>spoiler alerts</strong> here (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very bottom, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
   ];
 }
@@ -7968,6 +7968,66 @@ function judgeTagMatches(fragment, names, limit){
   }
   return Array.from(new Set(starts.concat(inside))).slice(0, limit || 6);
 }
+/* 1.34: card names written plainly ("ketramose", "sol ring") are found too.
+   idx = { full: Map(norm name -> name), short: Map(norm part before the
+   comma -> name, only when unique), common: Set of words in the rules }.
+   A name made only of rules words ("Cast Out", "Exile") is NOT matched from
+   plain text -- it would fire on ordinary questions; @ still finds those. */
+function judgeNameIndex(names, rules){
+  const full = new Map(), short = new Map(), dup = new Set(), common = new Set();
+  (rules || []).forEach(r=>String(r.t || '').toLowerCase().split(/[^a-z]+/).forEach(w=>{ if(w) common.add(w); }));
+  (names || []).forEach(([k, n])=>{
+    if(!full.has(k)) full.set(k, n);
+    const cut = n.indexOf(',');
+    if(cut > 0){
+      const sk = scanNorm(n.slice(0, cut));
+      if(sk.length >= 5){ if(short.has(sk) && short.get(sk) !== n) dup.add(sk); else short.set(sk, n); }
+    }
+  });
+  dup.forEach(k=>short.delete(k));
+  return { full, short, common };
+}
+function judgeFindCards(text, idx){
+  if(!idx) return [];
+  const w = scanNorm(text).split(' ').filter(Boolean);
+  const used = new Array(w.length).fill(false), out = [];
+  const plainOk = (words)=>words.some(x=>x.length >= 3 && !idx.common.has(x));
+  for(let len = Math.min(8, w.length); len >= 1; len--){
+    for(let i = 0; i + len <= w.length; i++){
+      if(used.slice(i, i + len).some(Boolean)) continue;
+      const words = w.slice(i, i + len), key = words.join(' ');
+      let hit = idx.full.get(key) || null;
+      if(!hit && idx.short.has(key)) hit = idx.short.get(key);
+      if(!hit || !plainOk(words)) continue;
+      if(len === 1 && (words[0].length < 5)) continue;
+      if(out.indexOf(hit) < 0) out.push(hit);
+      for(let k = i; k < i + len; k++) used[k] = true;
+    }
+  }
+  return out.slice(0, 5);
+}
+/* The rules a judge always wants at hand for these concepts -- the search
+   by words alone does not reliably find them. Only numbers that exist in
+   the loaded rules are used. */
+const JUDGE_CONCEPTS = [
+  [/\btokens?\b/i, ['111.1', '111.7', '108.2']],
+  [/\bcards?\b/i, ['108.2', '108.3']],
+  [/\bexile/i, ['406.1', '406.3']],
+  [/\b(whenever|when|trigger)/i, ['603.2', '603.6', '603.10']],
+  [/\b(dies|die|died|leaves? the battlefield)\b/i, ['700.4', '603.6c', '603.10a']],
+  [/\bcounters?\b/i, ['122.1']],
+  [/\b(copy|copies|clone)\b/i, ['707.2']],
+  [/\b(layer|loses? all abilities|becomes? a)\b/i, ['613.1']],
+  [/\btrample\b/i, ['702.19b', '702.19c']],
+  [/\b(state-based|legend rule)\b/i, ['704.3', '704.5j']],
+  [/\b(replace|instead)\b/i, ['614.1']],
+  [/\b(stack|respond|in response)\b/i, ['405.1', '117.3']]
+];
+function judgeConceptRules(text, rules){
+  const by = new Map((rules || []).map(r=>[r.n, r])), out = [];
+  JUDGE_CONCEPTS.forEach(([re, nums])=>{ if(re.test(text)) nums.forEach(n=>{ const r = by.get(n); if(r && out.indexOf(r) < 0) out.push(r); }); });
+  return out;
+}
 // The cards tagged in the text: every "@Name" whose name was picked.
 function judgeTagsIn(text, picked){
   return (picked || []).filter(n=>String(text || '').includes('@' + n));
@@ -7994,8 +8054,12 @@ async function judgeGather(q, tagged, rules){
   // the question without the card names, then each card's own words
   let plain = String(q || '');
   (tagged || []).forEach(n=>{ plain = plain.split('@' + n).join(' '); });
+  // names written plainly go too, so their words do not steer the rule search
+  const nw = new Set((tagged || []).flatMap(n=>scanNorm(n).split(' ')));
+  if(nw.size) plain = scanNorm(plain).split(' ').filter(x=>!nw.has(x)).join(' ');
   const pool = new Map();
   const add = (list)=>list.forEach(r=>{ if(!pool.has(r.n)) pool.set(r.n, r); });
+  add(judgeConceptRules(q + ' ' + cards.map(k=>k.oracle).join(' '), rules));
   add(crSearch(rules, plain, 22));
   cards.forEach(k=>add(crSearch(rules, (k.type + ' ' + k.oracle).slice(0, 400), 7)));
   return { cards, rules: Array.from(pool.values()).slice(0, 36) };
@@ -8024,7 +8088,9 @@ function judgeAnswerHtml(res, rules, q, NL){
   const v = judgeVerify(res.cites, rules);
   const meta = (NL ? 'AI-antwoord' : 'AI answer') + (res.cached ? (NL ? ' · eerder gesteld' : ' · asked before') : '')
     + (res.confident === false ? (NL ? ' · de AI twijfelt' : ' · the AI is not sure') : '')
-    + ' — ' + (NL ? 'de regels hieronder zijn de officiële tekst; die gaat altijd voor.' : 'the rules below are the official text; they always win.');
+    + ' — ' + (NL ? 'de regels hieronder zijn de officiële tekst; die gaat altijd voor.' : 'the rules below are the official text; they always win.')
+    + (res._cards && res._cards.length ? ' ' + (NL ? 'Gelezen kaarten: ' : 'Cards read: ') + res._cards.join(', ') + '.' : ' ' + (NL ? 'Geen kaart herkend \u2014 tag kaarten met @.' : 'No card recognised \u2014 tag cards with @.'))
+    + (res.model ? ' (' + res.provider + ' · ' + res.model + ')' : '');
   return `<div class="cja" data-notr><div class="cja-a">${lnk(res.answer)}</div><div class="cja-meta">⚖ ${escapeHtml(meta)}</div></div>`
     + (res.reasoning ? `<div class="cja-why" data-notr>${lnk(res.reasoning)}</div>` : '')
     + (v.ok.length || v.bad.length ? `<div class="cja-h">${NL ? 'Geciteerde regels' : 'Rules cited'}</div>` : '')
@@ -8150,12 +8216,17 @@ function openCROverlay(){
     try{ q.blur(); }catch(e){}
     body.innerHTML = `<div class="status" style="margin:16px 0;"><div class="spinner"></div>${NLj ? 'De judge leest de regels\u2026' : 'The judge is reading the rules\u2026'}</div><div class="cja-q">\u201c${escapeHtml(query)}\u201d</div>`;
     body.scrollTop = 0;
-    const tagged = judgeTagsIn(query, picked);
+    let tagged = judgeTagsIn(query, picked);
+    try{
+      if(!state._judgeIdx) state._judgeIdx = judgeNameIndex(await scanNameList(), rules);
+      judgeFindCards(query.replace(/@/g, ' '), state._judgeIdx).forEach(n=>{ if(tagged.indexOf(n) < 0) tagged.push(n); });
+    }catch(e){}
+    tagged = tagged.slice(0, 5);
     const g = await judgeGather(query, tagged, rules);
     const res = await judgeAsk({ q: query, lang: NLj ? 'nl' : 'en', cards: g.cards, rules: g.rules.map(r=>({ n: r.n, t: r.t })), device: judgeDevice() });
     judgeBusy = false;
     if(!document.getElementById('crOverlay')) return;
-    if(res && res.ok){ body.innerHTML = judgeAnswerHtml(res, rules, query, NLj); body.scrollTop = 0; return; }
+    if(res && res.ok){ res._cards = g.cards.map(k=>k.name); body.innerHTML = judgeAnswerHtml(res, rules, query, NLj); body.scrollTop = 0; return; }
     // no judge: say why, and show what the app found itself
     const why = res && res.error === 'limit' ? (NLj ? `Je hebt vandaag je ${res.limit || ''} vragen aan de judge gesteld. Morgen kan het weer. Hieronder wat de regels zelf zeggen.` : `You have asked the judge your ${res.limit || ''} questions for today. More tomorrow. Below, what the rules themselves say.`)
       : res && res.error === 'nokey' ? (NLj ? 'De judge is nog niet ingesteld. Hieronder wat de regels zelf zeggen.' : 'The judge is not set up yet. Below, what the rules themselves say.')
