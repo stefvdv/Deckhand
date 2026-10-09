@@ -2058,7 +2058,19 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 #crOverlay{position:fixed;inset:0;z-index:9600;background:var(--ink);display:flex;flex-direction:column;max-width:none;}
 .cr-head{display:flex;align-items:center;gap:10px;padding:12px 14px 6px;}
 .cr-title{font-family:'Cinzel',serif;font-size:17px;color:var(--brass);letter-spacing:.04em;}
-.cr-bar{display:flex;gap:8px;padding:8px 14px 10px;}
+.cr-bar{display:flex;gap:8px;padding:8px 14px 10px;position:relative;}
+/* 1.33: the judge */
+.cr-judge{flex:none;width:auto;padding:0 14px;font-size:18px;}
+.cr-tagpop{position:absolute;left:14px;right:14px;bottom:calc(100% + 4px);z-index:20;display:flex;flex-direction:column-reverse;max-height:240px;overflow-y:auto;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
+.cr-tagpop[hidden]{display:none;}
+.cr-tagpop button{flex:none;text-align:left;padding:10px 12px;background:none;border:none;border-top:1px solid var(--line);color:var(--ink-text);font-size:14px;cursor:pointer;}
+.cr-tagpop button:last-child{border-top:none;}
+.cja{margin:8px 8px 4px;padding:12px 14px;border:2px solid var(--brass);border-radius:12px;background:var(--ink-2);}
+.cja-a{font-size:17px;font-weight:700;line-height:1.35;color:var(--ink-text);}
+.cja-meta{margin-top:8px;font-size:12px;line-height:1.4;color:var(--sub-text);}
+.cja-why{margin:6px 12px;font-size:14px;line-height:1.55;color:var(--ink-text);}
+.cja-q{margin:12px 12px 4px;font-size:13.5px;font-style:italic;color:var(--sub-text);}
+.cja-h{margin:10px 12px 2px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sub-text);}
 .cr-bar input{flex:1;background:var(--field);border:1.5px solid var(--field-line);border-radius:8px;color:var(--ink-text);padding:10px 12px;font-size:15px;min-width:0;}
 #crBody{padding:0 6px 30px;}
 .cr-rule{display:flex;gap:10px;padding:10px 10px;border-bottom:2px solid var(--line);}
@@ -6134,15 +6146,17 @@ const LS_PREFIX = 'admiral_app:';
    NUMBERING (Stef, 4 Oct 2026, from 1.0 on): a small update adds one after
    the dot (1.0 -> 1.1 -> 1.2), a big one goes to the next whole number and
    resets the dot (1.8 -> 2.0). Only ever compared for equality. */
-const APP_VERSION = '1.32';
+const APP_VERSION = '1.33';
 const CHANGELOG_NOTES = {
   en: [
-    'Search: no explanation text',
-    'Deck bar sits right above search'
+    'Rules: ask the judge (AI, free)',
+    'Tag cards with @ in your question',
+    'Every cited rule checked for real'
   ],
   nl: [
-    'Zoeken: geen uitlegtekst meer',
-    'Deckbalk staat direct boven zoeken'
+    'Regels: vraag de judge (AI, gratis)',
+    'Tag kaarten met @ in je vraag',
+    'Elke geciteerde regel gecontroleerd'
   ]
 };
 /* ---------- Guided tour (first run + replay from Extras) ----------
@@ -6226,10 +6240,10 @@ function tourSteps(){
       t: NL ? '⚙ Extra\u2019s' : '⚙ Extras',
       b: NL
         ? `<p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
-           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (die klappen naar beneden open, om rustig te lezen), de <strong>officiële regels</strong> (Comprehensive Rules), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
+           <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling; levens, poison en commander damage tonen even −N/+N), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats (die klappen naar beneden open, om rustig te lezen), de <strong>officiële regels</strong> (Comprehensive Rules, met <strong>⚖ vraag de judge</strong>: typ je vraag, tag kaarten met @, en een AI antwoordt met de regels erbij), <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
            <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. In de Android-app zie je hier ook je app-versie, en een nieuwe versie installeer je met één tik. Zet je hier de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan laat de melding de nieuwste kaarten zelf zien; is het er één, dan opent een tik die kaart. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal onderaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame.</p>`
         : `<p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
-           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (they unfold downward, for an easy read), the complete <strong>Comprehensive Rules</strong>, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
+           <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout; life, poison and commander damage flash −N/+N), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats (they unfold downward, for an easy read), the complete <strong>Comprehensive Rules</strong> (with <strong>⚖ ask the judge</strong>: type your question, tag cards with @, and an AI answers with the rules attached), <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
            <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. In the Android app you also see your app version here, and a new version installs with one tap. Turn on <strong>spoiler alerts</strong> here (every card, per 5 or per 10) and the notification shows the newest cards themselves; when it is just one, a tap opens that card. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very bottom, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads.</p>` }
   ];
 }
@@ -7937,6 +7951,87 @@ function crRuleHtml(r, toks){
   t = t.replace(/\b(\d{3}\.\d+[a-z]?|\d{3})\b(?!<)/g, (m)=>`<button class="cr-jump" data-crjump="${m}">${m}</button>`);
   return `<div class="cr-rule"><div class="cr-num">${escapeHtml(r.n)}</div><div class="cr-txt">${t}</div></div>`;
 }
+/* ---- 1.33: Ask the judge ----
+   The app does the finding (rules from its own CR search, oracle text and
+   rulings of the tagged cards from its own card database); a free AI service
+   behind /.netlify/functions/judge only does the reasoning. Every rule number
+   it cites is checked against the real CR on the phone. */
+// "@sol ri" at the caret -> the names to offer (local card database)
+function judgeTagMatches(fragment, names, limit){
+  const q = scanNorm(fragment);
+  if(q.length < 2 || !names) return [];
+  const starts = [], inside = [];
+  for(const [k, n] of names){
+    if(k.startsWith(q)) starts.push(n);
+    else if(inside.length < 40 && k.includes(q)) inside.push(n);
+    if(starts.length >= (limit || 6)) break;
+  }
+  return Array.from(new Set(starts.concat(inside))).slice(0, limit || 6);
+}
+// The cards tagged in the text: every "@Name" whose name was picked.
+function judgeTagsIn(text, picked){
+  return (picked || []).filter(n=>String(text || '').includes('@' + n));
+}
+// Rule numbers the AI cited -> the real rules, and the ones that do not exist.
+function judgeVerify(cites, rules){
+  const by = new Map((rules || []).map(r=>[r.n, r]));
+  const ok = [], bad = [];
+  (cites || []).forEach(c=>{ const r = by.get(String(c)); if(r) ok.push(r); else bad.push(String(c)); });
+  return { ok, bad };
+}
+async function judgeGather(q, tagged, rules){
+  const cards = [];
+  for(const nm of (tagged || []).slice(0, 5)){
+    let oracle = '', type = '';
+    try{ const c = await bulkCardByName(nm); if(c){ oracle = c.ot || ''; type = c.tl || ''; } }catch(e){}
+    if(!oracle){
+      try{ const full = await scanCardFor(nm); if(full){ type = full.type_line || type; oracle = full.oracle_text || (full.card_faces || []).map(f=>f.name + ': ' + (f.oracle_text || '')).join('\n'); } }catch(e){}
+    }
+    let rulings = [];
+    try{ const r = await bulkRulingsFor({ name: nm }); if(Array.isArray(r)) rulings = r.map(x=>x.c).filter(Boolean).slice(0, 10); }catch(e){}
+    cards.push({ name: nm, type, oracle, rulings });
+  }
+  // the question without the card names, then each card's own words
+  let plain = String(q || '');
+  (tagged || []).forEach(n=>{ plain = plain.split('@' + n).join(' '); });
+  const pool = new Map();
+  const add = (list)=>list.forEach(r=>{ if(!pool.has(r.n)) pool.set(r.n, r); });
+  add(crSearch(rules, plain, 22));
+  cards.forEach(k=>add(crSearch(rules, (k.type + ' ' + k.oracle).slice(0, 400), 7)));
+  return { cards, rules: Array.from(pool.values()).slice(0, 36) };
+}
+function judgeDevice(){
+  try{
+    let id = localStorage.getItem(LS_PREFIX + 'judgeId');
+    if(!id){ id = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem(LS_PREFIX + 'judgeId', id); }
+    return id;
+  }catch(e){ return ''; }
+}
+async function judgeAsk(payload){
+  const ctl = ('AbortController' in window) ? new AbortController() : null;
+  const t = setTimeout(()=>{ try{ ctl && ctl.abort(); }catch(e){} }, 40000);
+  try{
+    const res = await fetch('/.netlify/functions/judge', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: ctl ? ctl.signal : undefined });
+    let j = null; try{ j = await res.json(); }catch(e){}
+    return j || { ok: false, error: 'down' };
+  }catch(e){ return { ok: false, error: 'offline' }; }
+  finally{ clearTimeout(t); }
+}
+// The judge's answer, bottom-up for #crBody (column-reverse: DOM-first = foot).
+function judgeAnswerHtml(res, rules, q, NL){
+  const lnk = (txt)=>escapeHtml(txt).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')
+    .replace(/\b(\d{3}\.\d+[a-z]?)\b/g, (m)=>`<button class="cr-jump" data-crjump="${m}">${m}</button>`);
+  const v = judgeVerify(res.cites, rules);
+  const meta = (NL ? 'AI-antwoord' : 'AI answer') + (res.cached ? (NL ? ' · eerder gesteld' : ' · asked before') : '')
+    + (res.confident === false ? (NL ? ' · de AI twijfelt' : ' · the AI is not sure') : '')
+    + ' — ' + (NL ? 'de regels hieronder zijn de officiële tekst; die gaat altijd voor.' : 'the rules below are the official text; they always win.');
+  return `<div class="cja" data-notr><div class="cja-a">${lnk(res.answer)}</div><div class="cja-meta">⚖ ${escapeHtml(meta)}</div></div>`
+    + (res.reasoning ? `<div class="cja-why" data-notr>${lnk(res.reasoning)}</div>` : '')
+    + (v.ok.length || v.bad.length ? `<div class="cja-h">${NL ? 'Geciteerde regels' : 'Rules cited'}</div>` : '')
+    + v.ok.map(r=>crRuleHtml(r, [])).join('')
+    + v.bad.map(n=>`<div class="cr-rule"><div class="cr-num">⚠ ${escapeHtml(n)}</div><div class="cr-txt">${NL ? 'Deze regel bestaat niet in de officiële regels \u2014 dat deel van het antwoord is niet te controleren.' : 'This rule does not exist in the official rules \u2014 that part of the answer cannot be checked.'}</div></div>`).join('')
+    + `<div class="cja-q" data-notr>\u201c${escapeHtml(q)}\u201d</div>`;
+}
 function openCROverlay(){
   document.getElementById('crOverlay')?.remove();
   const el = document.createElement('div');
@@ -7949,7 +8044,9 @@ function openCROverlay(){
     ${overlayCapHtml(NL ? 'Officiële regels' : 'Comprehensive Rules')}
     <div id="crBody"><div class="empty-note" style="padding:14px;">${NL ? 'Regels laden\u2026' : 'Loading the rules\u2026'}</div></div>
     <div class="cr-bar">
-      <input id="crQ" type="search" placeholder="${NL ? 'Vraag, woorden of regel (601.2)\u2026' : 'Question, words or rule (601.2)\u2026'}" autocomplete="off">
+      <input id="crQ" type="search" placeholder="${NL ? 'Vraag, woorden of regel (601.2)\u2026 @ voor een kaart' : 'Question, words or rule (601.2)\u2026 @ for a card'}" autocomplete="off">
+      <button type="button" class="ghost-btn cr-judge" id="crJudge" title="${NL ? 'Vraag de judge' : 'Ask the judge'}" aria-label="${NL ? 'Vraag de judge' : 'Ask the judge'}">⚖</button>
+      <div class="cr-tagpop" id="crTagPop" hidden></div>
     </div>
     ${overlayNavHtml()}`;
   document.body.appendChild(el);
@@ -8012,7 +8109,63 @@ function openCROverlay(){
     const j = e.target.closest('[data-crjump]');
     if(j){ q.value = j.dataset.crjump; run(); }
   });
-  q.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); run(); } });
+  q.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); tagPop.hidden = true; run(); } });
+  // ---- 1.33: @-tags and the judge ----
+  const tagPop = el.querySelector('#crTagPop');
+  const picked = [];
+  q.addEventListener('input', async ()=>{
+    const before = q.value.slice(0, q.selectionStart == null ? q.value.length : q.selectionStart);
+    const m = before.match(/@([^@\n]{2,40})$/);
+    if(!m){ tagPop.hidden = true; return; }
+    const names = await scanNameList();
+    const hits = judgeTagMatches(m[1], names, 6);
+    if(!hits.length){ tagPop.hidden = true; return; }
+    // column-reverse: the best match first in the DOM = nearest the field
+    tagPop.innerHTML = hits.map(n=>`<button type="button" data-tagname="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('');
+    tagPop.hidden = false;
+  });
+  tagPop.addEventListener('click', (e)=>{
+    const b = e.target.closest('[data-tagname]');
+    if(!b) return;
+    const name = b.dataset.tagname;
+    const pos = q.selectionStart == null ? q.value.length : q.selectionStart;
+    const before = q.value.slice(0, pos).replace(/@([^@\n]{2,40})$/, '@' + name + ' ');
+    q.value = before + q.value.slice(pos);
+    if(picked.indexOf(name) < 0) picked.push(name);
+    tagPop.hidden = true;
+    q.focus();
+    try{ q.setSelectionRange(before.length, before.length); }catch(err){}
+  });
+  let judgeBusy = false;
+  const askJudge = async ()=>{
+    const NLj = appLang() === 'nl';
+    const query = q.value.trim();
+    tagPop.hidden = true;
+    if(query.length < 4){ toast(NLj ? 'Typ eerst je vraag.' : 'Type your question first.'); q.focus(); return; }
+    if(judgeBusy) return;
+    const rules = state._cr || await ensureCR();
+    if(!rules) return;
+    if(!state._crqArmed){ state._crqArmed = true; pushOverlay('crq', crClearStep); }
+    judgeBusy = true;
+    try{ q.blur(); }catch(e){}
+    body.innerHTML = `<div class="status" style="margin:16px 0;"><div class="spinner"></div>${NLj ? 'De judge leest de regels\u2026' : 'The judge is reading the rules\u2026'}</div><div class="cja-q">\u201c${escapeHtml(query)}\u201d</div>`;
+    body.scrollTop = 0;
+    const tagged = judgeTagsIn(query, picked);
+    const g = await judgeGather(query, tagged, rules);
+    const res = await judgeAsk({ q: query, lang: NLj ? 'nl' : 'en', cards: g.cards, rules: g.rules.map(r=>({ n: r.n, t: r.t })), device: judgeDevice() });
+    judgeBusy = false;
+    if(!document.getElementById('crOverlay')) return;
+    if(res && res.ok){ body.innerHTML = judgeAnswerHtml(res, rules, query, NLj); body.scrollTop = 0; return; }
+    // no judge: say why, and show what the app found itself
+    const why = res && res.error === 'limit' ? (NLj ? `Je hebt vandaag je ${res.limit || ''} vragen aan de judge gesteld. Morgen kan het weer. Hieronder wat de regels zelf zeggen.` : `You have asked the judge your ${res.limit || ''} questions for today. More tomorrow. Below, what the rules themselves say.`)
+      : res && res.error === 'nokey' ? (NLj ? 'De judge is nog niet ingesteld. Hieronder wat de regels zelf zeggen.' : 'The judge is not set up yet. Below, what the rules themselves say.')
+      : res && res.error === 'offline' ? (NLj ? 'Geen verbinding met de judge. Hieronder wat de regels zelf zeggen.' : 'No connection to the judge. Below, what the rules themselves say.')
+      : (NLj ? 'De judge is even niet bereikbaar. Hieronder wat de regels zelf zeggen.' : 'The judge cannot be reached right now. Below, what the rules themselves say.');
+    const toks = crTokens(query);
+    body.innerHTML = `<p class="hint" style="margin:4px 12px 8px;">⚠ ${escapeHtml(why)}</p>` + g.rules.slice(0, 14).map(r=>crRuleHtml(r, toks)).join('');
+    body.scrollTop = 0;
+  };
+  el.querySelector('#crJudge').addEventListener('click', askJudge);
   ensureCR().then(rules=>{
     if(!document.getElementById('crOverlay')) return;
     if(!rules){ body.innerHTML = `<div class="empty-note" style="padding:14px;">${appLang() === 'nl' ? 'De regels konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw \u2014 na de eerste keer blijven ze een week offline beschikbaar.' : 'The rules service could not be reached. Check your connection and try again — after the first load they stay available offline for a week.'}</div>`; return; }
@@ -9157,6 +9310,8 @@ function translateTree(root){
   while((n = walker.nextNode())){
     const p = n.parentNode && n.parentNode.nodeName;
     if(p === 'SCRIPT' || p === 'STYLE' || p === 'INPUT' || p === 'TEXTAREA') continue;
+    // 1.33: text written by someone else (the judge's answer) stays as written
+    if(n.parentElement && n.parentElement.closest('[data-notr]')) continue;
     const nv = trText(n.nodeValue, lang);
     if(nv != null && nv !== n.nodeValue) n.nodeValue = nv;
   }
