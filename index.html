@@ -92,6 +92,15 @@ html[data-main="G"]{--main-lt:#A1CEA1;--main-dk:#123A22;}   /* was #9CCB9C: no r
 html[data-side="W"]{--pop-bg:#F3EACF;--pop-line:#CBB98A;--field:#F4F1E3;--field-line:#CBB98A;--sel-rim:var(--panel-brass-dim);--plate-ink:var(--main-dk);--icon-pl:var(--main-dk);--m1:#C9B98A;--m2:#A8925C;--m3:#6E5C34;--m4:#B8A878;--m5:#8A784A;--panel-brass:#EFE2B8;--brass:#A8925C;--brass-dim:#6E5C34;--field-line:#8F7842;--pop-line:#8F7842;--panel-line:#8A7440;--panel-brass-dim:#55420F;--brass-glow:color-mix(in srgb, var(--brass) 14%, transparent);--line:color-mix(in srgb, var(--brass) 60%, transparent);}
 html[data-side="U"]{--pop-bg:#0A4B7B;--pop-line:#3F87BE;--field:#0A4978;--field-line:#3F87BE;--sel-rim:var(--panel-brass);--plate-ink:color-mix(in srgb, var(--main-lt) 85%, #FFFFFF);--icon-pl:var(--main-lt);--m1:#4E8CBE;--m2:#2E6390;--m3:#14344E;--m4:#3F7CAC;--m5:#1F4E74;--brass:#2E6390;--brass-dim:#1F4666;--brass-glow:color-mix(in srgb, var(--brass) 14%, transparent);--line:color-mix(in srgb, var(--brass) 60%, transparent);--panel-brass:#A6D0EE;--panel-brass-dim:#052236;--panel-brass-glow:color-mix(in srgb, #8FC3E8 14%, transparent);--panel-line:#052236;--field-line:#041D32;--pop-line:#041D32;}
 html[data-side="B"]{--pop-bg:#1D1915;--pop-line:#4A4441;--field:#1B1714;--field-line:#4A4441;--sel-rim:var(--panel-brass);--plate-ink:color-mix(in srgb, var(--main-lt) 85%, #FFFFFF);--icon-pl:var(--main-lt);--m1:#7E766E;--m2:#55504A;--m3:#211D19;--m4:#6A645C;--m5:#3A342E;--brass:#55504A;--brass-dim:#35302B;--brass-glow:color-mix(in srgb, var(--brass) 14%, transparent);--line:color-mix(in srgb, var(--brass) 60%, transparent);--panel-brass:#D6D1CA;--panel-brass-dim:#131111;--panel-brass-glow:color-mix(in srgb, #C9C3BC 14%, transparent);--panel-line:#121110;--field-line:#121110;--pop-line:#121110;}
+/* Dimir (blue page, black side): the black side's GREY accent ramp vanishes on
+   the blue page (Stef, 12 Oct 2026) -- there every accent on the page goes
+   BLACK: rims, pills, banners, "+" buttons, section labels, hairlines. Ink on
+   a black fill stays the light --on-acc. Panels keep their own light accent;
+   Orzhov's cream page keeps the grey (readable there). */
+html[data-main="U"][data-side="B"]{--m1:#2A2522;--m2:#0E0A07;--m3:#000000;--m4:#1C1815;--m5:#070605;--brass:#0E0A07;--brass-dim:#000000;--brass-glow:color-mix(in srgb, #000000 22%, transparent);--line:color-mix(in srgb, #0E0A07 75%, transparent);}
+/* ...but LETTERS in that accent would be as faint in black as in grey on the
+   dark blue: on the page they take the page's own light ink instead. */
+html[data-main="U"][data-side="B"] :is(.home-rule-star, .home-kicker, .section-label, .pin-pill, .pin-pill > button:not(.bk-now), .sr-tile .st-price, .pair-cell .st-price, .cap-note){color:var(--page-ink);}
 html[data-side="R"]{--pop-bg:#98171E;--pop-line:#DA4644;--field:#94161D;--field-line:#DA4644;--sel-rim:var(--panel-brass);--plate-ink:color-mix(in srgb, var(--main-lt) 85%, #FFFFFF);--icon-pl:var(--main-lt);--m1:#C05840;--m2:#8E2E1E;--m3:#4E140C;--m4:#A64432;--m5:#6E2418;--brass:#8E2E1E;--brass-dim:#641E12;--brass-glow:color-mix(in srgb, var(--brass) 14%, transparent);--line:color-mix(in srgb, var(--brass) 60%, transparent);--panel-brass:#F4B6A2;--panel-brass-dim:#45080B;--panel-brass-glow:color-mix(in srgb, #EE9E86 14%, transparent);--panel-line:#40070A;--field-line:#3C0608;--pop-line:#3C0608;}
 html[data-side="G"]{--pop-bg:#00532D;--pop-line:#3B9068;--field:#00512B;--field-line:#3B9068;--sel-rim:var(--panel-brass);--plate-ink:color-mix(in srgb, var(--main-lt) 85%, #FFFFFF);--icon-pl:var(--main-lt);--m1:#4E8A5C;--m2:#2F6E42;--m3:#123A22;--m4:#3F7C50;--m5:#205432;--brass:#2F6E42;--brass-dim:#1F4A2C;--brass-glow:color-mix(in srgb, var(--brass) 14%, transparent);--line:color-mix(in srgb, var(--brass) 60%, transparent);--panel-brass:#B4DAB4;--panel-brass-dim:#002814;--panel-brass-glow:color-mix(in srgb, #9CCB9C 14%, transparent);--panel-line:#002412;--field-line:#00200F;--pop-line:#00200F;}
 html{--gold:#E8BE58;--gold-deep:#8A6A1E;}   /* plain flat gold: page names and gold-faced buttons only */
@@ -2655,14 +2664,20 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
    as the secondary plates stand off the main-coloured bars. The main-role
    aliases are frozen at the html element — custom properties inherit their
    COMPUTED value, so panel-level re-points can't reach them. */
-html{--main-field:var(--ink-2);--main-field-line:var(--line);--main-hl:var(--glow);--main-text:var(--ink-text);--main-sub:var(--sub-text);--main-sub-2:var(--sub-text-2);--main-brass:var(--brass);--main-brass-dim:var(--brass-dim);--main-brass-glow:var(--brass-glow);--main-parchment:var(--parchment);--main-parchment-dim:var(--parchment-dim);}
+html{--main-field:var(--ink-2);--main-field-line:var(--line);--main-hl:var(--glow);--main-text:var(--ink-text);--main-sub:var(--sub-text);--main-sub-2:var(--sub-text-2);--main-brass:var(--brass);--main-brass-dim:var(--brass-dim);--main-brass-glow:var(--brass-glow);--main-parchment:var(--parchment);--main-parchment-dim:var(--parchment-dim);--main-acc-fill:var(--acc-fill);--main-on-acc:var(--on-acc);}
 :is(.panel-card, .settings-section, .adv-panel, #colAdvBox, .dl-cover, .pd-panel, .cselect-panel, .sc-primer, .sc-list, .life-panel, .life-card-v2, .deck-tile, .folder-tile, .pr-rail, .home-fact, .oracle-face, .tag-editor, .appoint-sheet) :is(.ghost-btn, .icon-btn, .dk-tool, .rt-chip, .chip, .col-filter-input, .col-select, .pd-btn, .adv-toggle, .cselect-btn, .cselect-search, .dp-row, .tr-qty button, .edh-rel-chip, .edh-jump, .glog-sel, .glog-num, .glog-chip, .hfm-chip, .sp-jump-btn, .inspire-cta, .appoint-row, .bulk-textarea, select, input, textarea, .seg button, .add-btn){
   --field:var(--main-field);--field-line:var(--main-field-line);--hl:var(--main-hl);
   --ink-text:var(--main-text);--sub-text:var(--main-sub);--sub-text-2:var(--main-sub-2);
   --brass:var(--main-brass);--brass-dim:var(--main-brass-dim);--brass-glow:var(--main-brass-glow);
   --parchment:var(--main-parchment);--parchment-dim:var(--main-parchment-dim);
   --line:var(--main-field-line);
+  /* a chosen seg / chip / button inside a panel is filled with the PAGE accent,
+     so its letters take the page's ink too (was the panel's dark ink: dark on
+     dark, e.g. the language switch in Extras) */
+  --acc-fill:var(--main-acc-fill);--on-acc:var(--main-on-acc);
 }
+/* ...except on a white side: its tan accent reads best with the dark ink */
+html[data-side="W"]{--main-on-acc:var(--panel-brass-dim);}
 :is(.panel-card, .settings-section, .adv-panel, #colAdvBox, .dl-cover, .pd-panel, .cselect-panel, .sc-primer, .sc-list, .life-panel, .life-card-v2, .deck-tile, .folder-tile, .pr-rail, .home-fact, .oracle-face, .tag-editor, .appoint-sheet) :is(.icon-btn, .dk-tool, .banner-tab){
   background-color:var(--main-field);
   background-image:linear-gradient(var(--main-field),var(--main-field)), linear-gradient(var(--brass),var(--brass));
