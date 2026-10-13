@@ -1344,11 +1344,15 @@ img.art-missing::after{
 .art-missing-holder{display:block !important;width:100% !important;}
 .empty-note{color:var(--sub-text);font-size:14px;text-align:center;padding:12px 10px;}
 .status{text-align:center;color:var(--sub-text);font-size:14px;padding:16px;}
-#searchResultsBox > .status:only-child, #browseResults > .status:only-child,
-#bsNameResults > .status:only-child{
+#searchResultsBox > .status:only-child{
   position:fixed;left:50%;top:44%;transform:translate(-50%,-50%);
   width:max-content;max-width:80vw;padding:0;z-index:5;
 }
+/* 1.2: Inspiration -- the results box fills the free space between the cap
+   and the menus while it loads, and the ring sits in its middle: never on the
+   menus, whatever the screen height or the number of menus. */
+.app > main > :is(#browseResults, #bsNameResults):has(> .status:only-child){flex:1 0 auto;display:flex;align-items:center;justify-content:center;}
+:is(#browseResults, #bsNameResults) > .status:only-child{padding:16px 0;}
 /* Set symbols in the set pickers. Scryfall ships them as black SVGs; masking
    instead of filtering means the glyph takes the INK of the label beside it,
    so it is monochrome by construction and never introduces an eighth colour. */
@@ -6278,17 +6282,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.3';
 const CHANGELOG_NOTES = {
   en: [
-    'Leader page: theme shown in the title',
-    'Theme/Kindred ready while loading',
-    'Dimir: black instead of grey'
+    'Leader page keeps your theme choice'
   ],
   nl: [
-    'Leaderpagina: thema in de titel',
-    'Theme/Kindred al kiesbaar bij laden',
-    'Dimir: zwart in plaats van grijs'
+    'Leaderpagina neemt je thema over'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6298,6 +6298,12 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-13';
 const CHANGELOG_HISTORY = [
+  { v: '1.2', d: '2026-10-13',
+    en: ['Inspiration stays put after loading', 'Loading ring clear of the menus'],
+    nl: ['Inspiratie verspringt niet na laden', 'Laadring niet meer over de menu\u2019s'] },
+  { v: '1.1', d: '2026-10-13',
+    en: ['Leader page: theme shown in the title', 'Theme/Kindred ready while loading', 'Dimir: black instead of grey'],
+    nl: ['Leaderpagina: thema in de titel', 'Theme/Kindred al kiesbaar bij laden', 'Dimir: zwart in plaats van grijs'] },
   { v: '1.0', d: '2026-10-09',
     en: ['Deckhand 1.0 \u2014 welcome aboard', 'Send feedback from About Deckhand'],
     nl: ['Deckhand 1.0 \u2014 welkom aan boord', 'Feedback sturen via Over Deckhand'] }
@@ -23820,9 +23826,12 @@ function holdBrowseView(box){
   if(!box || box._holdView || !window.ResizeObserver) return;
   box._holdView = true;
   const se = ()=>document.scrollingElement || document.documentElement;
-  let anc = null, top = 0, raf = 0;
+  let anc = null, top = 0, raf = 0, pickY = 0, atFoot = false;
+  const footGap = ()=>se().scrollHeight - (se().scrollTop + window.innerHeight);
   const pick = ()=>{
     const vh = window.innerHeight;
+    pickY = se().scrollTop;
+    atFoot = footGap() <= 4;
     let best = null, bestB = -Infinity;
     box.querySelectorAll('.sr-grid > *, .section-label').forEach(el=>{
       const r = el.getBoundingClientRect();
@@ -23833,6 +23842,12 @@ function holdBrowseView(box){
   const onScroll = ()=>{ if(raf) return; raf = requestAnimationFrame(()=>{ raf = 0; pick(); }); };
   const ro = new ResizeObserver(()=>{
     if(!box.isConnected){ ro.disconnect(); window.removeEventListener('scroll', onScroll); return; }
+    // 1.2: the page was scrolled since the anchor was taken (the jump to the
+    // foot after loading, or the reader): the old anchor is stale -- putting
+    // it back is what threw the page to Mana Staples halfway up.
+    if(Math.abs(se().scrollTop - pickY) > 1){ pick(); return; }
+    // bottom-up: a reader at the foot stays at the foot while the page grows above
+    if(atFoot){ const g = footGap(); if(g > 0.5) se().scrollTop += g; pick(); return; }
     if(anc && anc.isConnected){
       const dy = anc.getBoundingClientRect().top - top;
       if(Math.abs(dy) > 0.5) se().scrollTop += dy;
@@ -23910,7 +23925,12 @@ function renderColorBrowse(box, key, cmd, keepScroll){
     });
     bindInspJump();
   }
-  if(!keepScroll) scrollToPageFoot();
+  if(!keepScroll){
+    // 1.2: straight to the foot in this very frame -- waiting for the next
+    // frames flashed the top of the list first
+    try{ const se = document.scrollingElement || document.documentElement; se.scrollTop = se.scrollHeight; }catch(e){}
+    scrollToPageFoot();
+  }
 }
 /* ---- Two-commander pairings for a chosen color combination ---- */
 function pairsCacheKey(key){ return key + '::pairs'; }
@@ -23947,7 +23967,8 @@ async function loadEdhrecDeckCounts(key, combo, tagSlug){
   // Re-render only if the pool itself has landed. Firing before that wiped
   // the loading spinner: with pairs already in, the render skipped the
   // still-loading branch and painted the caption over an empty page.
-  if(key === browseKey() && state.browseCache[key]) renderBrowseResults(key);
+  // 1.2: late extras (pairs, deck counts) keep the reader where they are once the list shows
+  if(key === browseKey() && state.browseCache[key]) renderBrowseResults(key, !!document.querySelector('#browseResults .sr-grid'));
 }
 function edhrecDeckCountsFrom(data){
   // Walk the page JSON for anything carrying a name and a num_decks. Partner
@@ -23983,7 +24004,8 @@ async function loadLeaderPairs(key, combo, theme){
     && !isBanned(c)
     && pairAbility(c));
   state.browseCache[pk] = computeLeaderPairs(cands, combo);
-  if(key === browseKey() && state.browseCache[key]) renderBrowseResults(key);
+  // 1.2: late extras (pairs, deck counts) keep the reader where they are once the list shows
+  if(key === browseKey() && state.browseCache[key]) renderBrowseResults(key, !!document.querySelector('#browseResults .sr-grid'));
 }
 function computeLeaderPairs(cands, combo){
   const want = combo === 'c' ? '' : combo.toUpperCase().split('').sort().join('');
@@ -25029,7 +25051,8 @@ function tuneRecoStickyLabels(){
    made while the list still loads (R._pick) counts too. */
 function recoCapTitle(R){
   const base = R.admiral.name + (R.partner ? ' & ' + R.partner.name : '');
-  const sl = R._pick || R.activeThemeSlug || '';
+  // 1.3: the Theme/Kindred chosen on Inspiration (the seed) counts from the start
+  const sl = R._pick || R._seedTheme || R.activeThemeSlug || '';
   if(!sl) return base;
   const t = (R.themes || []).find(x=>x.slug === sl);
   const lab = t ? String(t.label) : String(sl).replace(/-/g, ' ').replace(/\b\w/g, ch=>ch.toUpperCase());
@@ -25052,7 +25075,7 @@ function paintRecoMenus(){
   if(!R || !slot) return;
   const cachedThemes = (state._recoCache[recoCacheKey(R.admiral, R.partner)]||{}).themes;
   const chipList = ((R.themes && R.themes.length) ? R.themes : (cachedThemes||[])).slice();
-  const curSl = R._pick || R.activeThemeSlug || '';
+  const curSl = R._pick || R._seedTheme || R.activeThemeSlug || '';
   if(curSl && !chipList.some(t=>t.slug===curSl)){
     chipList.unshift({ label: curSl.replace(/-/g,' ').replace(/(^|\s)\w/g, ch=>ch.toUpperCase()), slug: curSl, count: 0 });
   }
@@ -25079,7 +25102,9 @@ function paintRecoMenus(){
     const R2 = state.reco; if(!R2) return;
     if(R2.loading || R2._streaming){
       // the list is still on its way: hold the pick, apply it when it lands
+      // (a pick -- "none" too -- replaces the choice brought from Inspiration)
       R2._pick = v || null;
+      R2._seedTheme = null;
       paintRecoMenus();
       const box = document.getElementById('recoBody');
       if(box) box.innerHTML = `<div class="status"><div class="spinner"></div>${R2._pick ? trS('Charting themed recommendations…') : 'Charting recommendations…'}</div>`;
@@ -25602,17 +25627,12 @@ async function _loadRecoPoolOnline(){
           // through: pre-select that same theme chip for this leader. The
           // seed is released FIRST — the themed render itself must never be
           // held back by the seed-pending choke in renderRecoBody.
-          const hadSeed = !!R._seedTheme;
+          // 1.3: the seed itself (Theme, or Kindred: that creature type's own
+          // theme page carries the tribal build) -- not browseSel, which a
+          // "none" picked while loading could not override
+          const seed = R._seedTheme;
           R._seedTheme = null;
-          const tr = state.browseSel && state.browseSel.tribe;
-          const bs = state.browseSel && state.browseSel.theme;
-          if(tr){
-            // Arrived from a Kindred browse: focus this leader's list on that
-            // creature type (its own theme page carries the tribal build).
-            loadRecoTheme(tr);
-          } else if(bs && bs.indexOf('ed:')===0){
-            loadRecoTheme(bs.slice(3));
-          } else if(hadSeed) renderRecoBody();   // seed with no target — repaint the held pool
+          if(seed) loadRecoTheme(seed);
           return;
         }
       }
