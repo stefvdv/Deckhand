@@ -101,6 +101,12 @@ html[data-main="U"][data-side="B"]{--m1:#2A2522;--m2:#0E0A07;--m3:#000000;--m4:#
 /* ...but LETTERS in that accent would be as faint in black as in grey on the
    dark blue: on the page they take the page's own light ink instead. */
 html[data-main="U"][data-side="B"] :is(.home-rule-star, .home-kicker, .section-label, .pin-pill, .pin-pill > button:not(.bk-now), .sr-tile .st-price, .pair-cell .st-price, .cap-note){color:var(--page-ink);}
+/* 1.6 (Stef, 14 Oct 2026): in Dimir the accent is black -- letters that took
+   it were black on the blue page. On the page (not inside a dark panel, where
+   the accent is light) they take the page's own light ink. Generated from
+   every rule that colours text with the accent; :where keeps it weak, so a
+   component's own stronger colour still wins. */
+html[data-main="U"][data-side="B"] :where(.page-cap .cap-note, .save-indicator.saving, .tw-row .tw-eur, .banner-tab.active, .salt-meta, .tw-poprow .tw-eur, .tp-val, .legality.warn .lg-head, .cp-val, .detail-h, .oracle-cost, .tag-chip, .tag-chip button, .cmb-res-btn, .tag-drop-h, .home-logo-txt, .home-rule-star, .hfm-k, .home-kicker, .home-callout, .hf-n, .fleet-stat, .tile-fav, .section-label, .folder-crumb button, .fp-crumb, .br-info, .br-h2, .ci-foil-on, .br-title b, .br-h #brPriceLab, .pp-foil, .b-tab.active, .lg-chip.warn, .deck-meter-row .count, .panel-h, .cat-head .t, .cat-price, .dpb-val, .vg-row .vr-p, .want-in .wi-eur, .ls-tile .ls-p, .leg-chip.res, .dk-tool.active, .dl-winrate b, .dl-leader-cat, .dl-bracket, .bkt-mini, .ar-set, .sc-hero-nm, .sc-byline2 strong, .sc-adm-price, .sr-tile .st-price, .pair-cell .st-price, .pr-vals, .hv-mov, .budget-star .bs-pr, .typal-label, .col-tile .col-bnd, .ci-nav-arrow, #nselPop .cselect-opt.on, .cselect-opt.sel, .tag.dupe, .rank-badge, .curve-n, .rules-text h4, .dr-steps span.on, .dr-dir, .dr-clock, .dr-ring-mid .dr-arrow, .dr-lands b, .dr-p.win, .dr-past b, .dr-champ, .xt-mini, .xt-ico, #pasteDeckFileBtn.fb-lead, .dpp-v, .dpp-eur, .modal-sheet h3, .turn-hub .th-arrow, .turn-hub .th-lbl, .deckpick h4, .pin-pill, .pin-pill button, .cr-title, .cj-hero .cj-ico, .cr-num, .cr-jump, .tr-eur, .dfc-flip.flipped, .edh-jump, .reco-theme-banner, .edh-rel-chip b, .colfold-ico, .trade-verdict.even, .glog-frow .seg button.active, .glog-tag, .glog-line2, .dl60-wr b, .cotd-h, .inspire-cta, .back-h):not(:where(.app > main > .adv-toggle, .app > main > .adv-panel, .app > main > #colAdvBox, .tw-row, .brand-banner #capBack, .brand-banner .ov-back, .oracle-face, .tag-editor, .hfm-chip, .home-fact, .home-hero-banner, .deck-tile, .folder-tile, .ghost-btn, .bulk-textarea, .panel-card, .col-filter-input, .col-select, #bindersPop, #fabMenu, .pd-btn, .pd-panel, .searchbar input, .appoint-sheet, .appoint-row, .pair-btns .add-btn, .sp-jump-btn, .adv-toggle, .cmc-row select, .cmc-row input, .adv-row input[type=text], .adv-row select, .sc-primer, .sc-list, .sr-tile .st-btns .add-btn, .pr-rail, .cselect-btn, .cselect-panel, .cselect-search, .cselect-search input, .bs-row select, .settings-section, .guild-opt, .menu-pop, .toast, .dp-row, .cr-bar input, .tr-qty button, .edh-jump, .edh-rel-chip, .glog-frow .seg button, .glog-sel, .glog-num, .glog-chip, .inspire-cta, .life-card-v2, .life-panel) *){color:var(--page-ink);}
 html[data-side="R"]{--pop-bg:#98171E;--pop-line:#DA4644;--field:#94161D;--field-line:#DA4644;--sel-rim:var(--panel-brass);--plate-ink:color-mix(in srgb, var(--main-lt) 85%, #FFFFFF);--icon-pl:var(--main-lt);--m1:#C05840;--m2:#8E2E1E;--m3:#4E140C;--m4:#A64432;--m5:#6E2418;--brass:#8E2E1E;--brass-dim:#641E12;--brass-glow:color-mix(in srgb, var(--brass) 14%, transparent);--line:color-mix(in srgb, var(--brass) 60%, transparent);--panel-brass:#F4B6A2;--panel-brass-dim:#45080B;--panel-brass-glow:color-mix(in srgb, #EE9E86 14%, transparent);--panel-line:#40070A;--field-line:#3C0608;--pop-line:#3C0608;}
 html[data-side="G"]{--pop-bg:#00532D;--pop-line:#3B9068;--field:#00512B;--field-line:#3B9068;--sel-rim:var(--panel-brass);--plate-ink:color-mix(in srgb, var(--main-lt) 85%, #FFFFFF);--icon-pl:var(--main-lt);--m1:#4E8A5C;--m2:#2F6E42;--m3:#123A22;--m4:#3F7C50;--m5:#205432;--brass:#2F6E42;--brass-dim:#1F4A2C;--brass-glow:color-mix(in srgb, var(--brass) 14%, transparent);--line:color-mix(in srgb, var(--brass) 60%, transparent);--panel-brass:#B4DAB4;--panel-brass-dim:#002814;--panel-brass-glow:color-mix(in srgb, #9CCB9C 14%, transparent);--panel-line:#002412;--field-line:#00200F;--pop-line:#00200F;}
 html{--gold:#E8BE58;--gold-deep:#8A6A1E;}   /* plain flat gold: page names and gold-faced buttons only */
@@ -1169,9 +1175,9 @@ body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 #bindersPop > button:last-child{border-bottom:none;}
 .binder-glyphs{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-right:3px;}
 .binder-glyphs svg{width:14px;height:14px;}
-.vg-card.dl-msel{outline:2.5px solid var(--brass);outline-offset:-2px;border-radius:10px;}
+.vg-card.dl-msel{outline:2.5px solid var(--gold);outline-offset:-2px;border-radius:10px;}
 .vg-card.dl-msel img{filter:brightness(0.72);}
-.vg-card.dl-msel::after{content:'\2713';position:absolute;top:6px;right:6px;z-index:4;width:22px;height:22px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.5);pointer-events:none;}
+.vg-card.dl-msel::after{content:'\2713';position:absolute;top:6px;right:6px;z-index:4;width:22px;height:22px;border-radius:50%;background:var(--gold);color:#241A04;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.5);pointer-events:none;}
 .ls-tile{width:46%;max-width:230px;border:2px solid transparent;border-radius:12px;padding:4px;position:relative;}
 .ls-tile img{width:100%;border-radius:9px;display:block;}
 .ls-noimg{min-height:120px;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border:2px solid var(--line);border-radius:9px;font-size:14px;}
@@ -1526,7 +1532,7 @@ html[data-main="W"] :is(.sr-tile, .pair-cell) .st-meta-row .add-btn svg{color:#2
 /* selectable tiles (admiral recommendation picker) */
 .sr-tile.selectable{cursor:pointer;}
 .sr-tile.selected{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass);}
-.sr-tile .sel-check{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--acc-fill);color:var(--on-acc);font-weight:700;display:none;align-items:center;justify-content:center;font-size:14px;pointer-events:none;}
+.sr-tile .sel-check{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--gold);color:#241A04;box-shadow:0 1px 4px rgba(0,0,0,0.5);font-weight:700;display:none;align-items:center;justify-content:center;font-size:14px;pointer-events:none;}
 .sc-hero{text-align:center;margin:4px 0 10px;}
 .sc-hero img{width:min(64%,240px);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.5);cursor:pointer;aspect-ratio:63/88;background:#0006;}
 .sc-hero-nm{font-family:'Cinzel',serif;font-weight:700;font-size:17px;margin-top:10px;color:var(--brass);}
@@ -2321,7 +2327,7 @@ html:has(#crOverlay){overflow:hidden;}
 .colfold-ico{color:var(--brass);}
 .colfold-ico svg{width:46px;height:46px;display:block;}
 .col-tile.csel{outline:2.5px solid var(--brass);outline-offset:-2px;}
-.csel-mark{position:absolute;top:6px;right:6px;z-index:3;width:20px;height:20px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.5);pointer-events:none;}
+.csel-mark{position:absolute;top:6px;right:6px;z-index:3;width:20px;height:20px;border-radius:50%;background:var(--gold);color:#241A04;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.5);pointer-events:none;}
 /* The selection button TAKES the ＋'s place (it used to sit half over it). */
 body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !important;}
 /* Gold selection buttons: ＋ for one pick, the count itself from two up. */
@@ -6295,17 +6301,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 const CHANGELOG_NOTES = {
   en: [
-    'Search hides cards that aren\u2019t legal',
-    'In the deck? Tap \u2212 to take it out',
-    'Clearer + button on search results'
+    'Selection tick clear in every scheme',
+    'Dimir: no more black text on blue'
   ],
   nl: [
-    'Zoeken toont geen illegale kaarten',
-    'In het deck? Tik \u2212 om te verwijderen',
-    'Duidelijkere +-knop bij zoeken'
+    'Selectievinkje overal goed zichtbaar',
+    'Dimir: geen zwarte tekst meer op blauw'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6315,6 +6319,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-14';
 const CHANGELOG_HISTORY = [
+  { v: '1.5', d: '2026-10-14',
+    en: ['Search hides cards that aren\u2019t legal', 'In the deck? Tap \u2212 to take it out', 'Clearer + button on search results'],
+    nl: ['Zoeken toont geen illegale kaarten', 'In het deck? Tik \u2212 om te verwijderen', 'Duidelijkere +-knop bij zoeken'] },
   { v: '1.4', d: '2026-10-13',
     en: ['Themes load reliably, and faster'],
     nl: ['Thema\u2019s laden betrouwbaar en sneller'] },
