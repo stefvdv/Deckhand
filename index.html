@@ -6301,15 +6301,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 const CHANGELOG_NOTES = {
   en: [
-    'Selection tick clear in every scheme',
-    'Dimir: no more black text on blue'
+    'Inspiration: tap a card for its details',
+    'Inspiration no longer edits your deck'
   ],
   nl: [
-    'Selectievinkje overal goed zichtbaar',
-    'Dimir: geen zwarte tekst meer op blauw'
+    'Inspiratie: tik een kaart voor details',
+    'Inspiratie past je deck niet meer aan'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6317,8 +6317,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-10-14';
+const APP_DATE = '2026-10-15';
 const CHANGELOG_HISTORY = [
+  { v: '1.6', d: '2026-10-14',
+    en: ['Selection tick clear in every scheme', 'Dimir: no more black text on blue'],
+    nl: ['Selectievinkje overal goed zichtbaar', 'Dimir: geen zwarte tekst meer op blauw'] },
   { v: '1.5', d: '2026-10-14',
     en: ['Search hides cards that aren\u2019t legal', 'In the deck? Tap \u2212 to take it out', 'Clearer + button on search results'],
     nl: ['Zoeken toont geen illegale kaarten', 'In het deck? Tik \u2212 om te verwijderen', 'Duidelijkere +-knop bij zoeken'] },
@@ -17763,8 +17766,8 @@ function searchRowHtml(c, d, opts){
         <div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div>
         <span style="display:flex;gap:6px;">
           ${canBeAdmiral ? `<button class="add-btn add-btn-slim" data-admiral="1" data-name="${encodeURIComponent(c.name)}" title="Set as ${fmtName(d)}">${modeGlyph()}</button>` : ''}
-          ${showRm ? `<button class="add-btn add-btn-slim add-btn-rm" data-rm="${encodeURIComponent(c.name)}" title="${trS('Remove from deck')}" aria-label="${trS('Remove from deck')}">\u2212</button>` : ''}
-          ${showAdd ? `<button class="add-btn add-btn-slim" data-name="${encodeURIComponent(c.name)}" title="Add to Deck" ${disabled?'disabled':''}>+</button>` : ''}
+          ${showRm && !opts.noAdd ? `<button class="add-btn add-btn-slim add-btn-rm" data-rm="${encodeURIComponent(c.name)}" title="${trS('Remove from deck')}" aria-label="${trS('Remove from deck')}">\u2212</button>` : ''}
+          ${showAdd && !opts.noAdd ? `<button class="add-btn add-btn-slim" data-name="${encodeURIComponent(c.name)}" title="Add to Deck" ${disabled?'disabled':''}>+</button>` : ''}
         </span>
       </div>
       ${opts.sub ? `<div class="st-decks">${escapeHtml(opts.sub)}</div>` : decksNoteHtml(opts.decks)}
@@ -18343,7 +18346,7 @@ function openCardInfo(card, opts){
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
   }
-  const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
+  const pinned = (state.searchPinnedDeckId && state.screen !== 'browse') ? getDeck(state.searchPinnedDeckId) : null;   // 1.7: not from the loose Inspiration page
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
   // cards (basics etc.) stay on the Add side — only a removable main-deck
   // copy flips the button to Remove.
@@ -18650,8 +18653,9 @@ function wireResultButtons(list, d, refreshFn, opts){
   };
   // d = a specific deck (pinned search, inspiration, browse-with-pin) → direct adds.
   // d = null → every action asks which deck via the popup.
+  const _has = (nm)=>list.some(x=>x.name === nm);   // 1.7: only claim tiles whose card this list holds
   document.querySelectorAll('.add-btn[data-name]:not([data-mb]):not([data-admiral])').forEach(btn=>{
-    if(btn.dataset.w) return; btn.dataset.w='1';
+    if(btn.dataset.w || !_has(decodeURIComponent(btn.dataset.name))) return; btn.dataset.w='1';
     btn.addEventListener('click', ()=>{
       const c = list.find(x=>x.name===decodeURIComponent(btn.dataset.name));
       if(!c) return;
@@ -18678,7 +18682,7 @@ function wireResultButtons(list, d, refreshFn, opts){
     });
   });
   document.querySelectorAll('.add-btn[data-insp]').forEach(btn=>{
-    if(btn.dataset.w) return; btn.dataset.w='1';
+    if(btn.dataset.w || !_has(decodeURIComponent(btn.dataset.name))) return; btn.dataset.w='1';
     btn.addEventListener('click', ()=>{
       const c = list.find(x=>x.name===decodeURIComponent(btn.dataset.name));
       if(!c) return;
@@ -18688,7 +18692,7 @@ function wireResultButtons(list, d, refreshFn, opts){
     });
   });
   document.querySelectorAll('.add-btn[data-mb]').forEach(btn=>{
-    if(btn.dataset.w) return; btn.dataset.w='1';
+    if(btn.dataset.w || !_has(decodeURIComponent(btn.dataset.name))) return; btn.dataset.w='1';
     btn.addEventListener('click', ()=>{
       const c = list.find(x=>x.name===decodeURIComponent(btn.dataset.name));
       if(!c) return;
@@ -18697,7 +18701,7 @@ function wireResultButtons(list, d, refreshFn, opts){
     });
   });
   document.querySelectorAll('.add-btn[data-admiral]').forEach(btn=>{
-    if(btn.dataset.w) return; btn.dataset.w='1';
+    if(btn.dataset.w || !_has(decodeURIComponent(btn.dataset.name))) return; btn.dataset.w='1';
     btn.addEventListener('click', ()=>{
       const c = list.find(x=>x.name===decodeURIComponent(btn.dataset.name));
       if(!c) return;
@@ -18707,7 +18711,8 @@ function wireResultButtons(list, d, refreshFn, opts){
     });
   });
   document.querySelectorAll('.sr-tile img, .sr-row img').forEach(img=>{
-    if(img.dataset.w) return; img.dataset.w = '1';   // wireResultButtons runs repeatedly (per trio, per chunk) — one listener only
+    const _t = img.closest('[data-name]');
+    if(img.dataset.w || (_t && !_has(decodeURIComponent(_t.dataset.name)))) return; img.dataset.w = '1';   // wireResultButtons runs repeatedly (per trio, per chunk) — one listener only
     img.addEventListener('click', ()=>{
     const tile = img.closest('[data-name]');
     const c = tile && list.find(x=>x.name===decodeURIComponent(tile.dataset.name));
@@ -22439,7 +22444,7 @@ async function filterCardsByFormat(cards, fmt, role){
 }
 function filterLeadersByFormat(cards, fmt){ return filterCardsByFormat(cards, fmt, 'leader'); }
 function renderEdhrecSections(box, key, S, keepScroll){
-  const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
+  const pinned = null;   // 1.7: the loose Inspiration page has no tie to any deck
   // EDHREC's lists are Commander play data. Any other format first passes
   // its leaders through that format's rules and ban list; nothing shows
   // until the check is done, so an illegal commander never appears.
@@ -22488,7 +22493,7 @@ function renderEdhrecSections(box, key, S, keepScroll){
   const chunks = [
     section(trS('New') + ' ' + noun, newCmd, {showAdmiralBtn:true}, leaderSub, leaderWire),
     section(trS('Top') + ' ' + noun, topCmd, {showAdmiralBtn:true}, leaderSub, leaderWire)
-  ].concat(secs.map(cs=> section(trS(cs.header), fOkCard(cs.list), {}, synSub, {})));
+  ].concat(secs.map(cs=> section(trS(cs.header), fOkCard(cs.list), {noAdd:true}, synSub, {})));   // 1.7: card tiles: look, no +
   box.innerHTML = `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="edhJump" title="${trS('Jump to section')}">☰</button></div>`
     + chunks.filter(Boolean).reverse().join('')
     + relHtml
@@ -23607,7 +23612,7 @@ async function loadTypal(box, key, keepScroll){
     if(!live) return;
     if(error){ live.innerHTML = `<div class="error-note">Couldn't reach Scryfall. Check your connection and try again.</div>`; return; }
     const pool = results.filter(c=> leaderTypeOk(c) && hasPowerToughness(c) && isNonlandFront(c) && !isBanned(c)).slice(0, 200);
-    const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
+    const pinned = null;   // 1.7: the loose Inspiration page has no tie to any deck
     // Bottom-up (§10a): the grid reads upward, so the caption and the way
     // back ride the FOOT, nearest the thumb — not ten screens up at the
     // head of a 200-tile list. Normal flow column: DOM-last = bottom.
@@ -23765,7 +23770,7 @@ function renderBrowseResults(key, keepScroll){
   const pairsApply = admiralMode && state.browseSel.combo;
   const pairs = pairsApply ? state.browseCache[pairsCacheKey(key)] : undefined;
   const pairsReady = Array.isArray(pairs);
-  const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
+  const pinned = null;   // 1.7: the loose Inspiration page has no tie to any deck
   const wireOpts = admiralMode ? {onCardTap:(c)=>openAdmiralReco(c)} : undefined;
   // Pairs status note — shown only while they can't be blended in yet.
   const pairNote = ()=>{
@@ -23925,7 +23930,9 @@ function holdBrowseView(box){
 /* cmd = { items, tile(it, idx) -> html, after(chunk) } for the commanders. */
 function renderColorBrowse(box, key, cmd, keepScroll){
   holdBrowseView(box);
-  const pinned = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
+  // 1.7: the loose Inspiration page has no tie to any deck (that is what the
+  // deck's own Inspiration button is for) -- no pinned deck here
+  const pinned = null;
   const CAP = 10;
   const shownK = key + '::shown';
   const shown = state.browseCache[shownK] || (state.browseCache[shownK] = {});
@@ -23940,7 +23947,7 @@ function renderColorBrowse(box, key, cmd, keepScroll){
     return { sub: t };
   };
   const cardSec = (id, title, list)=>({ id, title, items: list,
-    html: (part)=>part.map(c=>searchRowHtml(c, pinned, subOf(c))).join(''),
+    html: (part)=>part.map(c=>searchRowHtml(c, pinned, Object.assign({noAdd:true}, subOf(c)))).join(''),   // 1.7: card tiles: look, no +
     after: (chunk, all)=>{ wireResultButtons(all, pinned, ()=>renderBrowseResults(key, true), {}); loadTilePrices(chunk); } });
   // reading order: Commanders first (the foot), then Staples, then Mana Staples
   const secs = [{ id: 'cmd', title: trS('Top') + ' ' + leaderNoun(browseFmt(), true), items: cmd.items,
