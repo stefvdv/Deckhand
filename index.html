@@ -1531,7 +1531,9 @@ html[data-main="W"] :is(.sr-tile, .pair-cell) .st-meta-row .add-btn svg{color:#2
 .tile-info{border-radius:10px;}
 /* selectable tiles (admiral recommendation picker) */
 .sr-tile.selectable{cursor:pointer;}
-.sr-tile.selected{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass);}
+.sr-tile.selected{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold);}   /* 1.8: gold, like the tick */
+/* 1.8: the pick button and the section jump share the corner -- the jump steps up */
+:is(#cardRecoOverlay, #similarOverlay):has(.ov-pick-fab:not([hidden])) .edh-jump-row.insp-jump{bottom:calc(86px + var(--nav-h) + env(safe-area-inset-bottom));}
 .sr-tile .sel-check{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--gold);color:#241A04;box-shadow:0 1px 4px rgba(0,0,0,0.5);font-weight:700;display:none;align-items:center;justify-content:center;font-size:14px;pointer-events:none;}
 .sc-hero{text-align:center;margin:4px 0 10px;}
 .sc-hero img{width:min(64%,240px);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.5);cursor:pointer;aspect-ratio:63/88;background:#0006;}
@@ -6275,6 +6277,15 @@ function idClauseFor(admiral){
   if(!ci.length) return 'id=c';
   return 'id<=' + ci.join('');
 }
+/* 1.9: "in the colours of <deck>" -- under a card's Recommendations and
+   Similar cards when they were opened from that deck's card sheet */
+function deckColorNoteHtml(d){
+  if(!d || !deckLeaders(d).length) return '';
+  const ci = deckColorIdentity(d);
+  const pips = ci.length ? manaRowSvg(ci.join('').toLowerCase(), 14) : manaIconSvg('C', 14);
+  const NL = appLang() === 'nl';
+  return `<div class="ra-sub deck-ci-note" style="font-size:12.5px;display:flex;align-items:center;justify-content:center;gap:6px;">${pips}<span>${NL ? 'binnen de kleuren van' : 'within the colours of'} ${escapeHtml(d.name || '')}</span></div>`;
+}
 function idClauseForDeck(d){
   return idClauseFor({ color_identity: deckColorIdentity(d) });
 }
@@ -6301,15 +6312,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.11';
 const CHANGELOG_NOTES = {
   en: [
-    'Inspiration: tap a card for its details',
-    'Inspiration no longer edits your deck'
+    'Smooth swiping between cards'
   ],
   nl: [
-    'Inspiratie: tik een kaart voor details',
-    'Inspiratie past je deck niet meer aan'
+    'Soepel swipen tussen kaarten'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6319,6 +6328,18 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-15';
 const CHANGELOG_HISTORY = [
+  { v: '1.10', d: '2026-10-15',
+    en: ['Inspiration search suggests names'],
+    nl: ['Inspiratie-zoeken stelt namen voor'] },
+  { v: '1.9', d: '2026-10-15',
+    en: ['From a deck: tips in its colours'],
+    nl: ['Vanuit een deck: tips in zijn kleuren'] },
+  { v: '1.8', d: '2026-10-15',
+    en: ['Similar cards: pick several at once', 'Card picks: select, then Add to\u2026', 'Card picks are about the card itself'],
+    nl: ['Similar cards: kies er meerdere', 'Kaart-tips: selecteer, dan Voeg toe', 'Kaart-tips gaan over de kaart zelf'] },
+  { v: '1.7', d: '2026-10-15',
+    en: ['Inspiration: tap a card for its details', 'Inspiration no longer edits your deck'],
+    nl: ['Inspiratie: tik een kaart voor details', 'Inspiratie past je deck niet meer aan'] },
   { v: '1.6', d: '2026-10-14',
     en: ['Selection tick clear in every scheme', 'Dimir: no more black text on blue'],
     nl: ['Selectievinkje overal goed zichtbaar', 'Dimir: geen zwarte tekst meer op blauw'] },
@@ -7466,6 +7487,31 @@ function allCardNamesFor(q){
   return sfFetch(SF_BASE + '/cards/autocomplete?q=' + encodeURIComponent(q), 0, true)
     .then(r=>r.ok ? r.json() : null).then(j=>((j && j.data) || []).filter(n=>!/^A-/.test(n))).catch(()=>[]);
 }
+/* 1.10: the leaders a format can field, for Inspiration's name suggestions --
+   the same pools the leader search itself uses: legendary creatures (and
+   "can be your commander") for the commander family, uncommon creatures for
+   Pauper Commander, legendaries with power/toughness for Admiral. */
+const _leaderNames = {};
+function leaderNamesFor(q){
+  const fmt = state.browseFormat || 'commander';
+  const k = fmt === 'admiral' ? 'admiral' : fmt === 'paupercommander' ? 'pdh' : 'cmd';
+  if(_bulkIdx && _bulkIdx.cards){
+    const hit = _leaderNames[k];
+    if(hit && hit.src === _bulkIdx) return hit.names;
+    const set = new Set();
+    _bulkIdx.cards.forEach(c=>{
+      if(!c || !c.n || /^A-/.test(c.n)) return;
+      const tl = String(c.tl || '').split('//')[0], ot = String(c.ot || '');
+      const ok = k === 'pdh' ? (/\bCreature\b/.test(tl) && c.r === 'uncommon')
+        : k === 'admiral' ? (/\bLegendary\b/.test(tl) && c.pw != null)
+        : ((/\bLegendary\b/.test(tl) && /\bCreature\b/.test(tl)) || /can be your commander/i.test(ot));
+      if(ok && isRealCard({ type_line: c.tl, layout: c.ly })) set.add(c.n);
+    });
+    _leaderNames[k] = { src: _bulkIdx, names: Array.from(set) };
+    return _leaderNames[k].names;
+  }
+  return allCardNamesFor(q);   // no card database yet: every name (the search itself still filters)
+}
 function pushOverlay(id, closeFn, defer){
   // Reopening the overlay that is ALREADY on top must not mint a second
   // stack entry — those zombies made back presses vanish into silent no-op
@@ -7942,11 +7988,20 @@ function fitBrandTitle(){
   // Mid-render the box can report a sliver of its real width — fitting
   // against that shrinks titles like INSPIRATION to a whisper, and the size
   // sticks. Wait a frame and measure the finished layout instead.
-  if(avail < 80){ requestAnimationFrame(fitBrandTitle); return; }
+  // 1.11: a few frames at most -- a short name in a narrow cap (SEARCH, HOME)
+  // IS that narrow, and the endless retry measured the page every frame,
+  // which is what made card swipes stutter on those pages
+  if(avail < 80){
+    if((fitBrandTitle._tries = (fitBrandTitle._tries || 0) + 1) <= 4) requestAnimationFrame(fitBrandTitle);
+    else fitBrandTitle._tries = 0;   // still narrow: leave the size alone (as before), just stop asking
+    return;
+  }
+  fitBrandTitle._tries = 0;
   // Measuring against the fallback serif (wider than Cinzel) also shrinks
   // titles — refit once the real face arrives.
-  if(document.fonts && document.fonts.status !== 'loaded'){
-    document.fonts.ready.then(()=>requestAnimationFrame(fitBrandTitle));
+  if(document.fonts && document.fonts.status !== 'loaded' && !fitBrandTitle._waitFonts){
+    fitBrandTitle._waitFonts = true;   // one wait, not one per call
+    document.fonts.ready.then(()=>{ fitBrandTitle._waitFonts = false; requestAnimationFrame(fitBrandTitle); });
   }
   const text = (inner.textContent || '').trim();
   if(!text){ state._brandSize = '18px'; return; }
@@ -11512,6 +11567,64 @@ function searchSelClear(){
   document.querySelectorAll('#searchResultsBox .sr-tile.selected').forEach(t=>t.classList.remove('selected'));
   updateSearchSelFab();
 }
+/* 1.8: multi-select on a card list inside an overlay (Similar cards, a
+   card's recommendations) -- the house gestures: long-press picks a card
+   (gold tick), then every tap picks one more; the gold count button at the
+   bottom right holds Add to deck / collection. A tap with nothing picked
+   opens the card (onOpen, or the tile's own handler). */
+function wireOverlayPick(el, box, pool, onOpen){
+  if(!el || !box) return;
+  const sel = el._pick || (el._pick = new Map());
+  let fab = el.querySelector('.ov-pick-fab');
+  const paint = ()=>{ const f = el.querySelector('.ov-pick-fab'); if(!f) return; const n = sel.size; f.hidden = !n; f.innerHTML = selFabLabel(n); };
+  const clear = ()=>{ sel.clear(); el.querySelectorAll('.sr-tile.selected').forEach(t=>t.classList.remove('selected')); paint(); };
+  el._pickClear = clear;
+  if(!fab){
+    fab = document.createElement('button');
+    fab.type = 'button'; fab.className = 'reco-fab ov-pick-fab'; fab.hidden = true;
+    fab.setAttribute('aria-label', trS('Add to\u2026'));
+    el.appendChild(fab);
+    fab.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const cards = Array.from(sel.values());
+      if(!cards.length) return;
+      // drop-up: the first choice sits nearest the thumb (last here)
+      openTileMenu(fab, [
+        { label:'\u2715 ' + trS('Deselect all'), fn: ()=>el._pickClear() },
+        { label: mIco('binder') + trS('Add to collection\u2026'), fn: ()=>openAddManyToCollection(cards, ()=>el._pickClear()) },
+        { label:'\uFF0B ' + trS('Add to deck\u2026'), fn: ()=>openMultiDeckChooser(cards, ()=>el._pickClear()) }
+      ]);
+    });
+  }
+  box.querySelectorAll('.sr-tile[data-name]').forEach(tile=>{
+    if(tile.dataset.pk) return; tile.dataset.pk = '1';
+    tile.classList.add('selectable');
+    if(!tile.querySelector('.sel-check')){ const m = document.createElement('span'); m.className = 'sel-check'; m.textContent = '\u2713'; tile.appendChild(m); }
+    const nm = decodeURIComponent(tile.dataset.name);
+    tile.classList.toggle('selected', sel.has(nm));
+    let lpT = null, fired = false;
+    const toggle = ()=>{
+      const c = pool.find(x=>x.name === nm); if(!c) return;
+      if(sel.has(nm)) sel.delete(nm); else sel.set(nm, c);
+      tile.classList.toggle('selected', sel.has(nm));
+      paint();
+    };
+    tile.addEventListener('pointerdown', (e)=>{
+      if(e.target.closest && e.target.closest('button')) return;
+      fired = false; clearTimeout(lpT);
+      lpT = setTimeout(()=>{ fired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} toggle(); }, 480);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev=>tile.addEventListener(ev, ()=>clearTimeout(lpT)));
+    tile.addEventListener('contextmenu', e=>e.preventDefault());
+    // capture: decide before the picture's own tap handler sees the click
+    tile.addEventListener('click', (e)=>{
+      if(fired){ fired = false; e.stopPropagation(); e.preventDefault(); return; }
+      if(sel.size){ e.stopPropagation(); e.preventDefault(); toggle(); return; }
+      if(onOpen){ e.stopPropagation(); onOpen(nm); }
+    }, true);
+  });
+  paint();
+}
 function recoSelClear(){
   const R = state.reco;
   if(!R || !R.selected) return;
@@ -11526,6 +11639,10 @@ function clearSelectionOnBack(){
   const top = state.overlayStack[state.overlayStack.length - 1];
   if(top){
     if(top.id === 'reco' && state.reco && state.reco.selected && state.reco.selected.size){ recoSelClear(); return true; }
+    if(top.id === 'similar' || top.id === 'cardReco'){   // 1.8
+      const ov = document.getElementById(top.id === 'similar' ? 'similarOverlay' : 'cardRecoOverlay');
+      if(ov && ov._pick && ov._pick.size){ ov._pickClear(); return true; }
+    }
     return false;
   }
   if(state.screen === 'decklist' && state._dlSel && state._dlSel.size){ dlSelClear(); return true; }
@@ -15744,10 +15861,10 @@ function renderCardSheet(d, card, loc, idx){
   // price/printing re-render must never climb above overlays opened later
   // (the Similar page vanished behind exactly that on its first open).
   {
-    const _ovs = document.querySelectorAll('body > .overlay');
+    const _ovs = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
     if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el)) document.body.appendChild(el);
     el.classList.toggle('sheet-over-overlay',
-      Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
+      Array.from(document.querySelectorAll('body > .overlay:not(.swipe-leaving)')).some(o=>o !== el));
   }
   const admiralEligible = isLegendary(card) && hasPowerToughness(card) && isNonlandFront(card) && !isBanned(card);
   const actions = [];
@@ -15804,7 +15921,7 @@ function renderCardSheet(d, card, loc, idx){
   applyLocalizedSheetImage(card, 'dcImg');
   try{ paintPendingArt(); }catch(e){}
   document.getElementById('csChangePrinting').addEventListener('click', ()=>openPrintingPicker(d, card, loc, idx));
-  document.getElementById('csSimilar')?.addEventListener('click', ()=>openSimilarCards(card, true));
+  document.getElementById('csSimilar')?.addEventListener('click', ()=>openSimilarCards(card, d));   // 1.9: the deck's colours
   document.getElementById('csReco')?.addEventListener('click', ()=>openCardReco(card, d));
   document.getElementById('csShare')?.addEventListener('click', (e)=>{
     e.stopPropagation();
@@ -18193,7 +18310,17 @@ function attachSwipeNav(el, onNext, onPrev, meta){
       const b = document.createElement('button');
       b.className = 'ci-nav-arrow ' + side;
       b.innerHTML = glyph;
-      b.addEventListener('click', (e)=>{ e.stopPropagation(); slideCommit(which); });
+      b.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(Date.now() < (el._swipeAnimUntil || 0)) return;
+        // 1.11: the same carousel as a swipe -- the whole next sheet glides in
+        if(el._swipeLive && el._swipeLive.can(which)){
+          G.W = window.innerWidth || 360; G.dx = 0;
+          const P = prepLive(which);
+          if(P){ placeLive(P, 0); finishLive(P, true); return; }
+        }
+        slideCommit(which);
+      });
       wrap.appendChild(b);
     };
     mk('prev', '‹', 'left');
@@ -18209,64 +18336,197 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     el.removeEventListener('touchend', el._swipeNavHandlers.te);
     if(el._swipeNavHandlers.tc) el.removeEventListener('touchcancel', el._swipeNavHandlers.tc);
   }
-  let sx = 0, sy = 0, armed = false, engaged = false, curDx = 0, W = 1;
+  let curDx = 0;   // the fallback glide (slideCommit) reads it
+  /* 1.11: a real carousel. The moment a drag picks its direction, the NEXT
+     sheet is built for real (the same render a chevron does) and the current
+     one is set aside, frozen as it was, in a fixed frame. Under the finger
+     both pages move together -- title, price, card, buttons, text: the whole
+     next page is in view during the swipe, nothing pops in afterwards.
+     Release past the threshold finishes the glide; a short drag glides back
+     and the original sheet is rebuilt in place, invisibly.
+     The gesture state lives on the overlay (el._swipeG): building the next
+     sheet re-attaches these handlers, and the drag carries straight on.
+     A sheet whose neighbour cannot be built at once (Wants, fetched card by
+     card) keeps the old ride-along card image. */
+  const G = el._swipeG || (el._swipeG = { armed: false, engaged: false, dx: 0, sx: 0, sy: 0, W: 1, prep: null });
+  el._swipeLive = { can, onNext, onPrev };
+  const pageOf = ()=>el.querySelector(':scope > .overlay-inner');
+  const prepLive = (dir)=>{
+    const L = el._swipeLive;
+    const inner = pageOf();
+    if(!inner) return null;
+    const r = inner.getBoundingClientRect();
+    const om = inner.querySelector('main'), st = om ? om.scrollTop : 0;
+    try{ (dir === 'next' ? L.onNext : L.onPrev)(); }catch(err){ return null; }
+    const ni = pageOf();
+    if(!ni || ni === inner){ return null; }              // nothing built (yet): the ride-along card instead
+    // The old page's frame sits beside the overlay (a late re-render of the
+    // sheet -- a printing or price upgrade -- can't sweep it away mid-swipe),
+    // wearing the overlay's own class so every sheet style still applies and
+    // its layout stays exactly as it was. Its ids stay too: it comes AFTER
+    // the live sheet in the document, so every lookup still finds the live one.
+    const wrap = document.createElement('div');
+    wrap.className = el.className + ' swipe-leaving';
+    const z = (parseInt(getComputedStyle(el).zIndex, 10) || 100) + 1;
+    wrap.style.cssText = `position:fixed;inset:auto;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;display:flex;flex-direction:column;background:none;pointer-events:none;z-index:${z};will-change:transform;`;
+    wrap.appendChild(inner);
+    document.body.appendChild(wrap);
+    // The finger's touch stays aimed at the element it first landed on -- now
+    // inside the frozen page, outside this overlay. Its moves are forwarded
+    // to the overlay's (current) handlers until the gesture ends.
+    if(!el._swipeDocFwd){
+      const fwd = (k)=>(e)=>{ if(el.contains(e.target)) return; const H = el._swipeNavHandlers; if(H && H[k]) H[k](e); };
+      el._swipeDocFwd = { tm: fwd('tm'), te: fwd('te'), tc: fwd('tc') };
+      document.addEventListener('touchmove', el._swipeDocFwd.tm, {passive:false});
+      document.addEventListener('touchend', el._swipeDocFwd.te, {passive:true});
+      document.addEventListener('touchcancel', el._swipeDocFwd.tc, {passive:true});
+    }
+    if(om) om.scrollTop = st;                              // a moved node forgets its scroll
+    ni.style.willChange = 'transform'; ni.style.transition = 'none';
+    return { dir, wrap, ni, nz: zoomOf(ni), out: dir === 'next' ? -1 : 1, st };   // the zoom once: reading it per move forced a style pass
+  };
+  const unFwd = ()=>{
+    const F = el._swipeDocFwd; if(!F) return;
+    document.removeEventListener('touchmove', F.tm, {passive:false});
+    document.removeEventListener('touchend', F.te, {passive:true});
+    document.removeEventListener('touchcancel', F.tc, {passive:true});
+    el._swipeDocFwd = null;
+  };
+  const placeLive = (P, d)=>{
+    P.wrap.style.transform = `translateX(${d}px)`;
+    const cur = pageOf(); if(cur && cur !== P.ni){ P.ni = cur; P.nz = zoomOf(cur); cur.style.willChange = 'transform'; cur.style.transition = 'none'; }   // re-rendered meanwhile
+    P.ni.style.transform = `translateX(${(d - P.out * G.W) / P.nz}px)`;
+  };
+  const finishLive = (P, commit)=>{
+    const W0 = G.W || window.innerWidth || 360;
+    const from = G.dx;
+    const dist = commit ? (W0 - Math.abs(from)) : Math.abs(from);
+    const dur = Math.round(Math.max(150, Math.min(300, dist / W0 * 340)));
+    const ease = 'cubic-bezier(.2,.75,.25,1)';
+    el._swipeAnimUntil = Date.now() + dur + 80;
+    if(commit){ try{ navigator.vibrate && navigator.vibrate(6); }catch(err){} }
+    { const cur = pageOf(); if(cur && cur !== P.ni){ placeLive(P, from); } }
+    const nz = P.nz;
+    P.wrap.style.transition = `transform ${dur}ms ${ease}`;
+    P.ni.style.transition = `transform ${dur}ms ${ease}`;
+    requestAnimationFrame(()=>{
+      P.wrap.style.transform = `translateX(${commit ? P.out * W0 : 0}px)`;
+      P.ni.style.transform = commit ? 'translateX(0px)' : `translateX(${(-P.out * W0) / nz}px)`;
+    });
+    setTimeout(()=>{
+      if(commit){
+        P.wrap.remove();
+      } else {
+        // back where we were: rebuild the original sheet in place (the
+        // frozen copy still covers it), then let the copy go
+        const L = el._swipeLive;
+        try{ (P.dir === 'next' ? L.onPrev : L.onNext)(); }catch(err){}
+        const back = pageOf();
+        const bm = back && back.querySelector('main');
+        if(bm) bm.scrollTop = P.st;
+        // the frozen copy covers the rebuilt sheet until its pictures are painted
+        requestAnimationFrame(()=>requestAnimationFrame(()=>P.wrap.remove()));
+      }
+      const cur = pageOf();
+      [P.ni, cur].forEach(x=>{ if(x){ x.style.transition = ''; x.style.transform = ''; x.style.willChange = ''; } });
+    }, dur + 30);
+  };
   const ts = (e)=>{
-    if(e.touches.length !== 1){ armed = false; return; }
-    armed = true; engaged = false; curDx = 0;
-    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-    W = window.innerWidth || 360;
+    if(e.touches.length !== 1){ G.armed = false; return; }
+    if(G.engaged) return;                                  // a gesture already under way
+    G.armed = true; G.engaged = false; G.dx = 0; G.prep = null;
+    G.sx = e.touches[0].clientX; G.sy = e.touches[0].clientY;
+    G.W = window.innerWidth || 360;
   };
   const tm = (e)=>{
-    if(!armed) return;
-    if(Date.now() < (el._swipeAnimUntil || 0)){ armed = false; return; }
+    if(!G.armed) return;
+    if(Date.now() < (el._swipeAnimUntil || 0)){ G.armed = false; return; }
     const t = e.touches[0];
-    const dx = t.clientX - sx, dy = t.clientY - sy;
-    if(!engaged){
-      if(Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx)){ armed = false; return; }   // scrolling wins
+    const dx = t.clientX - G.sx, dy = t.clientY - G.sy;
+    if(!G.engaged){
+      if(Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx)){   // scrolling wins
+        G.armed = false;
+        if(G.prep && G.prep.wrap){ const P0 = G.prep; G.prep = null; G.dx = 0; unFwd(); finishLive(P0, false); }   // built early for nothing
+        return;
+      }
+      // Build the next page EARLY -- while the finger travels its first
+      // pixels and nothing moves on screen yet -- so the build's moment of
+      // work is never seen as a hitch in the slide.
+      if(!G.prep && Math.abs(dx) > 7 && Math.abs(dx) > 2 * Math.abs(dy)){
+        const dirE = dx < 0 ? 'next' : 'prev';
+        if(el._swipeLive.can(dirE)){ const P1 = prepLive(dirE); if(P1){ G.prep = P1; G.dx = 0; placeLive(P1, 0); } }
+      }
       if(Math.abs(dx) > 16 && Math.abs(dx) > 1.5 * Math.abs(dy)){
-        engaged = true;
-        const m = paneEl();
-        if(m){ m.style.willChange = 'transform'; m.style.transition = 'none'; }
+        G.engaged = true;
+        const dir0 = dx < 0 ? 'next' : 'prev';
+        if(!G.prep){
+          if(el._swipeLive.can(dir0)) G.prep = prepLive(dir0) || { dir: dir0, ghost: true };
+          else G.prep = { dir: dir0, edge: true };
+        }
+        if(!G.prep.wrap){ const m = paneEl(); if(m){ m.style.willChange = 'transform'; m.style.transition = 'none'; } }
       } else return;
     }
     e.preventDefault();                                     // the sheet owns this gesture now
+    const P = G.prep;
+    if(P && P.wrap){
+      // live pages: dragging back past the start pushes back
+      const wrong = P.dir === 'next' ? dx > 0 : dx < 0;
+      G.dx = wrong ? dx * 0.25 : dx;
+      placeLive(P, G.dx);
+      return;
+    }
+    // the ride-along card (or the end of the chain)
     const dirW = dx < 0 ? 'next' : 'prev';
     const allowed = can(dirW);
     const useDx = allowed ? dx : dx * 0.3;                  // the end of the chain pushes back
-    curDx = useDx;
+    curDx = G.dx = useDx;
     const m = paneEl();
     if(m){
       setX(m, useDx);
-      m.style.opacity = String(Math.max(0.55, 1 - Math.abs(useDx) / W * 0.6));
+      m.style.opacity = String(Math.max(0.55, 1 - Math.abs(useDx) / G.W * 0.6));
     }
     if(allowed){
       const src = peek(dirW);
       if(src){
         const g = ghostEl();
         if(g.getAttribute('src') !== src) g.src = src;
-        g.style.transform = `translate(${(dx < 0 ? W : -W) + dx}px, -50%)`;
+        g.style.transform = `translate(${(dx < 0 ? G.W : -G.W) + dx}px, -50%)`;
         g.style.opacity = '1';
       }
     } else killGhost();
   };
   const te = (e)=>{
-    if(engaged){
-      const thr = Math.min(90, W * 0.22);
-      const want = curDx < -thr ? 'next' : curDx > thr ? 'prev' : null;
+    if(G.engaged){
+      const thr = Math.min(90, G.W * 0.22);
+      const P = G.prep;
+      G.armed = false; G.engaged = false; G.prep = null;
+      if(P && P.wrap){
+        unFwd();
+        const commit = P.dir === 'next' ? G.dx < -thr : G.dx > thr;
+        finishLive(P, commit);
+        return;
+      }
+      curDx = G.dx;
+      const want = G.dx < -thr ? 'next' : G.dx > thr ? 'prev' : null;
       slideCommit(want);                                  // the end guard inside flashes when out of cards
-      armed = false; engaged = false;
       return;
     }
-    if(!armed) return; armed = false;
+    if(G.prep && G.prep.wrap){ const P0 = G.prep; G.prep = null; G.dx = 0; unFwd(); finishLive(P0, false); }   // built early, never dragged
+    if(!G.armed) return; G.armed = false;
     const t = e.changedTouches && e.changedTouches[0]; if(!t) return;
-    const dx = t.clientX - sx, dy = t.clientY - sy;
+    const dx = t.clientX - G.sx, dy = t.clientY - G.sy;
     if(Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4){
       const want2 = dx < 0 ? 'next' : 'prev';
       if(!can(want2)){ edgeFlash(want2 === 'next' ? 'right' : 'left'); return; }
       slideCommit(want2);
     }
   };
-  const tc = ()=>{ if(engaged) slideCommit(null); armed = false; engaged = false; };
+  const tc = ()=>{
+    const P = G.prep;
+    unFwd();
+    if(G.engaged){ if(P && P.wrap) finishLive(P, false); else { curDx = G.dx; slideCommit(null); } }
+    G.armed = false; G.engaged = false; G.prep = null;
+  };
   el.addEventListener('touchstart', ts, {passive:true});
   el.addEventListener('touchmove', tm, {passive:false});
   el.addEventListener('touchend', te, {passive:true});
@@ -18341,10 +18601,10 @@ function openCardInfo(card, opts){
   // price/printing re-render must never climb above overlays opened later
   // (the Similar page vanished behind exactly that on its first open).
   {
-    const _ovs = document.querySelectorAll('body > .overlay');
+    const _ovs = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
     if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el)) document.body.appendChild(el);
     el.classList.toggle('sheet-over-overlay',
-      Array.from(document.querySelectorAll('body > .overlay')).some(o=>o !== el));
+      Array.from(document.querySelectorAll('body > .overlay:not(.swipe-leaving)')).some(o=>o !== el));
   }
   const pinned = (state.searchPinnedDeckId && state.screen !== 'browse') ? getDeck(state.searchPinnedDeckId) : null;   // 1.7: not from the loose Inspiration page
   // In-deck test for the sheet's main button: leaders and duplicate-allowed
@@ -18391,11 +18651,9 @@ function openCardInfo(card, opts){
   { const pr = el.querySelector('#csPrice'); if(pr){ pr.style.cursor = 'pointer'; pr.title = 'Price history'; pr.addEventListener('click', ()=>openPriceHistory(card)); } }
   applyLocalizedSheetImage(card, 'ciImg');
   try{ paintPendingArt(); }catch(e){}
-  document.getElementById('ciReco')?.addEventListener('click', ()=>{
-    if(pinned) openCardReco(card, pinned);
-    else if(state.decksIndex.length) openDeckPickPopup(card, 'reco');
-    else openCardReco(card, null);
-  });
+  // 1.9: outside a deck, recommendations are about the card itself -- no
+  // "which deck?" question first
+  document.getElementById('ciReco')?.addEventListener('click', ()=>openCardReco(card, null));
   document.getElementById('ciAddOne')?.addEventListener('click', ()=>{
     const it = state.collection.items[colIdx]; if(!it) return;
     it.qty = (it.qty || 1) + 1; saveCollection(); state._colDirty = true;
@@ -19843,7 +20101,7 @@ async function budgetCheckBatch(d, items){
     if(!gone) return;
     scheduleSave(d);
     toast(NL ? (gone === 1 ? drop[0].card.name + ' is er weer uit.' : gone + ' kaarten zijn er weer uit.') : (gone === 1 ? drop[0].card.name + ' is out again.' : gone + ' cards are out again.'));
-    if(state.screen === 'decklist' && state.activeDeckId === d.id && !document.querySelector('.overlay')) render();
+    if(state.screen === 'decklist' && state.activeDeckId === d.id && !document.querySelector('.overlay:not(.swipe-leaving)')) render();
   }, { ok: NL ? (n === 1 ? 'Verwijderen' : n + ' verwijderen') : (n === 1 ? 'Remove' : 'Remove ' + n), cancel: NL ? 'Houden' : 'Keep', icon: 'coins' });
 }
 /* ── Format legality ─ Scryfall's legalities map as a chip grid, the
@@ -20428,6 +20686,10 @@ function phraseOverlapWeight(srcFeats, cand){
    network time to Similar cards. */
 const MTG_LANG = ['whenever','when','each opponent','opponent','each player','you control','cast','noncreature','creature','draw','discard','exile','destroy','counter target','sacrifice','search your library','return','create','copy','scry','surveil','mill','tap','untap','attack','block','pay','token','treasure','clue','graveyard','battlefield','library','hand','damage','gain life','life','+1/+1','-1/-1','proliferate','flying','first strike','double strike','deathtouch','lifelink','haste','vigilance','trample','menace','reach','defender','hexproof','ward','indestructible','flash','prowess','landfall','cascade','equip','enchant','add {'];
 async function openSimilarCards(card, colorScope){
+  // 1.9: colorScope may be a DECK (opened from its card sheet): then the
+  // deck's colour identity is the ceiling, nothing else of the deck
+  const scopeDeck = (colorScope && typeof colorScope === 'object' && deckLeaders(colorScope).length) ? colorScope : null;
+  if(colorScope && typeof colorScope === 'object' && !scopeDeck) colorScope = false;
   // A Similar page opened OVER an earlier Similar page (via a card sheet in
   // between) must not hijack the earlier one's element — the singleton
   // reuse replaced the first list's content with the second's, so backing
@@ -20458,6 +20720,7 @@ async function openSimilarCards(card, colorScope){
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="simCardImg" alt="${escapeHtml(card.name)}">
       </div>
       <p class="hint" style="text-align:center;margin:0 0 8px;">${trS('Similar cards')} — ${trS('cards that do the same job')}, ${trS('most played first.')}</p>
+      ${deckColorNoteHtml(scopeDeck)}
       <div id="simBody"><div class="status"><div class="spinner"></div></div></div>
     </main>
     ${overlayNavHtml()}
@@ -20467,8 +20730,8 @@ async function openSimilarCards(card, colorScope){
   try{
     const f = frontFace(card);
     const isLand = /\bLand\b/.test(f.type_line||'');
-    const ci = card.color_identity || [];
-    const idClause = (colorScope && ci.length) ? ('id<=' + ci.join('').toLowerCase() + ' ') : '';
+    const ci = scopeDeck ? deckColorIdentity(scopeDeck) : (card.color_identity || []);
+    const idClause = scopeDeck ? (idClauseForDeck(scopeDeck) + ' ') : (colorScope && ci.length) ? ('id<=' + ci.join('').toLowerCase() + ' ') : '';
     let ranked = [], typeFallback = false;
     if(isLand){
       const r = await searchAndVerifyLegal((idClause + 't:land').trim(), 'edhrec', 80).catch(()=>({results:[]}));
@@ -20521,7 +20784,7 @@ async function openSimilarCards(card, colorScope){
           try{
             const ix = await bulkIndexReady();
             _corpusOk = !!(ix && ix.cards && ix.cards.length);
-            const ciSet = (colorScope && ci.length) ? new Set(ci.map(x=>String(x).toUpperCase())) : null;
+            const ciSet = scopeDeck ? new Set(ci.map(x=>String(x).toUpperCase())) : (colorScope && ci.length) ? new Set(ci.map(x=>String(x).toUpperCase())) : null;
             _bulkSweep(ix, card, srcWords, ciSet, null, card.name).forEach(bc=>{
               if(cand.has(bc.n) || isBanned({name: bc.n})) return;
               const x = bulkToCardish(bc);
@@ -20570,11 +20833,12 @@ async function openSimilarCards(card, colorScope){
     ranked = ranked.slice(0, 40);
     if(!ranked.length){ box.innerHTML = `<div class="empty-note">${trS('No similar cards found.')}</div>`; return; }
     box.innerHTML = (typeFallback ? `<p class="hint" style="text-align:center;margin:0 0 8px;">${trS('Function unknown — showing its closest kin by type.')}</p>` : '')
-      + `<div class="sr-grid">${ranked.map((c,i)=>`<div class="sr-tile sim-tile" role="button" tabindex="0" data-i="${i}">
+      + `<div class="sr-grid">${ranked.map((c,i)=>`<div class="sr-tile sim-tile" role="button" tabindex="0" data-i="${i}" data-name="${encodeURIComponent(c.name)}">
         <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}
         <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
       </div>`).join('')}</div>`;
-    box.querySelectorAll('.sim-tile').forEach(btn=>btn.addEventListener('click', ()=>openCardInfo(ranked[+btn.dataset.i], { pool: ranked, poolIdx: +btn.dataset.i })));
+    // 1.8: the house multi-select; a plain tap opens the card
+    wireOverlayPick(box.closest('.overlay'), box, ranked, (nm)=>{ const i = ranked.findIndex(x=>x.name === nm); if(i >= 0) openCardInfo(ranked[i], { pool: ranked, poolIdx: i }); });
     loadTilePrices(ranked);
   }catch(e){
     _noteCrash('similar FAILED', e && (e.message || e), e && e.stack ? String(e.stack).split('\n')[1] : '');
@@ -23123,6 +23387,8 @@ function wireMetaBrowse(){
     t = setTimeout(()=>{ state.browseNameQ = inp.value; renderMetaBrowse(true); }, 200);
   });
   inp?.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); clearTimeout(t); state.browseNameQ = inp.value; renderMetaBrowse(); try{ inp.blur(); }catch(err){} } });
+  // 1.10: the live suggestion list from Search (decks are found by a card in them)
+  if(inp) wireNameSuggest(inp, allCardNamesFor, (name)=>{ inp.value = name; clearTimeout(t); state.browseNameQ = name; renderMetaBrowse(); try{ inp.blur(); }catch(err){} });
   _csHandlers.bsFmt = v=>{
     sfDropQueuedFor('browse');
     state.browseFormat = v || 'commander';
@@ -23534,6 +23800,11 @@ function wireBrowsePage(){
     scrollToPageFoot();
   };
   document.getElementById('bsName')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); runLeaderSearch(); } });
+  // 1.10: the live suggestion list from Search -- leaders only here
+  wireNameSuggest(document.getElementById('bsName'), leaderNamesFor, (name)=>{
+    const inp = document.getElementById('bsName'); if(inp) inp.value = name;
+    runLeaderSearch();
+  });
   if(state.browseNameQ) runLeaderSearch();   // restore results after a re-render
   if(state.browseSel && state.browseSel.combo) ensureComboTagRanks(state.browseSel.combo);
   _csHandlers.bsFmt = v=>{
@@ -24398,6 +24669,11 @@ function detectCardThemes(card){
   return BROWSE_THEMES.filter(t=>themeMatchesCard(t, card)).slice(0, 4);
 }
 function openCardReco(card, forDeck, comboKey){
+  // 1.8: recommendations for the CARD itself; 1.9: opened from a deck's card
+  // sheet they stay inside that deck's colour identity -- only its colours,
+  // nothing else of the deck. Adding goes through the pick button.
+  comboKey = null;
+  if(forDeck && !deckLeaders(forDeck).length) forDeck = null;
   const combo = comboKey ? (Object.values(COLOR_COMBOS).flat().find(c=>c.key===comboKey) || null) : null;
   let el = document.getElementById('cardRecoOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardRecoOverlay'; }
@@ -24417,7 +24693,7 @@ function openCardReco(card, forDeck, comboKey){
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="crImg" alt="${escapeHtml(card.name)}">
         <div class="ra-nm">${escapeHtml(card.name)}</div>
         <div class="ra-sub">${escapeHtml(frontFace(card).type_line||'')}</div>
-        <div class="ra-sub" style="font-size:12.5px;opacity:0.8;">${themes.length?themes.map(t=>escapeHtml(t.label)).join(' · ')+' · ':''}${escapeHtml(scope)}</div>
+        ${deckColorNoteHtml(forDeck)}
       </div>
       <div id="crBody"><div class="status"><div class="spinner"></div></div></div>
     </main>
@@ -24482,26 +24758,28 @@ async function loadCardReco(card, themes, forDeck, comboKey){
   box.innerHTML = `<p class="hint" style="margin:0 0 4px;text-align:center;">Cards that play well with ${escapeHtml(card.name)}${edhSecs.length ? '' : roleTxt}, most-played first.</p>`;
   const groups = edhGroupPool(pool, edhSecs).map(g=>({ title: trS(g.title), cards: g.cards }));
   const rewire = ()=>loadCardReco(card, themes, forDeck, comboKey);
+  const crEl = box.closest('.overlay');
   if(groups.length < 2){
-    pagedGrid(box, pool, (c)=>searchRowHtml(c, forDeck, {showAdmiralBtn:true}),
-      (chunk)=>{ wireResultButtons(pool, forDeck, rewire); loadTilePrices(chunk); });
+    pagedGrid(box, pool, (c)=>searchRowHtml(c, null, {noAdd:true}),
+      (chunk)=>{ wireResultButtons(pool, null, rewire); wireOverlayPick(crEl, box, pool); loadTilePrices(chunk); });
     return;
   }
   // Bottom-up: #crBody sits ABOVE the card in a column-reverse main, so its
   // DOM-last child is nearest the foot -- EDHREC's first section goes last.
   // Inside a section the label rides under its cards (.edh-sec order).
   const CAP = 12;
-  const secHtml = (g, i)=>`<div class="edh-sec" data-csec="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > CAP ? `<button class="ghost-btn edh-more" data-csec="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid" data-csg="${i}">${g.cards.slice(0, CAP).map(c=>searchRowHtml(c, forDeck, {showAdmiralBtn:true})).join('')}</div></div>`;
+  const secHtml = (g, i)=>`<div class="edh-sec" data-csec="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > CAP ? `<button class="ghost-btn edh-more" data-csec="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid" data-csg="${i}">${g.cards.slice(0, CAP).map(c=>searchRowHtml(c, null, {noAdd:true})).join('')}</div></div>`;
   box.insertAdjacentHTML('beforeend', groups.map((g, i)=>({ g, i })).reverse().map(x=>secHtml(x.g, x.i)).join('')
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="crJump" title="${trS('Jump to section')}">☰</button></div>`);
-  wireResultButtons(pool, forDeck, rewire);
+  wireResultButtons(pool, null, rewire);
+  wireOverlayPick(crEl, box, pool);   // 1.8
   loadTilePrices(groups.flatMap(g=>g.cards.slice(0, CAP)));   // every shown tile (bottom-up: the first section is drawn last)
   box.querySelectorAll('.edh-more[data-csec]').forEach(btn=>btn.addEventListener('click', ()=>{
     const g = groups[+btn.dataset.csec]; const gr = box.querySelector(`.sr-grid[data-csg="${btn.dataset.csec}"]`);
     if(!g || !gr) return;
     const have = gr.children.length, next = Math.min(g.cards.length, have + CAP);
-    gr.insertAdjacentHTML('beforeend', g.cards.slice(have, next).map(c=>searchRowHtml(c, forDeck, {showAdmiralBtn:true})).join(''));
-    wireResultButtons(pool, forDeck, rewire); loadTilePrices(g.cards.slice(have, next));
+    gr.insertAdjacentHTML('beforeend', g.cards.slice(have, next).map(c=>searchRowHtml(c, null, {noAdd:true})).join(''));
+    wireResultButtons(pool, null, rewire); wireOverlayPick(crEl, box, pool); loadTilePrices(g.cards.slice(have, next));
     if(next >= g.cards.length) btn.remove();
   }));
   document.getElementById('crJump')?.addEventListener('click', (e)=>{
