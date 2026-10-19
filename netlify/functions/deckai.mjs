@@ -283,6 +283,7 @@ export async function askProviders(env, fetchImpl, c){
   return { error: last, tried };
 }
 
+export const DECKAI_V = '1.17';
 const today = ()=>new Date().toISOString().slice(0, 10);
 const sha = (x)=>crypto.createHash('sha256').update(x).digest('hex');
 
@@ -332,6 +333,11 @@ export default async (req, context) => {
   let storeFn = null;
   try{ const { getStore } = await import('@netlify/blobs'); storeFn = (n)=>getStore(n); }catch(e){ storeFn = null; }
   const ip = (context && context.ip) || req.headers.get('x-nf-client-connection-ip') || '';
-  const r = await handle(body, { env: process.env, fetch: globalThis.fetch, store: storeFn, ip });
+  let r;
+  try{ r = await handle(body, { env: process.env, fetch: globalThis.fetch, store: storeFn, ip }); }
+  catch(e){ r = { status: 500, json: { ok: false, error: 'down', tried: [{ model: 'server', why: String(e && e.message || e).slice(0, 160) }] } }; }
+  // which keys are set (never their values): tells a missing key apart from a broken one
+  r.json.v = DECKAI_V;
+  if(!r.json.ok) r.json.keys = ['GEMINI_API_KEY', 'GROQ_API_KEY', 'CEREBRAS_API_KEY'].filter(k=>!!process.env[k]).map(k=>k.split('_')[0].toLowerCase());
   return Response.json(r.json, { status: r.status, headers: cors });
 };
