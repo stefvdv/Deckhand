@@ -1890,6 +1890,7 @@ button.cl-head{background:none;border:none;padding:10px 2px;font-family:inherit;
 .ai-err{font-size:12.5px;color:var(--ink-text);line-height:1.35;border-left:3px solid var(--gold);padding-left:8px;}
 .ai-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-text);line-height:1.35;}
 .ai-row .ai-txt{flex:1;min-width:0;}
+.ai-via{display:block;font-size:11.5px;color:var(--sub-text);margin-top:2px;}
 .ai-badge{flex:none;display:inline-block;background:var(--gold);color:#241A04;font-size:11px;font-weight:700;border-radius:6px;padding:2px 6px;line-height:1.3;white-space:nowrap;}
 .cut-ai-tag{align-self:flex-start;}
 .ai-spin{flex:none;width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:sp 0.7s linear infinite;}
@@ -6329,15 +6330,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.13';
+const APP_VERSION = '1.14';
 const CHANGELOG_NOTES = {
   en: [
-    'AI picks cuts for your deck',
-    'AI advises lands and land count'
+    'Tap the deck count to open Cuts',
+    'AI cuts read your leader better'
   ],
   nl: [
-    'AI kiest cuts voor je deck',
-    'AI adviseert lands en aantal'
+    'Tik op de teller: Cuts gaat open',
+    'AI-cuts lezen je leider beter'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6345,8 +6346,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-10-18';
+const APP_DATE = '2026-10-19';
 const CHANGELOG_HISTORY = [
+  { v: '1.13', d: '2026-10-18',
+    en: ['AI picks cuts for your deck', 'AI advises lands and land count'],
+    nl: ['AI kiest cuts voor je deck', 'AI adviseert lands en aantal'] },
   { v: '1.12', d: '2026-10-16',
     en: ['Big card: tap above or below to close'],
     nl: ['Grote kaart sluit boven/onder de kaart'] },
@@ -8074,6 +8078,15 @@ document.addEventListener('click', (e)=>{
   // count of the rest).
   if(e.target && e.target.closest && e.target.closest('#capDeckCount') && state.screen === 'decklist'){
     const d = getDeck(state.activeDeckId);
+    // 1.14: too many cards (and a leader to weigh them by): straight to the
+    // deck's Inspiration page with Cuts already open, at its foot
+    if(d && d.admiral && deckCutOver(d) > 0){
+      state.inspireDeckId = d.id;
+      state._cutsDeck = d.id; state._cutsOpenFor = d.id; state._cutsMore = 0;
+      switchPage('inspiration');
+      requestAnimationFrame(()=>scrollToPageFoot());
+      return;
+    }
     if(d){
       const issues = checkDeckLegality(d);
       if(!issues.length) toast('\u2713 ' + trS('Deck is legal.'));
@@ -19747,7 +19760,7 @@ async function openLandSuggest(d){
         const r = aiState.res;
         const swaps = (r.swap || []).filter(x=>d.cards.some(c=>c.name === x.name));
         box.innerHTML = (swaps.length ? `<div class="ai-sub">${NLl ? 'Lands die de AI zou wisselen' : 'Lands the AI would swap out'}</div>` + swaps.map(x=>`<div class="ls-swap"><div class="ai-txt"><b>${escapeHtml(x.name)}</b> \u2014 ${escapeHtml(x.why || '')}</div><button type="button" class="ghost-btn ls-swap-btn" data-lsswap="${escapeHtml(x.name)}"><span class="ib">${ICONS.removeOne}</span>${trS('Remove one')}</button></div>`).join('') : '')
-          + `<div class="ai-row done"><span class="ai-badge" aria-hidden="true">\u2726 AI</span><span class="ai-txt">${r.count ? `<b>${r.count} lands</b> \u2014 ` : ''}${escapeHtml(r.countWhy || r.plan || '')}</span></div>`
+          + `<div class="ai-row done"><span class="ai-badge" aria-hidden="true">\u2726 AI</span><span class="ai-txt">${r.count ? `<b>${r.count} lands</b> \u2014 ` : ''}${escapeHtml(r.countWhy || r.plan || '')}${deckAiModelHtml(r, NLl)}</span></div>`
           + (r.plan && r.countWhy ? `<div class="ai-hint" style="text-align:left;">${escapeHtml(r.plan)}</div>` : '');
         box.querySelectorAll('[data-lsswap]').forEach(b=>b.addEventListener('click', ()=>{
           const i = d.cards.findIndex(c=>c.name === b.dataset.lsswap);
@@ -21634,6 +21647,14 @@ function deckAiLeftGet(){
 function deckAiLeftSet(n){
   try{ localStorage.setItem(LS_PREFIX + 'deckAiLeft', JSON.stringify({ d: new Date().toISOString().slice(0, 10), n })); }catch(e){}
 }
+/* Which AI answered: the strong model, or the smaller reserve one when the
+   strong one was busy (the reserve reasons less deeply). */
+function deckAiModelHtml(res, NL){
+  const m = String(res && res.model || '');
+  if(!m) return '';
+  const big = /gpt-oss/.test(m);
+  return `<span class="ai-via">${big ? 'GPT-OSS 120B' : (NL ? 'reservemodel (Llama 3.3) \u2014 de sterke AI was even bezet' : 'reserve model (Llama 3.3) \u2014 the strong AI was busy')}${res.cached ? (NL ? ' \u00b7 eerder antwoord' : ' \u00b7 earlier answer') : ''}</span>`;
+}
 function deckAiErrText(res, NL){
   const e = res && res.error;
   if(e === 'limit') return NL ? `Je ${res.limit || ''} AI-analyses voor vandaag zijn op. Morgen kan het weer.` : `Your ${res.limit || ''} AI analyses for today are used up. More tomorrow.`;
@@ -21644,8 +21665,13 @@ function deckAiErrText(res, NL){
 /* A card's rules text for the AI: every face, short. */
 function deckAiOracle(c, max){
   const faces = (c && Array.isArray(c.card_faces) && c.card_faces.length && !c.oracle_text) ? c.card_faces : [c || {}];
-  const t = faces.map(f=>String(f.oracle_text || '')).filter(Boolean).join(' // ').replace(/\s+/g, ' ');
-  return t.length > max ? t.slice(0, max - 1) + '…' : t;
+  const t = faces.map(f=>String(f.oracle_text || '')).filter(Boolean).join(' // ').replace(/\s*\([^()]*\)/g, '').replace(/\s+/g, ' ').trim();
+  return t.length > max ? t.slice(0, max - 1) + '\u2026' : t;
+}
+/* A card's mana cost, the front face for split and double-faced cards. */
+function deckAiCost(c){
+  const f = (c && !c.mana_cost && Array.isArray(c.card_faces) && c.card_faces[0]) ? c.card_faces[0] : (c || {});
+  return String(f.mana_cost || '').split(' // ')[0];
 }
 const DECKAI_FORMATS = ['commander', 'admiral', 'paupercommander', 'predh', 'duel'];
 function deckAiFits(d){ return !!d && !!d.admiral && DECKAI_FORMATS.includes(deckFormat(d)); }
@@ -21669,7 +21695,9 @@ function deckAiDeckInfo(d){
   for(const k in pips) pips[k] = Math.round(pips[k]);
   return { ctx, lands, info: {
     format: deckFormat(d),
-    leaders: deckLeaders(d).map(c=>({ name: c.name, type: c.type_line || '', oracle: deckAiOracle(c, 900) })),
+    leaders: deckLeaders(d).map(c=>({ name: c.name, type: c.type_line || '', oracle: deckAiOracle(c, 900), cost: deckAiCost(c),
+      colors: (Array.isArray(c.colors) && c.colors.length ? c.colors : (c.card_faces && c.card_faces[0] && c.card_faces[0].colors) || c.color_identity || []).join('') })),
+    name: String(d.name || '').slice(0, 60),
     theme: ctx.theme || '', kindred: ctx.kin || '',
     size: d.cards.length + deckLeaders(d).length, limit: deckTotal(d), over: deckCutOver(d),
     landCount: lands.length, landGoal: typeof d.landGoal === 'number' ? d.landGoal : 0,
@@ -21692,6 +21720,8 @@ function deckAiCutsPayload(d, plan){
   const qS = (ctx.selStats && Object.keys(ctx.selStats).length > 20) ? ctx.selStats : (ctx.stats && Object.keys(ctx.stats).length > 20 ? ctx.stats : null);
   const look = (c)=>qS ? (qS[String(c.name).toLowerCase()] || qS[String(c.name).split(' // ')[0].toLowerCase()]) : null;
   const landsOver = plan.tpl.land && plan.counts.land > plan.tpl.land;
+  const rank = new Map(plan.list.map((x, i)=>[x.card.name, i]));
+  const CAP = 45;
   const seen = new Set(), cands = [], others = [];
   d.cards.forEach(c=>{
     if(!c || !c.name) return;
@@ -21699,12 +21729,15 @@ function deckAiCutsPayload(d, plan){
     if(isLand && !landsOver){ others.push(c); return; }
     if(seen.has(c.name)) return;
     seen.add(c.name);
+    if(!rank.has(c.name) || rank.get(c.name) >= CAP){ others.push(c); return; }
     const st = look(c);
     const nBasic = isLand ? d.cards.filter(x=>x.name === c.name).length : 0;
-    cands.push({ name: c.name, type: String(c.type_line || ''), mv: Number(c.cmc) || 0, oracle: deckAiOracle(c, 200),
-      note: [st ? `in ${Math.round(st[0] * 100)}% of decks with this leader` : '', nBasic > 1 ? `×${nBasic} in deck` : ''].filter(Boolean).join(', ') });
+    cands.push({ name: c.name, type: String(c.type_line || ''), mv: Number(c.cmc) || 0, cost: deckAiCost(c), oracle: deckAiOracle(c, 200),
+      note: [st ? `in ${Math.round(st[0] * 100)}% of decks with this leader${st[1] ? `, synergy ${st[1] > 0 ? '+' : ''}${Math.round(st[1] * 100)}%` : ''}` : '', nBasic > 1 ? `\u00d7${nBasic} in deck` : ''].filter(Boolean).join(', '),
+      _r: rank.get(c.name) });
   });
-  return { kind: 'cuts', lang: NL ? 'nl' : 'en', device: judgeDevice(), want: Math.min(12, plan.over + 3),
+  cands.sort((a, b)=>a._r - b._r); cands.forEach(k=>{ delete k._r; });
+  return { kind: 'cuts', lang: NL ? 'nl' : 'en', device: judgeDevice(), want: Math.min(15, plan.over + 3),
     deck: Object.assign(base.info, { others: deckAiNameList(others) }), cands };
 }
 /* The AI's cuts as Cuts rows: its picks first (its own reason on top),
@@ -21743,7 +21776,7 @@ function cutsAiRowHtml(d){
   const left = deckAiLeftGet();
   const leftTxt = left == null ? '' : (NL ? ` · nog ${left} vandaag` : ` · ${left} left today`);
   if(a && a.busy) return `<div class="ai-row busy"><span class="ai-spin" aria-hidden="true"></span><span class="ai-txt">${NL ? 'De AI leest je deck… (tot een halve minuut)' : 'The AI is reading your deck… (up to half a minute)'}</span></div>`;
-  if(a && a.res) return `<div class="ai-row done"><span class="ai-badge" aria-hidden="true">✦ AI</span><span class="ai-txt">${escapeHtml(a.res.plan || (NL ? 'Gekozen op samenhang met je leider en plan.' : 'Picked on how the cards work with your leader and plan.'))}</span><button type="button" class="cut-reset" id="cutAiOff">${NL ? 'AI uit' : 'AI off'}</button></div>`;
+  if(a && a.res) return `<div class="ai-row done"><span class="ai-badge" aria-hidden="true">\u2726 AI</span><span class="ai-txt">${escapeHtml(a.res.plan || (NL ? 'Gekozen op samenhang met je leider en plan.' : 'Picked on how the cards work with your leader and plan.'))}${deckAiModelHtml(a.res, NL)}</span><button type="button" class="cut-reset" id="cutAiOff">${NL ? 'AI uit' : 'AI off'}</button></div>`;
   return `${a && a.err ? `<div class="ai-err">${escapeHtml(a.err)}</div>` : ''}<button type="button" class="ghost-btn ai-btn" id="cutAiBtn"><span class="ai-star" aria-hidden="true">✦</span>${NL ? 'Vraag de AI om cuts' : 'Ask the AI for cuts'}</button><div class="ai-hint">${NL ? 'Leest hoe je kaarten samenwerken' : 'Reads how your cards work together'}${leftTxt}</div>`;
 }
 /* The Cuts row: the top of the Inspiration menus, right above Theme, in
