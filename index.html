@@ -6330,15 +6330,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.16';
+const APP_VERSION = '1.17';
 const CHANGELOG_NOTES = {
   en: [
-    'AI judge and cuts run on Gemini',
-    'AI cuts read your whole deck'
+    'Cuts start with the AI right away',
+    'AI errors say what went wrong'
   ],
   nl: [
-    'AI-judge en cuts via Gemini',
-    'AI-cuts lezen je hele deck'
+    'Cuts begint meteen met de AI',
+    'AI-fouten zeggen wat er misging'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6348,6 +6348,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-19';
 const CHANGELOG_HISTORY = [
+  { v: '1.16', d: '2026-10-19',
+    en: ['AI judge and cuts run on Gemini', 'AI cuts read your whole deck'],
+    nl: ['AI-judge en cuts via Gemini', 'AI-cuts lezen je hele deck'] },
   { v: '1.15', d: '2026-10-19',
     en: ['AI cuts answer again', 'AI says why when it can\u2019t answer'],
     nl: ['AI-cuts geven weer antwoord', 'AI zegt waarom het mislukt'] },
@@ -21641,8 +21644,13 @@ async function deckAiAsk(payload){
   const t = setTimeout(()=>{ try{ ctl && ctl.abort(); }catch(e){} }, 58000);
   try{
     const res = await fetch('/.netlify/functions/deckai', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: ctl ? ctl.signal : undefined });
-    let j = null; try{ j = await res.json(); }catch(e){}
-    return j || { ok: false, error: 'down' };
+    let txt = '', j = null;
+    try{ txt = await res.text(); j = JSON.parse(txt); }catch(e){ j = null; }
+    // 1.17: not an answer of ours -- say what the server sent (404: the
+    // function is not on the site; 502/504: it crashed or ran out of time)
+    if(!j || typeof j !== 'object') return { ok: false, error: 'down', http: res.status, raw: String(txt || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90) };
+    if(!j.v && !j.ok) j.old = true;   // an older deckai.mjs on the site
+    return j;
   }catch(e){ return { ok: false, error: 'offline' }; }
   finally{ clearTimeout(t); }
 }
@@ -21673,14 +21681,17 @@ function deckAiErrText(res, NL){
   const e = res && res.error;
   // what each model said, small, so a screenshot tells what went wrong
   const tried = (res && Array.isArray(res.tried) ? res.tried : []).map(t=>`${deckAiModelName(t.model)}: ${t.why}`).join(' \u00b7 ');
-  const tail = tried ? `\n(${tried})` : '';
+  let tail = tried ? `\n(${tried})` : '';
+  if(!tried && res && res.http) tail = `\n(server: http ${res.http}${res.http === 404 ? (NL ? ' \u2014 de AI-functie staat niet op de site' : ' \u2014 the AI function is not on the site') : ''}${res.raw ? ': ' + res.raw : ''})`;
+  else if(!tried && res && res.old) tail = NL ? '\n(server: een oudere versie van de AI-functie)' : '\n(server: an older version of the AI function)';
+  if(res && Array.isArray(res.keys) && !res.keys.includes('gemini')) tail += NL ? '\n(server: geen Gemini-sleutel gevonden)' : '\n(server: no Gemini key found)';
   if(e === 'quota') return (NL ? 'De AI is even bezet: de gratis limiet per minuut is op. Probeer het over een minuut nog eens.' : 'The AI is busy: the free per-minute limit is used up. Try again in a minute.') + tail;
   if(e === 'shape') return (NL ? 'De AI gaf een antwoord dat de app niet kon lezen. Probeer het nog eens.' : 'The AI gave an answer the app could not read. Try again.') + tail;
   if(e === 'down' && tried) return (NL ? 'De AI is nu even niet bereikbaar. Probeer het straks nog eens.' : 'The AI can\u2019t be reached right now. Try again in a while.') + tail;
   if(e === 'limit') return NL ? `Je ${res.limit || ''} AI-analyses voor vandaag zijn op. Morgen kan het weer.` : `Your ${res.limit || ''} AI analyses for today are used up. More tomorrow.`;
   if(e === 'offline') return NL ? 'Geen verbinding. De AI heeft internet nodig.' : 'No connection. The AI needs the internet.';
   if(e === 'nokey') return NL ? 'De AI is nog niet ingesteld.' : 'The AI is not set up yet.';
-  return NL ? 'De AI is nu even niet bereikbaar. Probeer het straks nog eens.' : 'The AI can’t be reached right now. Try again in a while.';
+  return (NL ? 'De AI is nu even niet bereikbaar. Probeer het straks nog eens.' : 'The AI can’t be reached right now. Try again in a while.') + tail;
 }
 /* A card's rules text for the AI: every face, short. */
 function deckAiOracle(c, max){
@@ -21773,6 +21784,29 @@ function deckAiCutRows(d, plan, res){
   });
   return { ai, list: ai.concat(plan.list.filter(x=>!used.has(x.card.name))) };
 }
+function cutsAiStoreGet(d){
+  try{
+    const all = JSON.parse(localStorage.getItem(LS_PREFIX + 'cutsAI') || '{}');
+    const e = all[d.id] && all[d.id][deckAiCutKey(d)];
+    if(!e || !e.res || Date.now() - (e.t || 0) > 14 * 864e5) return null;
+    // only while the deck has had cards taken out, none put in
+    const had = new Set(e.names || []);
+    if(!d.cards.every(c=>had.has(c.name))) return null;
+    return e.res;
+  }catch(e){ return null; }
+}
+function cutsAiStoreSet(d, key, res){
+  try{
+    const all = JSON.parse(localStorage.getItem(LS_PREFIX + 'cutsAI') || '{}');
+    const mine = all[d.id] || {};
+    mine[key] = { t: Date.now(), names: Array.from(new Set(d.cards.map(c=>c.name))), res };
+    // keep the newest 3 choices per deck, and 20 decks
+    const ks = Object.keys(mine).sort((a, b)=>(mine[b].t || 0) - (mine[a].t || 0)); ks.slice(3).forEach(k=>{ delete mine[k]; });
+    all[d.id] = mine;
+    const ids = Object.keys(all).sort((a, b)=>Math.max(...Object.values(all[b]).map(x=>x.t || 0)) - Math.max(...Object.values(all[a]).map(x=>x.t || 0))); ids.slice(20).forEach(k=>{ delete all[k]; });
+    localStorage.setItem(LS_PREFIX + 'cutsAI', JSON.stringify(all));
+  }catch(e){}
+}
 function deckAiCutKey(d){ const ctx = inspCutCtx(d); return [inspLeaderKey(d), ctx.theme, ctx.kin, typeof d.landGoal === 'number' ? d.landGoal : ''].join('|'); }
 async function askCutsAi(d, plan){
   state._cutsAI = state._cutsAI || {};
@@ -21785,6 +21819,7 @@ async function askCutsAi(d, plan){
   if(res && res.ok && typeof res.left === 'number') deckAiLeftSet(res.left);
   if(res && res.error === 'limit') deckAiLeftSet(0);
   state._cutsAI[d.id] = res && res.ok && res.kind === 'cuts' ? { key, res } : { key, err: deckAiErrText(res, appLang() === 'nl') };
+  if(res && res.ok && res.kind === 'cuts') cutsAiStoreSet(d, key, res);
   if(state.screen === 'inspiration' && document.getElementById('cutSlot') && getDeck(state.activeDeckId) === d) paintCuts(d);
 }
 /* The AI row at the foot of the Cuts settings: the button, or the AI's
@@ -21795,8 +21830,8 @@ function cutsAiRowHtml(d){
   const a = (state._cutsAI || {})[d.id];
   const left = deckAiLeftGet();
   const leftTxt = left == null ? '' : (NL ? ` · nog ${left} vandaag` : ` · ${left} left today`);
-  if(a && a.busy) return `<div class="ai-row busy"><span class="ai-spin" aria-hidden="true"></span><span class="ai-txt">${NL ? 'De AI leest je deck… (tot een halve minuut)' : 'The AI is reading your deck… (up to half a minute)'}</span></div>`;
-  if(a && a.res) return `<div class="ai-row done"><span class="ai-badge" aria-hidden="true">\u2726 AI</span><span class="ai-txt">${escapeHtml(a.res.plan || (NL ? 'Gekozen op samenhang met je leider en plan.' : 'Picked on how the cards work with your leader and plan.'))}${deckAiModelHtml(a.res, NL)}</span><button type="button" class="cut-reset" id="cutAiOff">${NL ? 'AI uit' : 'AI off'}</button></div>`;
+  if((a && a.busy) || (!a && state._cutsOpenFor === d.id && !(state._cutsAIOff || {})[d.id] && deckAiLeftGet() !== 0 && navigator.onLine !== false)) return `<div class="ai-row busy"><span class="ai-spin" aria-hidden="true"></span><span class="ai-txt">${NL ? 'De AI leest je deck… (tot een halve minuut)' : 'The AI is reading your deck… (up to half a minute)'}</span></div>`;
+  if(a && a.res) return `<div class="ai-row done"><span class="ai-badge" aria-hidden="true">\u2726 AI</span><span class="ai-txt">${escapeHtml(a.res.plan || (NL ? 'Gekozen op samenhang met je leider en plan.' : 'Picked on how the cards work with your leader and plan.'))}${deckAiModelHtml(a.res, NL)}</span><button type="button" class="cut-reset" id="cutAiOff">${NL ? 'Eigen lijst' : 'Own list'}</button></div>`;
   return `${a && a.err ? `<div class="ai-err">${escapeHtml(a.err)}</div>` : ''}<button type="button" class="ghost-btn ai-btn" id="cutAiBtn"><span class="ai-star" aria-hidden="true">✦</span>${NL ? 'Vraag de AI om cuts' : 'Ask the AI for cuts'}</button><div class="ai-hint">${NL ? 'Leest hoe je kaarten samenwerken' : 'Reads how your cards work together'}${leftTxt}</div>`;
 }
 /* The Cuts row: the top of the Inspiration menus, right above Theme, in
@@ -21809,10 +21844,11 @@ function cutsBlockHtml(d, plan){
   const open = state._cutsOpenFor === d.id;
   const btn = `<button type="button" class="cselect-btn cut-toggle" id="cutToggle" aria-expanded="${open}"><span class="cs-label">Cuts — ${plan.over} ${NL ? 'te veel' : 'too many'}</span><span class="cs-car">${open ? '▴' : '▾'}</span></button>`;
   if(!open) return `<div class="cut-block">${btn}</div>`;
-  const n = Math.min(plan.list.length, Math.max(plan.over + 4, 6, plan.aiN || 0) + (state._cutsMore || 0));
+  const n = plan.aiWait ? 0 : Math.min(plan.list.length, (plan.aiOnly ? Math.max(1, plan.aiN || 0) : Math.max(plan.over + 4, 6)) + (state._cutsMore || 0));
   const rows = plan.list.slice(0, n);
   const lead = d.admiral ? String(d.admiral.name).split(',')[0] : '';
-  const basis = `<div class="cut-basis">${NL ? 'Op basis van' : 'Based on'} ${escapeHtml(lead)}${plan.pg ? ' · ' + escapeHtml(plan.pg) : ''}${plan.pg ? '' : (NL ? ' — kies hieronder een Theme of Kindred' : ' — pick a Theme or Kindred below')}</div>`;
+  const own = !plan.aiOnly && !plan.aiWait && deckAiFits(d) ? `<div class="cut-basis"><b>${NL ? 'Eigen schatting van de app (zonder AI)' : 'The app\u2019s own estimate (no AI)'}</b></div>` : '';
+  const basis = own + `<div class="cut-basis">${NL ? 'Op basis van' : 'Based on'} ${escapeHtml(lead)}${plan.pg ? ' · ' + escapeHtml(plan.pg) : ''}${plan.pg ? '' : (NL ? ' — kies hieronder een Theme of Kindred' : ' — pick a Theme or Kindred below')}</div>`;
   const lands = plan.tpl.land ? `<div class="cut-lands"><span class="cut-lands-l">${NL ? 'Aantal lands' : 'Land count'}</span>
       <button type="button" class="ghost-btn cut-step" data-cutland="-1" aria-label="−">−</button>
       <b class="cut-lands-n">${plan.tpl.land}</b>
@@ -21838,9 +21874,19 @@ function paintCuts(d){
   const ctx = inspCutCtx(d);
   const plan = deckCutPlan(d, ctx.stats, ctx);
   if(!plan || !(plan.over > 0)){ slot.remove(); placeInspJump(); return; }
-  const aiSt = (state._cutsAI || {})[d.id];
-  if(aiSt && aiSt.key !== deckAiCutKey(d) && !aiSt.busy) delete state._cutsAI[d.id];
-  else if(aiSt && aiSt.res){ const r = deckAiCutRows(d, plan, aiSt.res); plan.list = r.list; plan.aiN = r.ai.length; }
+  state._cutsAI = state._cutsAI || {};
+  let aiSt = state._cutsAI[d.id];
+  if(aiSt && aiSt.key !== deckAiCutKey(d) && !aiSt.busy){ delete state._cutsAI[d.id]; aiSt = null; }
+  const aiOn = deckAiFits(d) && !(state._cutsAIOff || {})[d.id];
+  if(aiOn && !aiSt){ const kept = cutsAiStoreGet(d); if(kept) aiSt = state._cutsAI[d.id] = { key: deckAiCutKey(d), res: kept }; }
+  if(aiSt && aiSt.res){ const r = deckAiCutRows(d, plan, aiSt.res); plan.list = r.list; plan.aiN = r.ai.length; plan.aiOnly = true; }
+  // 1.17: the AI is the default -- Cuts open and nothing asked yet: ask now
+  // (not when today's analyses are used up: then the button stays)
+  if(aiOn && !aiSt && state._cutsOpenFor === d.id && deckAiLeftGet() !== 0 && navigator.onLine !== false){
+    setTimeout(()=>{ if(state._cutsOpenFor === d.id && !(state._cutsAI || {})[d.id]) askCutsAi(d, plan); }, 0);
+    plan.aiWait = true;
+  }
+  if(aiSt && aiSt.busy) plan.aiWait = true;
   const fromFoot = document.documentElement.scrollHeight - window.scrollY;
   slot.innerHTML = cutsBlockHtml(d, plan);
   wireCutsBlock(d, plan);
@@ -21875,8 +21921,8 @@ function wireCutsBlock(d, plan){
   slot.querySelectorAll('[data-cutimg]').forEach(im=>im.addEventListener('click', ()=>{ const x = plan.list[+im.dataset.cutimg]; if(x) openCardInfo(x.card); }));
   slot.querySelectorAll('[data-cutwhy]').forEach(b=>b.addEventListener('click', ()=>{ const i = +b.dataset.cutwhy, x = plan.list[i]; if(x) openCutWhy(d, x, i, plan.list.length); }));
   slot.querySelector('.cut-more')?.addEventListener('click', ()=>{ state._cutsMore = (state._cutsMore || 0) + 8; paintCuts(d); });
-  slot.querySelector('#cutAiBtn')?.addEventListener('click', ()=>askCutsAi(d, plan));
-  slot.querySelector('#cutAiOff')?.addEventListener('click', ()=>{ if(state._cutsAI) delete state._cutsAI[d.id]; paintCuts(d); });
+  slot.querySelector('#cutAiBtn')?.addEventListener('click', ()=>{ if(state._cutsAIOff) delete state._cutsAIOff[d.id]; askCutsAi(d, plan); });
+  slot.querySelector('#cutAiOff')?.addEventListener('click', ()=>{ if(state._cutsAI) delete state._cutsAI[d.id]; (state._cutsAIOff = state._cutsAIOff || {})[d.id] = true; state._cutsMore = 0; paintCuts(d); });
   slot.querySelectorAll('[data-cutland]').forEach(b=>b.addEventListener('click', ()=>{
     const step = +b.dataset.cutland;
     if(!step) delete d.landGoal;
