@@ -24,9 +24,23 @@
    - the same deck asked again is served from the cache, free. */
 import crypto from 'node:crypto';
 
-const MAX_CANDS = 90, MAX_ORACLE = 260, MAX_TOTAL_CHARS = 26000, MAX_DECK_NAMES = 110;
+const MAX_CANDS = 110, MAX_ORACLE = 450, MAX_TOTAL_CHARS = 60000, MAX_DECK_NAMES = 110;
 const GROQ_MODELS = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile'];
 const CEREBRAS_MODELS = ['gpt-oss-120b', 'llama-3.3-70b'];
+// 1.16: Google Gemini first (GEMINI_API_KEY, free in Google AI Studio, room
+// for a whole deck). GEMINI_MODEL (comma-separated) overrides the list.
+export const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-2.5-pro', 'gemini-2.5-flash'];
+const listOf = (v)=>String(v || '').split(',').map(x=>x.trim()).filter(Boolean);
+/* Groq's free cap is small: its request keeps the 36 cards the app finds
+   weakest (the app sends them weakest first) with shorter texts; the rest
+   go along by name. Lands are a short list already. */
+export function trimForSmallCap(c){
+  if(c.kind !== 'cuts') return Object.assign({}, c, { cands: c.cands.map(k=>Object.assign({}, k, { oracle: k.oracle.slice(0, 170) })) });
+  const keep = c.cands.slice(0, 36).map(k=>Object.assign({}, k, { oracle: k.oracle.length > 170 ? k.oracle.slice(0, 169) + '\u2026' : k.oracle }));
+  const rest = c.cands.slice(36).map(k=>k.name);
+  return Object.assign({}, c, { cands: keep, deck: Object.assign({}, c.deck, { others: c.deck.others.concat(rest).slice(0, 160) }) });
+}
 
 const s = (x, n)=>String(x == null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, n);
 const num = (x, lo, hi, def)=>{ const v = Number(x); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def; };
@@ -166,7 +180,9 @@ export function parseReply(text, c){
   if(c.kind === 'cuts'){
     // the AI's own core list wins over a cut that contradicts it
     const core = new Set((Array.isArray(o.core) ? o.core : []).map(x=>byName.get(String(x && (x.name || x) || '').trim().toLowerCase())).filter(Boolean).map(k=>k.name));
-    const cuts = list(o.cuts, 15, k=>!core.has(k.name));
+    let cuts = list(o.cuts, 15, k=>!core.has(k.name));
+    // the AI put every cut in its own core list: its cuts list wins then
+    if(!cuts.length){ used.clear(); cuts = list(o.cuts, 15); }
     if(!cuts.length) return null;
     return { kind: 'cuts', plan, engine: s(o.engine, 400), core: Array.from(core).slice(0, 40), cuts };
   }
@@ -177,51 +193,94 @@ export function parseReply(text, c){
   return { kind: 'lands', plan, count: count >= 20 && count <= 45 ? count : 0, countWhy: s(o.countWhy, 300), add, swap };
 }
 
-async function chat(fetchImpl, url, key, model, sys, user, extras = true){
-  const req = { model, temperature: 0.2, max_tokens: 3500,
+/* Rough token count of a text, on the safe side (~3.2 characters a token). */
+export const estTokens = (t)=>Math.ceil(String(t || '').length / 3.2);   // careful: mana symbols and names cost more
+/* Room for the answer: the free tiers count prompt + max_tokens against a
+   per-minute cap (Groq gpt-oss-120b: 8,000; Llama 3.3 70B: 12,000). Asking
+   for more than fits makes the provider refuse the whole request (413). */
+export function answerRoom(provider, model, promptTokens){
+  // Gemini thinks before it answers and counts that in max_tokens: it gets more room
+  if(provider === 'gemini') return 12000;
+  const cap = provider === 'groq' ? (/gpt-oss/.test(model) ? 8000 : 12000) : 60000;
+  return Math.max(1200, Math.min(4000, cap - promptTokens - 250));
+}
+async function chat(fetchImpl, url, key, model, sys, user, extras = true, provider = '', waitMs = 40000){
+  const req = { model, temperature: 0.2, max_tokens: answerRoom(provider, model, estTokens(sys) + estTokens(user)),
     messages: [{ role: 'system', content: sys }, { role: 'user', content: user }] };
   if(extras){
     req.response_format = { type: 'json_object' };
-    if(/gpt-oss/.test(model)) req.reasoning_effort = 'medium';
+    // low: the reply itself reasons step by step (engine -> core -> cuts),
+    // and hidden reasoning tokens would eat the room the answer needs
+    if(/gpt-oss/.test(model)) req.reasoning_effort = 'low';
+    // Gemini has the room: let it think properly
+    if(provider === 'gemini') req.reasoning_effort = 'medium';
   }
-  const res = await fetchImpl(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-    body: JSON.stringify(req)
-  });
+  // one slow model must not eat the whole wait
+  const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const tm = ctl ? setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, waitMs) : null;
+  let res;
+  try{
+    res = await fetchImpl(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+      body: JSON.stringify(req), signal: ctl ? ctl.signal : undefined
+    });
+  }catch(e){
+    if(e && e.name === 'AbortError'){ const x = new Error('too slow'); x.status = 0; x.detail = 'no answer within ' + Math.round(waitMs / 1000) + ' s'; throw x; }
+    throw e;
+  }finally{ if(tm) clearTimeout(tm); }
   // a model that refuses JSON mode or the effort setting: once more without them
-  if(res.status === 400 && extras) return chat(fetchImpl, url, key, model, sys, user, false);
-  if(!res.ok){ const e = new Error('http ' + res.status); e.status = res.status; throw e; }
+  if(res.status === 400 && extras) return chat(fetchImpl, url, key, model, sys, user, false, provider, waitMs);
+  if(!res.ok){
+    let msg = ''; try{ const t = await res.text(); const j = JSON.parse(t); msg = (j && j.error && (j.error.message || j.error.code)) || t; }catch(e2){}
+    const e = new Error('http ' + res.status); e.status = res.status; e.detail = String(msg || '').replace(/\s+/g, ' ').slice(0, 160); throw e;
+  }
   const j = await res.json();
-  return j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '';
+  const ch = j && j.choices && j.choices[0];
+  const out = ch && ch.message && ch.message.content || '';
+  if(!out && ch && ch.finish_reason === 'length'){ const e = new Error('cut off'); e.status = 0; e.detail = 'answer cut off (length)'; throw e; }
+  return out;
 }
 
 export async function askProviders(env, fetchImpl, c){
   const prov = [];
+  const gem = env.GEMINI_API_KEY ? { name: 'gemini', url: GEMINI_URL, key: env.GEMINI_API_KEY, models: env.GEMINI_MODEL ? listOf(env.GEMINI_MODEL) : GEMINI_MODELS } : null;
   if(env.GROQ_API_KEY) prov.push({ name: 'groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: env.GROQ_API_KEY, models: env.GROQ_MODEL ? [env.GROQ_MODEL] : GROQ_MODELS });
   if(env.CEREBRAS_API_KEY) prov.push({ name: 'cerebras', url: 'https://api.cerebras.ai/v1/chat/completions', key: env.CEREBRAS_API_KEY, models: env.CEREBRAS_MODEL ? [env.CEREBRAS_MODEL] : CEREBRAS_MODELS });
-  if(!prov.length) return { error: 'nokey' };
+  if(!prov.length && !gem) return { error: 'nokey' };
   // 1.14: quality first -- the strong model on each provider, then the
   // smaller one: [groq gpt-oss, cerebras gpt-oss, groq llama, cerebras llama]
   const lanes = [];
   const rounds = Math.max(...prov.map(p=>p.models.length));
   for(let i = 0; i < rounds; i++) prov.forEach(p=>{ if(p.models[i]) lanes.push({ name: p.name, url: p.url, key: p.key, models: [p.models[i]] }); });
-  const sys = systemPrompt(c), user = userMessage(c);
+  // 1.16: Gemini's models before all of them, with the full request
+  if(gem) lanes.unshift(...gem.models.map(m=>({ name: 'gemini', url: gem.url, key: gem.key, models: [m] })));
+  const full = { sys: systemPrompt(c), user: userMessage(c), c };
+  const cs = trimForSmallCap(c);
+  const small = { sys: systemPrompt(cs), user: userMessage(cs), c: cs };
   let last = 'down';
-  const t0 = Date.now();
+  const t0 = Date.now(), tried = [];
   for(const ln of lanes) for(const m of ln.models){
-    // Netlify stops a function after 60 s: no new attempt after 35 s
-    if(Date.now() - t0 > 35000) return { error: last };
+    // Netlify stops a function after 60 s: every try gets what is left of
+    // 54 s (at most 40), and none starts with less than 8 s to go
+    const left = 54000 - (Date.now() - t0);
+    if(left < 8000){ tried.push({ model: m, why: 'no time left' }); return { error: last, tried }; }
+    const t1 = Date.now();
+    const P = ln.name === 'gemini' ? full : small;
     try{
-      const out = parseReply(await chat(fetchImpl, ln.url, ln.key, m, sys, user), c);
-      if(out) return Object.assign(out, { provider: ln.name, model: m });
+      const txt = await chat(fetchImpl, ln.url, ln.key, m, P.sys, P.user, true, ln.name, Math.min(40000, left));
+      const out = parseReply(txt, P.c);
+      if(out) return Object.assign(out, { provider: ln.name, model: m, tried });
       last = 'shape';
+      tried.push({ model: m, why: 'unusable answer', ms: Date.now() - t1, peek: String(txt || '').replace(/\s+/g, ' ').slice(0, 120) });
     }catch(e){
-      // a 429 here is often the per-minute token cap of ONE model: try the next model
+      // 429 / 413: the per-minute token cap of ONE model -- try the next model
       last = e && (e.status === 429 || e.status === 413) ? 'quota' : 'down';
+      tried.push({ model: m, why: (e && e.status ? 'http ' + e.status : (e && e.message) || 'error') + (e && e.detail ? ': ' + e.detail : ''), ms: Date.now() - t1 });
     }
   }
-  return { error: last };
+  try{ console.warn('deckai: no answer', JSON.stringify(tried)); }catch(e){}
+  return { error: last, tried };
 }
 
 const today = ()=>new Date().toISOString().slice(0, 10);
@@ -253,7 +312,7 @@ export async function handle(body, deps){
   if(devN >= perDev) return { status: 429, json: { ok: false, error: 'limit', limit: perDev } };
   if(allN >= all) return { status: 429, json: { ok: false, error: 'quota' } };
   const out = await askProviders(env, deps.fetch, c);
-  if(out.error) return { status: out.error === 'nokey' ? 503 : 502, json: { ok: false, error: out.error } };
+  if(out.error) return { status: out.error === 'nokey' ? 503 : 502, json: { ok: false, error: out.error, tried: out.tried || [] } };
   try{
     if(count){
       await count.setJSON('d|' + day + '|' + dev, { n: devN + 1 });

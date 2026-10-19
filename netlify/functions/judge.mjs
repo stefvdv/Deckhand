@@ -6,8 +6,8 @@
    free AI service to answer from THAT material only, and returns
      { ok, answer, reasoning, cites: ["603.2", ...], confident, provider, cached }.
 
-   Free first: Groq (GROQ_API_KEY), then Cerebras (CEREBRAS_API_KEY) if that
-   key is also set. No credit card on those accounts = no bill, ever; when
+   Free first: Google Gemini (GEMINI_API_KEY, 1.16), then Groq (GROQ_API_KEY),
+   then Cerebras (CEREBRAS_API_KEY) -- each only when its key is set. No credit card on those accounts = no bill, ever; when
    the free quota is used up the app falls back to its own rule search.
 
    Guards, because a public endpoint is a free AI for anyone who finds it:
@@ -22,6 +22,11 @@ import crypto from 'node:crypto';
 const MAX_Q = 500, MAX_CARDS = 5, MAX_RULES = 40, MAX_RULE_CHARS = 18000, MAX_CARD_CHARS = 2500;
 
 const GROQ_MODELS = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile'];
+// 1.16: Google Gemini first (GEMINI_API_KEY, free in Google AI Studio). Its
+// own models in turn; GEMINI_MODEL (comma-separated) overrides the list.
+export const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-2.5-flash'];
+const listOf = (v)=>String(v || '').split(',').map(x=>x.trim()).filter(Boolean);
 const CEREBRAS_MODELS = ['gpt-oss-120b', 'llama-3.3-70b'];
 
 export function systemPrompt(lang){
@@ -94,14 +99,25 @@ export function parseReply(text){
 }
 
 async function chat(fetchImpl, url, key, model, sys, user, jsonMode = true){
-  const req = { model, temperature: 0.1, max_tokens: 1200,
+  const gem = /^gemini/.test(model);
+  // Gemini thinks before it answers and counts that in max_tokens: more room
+  const req = { model, temperature: 0.1, max_tokens: gem ? 6000 : 1200,
     messages: [{ role: 'system', content: sys }, { role: 'user', content: user }] };
-  if(jsonMode) req.response_format = { type: 'json_object' };
-  const res = await fetchImpl(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-    body: JSON.stringify(req)
-  });
+  if(jsonMode){
+    req.response_format = { type: 'json_object' };
+    if(gem) req.reasoning_effort = 'medium';
+  }
+  // one slow model must not eat the whole wait: give up on it after 28 s
+  const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const tm = ctl ? setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 28000) : null;
+  let res;
+  try{
+    res = await fetchImpl(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+      body: JSON.stringify(req), signal: ctl ? ctl.signal : undefined
+    });
+  }finally{ if(tm) clearTimeout(tm); }
   // a model that does not do JSON mode: once more without it (the prompt asks for JSON anyway)
   if(res.status === 400 && jsonMode) return chat(fetchImpl, url, key, model, sys, user, false);
   if(!res.ok){ const e = new Error('http ' + res.status); e.status = res.status; throw e; }
@@ -112,6 +128,7 @@ async function chat(fetchImpl, url, key, model, sys, user, jsonMode = true){
 /* Each provider, each model in turn, until one answers in shape. */
 export async function askProviders(env, fetchImpl, sys, user){
   const lanes = [];
+  if(env.GEMINI_API_KEY) lanes.push({ name: 'gemini', url: GEMINI_URL, key: env.GEMINI_API_KEY, models: env.GEMINI_MODEL ? listOf(env.GEMINI_MODEL) : GEMINI_MODELS });
   if(env.GROQ_API_KEY) lanes.push({ name: 'groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: env.GROQ_API_KEY, models: env.GROQ_MODEL ? [env.GROQ_MODEL] : GROQ_MODELS });
   if(env.CEREBRAS_API_KEY) lanes.push({ name: 'cerebras', url: 'https://api.cerebras.ai/v1/chat/completions', key: env.CEREBRAS_API_KEY, models: env.CEREBRAS_MODEL ? [env.CEREBRAS_MODEL] : CEREBRAS_MODELS });
   if(!lanes.length) return { error: 'nokey' };
@@ -123,7 +140,9 @@ export async function askProviders(env, fetchImpl, sys, user){
       last = 'shape';
     }catch(e){
       last = e && e.status === 429 ? 'quota' : 'down';
-      if(e && e.status === 429) break;          // this provider is out for today: next provider
+      // Groq's 429 holds for all its models today: next provider. Gemini
+      // counts per model, so its next model still has room.
+      if(e && e.status === 429 && ln.name !== 'gemini') break;
     }
   }
   return { error: last };
