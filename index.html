@@ -1887,7 +1887,7 @@ button.cl-head{background:none;border:none;padding:10px 2px;font-family:inherit;
 .ai-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;}
 .ai-star{flex:none;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--gold);color:#241A04;font-size:13px;line-height:1;}
 .ai-hint{font-size:12px;color:var(--sub-text);text-align:center;}
-.ai-err{font-size:12.5px;color:var(--ink-text);line-height:1.35;border-left:3px solid var(--gold);padding-left:8px;}
+.ai-err{font-size:12.5px;color:var(--ink-text);line-height:1.35;border-left:3px solid var(--gold);padding-left:8px;white-space:pre-line;overflow-wrap:anywhere;}
 .ai-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-text);line-height:1.35;}
 .ai-row .ai-txt{flex:1;min-width:0;}
 .ai-via{display:block;font-size:11.5px;color:var(--sub-text);margin-top:2px;}
@@ -6330,15 +6330,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.14';
+const APP_VERSION = '1.16';
 const CHANGELOG_NOTES = {
   en: [
-    'Tap the deck count to open Cuts',
-    'AI cuts read your leader better'
+    'AI judge and cuts run on Gemini',
+    'AI cuts read your whole deck'
   ],
   nl: [
-    'Tik op de teller: Cuts gaat open',
-    'AI-cuts lezen je leider beter'
+    'AI-judge en cuts via Gemini',
+    'AI-cuts lezen je hele deck'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6348,6 +6348,12 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-19';
 const CHANGELOG_HISTORY = [
+  { v: '1.15', d: '2026-10-19',
+    en: ['AI cuts answer again', 'AI says why when it can\u2019t answer'],
+    nl: ['AI-cuts geven weer antwoord', 'AI zegt waarom het mislukt'] },
+  { v: '1.14', d: '2026-10-19',
+    en: ['Tap the deck count to open Cuts', 'AI cuts read your leader better'],
+    nl: ['Tik op de teller: Cuts gaat open', 'AI-cuts lezen je leider beter'] },
   { v: '1.13', d: '2026-10-18',
     en: ['AI picks cuts for your deck', 'AI advises lands and land count'],
     nl: ['AI kiest cuts voor je deck', 'AI adviseert lands en aantal'] },
@@ -21649,14 +21655,28 @@ function deckAiLeftSet(n){
 }
 /* Which AI answered: the strong model, or the smaller reserve one when the
    strong one was busy (the reserve reasons less deeply). */
+/* A model id as people read it: gemini-2.5-pro -> Gemini 2.5 Pro. */
+function deckAiModelName(m){
+  m = String(m || '');
+  if(/^gemini/i.test(m)) return m.replace(/^gemini-/i, 'Gemini ').replace(/-/g, ' ').replace(/\b(pro|flash|lite|preview|latest|argon)\b/gi, w=>w.charAt(0).toUpperCase() + w.slice(1));
+  if(/gpt-oss/.test(m)) return 'GPT-OSS 120B';
+  if(/llama/i.test(m)) return 'Llama 3.3';
+  return m;
+}
 function deckAiModelHtml(res, NL){
   const m = String(res && res.model || '');
   if(!m) return '';
-  const big = /gpt-oss/.test(m);
-  return `<span class="ai-via">${big ? 'GPT-OSS 120B' : (NL ? 'reservemodel (Llama 3.3) \u2014 de sterke AI was even bezet' : 'reserve model (Llama 3.3) \u2014 the strong AI was busy')}${res.cached ? (NL ? ' \u00b7 eerder antwoord' : ' \u00b7 earlier answer') : ''}</span>`;
+  const reserve = /llama/i.test(m);
+  return `<span class="ai-via">${reserve ? (NL ? 'reservemodel (Llama 3.3) \u2014 de sterke AI was even bezet' : 'reserve model (Llama 3.3) \u2014 the strong AI was busy') : escapeHtml(deckAiModelName(m))}${res.cached ? (NL ? ' \u00b7 eerder antwoord' : ' \u00b7 earlier answer') : ''}</span>`;
 }
 function deckAiErrText(res, NL){
   const e = res && res.error;
+  // what each model said, small, so a screenshot tells what went wrong
+  const tried = (res && Array.isArray(res.tried) ? res.tried : []).map(t=>`${deckAiModelName(t.model)}: ${t.why}`).join(' \u00b7 ');
+  const tail = tried ? `\n(${tried})` : '';
+  if(e === 'quota') return (NL ? 'De AI is even bezet: de gratis limiet per minuut is op. Probeer het over een minuut nog eens.' : 'The AI is busy: the free per-minute limit is used up. Try again in a minute.') + tail;
+  if(e === 'shape') return (NL ? 'De AI gaf een antwoord dat de app niet kon lezen. Probeer het nog eens.' : 'The AI gave an answer the app could not read. Try again.') + tail;
+  if(e === 'down' && tried) return (NL ? 'De AI is nu even niet bereikbaar. Probeer het straks nog eens.' : 'The AI can\u2019t be reached right now. Try again in a while.') + tail;
   if(e === 'limit') return NL ? `Je ${res.limit || ''} AI-analyses voor vandaag zijn op. Morgen kan het weer.` : `Your ${res.limit || ''} AI analyses for today are used up. More tomorrow.`;
   if(e === 'offline') return NL ? 'Geen verbinding. De AI heeft internet nodig.' : 'No connection. The AI needs the internet.';
   if(e === 'nokey') return NL ? 'De AI is nog niet ingesteld.' : 'The AI is not set up yet.';
@@ -21721,7 +21741,7 @@ function deckAiCutsPayload(d, plan){
   const look = (c)=>qS ? (qS[String(c.name).toLowerCase()] || qS[String(c.name).split(' // ')[0].toLowerCase()]) : null;
   const landsOver = plan.tpl.land && plan.counts.land > plan.tpl.land;
   const rank = new Map(plan.list.map((x, i)=>[x.card.name, i]));
-  const CAP = 45;
+  const CAP = 100;   // 1.16: Gemini reads the whole deck; the server trims for the reserve
   const seen = new Set(), cands = [], others = [];
   d.cards.forEach(c=>{
     if(!c || !c.name) return;
@@ -21732,8 +21752,8 @@ function deckAiCutsPayload(d, plan){
     if(!rank.has(c.name) || rank.get(c.name) >= CAP){ others.push(c); return; }
     const st = look(c);
     const nBasic = isLand ? d.cards.filter(x=>x.name === c.name).length : 0;
-    cands.push({ name: c.name, type: String(c.type_line || ''), mv: Number(c.cmc) || 0, cost: deckAiCost(c), oracle: deckAiOracle(c, 200),
-      note: [st ? `in ${Math.round(st[0] * 100)}% of decks with this leader${st[1] ? `, synergy ${st[1] > 0 ? '+' : ''}${Math.round(st[1] * 100)}%` : ''}` : '', nBasic > 1 ? `\u00d7${nBasic} in deck` : ''].filter(Boolean).join(', '),
+    cands.push({ name: c.name, type: String(c.type_line || ''), mv: Number(c.cmc) || 0, cost: deckAiCost(c), oracle: deckAiOracle(c, 400),
+      note: [st ? `played ${Math.round(st[0] * 100)}%${st[1] ? `, synergy ${st[1] > 0 ? '+' : ''}${Math.round(st[1] * 100)}%` : ''}` : '', nBasic > 1 ? `\u00d7${nBasic} in deck` : ''].filter(Boolean).join(', '),
       _r: rank.get(c.name) });
   });
   cands.sort((a, b)=>a._r - b._r); cands.forEach(k=>{ delete k._r; });
@@ -26960,7 +26980,7 @@ function aboutHtml(){
     ['Kaartgegevens worden gedownload', 'de kaartendatabase, prijzen en scan-vingerafdrukken komen eens per dag of week van de Deckhand-site en blijven op je telefoon staan. Zoek je iets wat er niet in staat, dan vraagt de app het rechtstreeks aan Scryfall of EDHREC; die zien dat er een vraag komt, maar niet van wie.'],
     ['Meldingen zonder account', 'de Android-app kijkt zelf op je telefoon of er spoilers of updates zijn. Er wordt niets over jou opgeslagen om je een melding te kunnen sturen.'],
     ['Feedback', 'wat je via Over Deckhand stuurt, gaat via de Deckhand-site (Netlify) als e-mail naar de maker, met je appversie en telefoontype. Je e-mailadres alleen als je het zelf invult.'],
-    ['De AI-judge', 'je vraag gaat met de officiële regels en de tekst van de kaarten die je tagt via de Deckhand-site naar een AI-dienst (Groq), die antwoordt. Zonder naam of account: alleen een willekeurig toestelnummer, om de 20 vragen per dag te tellen. Voor een antwoord is dus internet nodig.'],
+    ['De AI-judge', 'je vraag gaat met de officiële regels en de tekst van de kaarten die je tagt via de Deckhand-site naar een AI-dienst: Google Gemini, met Groq als reserve. Zonder naam of account: alleen een willekeurig toestelnummer, om de 20 vragen per dag te tellen. Google mag wat via zijn gratis laag binnenkomt gebruiken om zijn diensten te verbeteren; er gaat niets mee dat naar jou wijst. Voor een antwoord is dus internet nodig.'],
     ['AI-hulp bij cuts en lands', 'vraag je de AI om cuts of lands, dan gaan de kaartnamen, kaartteksten en cijfers van dat deck via de Deckhand-site naar dezelfde AI-dienst. Je deck zelf wordt daar niet bewaard, alleen het antwoord, zodat hetzelfde deck de volgende keer niets kost. Ook hier alleen het toestelnummer, om de 10 analyses per dag te tellen.'],
     ['Wis je de app, dan is alles weg', 'app-gegevens wissen, de app verwijderen of je telefoon resetten haalt alles mee. Daarom de back-up in Extra\u2019s: één bestand met alles, dat je in je eigen cloud zet en op elk toestel terugzet.'],
     ['Beschermde opslag', 'de app vraagt Android of zijn opslag beschermd mag blijven, zodat het systeem hem niet opruimt als je telefoon vol raakt. In Extra\u2019s → Back-up zie je of dat gelukt is.']
@@ -26969,7 +26989,7 @@ function aboutHtml(){
     ['Card data is downloaded', 'the card database, prices and scanner fingerprints come from the Deckhand site once a day or week and stay on your phone. Look up something that is not in it and the app asks Scryfall or EDHREC directly; they see a request arrive, not who sent it.'],
     ['Notifications without an account', 'the Android app checks for spoilers and updates on your phone itself. Nothing about you is stored to be able to notify you.'],
     ['Feedback', 'what you send from About Deckhand goes through the Deckhand site (Netlify) as an email to the maker, with your app version and phone type. Your email address only if you fill it in.'],
-    ['The AI judge', 'your question goes, with the official rules and the text of the cards you tag, through the Deckhand site to an AI service (Groq), which answers. No name, no account: only a random device number, to count the 20 questions a day. So an answer needs an internet connection.'],
+    ['The AI judge', 'your question goes, with the official rules and the text of the cards you tag, through the Deckhand site to an AI service: Google Gemini, with Groq as the reserve. No name, no account: only a random device number, to count the 20 questions a day. Google may use what comes in through its free tier to improve its services; nothing that points to you goes along. So an answer needs an internet connection.'],
     ['AI help with cuts and lands', 'when you ask the AI for cuts or lands, the card names, card texts and numbers of that deck go through the Deckhand site to the same AI service. Your deck itself is not kept there, only the answer, so the same deck costs nothing next time. Here too only the device number, to count the 10 analyses a day.'],
     ['Clear the app and it is all gone', 'clearing app data, uninstalling or resetting your phone takes everything with it. That is why there is the backup in Extras: one file with everything, kept in your own cloud and restored on any device.'],
     ['Protected storage', 'the app asks Android to keep its storage protected, so the system does not clean it up when your phone runs full. Extras → Backup shows whether that worked.']
