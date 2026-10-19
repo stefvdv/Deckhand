@@ -38,11 +38,12 @@ export function clean(body){
   const dk = body.deck || {};
   const fmt = ['commander', 'admiral', 'paupercommander', 'predh', 'duel'].includes(dk.format) ? dk.format : 'commander';
   const leaders = (Array.isArray(dk.leaders) ? dk.leaders : []).slice(0, 2).map(c=>({
-    name: s(c && c.name, 150), type: s(c && c.type, 150), oracle: s(c && c.oracle, 900)
+    name: s(c && c.name, 150), type: s(c && c.type, 150), oracle: s(c && c.oracle, 900),
+    cost: s(c && c.cost, 60), colors: String(c && c.colors || '').toUpperCase().replace(/[^WUBRG]/g, '').slice(0, 5)
   })).filter(c=>c.name);
   const pick = (o, keys, hi)=>{ const r = {}; keys.forEach(k=>{ r[k] = num(o && o[k], 0, hi, 0); }); return r; };
   const deck = {
-    format: fmt, leaders,
+    format: fmt, leaders, name: s(dk.name, 60),
     theme: s(dk.theme, 60), kindred: s(dk.kindred, 60),
     size: num(dk.size, 0, 300, 0), limit: num(dk.limit, 0, 300, 100),
     over: num(dk.over, 0, 60, 0),
@@ -61,9 +62,9 @@ export function clean(body){
   for(const c of (Array.isArray(body.cands) ? body.cands : []).slice(0, MAX_CANDS)){
     const name = s(c && c.name, 150);
     if(!name || seen.has(name.toLowerCase())) continue;
-    const k = { name, type: s(c && c.type, 120), mv: num(c && c.mv, 0, 20, 0), oracle: s(c && c.oracle, MAX_ORACLE),
-      note: s(c && c.note, 80), inDeck: !!(c && c.inDeck) };
-    const len = k.name.length + k.type.length + k.oracle.length + k.note.length + 20;
+    const k = { name, type: s(c && c.type, 120), mv: num(c && c.mv, 0, 20, 0), cost: s(c && c.cost, 40), oracle: s(c && c.oracle, MAX_ORACLE),
+      note: s(c && c.note, 100), inDeck: !!(c && c.inDeck) };
+    const len = k.name.length + k.type.length + k.cost.length + k.oracle.length + k.note.length + 20;
     if(len > room) break;
     room -= len;
     seen.add(name.toLowerCase());
@@ -94,11 +95,14 @@ export function systemPrompt(c){
   ];
   if(c.kind === 'cuts') return common.concat([
     `TASK: the deck has ${c.deck.over} card(s) too many. Pick the ${c.want} candidates that contribute LEAST to this deck's plan, weakest first.`,
-    'Good reasons to cut: does nothing for the leader or theme; anti-synergy with other cards in the deck; a worse copy of a role the deck already fills well; too expensive for what it does here; win-more; too narrow.',
-    'Do NOT cut: the cards the leader\'s plan depends on, key ramp/draw/removal when the deck is short on that role, or payoffs that the deck feeds well.',
-    'Lands are only candidates when they are listed.',
-    'Reply with ONE JSON object and nothing else:',
-    '{"plan": "one sentence: what this deck is trying to do", "cuts": [{"name": "exact candidate name", "why": "reason"}]}'
+    'Work in three steps, in this order:',
+    '1. ENGINE. Read the leader\'s text literally AND broadly. Name the resource it uses or rewards and every way the deck can make that resource. General words are general: "a counter" means ANY counter (+1/+1, shield, lore, time, charge on a creature, keyword counters such as flying or deathtouch counters); "a spell" means any spell; "a creature you control" includes tokens. Note the leader\'s colours and creature types: cards that check them (for example "if enchanted creature is white") work on this leader when it has them.',
+    '2. CORE. List the candidates that make, move, double or pay off that resource, protect the leader when the deck relies on it, or carry the chosen theme. These stay, even when they look weak or narrow on their own.',
+    '3. CUTS. Only from the candidates NOT in your core list. Good reasons: does nothing for the engine, the leader or the theme; another card in the deck does the same job better (name that card); too expensive for what it does here; win-more; a condition this deck rarely meets.',
+    'Before you write a reason, check it against the leader\'s text, colours and types and against the rest of the deck. Never call a card useless for a reason the leader\'s own text contradicts.',
+    'Lands are only candidates when they are listed. Notes such as "in 40% of decks" are popularity; use them only as a tie-breaker.',
+    'Reply with ONE JSON object and nothing else, keys in this order:',
+    '{"engine": "one or two sentences: what the leader does and how this deck feeds it", "core": ["exact candidate names"], "plan": "one sentence for the player: what this deck is trying to do", "cuts": [{"name": "exact candidate name", "why": "reason"}]}'
   ]).join('\n');
   return common.concat([
     'TASK: advise on the mana base. Decide how many lands this deck should run in total, given its curve, ramp count and colour needs.',
@@ -113,7 +117,9 @@ export function userMessage(c){
   const d = c.deck;
   const L = [];
   L.push('LEADER(S):');
-  d.leaders.forEach(k=>L.push(`${k.name} — ${k.type}\n${k.oracle}`));
+  const COL = { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green' };
+  d.leaders.forEach(k=>L.push(`${k.name}${k.cost ? ' ' + k.cost : ''} — ${k.type} — colours: ${k.colors ? k.colors.split('').map(x=>COL[x]).join(', ') : 'colourless'}\n${k.oracle}`));
+  if(d.name) L.push('', 'DECK NAME (the player\'s own words, may hint at the plan): ' + d.name);
   if(d.theme || d.kindred) L.push('', 'CHOSEN PLAN: ' + [d.kindred && ('Kindred ' + d.kindred), d.theme && ('Theme ' + d.theme)].filter(Boolean).join(' + '));
   L.push('', 'DECK NUMBERS:');
   L.push(`cards ${d.size} of ${d.limit}` + (d.over ? ` (${d.over} too many)` : ''));
@@ -130,7 +136,7 @@ export function userMessage(c){
   L.push('', 'CANDIDATES:');
   c.cands.forEach(k=>{
     const tag = c.kind === 'lands' ? (k.inDeck ? '[in deck] ' : '[new] ') : '';
-    L.push(`- ${tag}${k.name} | ${k.type}${k.mv ? ' | MV ' + k.mv : ''}${k.note ? ' | ' + k.note : ''}\n  ${k.oracle}`);
+    L.push(`- ${tag}${k.name}${k.cost ? ' ' + k.cost : (k.mv ? ' | MV ' + k.mv : '')} | ${k.type}${k.note ? ' | ' + k.note : ''}\n  ${k.oracle}`);
   });
   return L.join('\n');
 }
@@ -158,9 +164,11 @@ export function parseReply(text, c){
   }).filter(Boolean).slice(0, max);
   const plan = s(o.plan, 300);
   if(c.kind === 'cuts'){
-    const cuts = list(o.cuts, 15);
+    // the AI's own core list wins over a cut that contradicts it
+    const core = new Set((Array.isArray(o.core) ? o.core : []).map(x=>byName.get(String(x && (x.name || x) || '').trim().toLowerCase())).filter(Boolean).map(k=>k.name));
+    const cuts = list(o.cuts, 15, k=>!core.has(k.name));
     if(!cuts.length) return null;
-    return { kind: 'cuts', plan, cuts };
+    return { kind: 'cuts', plan, engine: s(o.engine, 400), core: Array.from(core).slice(0, 40), cuts };
   }
   const count = Math.round(num(o.count, 0, 60, 0));
   const add = list(o.add, 15, k=>!k.inDeck);
@@ -170,7 +178,7 @@ export function parseReply(text, c){
 }
 
 async function chat(fetchImpl, url, key, model, sys, user, extras = true){
-  const req = { model, temperature: 0.2, max_tokens: 3000,
+  const req = { model, temperature: 0.2, max_tokens: 3500,
     messages: [{ role: 'system', content: sys }, { role: 'user', content: user }] };
   if(extras){
     req.response_format = { type: 'json_object' };
@@ -189,10 +197,15 @@ async function chat(fetchImpl, url, key, model, sys, user, extras = true){
 }
 
 export async function askProviders(env, fetchImpl, c){
+  const prov = [];
+  if(env.GROQ_API_KEY) prov.push({ name: 'groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: env.GROQ_API_KEY, models: env.GROQ_MODEL ? [env.GROQ_MODEL] : GROQ_MODELS });
+  if(env.CEREBRAS_API_KEY) prov.push({ name: 'cerebras', url: 'https://api.cerebras.ai/v1/chat/completions', key: env.CEREBRAS_API_KEY, models: env.CEREBRAS_MODEL ? [env.CEREBRAS_MODEL] : CEREBRAS_MODELS });
+  if(!prov.length) return { error: 'nokey' };
+  // 1.14: quality first -- the strong model on each provider, then the
+  // smaller one: [groq gpt-oss, cerebras gpt-oss, groq llama, cerebras llama]
   const lanes = [];
-  if(env.GROQ_API_KEY) lanes.push({ name: 'groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: env.GROQ_API_KEY, models: env.GROQ_MODEL ? [env.GROQ_MODEL] : GROQ_MODELS });
-  if(env.CEREBRAS_API_KEY) lanes.push({ name: 'cerebras', url: 'https://api.cerebras.ai/v1/chat/completions', key: env.CEREBRAS_API_KEY, models: env.CEREBRAS_MODEL ? [env.CEREBRAS_MODEL] : CEREBRAS_MODELS });
-  if(!lanes.length) return { error: 'nokey' };
+  const rounds = Math.max(...prov.map(p=>p.models.length));
+  for(let i = 0; i < rounds; i++) prov.forEach(p=>{ if(p.models[i]) lanes.push({ name: p.name, url: p.url, key: p.key, models: [p.models[i]] }); });
   const sys = systemPrompt(c), user = userMessage(c);
   let last = 'down';
   const t0 = Date.now();
@@ -205,7 +218,7 @@ export async function askProviders(env, fetchImpl, c){
       last = 'shape';
     }catch(e){
       // a 429 here is often the per-minute token cap of ONE model: try the next model
-      last = e && e.status === 429 ? 'quota' : 'down';
+      last = e && (e.status === 429 || e.status === 413) ? 'quota' : 'down';
     }
   }
   return { error: last };
@@ -221,7 +234,7 @@ export async function handle(body, deps){
   if(!c.deck.leaders.length || c.cands.length < 2) return { status: 400, json: { ok: false, error: 'empty' } };
   if(c.kind === 'lands' && c.deck.format === 'admiral') return { status: 400, json: { ok: false, error: 'nolands' } };
   const dev = sha(String(body && body.device || '') + '|' + (deps.ip || '')).slice(0, 24);
-  const cacheKey = sha(JSON.stringify(['d1', c.kind, c.lang, c.want, c.deck.format, c.deck.leaders.map(k=>k.name), c.deck.theme, c.deck.kindred,
+  const cacheKey = sha(JSON.stringify(['d2', c.kind, c.lang, c.want, c.deck.format, c.deck.leaders.map(k=>k.name), c.deck.theme, c.deck.kindred,
     c.deck.landGoal, c.deck.over, c.deck.others.slice().sort(), c.cands.map(k=>k.name + (k.inDeck ? '*' : '')).sort()]));
   const cache = deps.store ? deps.store('deckai-cache') : null;
   const count = deps.store ? deps.store('deckai-count') : null;
