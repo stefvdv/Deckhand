@@ -6376,15 +6376,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.19';
+const APP_VERSION = '1.20';
 const CHANGELOG_NOTES = {
   en: [
-    'Build decks with spoiler cards',
-    'Select spoilers with a long press'
+    'Sharper Similar cards'
   ],
   nl: [
-    'Decks bouwen met spoilerkaarten',
-    'Spoilers selecteren: lang indrukken'
+    'Scherpere Similar cards'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6392,8 +6390,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-10-24';
+const APP_DATE = '2026-10-27';
 const CHANGELOG_HISTORY = [
+  { v: '1.19', d: '2026-10-24',
+    en: ['Build decks with spoiler cards', 'Select spoilers with a long press'],
+    nl: ['Decks bouwen met spoilerkaarten', 'Spoilers selecteren: lang indrukken'] },
   { v: '1.18', d: '2026-10-24',
     en: ['A printing pick stays where you made it'],
     nl: ['Gekozen versie geldt alleen daar'] },
@@ -20760,7 +20761,7 @@ async function edhrecThemeNames(slug){
                    page, 8 pts elsewhere on it
      magic words   2 × rarity per shared word — rarity folds the corpus
                    weighting in, clamped so each word is worth 1..5 (cap 20)
-     tags          3 pts per shared Scryfall tag (cap 15)
+     tags          6 pts per shared Scryfall tag (cap 27)  [1.20]
      colors        +2 identical identity, +1 overlap or colorless
    Ties break on EDHREC page position, then popularity, then price
    (Budget only). Every network signal that's absent scores 0 — the
@@ -20780,11 +20781,12 @@ const SIM_POINTS = {
   // Wordiness penalty: every magic word the CANDIDATE carries that the
   // source does NOT costs a little — walls of text stop outranking clean
   // cousins just by touching every mechanic in the game.
-  missRate: 0.4, missCap: 8,
+  missRate: 0.6, missCap: 8,   // 1.20: 0.4 -> 0.6
   // The same idea for curated tags, gentler still: a candidate wearing
   // functions the source doesn't have drifts down, softly.
-  tagMissRate: 0.5, tagMissCap: 6,
-  tagRate: 4, tagCap: 18,
+  tagMissRate: 0.7, tagMissCap: 6,   // 1.20: 0.5 -> 0.7
+  // 1.20: a shared tag (same function) weighs more: 4 -> 6 a tag, cap 18 -> 27
+  tagRate: 6, tagCap: 27,
   colorSame: 2, colorOverlap: 1,
   // Same primary TYPE earns points on BOTH profiles now — an instant's
   // cousin should be an instant; Budget (a literal stand-in hunt) weighs
