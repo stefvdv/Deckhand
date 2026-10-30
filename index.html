@@ -700,6 +700,21 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 #deckCombosPanel .panel-h svg{width:12px;height:12px;vertical-align:-2px;margin-right:3px;}
 .overlay[id^="cardSheetOverlay_bg"] .cs-combos-btn{display:none!important;}
 .tag-drop-h{padding:3px 10px 7px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);pointer-events:none;border-bottom:1.5px solid var(--pop-line);}
+/* 1.26: the picker = a scrolling list above its own search field; each
+   group's name is a gold plate under its tags, never mistaken for a tag. */
+.tag-drop:has(> .tag-drop-list){overflow:hidden;padding:0;gap:0;}
+.tag-drop-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column-reverse;gap:2px;padding:6px 6px 8px;}
+.tag-drop-search{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:2px solid var(--pop-line);background:var(--panel);}
+.tag-drop-search .tds-ico{flex:none;display:flex;opacity:0.7;}
+.tag-drop-search .tds-ico svg{width:18px;height:18px;}
+.tag-drop-search input{flex:1;min-width:0;background:var(--ink-2);border:2px solid var(--line);border-radius:8px;color:var(--ink-text);padding:8px 10px;font-size:14px;}
+.tag-drop-search input:focus{outline:none;border-color:var(--brass);}
+.tag-drop-none{padding:12px 10px;font-size:13px;color:var(--sub-text);text-align:center;}
+html .tag-drop .tag-drop-list > .tag-drop-h{display:flex;align-items:center;justify-content:space-between;margin:10px 2px 4px;padding:6px 10px;border:none;border-radius:6px;background:linear-gradient(var(--gold),var(--gold)) !important;-webkit-background-clip:border-box !important;background-clip:border-box !important;color:#241A04 !important;-webkit-text-fill-color:#241A04 !important;text-shadow:none !important;font-weight:800;font-size:11.5px;letter-spacing:0.1em;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
+html .tag-drop .tag-drop-list > .tag-drop-h *{font-weight:800;font-size:11px;color:#241A04 !important;-webkit-text-fill-color:#241A04 !important;background:none !important;text-shadow:none !important;}
+html .tag-drop .tag-drop-list > .tag-drop-h b{opacity:0.75;}
+.tag-drop-list > .tag-drop-h:first-child{margin-bottom:0;}
+@media (hover:hover){ .tag-drop-list button:hover{background:var(--hl);} }
 /* On deckless card pages the picker is the app's one allowed drop-DOWN:
    the editor sits under the buttons and the list opens below the input. */
 #ciTagBox .tag-drop{bottom:auto;top:calc(100% + 6px);}
@@ -2668,6 +2683,76 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
   .sr-grid > *, .sc-grid > *, .visual-grid > *, .col-grid > *, .deck-grid > *{flex:0 0 180px;max-width:180px;}
   .pair-grid{grid-template-columns:repeat(auto-fill, 236px);justify-content:flex-start;}
 }
+/* ---------- 1.23: wide screens (>= 1000px: PC, laptop, tablet in landscape) ----------
+   The navigation becomes a SIDEBAR on the left; every page and overlay uses
+   the full width beside it. Still bottom-up: Home and Back sit at the foot of
+   the sidebar (where the thumb found them on the phone), the page tabs above.
+   --nav-h drops to 0, so everything that stood on the bottom bar now stands
+   on the bottom edge. Every left-anchored fixed bar starts after the sidebar. */
+@media (min-width: 1000px){
+  :root{ --nav-h: 0px; --side-w: 72px; }
+  body{max-width:none;margin:0 0 0 var(--side-w);}
+  .app{max-width:none;}
+  main{padding-left:28px;padding-right:28px;}
+  .brand-banner, .overlay .brand-banner.ov-nav{
+    position:fixed;left:0;top:0;bottom:0;right:auto;width:var(--side-w);height:auto;max-width:none;margin:0;
+    flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:10px;
+    padding:14px 0 calc(14px + env(safe-area-inset-bottom));
+    border-top:none;border-right:2px solid var(--line);z-index:85;
+  }
+  .brand-banner .spacer{flex:1 1 auto;min-height:12px;}
+  .brand-banner .banner-tabs{flex-direction:column;gap:10px;}
+  .brand-banner .banner-tab, .brand-banner .compass{width:48px;height:48px;}
+  /* the bars and docks that ran edge to edge start after the sidebar */
+  .page-cap{left:var(--side-w);}
+  .app > main > .adv-panel, .app > main > #advSlot > .adv-panel, .app > main > #colAdvBox,
+  .app > main > .builder-tabs, #tradeBarHost{left:var(--side-w);}
+  .app > main > #spAdvToggle{left:calc(var(--side-w) + 16px);}
+  .deck-dock{left:var(--side-w);right:0;transform:none;max-width:none;}
+  .deck-fab, #fabMenu{right:24px;}
+  .toast{left:calc(50% + var(--side-w) / 2);}
+  .tag-add-row .tag-drop, #ciTagBox .tag-drop{left:calc(var(--side-w) + 10px);right:auto;width:min(560px, calc(100vw - var(--side-w) - 20px));}
+  .dl-popup{left:calc(var(--side-w) + 12px);}
+  /* overlays: beside the sidebar too (their own nav takes the sidebar's place), full width */
+  .overlay{left:0;}
+  .overlay .overlay-inner{max-width:none;margin:0 0 0 var(--side-w);}
+  /* An overlay without its own side nav (the card page) uses the full width. */
+  .overlay:not(:has(.ov-nav)) .overlay-inner{margin:0;}
+  /* The card page keeps the real side nav visible, like the bottom nav on a phone. */
+  [id^="cardSheetOverlay"]:not(.sheet-over-overlay){left:var(--side-w);}
+  /* Card page: picture + buttons on the left, rules text on the right. */
+  .overlay-inner > main.card-detail{display:grid;max-width:1180px;grid-template-columns:minmax(280px,400px) minmax(340px,640px);grid-template-rows:1fr auto auto auto;column-gap:44px;justify-content:center;align-content:end;}
+  main.card-detail > div:nth-child(1){grid-column:1;grid-row:1 / 3;align-self:end;}
+  main.card-detail > #csTagBox, main.card-detail > #ciTagBox{grid-column:1;grid-row:3;}
+  main.card-detail > div:nth-child(2){grid-column:1;grid-row:4;}
+  main.card-detail > .detail-sec:not(:has(#csRulings)):not(:has(#sheetOracle)){grid-column:2;grid-row:1;align-self:end;}
+  main.card-detail > .detail-sec:has(#csRulings){grid-column:2;grid-row:2;}
+  main.card-detail > .detail-sec:has(#sheetOracle){grid-column:2;grid-row:3 / 5;align-self:end;}
+  main.card-detail > .sheet-foot-spacer{display:none;}
+  main.card-detail .cd-hero{max-width:400px;}
+  /* Decklist: the leader keeps a card size instead of half the screen. */
+  .dl-bridge:not(.dl-bridge-60){grid-template-columns:minmax(0,280px) minmax(0,620px);}
+  /* 1.25: card rows are centred, so a row never ends in a wide empty strip. */
+  .sr-grid, .sc-grid, .visual-grid, .col-grid, .deck-grid{justify-content:center;}
+  /* 1.25: Stats and Deck log read as a column, not as bars across the screen. */
+  #builderBody:has(> .panel-card){max-width:980px;margin-left:auto;margin-right:auto;width:100%;box-sizing:border-box;}
+  /* 1.25: Extras: four tiles a row instead of two giant squares. */
+  .xt-tiles > .settings-section, .xt-tiles > .xt-spacer{flex-basis:calc((100% - 36px) / 4);}
+  /* 1.26: Stacks and Text lists stand in columns, one per card type, each
+     resting on the same foot line (wrap-reverse: the first row is lowest). */
+  #decklistBox:has(.vg-stack), #decklistBox:has(.vg-text){flex-direction:row;flex-wrap:wrap-reverse;align-items:flex-start;justify-content:center;gap:14px 18px;}
+  #decklistBox:has(.vg-stack) > .cat-group{flex:0 0 220px;width:220px;margin:0;}
+  #decklistBox:has(.vg-text) > .cat-group{flex:0 0 280px;width:280px;margin:0;}
+  #decklistBox .cat-group .visual-grid.vg-stack{width:100%;max-width:none;}
+  #decklistBox:has(.vg-stack) > :not(.cat-group), #decklistBox:has(.vg-text) > :not(.cat-group){flex:1 0 100%;}
+  /* 1.26: Search filters stand beside the results as a side panel. */
+  .app > main:has(> #advSlot > .adv-panel){padding-right:calc(400px + 28px);}
+  .app > main > #advSlot > .adv-panel{left:auto !important;right:0;top:44px;bottom:0;width:400px;max-height:none;border-radius:0;border-top:none;border-left:2px solid var(--line);box-shadow:-12px 0 30px rgba(0,0,0,0.4);box-sizing:border-box;}
+  /* card grids: bigger tiles, as many columns as fit */
+  .sr-grid > *, .sc-grid > *, .visual-grid > *, .col-grid > *, .deck-grid > *{flex:0 0 210px;max-width:210px;}
+  #spMainPage .sc-grid > *{flex-basis:210px;}
+  .pair-grid{grid-template-columns:repeat(auto-fill, 260px);}
+}
 
 /* Depth fade: every solid surface — panels, tiles, fields, pop-ups — runs
    from its colour at the top into a slight black at its foot, and the page
@@ -2769,6 +2854,33 @@ main.card-detail{zoom:0.9;}
    (with a white square where the two scrollbars met). */
 .overlay main.card-detail, main.card-detail{overflow-x:hidden;}
 ::-webkit-scrollbar-corner{background:transparent;}
+/* 1.26 Sync: the link code, big and easy to read off another screen. */
+.sync-code{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;letter-spacing:0.08em;text-align:center;padding:12px 8px;margin:4px 0 6px;border:2px dashed var(--brass);border-radius:10px;color:var(--ink-text);user-select:all;}
+/* 1.26 Right-click popup (PC): the card page's buttons and text in a small
+   window by the mouse -- no picture; Legality and Rulings folded. */
+.overlay.cs-pop{position:fixed;inset:auto;height:auto;z-index:300;border:2px solid var(--brass);border-radius:12px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.7);}
+.overlay.cs-pop .overlay-inner{margin:0 !important;max-width:none !important;min-height:0;}
+.overlay.cs-pop .topbar{min-height:40px;padding-left:12px;padding-right:12px;}
+.overlay.cs-pop .cs-combos-btn{position:absolute;top:5px;right:8px;}
+.overlay.cs-pop main.card-detail{display:flex !important;flex-direction:column;max-width:none;padding:6px 12px 10px !important;zoom:0.86;}
+.overlay.cs-pop main.card-detail > div:nth-child(1), .overlay.cs-pop main.card-detail > .sheet-foot-spacer{display:none !important;}
+.overlay.cs-pop main.card-detail > div:nth-child(2){max-width:none !important;}
+.overlay.cs-pop main.card-detail > .detail-sec:not(:has(#sheetOracle)) > .detail-h{cursor:pointer;user-select:none;display:block;width:100%;box-sizing:border-box;text-align:left;margin:6px 0 0;padding:8px 2px;border-top:1.5px solid var(--line);}
+.overlay.cs-pop main.card-detail > .detail-sec:not(:has(#sheetOracle)) > .detail-h:hover{color:var(--brass);}
+.overlay.cs-pop main.card-detail > .detail-sec:not(:has(#sheetOracle)) > .detail-h::after{content:' \25B8';}
+.overlay.cs-pop.leg-open main.card-detail > .detail-sec:not(:has(#sheetOracle)):not(:has(#csRulings)) > .detail-h::after,
+.overlay.cs-pop.rul-open main.card-detail > .detail-sec:has(#csRulings) > .detail-h::after{content:' \25BE';}
+.overlay.cs-pop:not(.leg-open) main.card-detail > .detail-sec:not(:has(#sheetOracle)):not(:has(#csRulings)) > :not(.detail-h),
+.overlay.cs-pop:not(.rul-open) main.card-detail > .detail-sec:has(#csRulings) > :not(.detail-h){display:none !important;}
+/* 1.25 Tag focus drop-up under the card (Similar cards, card Recommendations). */
+.tag-focus-row{display:flex;align-items:center;gap:8px;width:100%;max-width:340px;margin:2px auto 10px;flex:0 0 auto;}
+.tag-focus-row[hidden]{display:none;}
+.tag-focus-row .tf-lbl{flex:0 0 auto;font-size:11px;color:var(--sub-text);text-transform:uppercase;letter-spacing:0.5px;}
+.tag-focus-row .nsel-btn{flex:1 1 auto;}
+/* The mouse hover preview: a big card beside the pointer, clicks pass through. */
+#hoverPrevBox{position:fixed;left:0;top:0;z-index:400;display:none;pointer-events:none;border-radius:4.75% / 3.5%;box-shadow:0 10px 36px rgba(0,0,0,0.7);overflow:hidden;background:#111;}
+#hoverPrevBox img{width:100%;height:100%;display:block;object-fit:cover;}
+@media (hover:none){ #hoverPrevBox{display:none !important;} }
 .nopr{cursor:pointer;font-family:'JetBrains Mono',monospace;}
 /* ── Surfaces the heading tint was never meant for ──────────────────────
    The heading treatment paints text in the page-ink tint. Two places do not
@@ -6406,13 +6518,27 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.22';
+const APP_VERSION = '1.26';
 const CHANGELOG_NOTES = {
   en: [
-    'Partner groups pair only together'
+    'Sync between phone, tablet and PC',
+    'Tag lists: search field, clear groups',
+    'PC: right-click a card for its menu',
+    'PC: Shift-click selects a range',
+    'PC: / jumps to search',
+    'PC: Ctrl+V a deck list to import',
+    'PC: decklist in columns per type',
+    'PC: search filters beside results'
   ],
   nl: [
-    'Partner-groepen alleen onderling'
+    'Sync tussen telefoon, tablet en pc',
+    'Taglijst: zoekveld, duidelijke groepen',
+    'Pc: rechtsklik op kaart toont menu',
+    'Pc: Shift-klik selecteert een reeks',
+    'Pc: / springt naar zoeken',
+    'Pc: Ctrl+V decklijst om te importeren',
+    'Pc: decklijst in kolommen per type',
+    'Pc: zoekfilters naast de resultaten'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6420,8 +6546,20 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-10-28';
+const APP_DATE = '2026-10-31';
 const CHANGELOG_HISTORY = [
+  { v: '1.25', d: '2026-10-31',
+    en: ['Similar cards: focus on one tag', 'Recommendations: focus on a tag', 'Next card no longer flickers', 'PC: arrow keys step through cards', 'PC: tidier Stats, Extras, rows'],
+    nl: ['Similar cards: focus op één tag', 'Aanbevelingen: focus op een tag', 'Volgende kaart flikkert niet meer', 'Pc: pijltjes bladeren door kaarten', "Pc: nettere Stats, Extra's, rijen"] },
+  { v: '1.24', d: '2026-10-30',
+    en: ['PC: hover a card to see it big'],
+    nl: ['Pc: muis op kaart toont hem groot'] },
+  { v: '1.23', d: '2026-10-30',
+    en: ['PC & tablet: menu bar on the left', 'PC & tablet: full screen width', 'PC & tablet: card page side by side'],
+    nl: ['Pc & tablet: menubalk links', 'Pc & tablet: volle schermbreedte', 'Pc & tablet: kaartpagina naast elkaar'] },
+  { v: '1.22', d: '2026-10-28',
+    en: ['Partner groups pair only together'],
+    nl: ['Partner-groepen alleen onderling'] },
   { v: '1.21', d: '2026-10-27',
     en: ['Search field selects all on tap', 'Partner pairings in a popup'],
     nl: ['Zoekveld selecteert alles bij tik', 'Partner-combinaties in een popup'] },
@@ -6614,11 +6752,11 @@ function tourSteps(){
         ? `<p style="margin:6px 0;">Bij je duim <strong>Draft tools</strong> en de <strong>Life Counter</strong>, daarboven <strong>Vraag de AI-judge</strong>: stel je regelvraag en tag de kaarten met @; een AI antwoordt, met de officiële regels erbij. Op die pagina staan ook de complete <strong>Comprehensive Rules</strong>, achter een knop.</p>
            <p style="margin:6px 0;"><strong>Draft tools</strong> regelt je draftavond: spelers, plaatsen aan tafel, pick- en deckbouwtimer, wie tegen wie speelt en de stand.</p>
            <p style="margin:6px 0;">De <strong>Life Counter</strong> voor aan tafel (kies de tafelindeling), <strong>formatregels</strong> en <strong>banlijsten</strong> van elf formats, <strong>taal</strong> (NL/EN) en het <strong>kleurenschema</strong>: kies een guild en de hele app kleurt mee.</p>
-           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. Zet je bij <strong>Meldingen</strong> de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan hoor je het als er nieuwe kaarten zijn. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame. Onder Over Deckhand stuur je ook <strong>feedback</strong>: een bug of idee, met screenshots.</p>`
+           <p style="margin:6px 0;">En belangrijk: <strong>Back-up &amp; terugzetten</strong>, alles in één bestand. Bewaar het in je eigen cloud (Google Drive, Nextcloud, Dropbox) of mail het naar jezelf; één keer per week herinnert de app je eraan. Zet je bij <strong>Meldingen</strong> de <strong>spoilermeldingen</strong> aan (elke kaart, per 5 of per 10), dan hoor je het als er nieuwe kaarten zijn. Met <strong>Sync</strong> koppel je je telefoon, tablet en pc: je decks en collectie staan overal hetzelfde. Met <strong>Deel deze app</strong> stuur je een vriend een link mét plaatje, plus de Android-app om direct te installeren. Helemaal bovenaan, bij <strong>Over Deckhand</strong>, lees je waar de app voor staat: open source, voor altijd gratis, geen reclame. Onder Over Deckhand stuur je ook <strong>feedback</strong>: een bug of idee, met screenshots.</p>`
         : `<p style="margin:6px 0;">By your thumb sit <strong>Draft tools</strong> and the <strong>Life Counter</strong>, above them <strong>Ask AI judge</strong>: ask your rules question and tag the cards with @; an AI answers, with the official rules attached. The complete <strong>Comprehensive Rules</strong> sit behind a button on that page.</p>
            <p style="margin:6px 0;"><strong>Draft tools</strong> runs your draft night: players, seats, pick and deckbuilding timers, who plays whom, and the standings.</p>
            <p style="margin:6px 0;">The table-side <strong>Life Counter</strong> (pick the table layout), <strong>format rules</strong> and <strong>ban lists</strong> for eleven formats, <strong>language</strong> (NL/EN) and the <strong>color scheme</strong> — pick a guild and the whole app dresses in it.</p>
-           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. Turn on <strong>spoiler alerts</strong> under <strong>Notifications</strong> (every card, per 5 or per 10) to hear when new cards are out. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads. Under About you can also send <strong>feedback</strong>: a bug or an idea, with screenshots.</p>` }
+           <p style="margin:6px 0;">And the big one: <strong>Backup &amp; Restore</strong> — everything in one file. Keep it in your own cloud (Google Drive, Nextcloud, Dropbox) or mail it to yourself; once a week the app reminds you. Turn on <strong>spoiler alerts</strong> under <strong>Notifications</strong> (every card, per 5 or per 10) to hear when new cards are out. <strong>Sync</strong> links your phone, tablet and PC: your decks and collection are the same everywhere. <strong>Share this app</strong> sends a friend a link with a picture, plus the Android app to install straight away. At the very top, <strong>About Deckhand</strong> tells what the app stands for: open source, free forever, no ads. Under About you can also send <strong>feedback</strong>: a bug or an idea, with screenshots.</p>` }
   ];
 }
 function startAppTour(){
@@ -7109,6 +7247,7 @@ function compactAllDecks(skipId){
   });
 }
 async function persistDeck(d){
+  try{ syncTouchDeck(d && d.id, false); }catch(e){}
   const clean = {}; Object.keys(d).forEach(k=>{ if(k!=='_saveStatus') clean[k]=d[k]; });
   const payload = JSON.stringify(slimDeckForSave(clean));
   const key = LS_PREFIX+'deck:'+d.id;
@@ -7143,6 +7282,7 @@ async function persistDeck(d){
   }
 }
 async function deleteDeckStorage(id){
+  try{ syncTouchDeck(id, true); }catch(e){}
   try{ localStorage.removeItem(LS_PREFIX+'deck:'+id); }catch(e){}
   try{ await deckDbDelete(LS_PREFIX+'deck:'+id); }catch(e){}
 }
@@ -7283,6 +7423,7 @@ function identityStripCss(colors){
   const stops = colors.map(c=>hex[c]||'#9FB0BC');
   return stops.length===1 ? stops[0] : `linear-gradient(90deg, ${stops.join(', ')})`;
 }
+const SYNC_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 9.6 4.5 4.5 0 0 0 7 18.5z"/><path d="M10 12.5l2-2 2 2M12 10.5v5"/></svg>`;
 const ICONS = {
   gavel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 12.5l-8 8a2.1 2.1 0 0 1-3-3l8-8"/><path d="M16 16l6-6"/><path d="M8 8l6-6"/><path d="M9 7l8 8"/><path d="M21 11l-8-8"/></svg>`,
   heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7.5 2.7C19.5 15.4 12 20 12 20z"/></svg>`,
@@ -9807,6 +9948,8 @@ function openPasteListSheet(opts){
       </div>`;
     document.body.appendChild(el);
     pushOverlay('appoint', ()=>{ document.getElementById('appointOverlay')?.remove(); });
+    // 1.26: a list pasted with Ctrl+V arrives filled in
+    if(opts.text){ const ta0 = document.getElementById('pasteDeckText'); if(ta0) ta0.value = String(opts.text); }
     el.addEventListener('click', (e)=>{ if(!e.target.closest('.appoint-sheet')) closeTopOverlay(); });
     document.getElementById('appointClose').addEventListener('click', ()=> closeTopOverlay());
     document.getElementById('pasteDeckFileBtn')?.addEventListener('click', ()=>document.getElementById('pasteDeckFile')?.click());
@@ -12220,7 +12363,7 @@ async function repriceCollectionDaily(){
       }catch(err){}
     }
     if(changed){
-      saveCollection();
+      _syncQuiet++; try{ saveCollection(); }finally{ _syncQuiet--; }   // 1.26: a price refresh is not an edit
       if(state.screen === 'collection') render();   // header total + '__col' breadcrumb re-record
     }
   }catch(err){}
@@ -14546,7 +14689,15 @@ function dedupeIdxs(idxs, arr){
 }
 /* The deck's cards as tiles (default), Moxfield-style stacks, or a text
    list -- picked from the \u22EF menu, remembered on this phone. */
-function dlView(){ try{ const v = localStorage.getItem(LS_PREFIX + 'dlView'); return (v === 'stack' || v === 'text') ? v : 'grid'; }catch(e){ return 'grid'; } }
+function dlView(){
+  // 1.26: on a wide screen a deck without a stored choice opens as stacks in
+  // columns, Moxfield-style; a phone keeps the tiles.
+  let v = null;
+  try{ v = localStorage.getItem(LS_PREFIX + 'dlView'); }catch(e){}
+  if(v === 'stack' || v === 'text' || v === 'grid') return v;
+  try{ if(window.matchMedia('(min-width: 1000px)').matches) return 'stack'; }catch(e){}
+  return 'grid';
+}
 function setDlView(v){ try{ localStorage.setItem(LS_PREFIX + 'dlView', v); }catch(e){} }
 function dlGroupGridHtml(groups, arr, loc){
   const v = dlView();
@@ -14597,7 +14748,7 @@ function cardRowHtml(card, idx, loc, qty){
   const _ill = _v === 'banned' || _v === 'not_legal';
   const hit = state.priceCache && state.priceCache[card.name];
   const pv = (hit && typeof hit.v === 'number') ? fmtEur(hit.v) : '';
-  return `<div class="vg-card vg-row${_ill?' vg-illegal':''}" data-idx="${idx}" data-loc="${loc}"><button type="button" class="vg-hit"><span class="vr-q">${qty||1}</span><span class="vr-n">${escapeHtml(card.name)}</span><span class="vr-cost">${costPipsHtml(card)}</span><span class="vr-p">${pv}</span></button></div>`;
+  return `<div class="vg-card vg-row${_ill?' vg-illegal':''}" data-idx="${idx}" data-loc="${loc}"><button type="button" class="vg-hit" data-himg="${escapeHtml(cardImageMed(card))}"><span class="vr-q">${qty||1}</span><span class="vr-n">${escapeHtml(card.name)}</span><span class="vr-cost">${costPipsHtml(card)}</span><span class="vr-p">${pv}</span></button></div>`;
 }
 function cardTileHtml(card, idx, loc, qty){
   // No quick-remove cross on tiles: it was too easy to hit by accident.
@@ -16048,6 +16199,7 @@ function renderCardSheet(d, card, loc, idx){
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   let el = document.getElementById('cardSheetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; }
+  csPopApply(el);   // 1.26: a right-click opens this sheet as a popup by the mouse
   // (Re)append only when this sheet is new or already on top — a background
   // price/printing re-render must never climb above overlays opened later
   // (the Similar page vanished behind exactly that on its first open).
@@ -16458,7 +16610,7 @@ function renderTagEditor(d, card, box){
     detectOtagsForCards([card]).then(m=>{
       autoTags = (m[card.name] || []).slice();
       if(!box.isConnected) return;
-      if(d && autoTags.length){ const keep = drop && !drop.hidden ? drop.scrollTop : null; box._keepDrop = keep; renderTagEditor(d, card, box); }
+      if(d && autoTags.length){ const _l = drop && drop.querySelector('.tag-drop-list'); const keep = drop && !drop.hidden ? (_l ? _l.scrollTop : 0) : null; box._keepDrop = keep; renderTagEditor(d, card, box); }
       else renderDrop();
     }).catch(()=>{});
   }
@@ -16484,31 +16636,58 @@ function renderTagEditor(d, card, box){
   box.querySelector('#tagAddBtn').addEventListener('click', commit);
   // drop-UP of every tag in the app, filtered live as you type
   const drop = box.querySelector('#tagDrop');
+  /* 1.26: the list carries its OWN search field at its foot (the input row
+     sits under the popup, out of sight), and the list scrolls above it. */
+  const dropList = ()=>drop && drop.querySelector('.tag-drop-list');
+  const dropQ = ()=>drop && drop.querySelector('#tagDropQ');
+  const ensureDropShell = ()=>{
+    if(!drop || dropList()) return;
+    const nl = appLang() === 'nl';
+    drop.innerHTML = `<div class="tag-drop-search"><span class="tds-ico">${ICONS.search}</span><input type="text" id="tagDropQ" autocomplete="off" placeholder="${nl ? 'Zoek een tag…' : 'Search tags…'}"></div><div class="tag-drop-list"></div>`;
+    const dq = dropQ();
+    if(box._dropQ){ dq.value = box._dropQ; }
+    dq.addEventListener('input', ()=>{ box._dropQ = dq.value; renderDrop(); });
+    dq.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape'){ e.preventDefault(); hideDrop(); return; }
+      if(e.key !== 'Enter') return;
+      e.preventDefault();
+      const v = dq.value.trim(); if(!v) return;
+      // An exact match is picked; anything else becomes a new tag.
+      const hit = Array.from(drop.querySelectorAll('[data-picktag]')).find(b=>decodeURIComponent(b.dataset.picktag).toLowerCase() === v.toLowerCase());
+      const t = hit ? decodeURIComponent(hit.dataset.picktag) : v;
+      box._keepDrop = 0; box._dropQ = '';
+      if(addCardTag(d, card.name, t)) refresh();
+      else { box._keepDrop = null; toast('That tag is already on this card.'); }
+    });
+  };
   const renderDrop = ()=>{
     if(!drop) return;
-    const q = (input.value || '').trim().toLowerCase();
+    ensureDropShell();
+    const dq = dropQ(), list = dropList();
+    const q = ((dq && dq.value) || input.value || '').trim().toLowerCase();
     const secs = pickerSections()
       .map(sec=>({ label: sec.label, items: sec.items.filter(t=>!q || t.toLowerCase().includes(q)).slice(0, 400) }))
       .filter(sec=>sec.items.length);
-    if(!secs.length){ drop.hidden = true; return; }
-    drop.innerHTML = secs.map(sec=>
-      `<div class="tag-drop-h">${trS(sec.label)}</div>` +
+    const nl = appLang() === 'nl';
+    if(!secs.length && !(dq && dq.value)){ drop.hidden = true; return; }
+    list.innerHTML = secs.length ? secs.map(sec=>
+      `<div class="tag-drop-h"><span>${trS(sec.label)}</span><b>${sec.items.length}</b></div>` +
       sec.items.map(t=>`<button type="button" data-picktag="${encodeURIComponent(t)}">${escapeHtml(t)}</button>`).join('')
-    ).join('');
+    ).join('') : `<div class="tag-drop-none">${nl ? 'Geen tag gevonden — Enter maakt hem aan.' : 'No tag found — Enter creates it.'}</div>`;
     if(_dropHideT){ clearTimeout(_dropHideT); _dropHideT = null; }   // a fresh show outlives any stale hide
     drop.hidden = false;
     state._localCsClose = hideDrop;   // back folds the list
-    drop.querySelectorAll('[data-picktag]').forEach(b=>b.addEventListener('mousedown', (ev)=>{
+    list.querySelectorAll('[data-picktag]').forEach(b=>b.addEventListener('mousedown', (ev)=>{
       ev.preventDefault();   // fire before the input's blur hides the panel
       const t = decodeURIComponent(b.dataset.picktag);
       // The list stays open for the next tag, at the same scroll spot,
       // until you close it.
-      box._keepDrop = drop.scrollTop;
+      box._keepDrop = list.scrollTop;
       if(addCardTag(d, card.name, t)) refresh();
       else box._keepDrop = null;
     }));
   };
-  const hideDrop = ()=>{ if(drop) drop.hidden = true; box._dropStay = false; if(state._localCsClose === hideDrop) state._localCsClose = null; };
+  const hideDrop = ()=>{ if(drop) drop.hidden = true; box._dropStay = false; box._dropQ = ''; const _dq = drop && drop.querySelector('#tagDropQ'); if(_dq) _dq.value = ''; if(state._localCsClose === hideDrop) state._localCsClose = null; };
   // mousedown-preventDefault keeps the input focused — tapping the chevron
   // with the keyboard up used to blur it, whose delayed hide then closed
   // the freshly opened list a heartbeat later.
@@ -16517,6 +16696,7 @@ function renderTagEditor(d, card, box){
     if(!drop.hidden){ hideDrop(); return; }
     input.focus();
     renderDrop();
+    try{ if(window.matchMedia('(hover: hover) and (pointer: fine)').matches) drop.querySelector('#tagDropQ')?.focus(); }catch(e){}
   });
   // The tag box appears right where the Tags button was, so the tap that
    // opened it can land on this input a heartbeat later and fling the whole
@@ -16526,7 +16706,7 @@ function renderTagEditor(d, card, box){
   input.addEventListener('focus', ()=>{ if(Date.now() - _bornAt < 500) return; renderDrop(); });
   input.addEventListener('input', renderDrop);
   let _dropHideT = null;
-  input.addEventListener('blur', ()=>{ _dropHideT = setTimeout(()=>{ if(box._keepDrop == null && drop && drop.isConnected && document.activeElement !== input && !box._dropStay) hideDrop(); }, 150); });
+  input.addEventListener('blur', ()=>{ _dropHideT = setTimeout(()=>{ if(box._keepDrop == null && drop && drop.isConnected && document.activeElement !== input && !drop.contains(document.activeElement) && !box._dropStay) hideDrop(); }, 150); });
   // A tap anywhere outside the tag row folds the list immediately — blur
   // alone missed taps on regions that never steal focus.
   document.addEventListener('pointerdown', (ev)=>{
@@ -16540,7 +16720,7 @@ function renderTagEditor(d, card, box){
     const st = box._keepDrop; box._keepDrop = null;
     box._dropStay = true;   // picked from the list: stay open without the keyboard
     renderDrop();
-    try{ drop.scrollTop = st; }catch(e){}
+    try{ const _l = drop.querySelector('.tag-drop-list'); if(_l) _l.scrollTop = st; }catch(e){}
   }
   input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
   box.querySelectorAll('[data-rmtag]').forEach(b=>b.addEventListener('click', ()=>{
@@ -18580,9 +18760,16 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     const wrap = document.createElement('div');
     wrap.className = el.className + ' swipe-leaving';
     const z = (parseInt(getComputedStyle(el).zIndex, 10) || 100) + 1;
-    wrap.style.cssText = `position:fixed;inset:auto;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;display:flex;flex-direction:column;background:none;pointer-events:none;z-index:${z};will-change:transform;`;
+    // 1.25: the frozen page rides inside a clip the size of the sheet itself,
+    // so on a wide screen it never slides across the side menu.
+    const er = el.getBoundingClientRect();
+    const clip = document.createElement('div');
+    clip.className = 'swipe-clip';
+    clip.style.cssText = `position:fixed;left:${er.left}px;top:${er.top}px;width:${er.width}px;height:${er.height}px;overflow:hidden;pointer-events:none;z-index:${z};`;
+    wrap.style.cssText = `position:absolute;inset:auto;left:${r.left - er.left}px;top:${r.top - er.top}px;width:${r.width}px;height:${r.height}px;display:flex;flex-direction:column;background:none;pointer-events:none;will-change:transform;`;
     wrap.appendChild(inner);
-    document.body.appendChild(wrap);
+    clip.appendChild(wrap);
+    document.body.appendChild(clip);
     // The finger's touch stays aimed at the element it first landed on -- now
     // inside the frozen page, outside this overlay. Its moves are forwarded
     // to the overlay's (current) handlers until the gesture ends.
@@ -18595,7 +18782,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     }
     if(om) om.scrollTop = st;                              // a moved node forgets its scroll
     ni.style.willChange = 'transform'; ni.style.transition = 'none';
-    return { dir, wrap, ni, nz: zoomOf(ni), out: dir === 'next' ? -1 : 1, st };   // the zoom once: reading it per move forced a style pass
+    return { dir, wrap, clip, ni, nz: zoomOf(ni), out: dir === 'next' ? -1 : 1, st };   // the zoom once: reading it per move forced a style pass
   };
   const unFwd = ()=>{
     const F = el._swipeDocFwd; if(!F) return;
@@ -18619,6 +18806,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     if(commit){ try{ navigator.vibrate && navigator.vibrate(6); }catch(err){} }
     { const cur = pageOf(); if(cur && cur !== P.ni){ placeLive(P, from); } }
     const nz = P.nz;
+    void P.wrap.offsetWidth; void P.ni.offsetWidth;   // 1.25: commit the start position first
     P.wrap.style.transition = `transform ${dur}ms ${ease}`;
     P.ni.style.transition = `transform ${dur}ms ${ease}`;
     requestAnimationFrame(()=>{
@@ -18627,7 +18815,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     });
     setTimeout(()=>{
       if(commit){
-        P.wrap.remove();
+        (P.clip || P.wrap).remove();
       } else {
         // back where we were: rebuild the original sheet in place (the
         // frozen copy still covers it), then let the copy go
@@ -18637,7 +18825,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
         const bm = back && back.querySelector('main');
         if(bm) bm.scrollTop = P.st;
         // the frozen copy covers the rebuilt sheet until its pictures are painted
-        requestAnimationFrame(()=>requestAnimationFrame(()=>P.wrap.remove()));
+        requestAnimationFrame(()=>requestAnimationFrame(()=>(P.clip || P.wrap).remove()));
       }
       const cur = pageOf();
       [P.ni, cur].forEach(x=>{ if(x){ x.style.transition = ''; x.style.transform = ''; x.style.willChange = ''; } });
@@ -18809,6 +18997,7 @@ function openCardInfo(card, opts){
   if(!opts._replace) pushOverlay('cardInfo', ()=>{ document.getElementById('cardSheetOverlay')?.remove(); });
   let el = document.getElementById('cardSheetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; }
+  csPopApply(el);   // 1.26: a right-click opens this sheet as a popup by the mouse
   // (Re)append only when this sheet is new or already on top — a background
   // price/printing re-render must never climb above overlays opened later
   // (the Similar page vanished behind exactly that on its first open).
@@ -18989,6 +19178,9 @@ function openCardInfo(card, opts){
       peekNext: ()=>{ const n = peekIdx(1); return n >= 0 ? cardImageMed(pool[n]) : null; },
       peekPrev: ()=>{ const n = peekIdx(-1); return n >= 0 ? cardImageMed(pool[n]) : null; }
     });
+    // 1.25: the neighbours' big pictures load ahead -- stepping on shows the
+    // next card at once instead of an empty frame that fills in late.
+    try{ [peekIdx(1), peekIdx(-1)].forEach(n=>{ if(n >= 0){ const u = cardImageLarge(pool[n]); if(u){ const im = new Image(); im.decoding = 'async'; im.src = u; } } }); }catch(e){}
   }
   // From Wants the pool is a list of names, resolved one card at a time —
   // exact same chevrons and swipe, with wantName tracking the shown card so
@@ -21006,6 +21198,7 @@ async function openSimilarCards(card, colorScope){
   el.innerHTML = `<div class="overlay-inner">
     ${overlayCapHtml(card.name)}
     <main>
+      <div class="tag-focus-row" id="simTagRow" hidden></div>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="simCardImg" alt="${escapeHtml(card.name)}">
       </div>
@@ -21017,6 +21210,47 @@ async function openSimilarCards(card, colorScope){
   </div>`;
   wireOverlayNav(el);
   document.getElementById('simCardImg')?.addEventListener('click', ()=>showCardPreview(card, cardImageLarge(card)));
+  // 1.25: the list painter is shared by the full list and the tag focus
+  let simCtx = null;
+  const simPaint = (ranked, note)=>{
+    const box = document.getElementById('simBody');
+    if(!box) return;
+    ranked = ranked.slice(0, 40);
+    if(!ranked.length){ box.innerHTML = `<div class="empty-note">${trS('No similar cards found.')}</div>`; return; }
+    box.innerHTML = (note ? `<p class="hint" style="text-align:center;margin:0 0 8px;">${note}</p>` : '')
+      + `<div class="sr-grid">${ranked.map((c,i)=>`<div class="sr-tile sim-tile" role="button" tabindex="0" data-i="${i}" data-name="${encodeURIComponent(c.name)}">
+        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}
+        <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
+      </div>`).join('')}</div>`;
+    // 1.8: the house multi-select; a plain tap opens the card
+    wireOverlayPick(box.closest('.overlay'), box, ranked, (nm)=>{ const i = ranked.findIndex(x=>x.name === nm); if(i >= 0) openCardInfo(ranked[i], { pool: ranked, poolIdx: i }); });
+    loadTilePrices(ranked);
+  };
+  const simFocus = async (tag)=>{
+    if(!simCtx) return;
+    if(!tag){ simPaint(simCtx.base, simCtx.baseNote); return; }
+    const box = document.getElementById('simBody');
+    if(!box) return;
+    box.innerHTML = '<div class="status"><div class="spinner"></div></div>';
+    const key = 'otag:' + tag;
+    if(!simCtx.pools[key]){
+      let got = [];
+      try{
+        const r = await searchAndVerifyLegal((simCtx.idClause + 'otag:' + tag).trim(), 'edhrec', 60);
+        got = ((r&&r.results)||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
+      }catch(e){}
+      simCtx.pools[key] = got;
+      got.forEach((x, i)=>{
+        if(x.name === card.name) return;
+        let e = simCtx.cand.get(x.name);
+        if(!e){ e = { x, best: i, tags: new Set([tag]) }; simCtx.cand.set(x.name, e); simCtx.scoreE(e); }
+        else e.tags.add(tag);
+      });
+    }
+    if((document.getElementById('simTagSel')?.value || '') !== tag) return;   // another pick meanwhile
+    const list = Array.from(simCtx.cand.values()).filter(e=>simCtx.has(e, tag)).sort(cmpSimilarity).slice(0, 20).map(e=>e.x);
+    simPaint(list, (appLang() === 'nl' ? 'Focus op ' : 'Focused on ') + '<b>' + escapeHtml(otagLabel(tag)) + '</b>');
+  };
   try{
     const f = frontFace(card);
     const isLand = /\bLand\b/.test(f.type_line||'');
@@ -21100,6 +21334,12 @@ async function openSimilarCards(card, colorScope){
             tagHas: (cc, t)=>{ const l = localTagSetSync(cc); return (l ? l.has(t) : false) || e.tags.has(t); },
             fallbackPop: e.best });
         });
+        // 1.25: kept for the tag focus -- the same candidates, the same points
+        simCtx = { cand, pools, idClause, tagsAll,
+          scoreE: (e)=>{ e.s = similarityScore(card, e.x, { srcWords, weights, srcTags: tagsAll, eMap, themeSets,
+            tagHas: (cc, t)=>{ const l = localTagSetSync(cc); return (l ? l.has(t) : false) || e.tags.has(t); },
+            fallbackPop: e.best }); },
+          has: (e, t)=>{ const l = localTagSetSync(e.x); return (l ? l.has(t) : false) || e.tags.has(t); } };
         const _all = Array.from(cand.values()).sort(cmpSimilarity);
         ranked = _all.slice(0, 20).map(e=>e.x);   // the 20 best earn their place — more is noise
         if(_all.length){
@@ -21120,16 +21360,12 @@ async function openSimilarCards(card, colorScope){
     }
     const box = document.getElementById('simBody');
     if(!box) return;   // overlay closed while loading
-    ranked = ranked.slice(0, 40);
-    if(!ranked.length){ box.innerHTML = `<div class="empty-note">${trS('No similar cards found.')}</div>`; return; }
-    box.innerHTML = (typeFallback ? `<p class="hint" style="text-align:center;margin:0 0 8px;">${trS('Function unknown — showing its closest kin by type.')}</p>` : '')
-      + `<div class="sr-grid">${ranked.map((c,i)=>`<div class="sr-tile sim-tile" role="button" tabindex="0" data-i="${i}" data-name="${encodeURIComponent(c.name)}">
-        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}
-        <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
-      </div>`).join('')}</div>`;
-    // 1.8: the house multi-select; a plain tap opens the card
-    wireOverlayPick(box.closest('.overlay'), box, ranked, (nm)=>{ const i = ranked.findIndex(x=>x.name === nm); if(i >= 0) openCardInfo(ranked[i], { pool: ranked, poolIdx: i }); });
-    loadTilePrices(ranked);
+    const baseNote = typeFallback ? trS('Function unknown — showing its closest kin by type.') : '';
+    if(simCtx){
+      simCtx.base = ranked.slice(); simCtx.baseNote = baseNote;
+      tagFocusRowFill('simTagRow', 'simTagSel', simCtx.tagsAll, simFocus);
+    }
+    simPaint(ranked, baseNote);
   }catch(e){
     _noteCrash('similar FAILED', e && (e.message || e), e && e.stack ? String(e.stack).split('\n')[1] : '');
     const box = document.getElementById('simBody');
@@ -25250,6 +25486,7 @@ function openCardReco(card, forDeck, comboKey){
   el.innerHTML = `<div class="overlay-inner">
     ${overlayCapHtml((appLang() === 'nl' ? 'Gespeeld met ' : 'Played with ') + card.name)}
     <main>
+      <div class="tag-focus-row" id="crTagRow" hidden></div>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="crImg" alt="${escapeHtml(card.name)}">
         <div class="ra-nm">${escapeHtml(card.name)}</div>
@@ -25274,6 +25511,15 @@ async function loadCardReco(card, themes, forDeck, comboKey){
   // 1) detect this card's function tags
   const tagMap = await detectOtagsForCards([card]);
   const cardTags = (tagMap[card.name] || []);
+  // 1.25: the tag focus drop-up under the card
+  {
+    const ov = document.getElementById('cardRecoOverlay');
+    if(ov) ov._crCtx = { idClause, pool: (ov._crCtx && ov._crCtx.pool) || null };
+    tagFocusRowFill('crTagRow', 'crTagSel', cardTags, (t)=>{
+      if(t) cardRecoFocus(card, forDeck, comboKey, t);
+      else loadCardReco(card, themes, forDeck, comboKey);
+    });
+  }
   const themeParts = (themes && themes.length) ? themes.map(t=>t.clause) : [];
   // 2) build a synergy clause: shares a tag OR shares a theme pattern
   const signalParts = cardTags.map(t=>'otag:'+t).concat(themeParts);
@@ -25314,11 +25560,13 @@ async function loadCardReco(card, themes, forDeck, comboKey){
   } else edhSecs = [];
   const box = document.getElementById('crBody');
   if(!box) return;   // overlay closed meanwhile
+  { const ov = document.getElementById('cardRecoOverlay'); if(ov && ov._crCtx) ov._crCtx.pool = pool; }
+  if(document.getElementById('crTagSel')?.value) return;   // 1.25: a tag focus took over meanwhile
   if(!pool.length){ box.innerHTML = `<div class="empty-note">No recommendations found for this card.</div>`; return; }
   const roleTxt = cardTags.length ? ` — sharing its role${cardTags.length>1?'s':''} (${cardTags.slice(0,3).map(escapeHtml).join(', ')})` : '';
   box.innerHTML = `<p class="hint" style="margin:0 0 4px;text-align:center;">Cards that play well with ${escapeHtml(card.name)}${edhSecs.length ? '' : roleTxt}, most-played first.</p>`;
   const groups = edhGroupPool(pool, edhSecs).map(g=>({ title: trS(g.title), cards: g.cards }));
-  const rewire = ()=>loadCardReco(card, themes, forDeck, comboKey);
+  const rewire = ()=>{ const t = document.getElementById('crTagSel')?.value; if(t) cardRecoFocus(card, forDeck, comboKey, t); else loadCardReco(card, themes, forDeck, comboKey); };
   const crEl = box.closest('.overlay');
   if(groups.length < 2){
     pagedGrid(box, pool, (c)=>searchRowHtml(c, null, {noAdd:true}),
@@ -25347,6 +25595,35 @@ async function loadCardReco(card, themes, forDeck, comboKey){
     e.stopPropagation();
     openTileMenu(e.currentTarget, groups.map((g, i)=>({ label: g.title, fn: ()=>{ box.querySelector(`.edh-sec[data-csec="${i}"]`)?.scrollIntoView({ behavior:'smooth', block:'end' }); } })));
   });
+}
+
+/* 1.25: Recommendations focused on ONE of the card's function tags: cards
+   played with it that do that job first, then the most-played cards with
+   that function, in the same colours. */
+async function cardRecoFocus(card, forDeck, comboKey, tag){
+  const ov = document.getElementById('cardRecoOverlay');
+  const box = document.getElementById('crBody');
+  if(!ov || !box) return;
+  const ctx = ov._crCtx || {};
+  box.innerHTML = '<div class="status"><div class="spinner"></div></div>';
+  const first = (ctx.pool || []).filter(c=>{ try{ const l = localTagSetSync(c); return !!(l && l.has(tag)); }catch(e){ return false; } });
+  let rest = [];
+  try{
+    const { results } = await searchAndVerifyLegal(['otag:' + tag, ctx.idClause || ''].filter(Boolean).join(' '), 'edhrec', 120);
+    rest = (results || []).filter(c=>landOk(c) && !isBanned(c) && c.name !== card.name);
+  }catch(e){}
+  if((document.getElementById('crTagSel')?.value || '') !== tag) return;   // another pick meanwhile
+  const b2 = document.getElementById('crBody');
+  if(!b2) return;
+  const seen = new Set(), pool = [];
+  first.concat(rest).forEach(c=>{ if(c && !seen.has(c.name)){ seen.add(c.name); pool.push(c); } });
+  const nl = appLang() === 'nl';
+  if(!pool.length){ b2.innerHTML = `<div class="empty-note">${nl ? 'Geen kaarten gevonden voor deze functie.' : 'No cards found for this function.'}</div>`; return; }
+  b2.innerHTML = `<p class="hint" style="margin:0 0 4px;text-align:center;">${nl ? 'Focus op' : 'Focused on'} <b>${escapeHtml(otagLabel(tag))}</b>${first.length ? (nl ? ' — eerst kaarten die met ' : ' — cards played with ') + escapeHtml(card.name) + (nl ? ' gespeeld worden' : ' first') : ''}.</p>`;
+  const crEl = b2.closest('.overlay');
+  const rewire = ()=>cardRecoFocus(card, forDeck, comboKey, tag);
+  pagedGrid(b2, pool, (c)=>searchRowHtml(c, null, {noAdd:true}),
+    (chunk)=>{ wireResultButtons(pool, null, rewire); wireOverlayPick(crEl, b2, pool); loadTilePrices(chunk); });
 }
 
 /* ---------------- BUDGET ALTERNATIVES ----------------
@@ -25457,6 +25734,21 @@ const BUDGET_OTAGS = ['removal','creature-removal','artifact-removal','enchantme
 /* Live probing (cards newer than the weekly file) stays on the core 17 —
    probing 170 tags per unknown card would resurrect the convoy tenfold. */
 const CORE_OTAGS = ['removal','boardwipe','counterspell','ramp','tutor','burn','lifegain','mill','discard','draw','reanimate','protection','sacrifice-outlet','graveyard-hate','peek'];   // the living probe core — dead slugs earn no requests
+/* 1.25 Tag focus: a drop-up under the card on Similar cards and on a card's
+   Recommendations, listing the card's own function tags. Picking one makes
+   the page suggest cards for that one job. */
+function otagLabel(t){ return BUDGET_TAG_LABELS[t] || String(t).replace(/-/g, ' ').replace(/\b\w/g, ch=>ch.toUpperCase()); }
+function tagFocusRowFill(rowId, selId, tags, onPick){
+  const row = document.getElementById(rowId);
+  if(!row) return;
+  if(!tags || !tags.length){ row.hidden = true; row.innerHTML = ''; return; }
+  const nl = appLang() === 'nl';
+  const cur = document.getElementById(selId)?.value || '';
+  row.innerHTML = `<span class="tf-lbl">${nl ? 'Focus' : 'Focus'}</span><select id="${selId}"><option value="">${nl ? 'Alle functies' : 'All functions'}</option>${
+    tags.map(t=>`<option value="${escapeHtml(t)}"${t === cur ? ' selected' : ''}>${escapeHtml(otagLabel(t))}</option>`).join('')}</select>`;
+  row.hidden = false;
+  row.querySelector('select').addEventListener('change', (e)=>onPick(e.target.value || ''));
+}
 const BUDGET_TAG_LABELS = { removal:'Removal', boardwipe:'Board Wipe', counterspell:'Counterspell', ramp:'Ramp', tutor:'Tutor', burn:'Burn', lifegain:'Lifegain', mill:'Mill', discard:'Discard', draw:'Card Draw', reanimate:'Reanimation', protection:'Protection', 'token-generator':'Tokens', 'sacrifice-outlet':'Sac Outlet', 'graveyard-hate':'Grave Hate', redirect:'Redirect', peek:'Peek' };
 /* Oracle tags are near-static (Tagger curates functions, not prices), so the
    per-card tag map persists for a week. It's a few kilobytes of names and
@@ -27243,22 +27535,24 @@ function aboutHtml(){
     ['By Magic players, for Magic players', 'built from what we missed at our own tables. Ideas are welcome.']
   ];
   const data = NL ? [
-    ['Alles op je eigen telefoon', 'je decks, collectie, Gezocht, prijsalerts, potjes en instellingen staan in de opslag van de app op dit toestel. Er is geen Deckhand-server die ze bewaart of meeleest.'],
+    ['Alles op je eigen telefoon', 'je decks, collectie, Gezocht, prijsalerts, potjes en instellingen staan in de opslag van de app op dit toestel. Er is geen Deckhand-server die ze bewaart of meeleest — behalve als je zelf Sync aanzet (zie hieronder).'],
     ['Kaartgegevens worden gedownload', 'de kaartendatabase, prijzen en scan-vingerafdrukken komen eens per dag of week van de Deckhand-site en blijven op je telefoon staan. Zoek je iets wat er niet in staat, dan vraagt de app het rechtstreeks aan Scryfall of EDHREC; die zien dat er een vraag komt, maar niet van wie.'],
     ['Meldingen zonder account', 'de Android-app kijkt zelf op je telefoon of er spoilers of updates zijn. Er wordt niets over jou opgeslagen om je een melding te kunnen sturen.'],
     ['Feedback', 'wat je via Over Deckhand stuurt, gaat via de Deckhand-site (Netlify) als e-mail naar de maker, met je appversie en telefoontype. Je e-mailadres alleen als je het zelf invult.'],
     ['De AI-judge', 'je vraag gaat met de officiële regels en de tekst van de kaarten die je tagt via de Deckhand-site naar een AI-dienst: Google Gemini, met Groq als reserve. Zonder naam of account: alleen een willekeurig toestelnummer, om de 20 vragen per dag te tellen. Google mag wat via zijn gratis laag binnenkomt gebruiken om zijn diensten te verbeteren; er gaat niets mee dat naar jou wijst. Voor een antwoord is dus internet nodig.'],
     ['AI-hulp bij cuts en lands', 'vraag je de AI om cuts of lands, dan gaan de kaartnamen, kaartteksten en cijfers van dat deck via de Deckhand-site naar dezelfde AI-dienst. Je deck zelf wordt daar niet bewaard, alleen het antwoord, zodat hetzelfde deck de volgende keer niets kost. Ook hier alleen het toestelnummer, om de 10 analyses per dag te tellen.'],
     ['Wis je de app, dan is alles weg', 'app-gegevens wissen, de app verwijderen of je telefoon resetten haalt alles mee. Daarom de back-up in Extra\u2019s: één bestand met alles, dat je in je eigen cloud zet en op elk toestel terugzet.'],
+    ['Sync, alleen als je het aanzet', 'koppel je apparaten in Extra\u2019s \u2192 Sync, dan staat een kopie van je decks, collectie, mappen, tags en instellingen op de Deckhand-site (Netlify), onder je koppelcode. Zonder naam of account; de site bewaart alleen een versleutelde vingerafdruk van de code. Wie de code heeft, kan erbij \u2014 deel hem dus niet. Ontkoppelen kan altijd.'],
     ['Beschermde opslag', 'de app vraagt Android of zijn opslag beschermd mag blijven, zodat het systeem hem niet opruimt als je telefoon vol raakt. In Extra\u2019s → Back-up zie je of dat gelukt is.']
   ] : [
-    ['Everything on your own phone', 'your decks, collection, Wants, price alerts, games and settings live in the app\u2019s storage on this device. There is no Deckhand server that keeps or reads them.'],
+    ['Everything on your own phone', 'your decks, collection, Wants, price alerts, games and settings live in the app\u2019s storage on this device. There is no Deckhand server that keeps or reads them — unless you turn on Sync yourself (see below).'],
     ['Card data is downloaded', 'the card database, prices and scanner fingerprints come from the Deckhand site once a day or week and stay on your phone. Look up something that is not in it and the app asks Scryfall or EDHREC directly; they see a request arrive, not who sent it.'],
     ['Notifications without an account', 'the Android app checks for spoilers and updates on your phone itself. Nothing about you is stored to be able to notify you.'],
     ['Feedback', 'what you send from About Deckhand goes through the Deckhand site (Netlify) as an email to the maker, with your app version and phone type. Your email address only if you fill it in.'],
     ['The AI judge', 'your question goes, with the official rules and the text of the cards you tag, through the Deckhand site to an AI service: Google Gemini, with Groq as the reserve. No name, no account: only a random device number, to count the 20 questions a day. Google may use what comes in through its free tier to improve its services; nothing that points to you goes along. So an answer needs an internet connection.'],
     ['AI help with cuts and lands', 'when you ask the AI for cuts or lands, the card names, card texts and numbers of that deck go through the Deckhand site to the same AI service. Your deck itself is not kept there, only the answer, so the same deck costs nothing next time. Here too only the device number, to count the 10 analyses a day.'],
     ['Clear the app and it is all gone', 'clearing app data, uninstalling or resetting your phone takes everything with it. That is why there is the backup in Extras: one file with everything, kept in your own cloud and restored on any device.'],
+    ['Sync, only if you turn it on', 'link your devices in Extras \u2192 Sync and a copy of your decks, collection, binders, tags and settings is kept on the Deckhand site (Netlify), under your link code. No name, no account; the site keeps only a scrambled fingerprint of the code. Whoever has the code can get in \u2014 so don\u2019t share it. You can unlink any time.'],
     ['Protected storage', 'the app asks Android to keep its storage protected, so the system does not clean it up when your phone runs full. Extras → Backup shows whether that worked.']
   ];
   return `<div class="about-txt">
@@ -27398,6 +27692,7 @@ function settingsPageHtml(){
       ${tile('notifRow', ICONS.bell, T('Meldingen', 'Notifications'))}
     </div>
     <div class="settings-section">${tile('shareAppRow', ICONS.share, T('Deel de app', 'Share the app'))}</div>
+    <div class="settings-section">${tile('syncRow', SYNC_ICON, 'Sync', `<div class="l2">${syncState() ? T('Gekoppeld', 'Linked') : T('Meerdere apparaten', 'Several devices')}</div>`)}</div>
     <div class="settings-section">
       <div id="backupBody" class="acc-up xt-body" hidden style="padding:4px 14px 2px;">
         <div class="l2">${T('Decks, collectie en instellingen in één bestand — bewaar het in je eigen cloud.', 'Decks, collection and settings in one file — keep it in your own cloud.')}</div>
@@ -27417,7 +27712,7 @@ function settingsPageHtml(){
     </div>
     ${browser ? `<div class="settings-section">${tile('installAppRow', ICONS.imp, T('Installeer als app', 'Install as an app'))}</div>` : ''}
     ${browser && /Android/i.test(navigator.userAgent) ? `<div class="settings-section" id="apkRow">${tile('apkBtn', ICONS.phone, T('Android-app', 'Android app'), '<div class="l2" id="apkNote"></div>')}</div>` : ''}
-    ${(browser ? 1 : 0) + (browser && /Android/i.test(navigator.userAgent) ? 1 : 0) === 1 ? '<div class="xt-spacer" aria-hidden="true"></div>' : ''}
+    ${((browser ? 1 : 0) + (browser && /Android/i.test(navigator.userAgent) ? 1 : 0)) % 2 === 0 ? '<div class="xt-spacer" aria-hidden="true"></div>' : ''}
     <div class="settings-section xt-note" id="appFootCell">
     <p class="hint" id="appFootNote" style="text-align:center;line-height:1.45;font-size:11px;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
       ${CHANGELOG_HISTORY.length ? `<button type="button" class="xt-mini" id="changelogBtn">${inlIco('spark', 14)}${T('Wat is nieuw', 'What\u2019s new')}</button>
@@ -27565,6 +27860,297 @@ function banPillarsHtml(){
    No server of our own: the file goes to Android's share sheet (Google
    Drive, Nextcloud, Dropbox, mail ...) or to Downloads, and comes back in
    through the file picker, which reaches the same clouds. */
+/* ===================== 1.26 SYNC BETWEEN DEVICES =====================
+   A link code ties devices together; Netlify Blobs (functions/sync.mjs)
+   keeps one shared document. Every synced piece -- each deck, the
+   collection, folders, tags, printings, settings -- carries the time this
+   device last changed it; the newest change wins, piece by piece.
+   A probe every few minutes costs a few bytes; data only moves when
+   something changed. Caches, prices and device-only switches never sync. */
+const SYNC_KEYS = new Set(['collection', 'folders', 'globalTags', 'printPrefs', 'printPrefsPlaced', 'trade', 'priceWatch', 'draftNames', 'authorName', 'lang', 'settings:app', 'budgetFloor', 'lifeFmt']);
+const SYNC_URL = '/.netlify/functions/sync';
+let _syncQuiet = 0, _syncTimer = null, _syncBusy = false, _syncMetaT = null;
+const _lsSetRaw = Storage.prototype.setItem, _lsDelRaw = Storage.prototype.removeItem;
+function syncState(){
+  if(!state._syncSt){ try{ state._syncSt = JSON.parse(localStorage.getItem(LS_PREFIX + 'syncState') || 'null'); }catch(e){} }
+  return state._syncSt || null;
+}
+function syncSaveState(){ try{ _lsSetRaw.call(localStorage, LS_PREFIX + 'syncState', JSON.stringify(state._syncSt || null)); }catch(e){} }
+function syncMeta(){
+  if(!state._syncMeta){ try{ state._syncMeta = JSON.parse(localStorage.getItem(LS_PREFIX + 'syncMeta') || '{}') || {}; }catch(e){ state._syncMeta = {}; } }
+  return state._syncMeta;
+}
+function syncSaveMeta(){
+  clearTimeout(_syncMetaT);
+  _syncMetaT = setTimeout(()=>{ try{ _lsSetRaw.call(localStorage, LS_PREFIX + 'syncMeta', JSON.stringify(syncMeta())); }catch(e){} }, 300);
+}
+function syncNoteChange(k, del){
+  if(_syncQuiet) return;
+  const m = syncMeta();
+  m[k] = del ? { t: Date.now(), d: 1 } : { t: Date.now() };
+  syncSaveMeta();
+  if(syncState()) syncSoon(6000);
+}
+function syncTouchDeck(id, del){ if(id) syncNoteChange('deck:' + id, del); }
+// Every write to a synced key is noted (decks are noted where they are saved).
+try{
+  Storage.prototype.setItem = function(k, v){
+    _lsSetRaw.call(this, k, v);
+    try{ if(this === window.localStorage && typeof k === 'string' && k.indexOf(LS_PREFIX) === 0 && SYNC_KEYS.has(k.slice(LS_PREFIX.length))) syncNoteChange(k.slice(LS_PREFIX.length), false); }catch(e){}
+  };
+  Storage.prototype.removeItem = function(k){
+    _lsDelRaw.call(this, k);
+    try{ if(this === window.localStorage && typeof k === 'string' && k.indexOf(LS_PREFIX) === 0 && SYNC_KEYS.has(k.slice(LS_PREFIX.length))) syncNoteChange(k.slice(LS_PREFIX.length), true); }catch(e){}
+  };
+}catch(e){}
+function syncSoon(ms){
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(()=>{ syncRun('change'); }, ms || 6000);
+}
+function syncNewCode(){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const b = new Uint8Array(16); crypto.getRandomValues(b);
+  let c = ''; for(let i = 0; i < 16; i++) c += A[b[i] % 32];
+  return c.match(/.{4}/g).join('-');
+}
+function syncCleanCode(c){ return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+function syncNiceCode(c){ const x = syncCleanCode(c); return (x.match(/.{1,4}/g) || []).join('-'); }
+async function syncCall(body){
+  const st = syncState();
+  const ctl = new AbortController();
+  const to = setTimeout(()=>ctl.abort(), 30000);
+  try{
+    const r = await fetch(SYNC_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ code: st && st.code }, body)), signal: ctl.signal, cache: 'no-store' });
+    let j = null; try{ j = await r.json(); }catch(e){}
+    if(!r.ok || !j || !j.ok) throw new Error((j && j.error) || ('http ' + r.status));
+    return j;
+  }finally{ clearTimeout(to); }
+}
+// The current value of a synced piece on this device (null = gone).
+function syncValueOf(k){
+  if(k.indexOf('deck:') === 0){
+    const d = (state.decksIndex || []).find(x=>x.id === k.slice(5));
+    if(!d) return null;
+    const c = {}; Object.keys(d).forEach(x=>{ if(x !== '_saveStatus') c[x] = d[x]; });
+    return JSON.stringify(slimDeckForSave(c));
+  }
+  try{ return localStorage.getItem(LS_PREFIX + k); }catch(e){ return null; }
+}
+function syncPending(){
+  const st = syncState(), m = syncMeta(), out = {};
+  if(!st) return out;
+  const sent = st.sent || {};
+  Object.keys(m).forEach(k=>{
+    if(!(m[k].t > (sent[k] || 0))) return;
+    const v = m[k].d ? null : syncValueOf(k);
+    out[k] = v == null ? { t: m[k].t, del: 1 } : { t: m[k].t, v };
+  });
+  return out;
+}
+// Note every piece already on this device, so a new link carries it.
+// t = 1 (the creator: "old but present"); t = 0.5 for a device that joins, so
+// anything the cloud already holds wins, and what only this device has is
+// still sent up.
+function syncSeed(t){
+  const m = syncMeta();
+  (state.decksIndex || []).forEach(d=>{ const k = 'deck:' + d.id; if(!m[k]) m[k] = { t }; });
+  SYNC_KEYS.forEach(k=>{ try{ if(!m[k] && localStorage.getItem(LS_PREFIX + k) != null) m[k] = { t }; }catch(e){} });
+  syncSaveMeta();
+}
+async function syncApply(changes){
+  const m = syncMeta(), keys = Object.keys(changes || {});
+  let decks = 0, other = new Set();
+  _syncQuiet++;
+  try{
+    for(const k of keys){
+      const c = changes[k];
+      if(m[k] && !(c.t > m[k].t)) continue;               // ours is as new or newer
+      if(k.indexOf('deck:') === 0){
+        const id = k.slice(5);
+        const i = (state.decksIndex || []).findIndex(x=>x.id === id);
+        if(c.del){
+          if(i >= 0) state.decksIndex.splice(i, 1);
+          if(state.activeDeckId === id) state.activeDeckId = null;
+          try{ await deleteDeckStorage(id); }catch(e){}
+        } else {
+          let d = null; try{ d = JSON.parse(c.v); }catch(e){}
+          if(!d || !d.id) continue;
+          if(i >= 0) state.decksIndex[i] = d; else state.decksIndex.push(d);
+          try{ if(!(await deckDbPutMany([[LS_PREFIX + k, c.v]]))) localStorage.setItem(LS_PREFIX + k, c.v); }catch(e){}
+        }
+        decks++;
+      } else if(SYNC_KEYS.has(k)){
+        try{ if(c.del) localStorage.removeItem(LS_PREFIX + k); else localStorage.setItem(LS_PREFIX + k, c.v); }catch(e){}
+        other.add(k);
+      } else continue;
+      m[k] = c.del ? { t: c.t, d: 1 } : { t: c.t };
+      const st = syncState(); if(st){ st.sent = st.sent || {}; st.sent[k] = c.t; }
+    }
+  }finally{ _syncQuiet--; }
+  syncSaveMeta();
+  if(!decks && !other.size) return 0;
+  // the app's memory follows its storage
+  try{ if(other.has('collection')) state.collection = loadCollection(); }catch(e){}
+  try{ if(other.has('folders')) state.folders = loadFolders(); }catch(e){}
+  try{ if(other.has('globalTags')) state.globalTags = loadGlobalTags(); }catch(e){}
+  try{ if(other.has('printPrefs')) state._printPrefs = null; }catch(e){}
+  try{ if(other.has('settings:app')) loadSettings(); }catch(e){}
+  try{ state._ownedSet = null; }catch(e){}
+  if(decks) try{ state.decksIndex.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)); }catch(e){}
+  return decks + other.size;
+}
+/* One round: a few-byte probe when nothing changed here; otherwise send
+   what changed and take back what changed elsewhere, in pages. */
+async function syncRun(why){
+  const st = syncState();
+  if(!st || !st.code || _syncBusy) return null;
+  if(typeof navigator !== 'undefined' && navigator.onLine === false) return null;
+  _syncBusy = true;
+  let got = 0;
+  try{
+    let pend = syncPending();
+    if(!Object.keys(pend).length){
+      const pr = await syncCall({ op: 'probe' });
+      if((pr.rev || 0) === (st.rev || 0)){ st.last = Date.now(); syncSaveState(); return 0; }
+    }
+    // send in parcels of ~3 MB
+    const parcels = []; let cur = {}, size = 0;
+    Object.keys(pend).forEach(k=>{
+      const len = (pend[k].v ? pend[k].v.length : 0) + 60;
+      if(size && size + len > 3000000){ parcels.push(cur); cur = {}; size = 0; }
+      cur[k] = pend[k]; size += len;
+    });
+    parcels.push(cur);
+    const since = st.rev || 0;
+    let res = null;
+    for(const parcel of parcels){
+      res = await syncCall({ op: 'sync', since, changes: parcel });
+      st.sent = st.sent || {};
+      Object.keys(parcel).forEach(k=>{ st.sent[k] = parcel[k].t; });
+      got += await syncApply(res.changes);
+      syncSaveState();
+    }
+    let guard = 0;
+    while(res && res.more && guard++ < 50){
+      res = await syncCall({ op: 'sync', since, changes: {}, after: res.more });
+      got += await syncApply(res.changes);
+    }
+    st.rev = res ? (res.rev || 0) : st.rev;
+    st.last = Date.now(); st.err = null;
+    syncSaveState();
+    if(got){
+      const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+      if(!state.overlayStack.length && !typing){ try{ render(); }catch(e){} }
+      if(why !== 'start' || got) toast(appLang() === 'nl' ? '☁ Bijgewerkt vanaf je andere apparaat.' : '☁ Updated from your other device.');
+    }
+    // more changes may have come in while this round ran
+    if(Object.keys(syncPending()).length) syncSoon(4000);
+    return got;
+  }catch(e){
+    st.err = String(e && e.message || e); syncSaveState();
+    return null;
+  }finally{
+    _syncBusy = false;
+    const lb = document.getElementById('syncLastLine'); if(lb) lb.textContent = syncLastLabel();
+  }
+}
+function syncLastLabel(){
+  const st = syncState(), nl = appLang() === 'nl';
+  if(!st) return '';
+  if(st.err && /code|store|404|http 5/.test(st.err)) return (nl ? '⚠ Sync werkt nog niet (' : '⚠ Sync is not working yet (') + st.err + ')';
+  if(!st.last) return nl ? 'Nog niet gesynchroniseerd' : 'Not synced yet';
+  const min = Math.round((Date.now() - st.last) / 60000);
+  return (nl ? 'Laatst gesynchroniseerd: ' : 'Last synced: ') + (min < 1 ? (nl ? 'zojuist' : 'just now') : min < 60 ? (min + ' min') : new Date(st.last).toLocaleString(nl ? 'nl-NL' : 'en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }));
+}
+async function syncLink(code, creator){
+  state._syncSt = { code: syncCleanCode(code), rev: 0, sent: {}, last: 0, at: Date.now() };
+  syncSaveState();
+  syncSeed(creator ? 1 : 0.5);
+  const r = await syncRun('link');
+  return r;
+}
+function syncUnlink(){
+  state._syncSt = null;
+  try{ _lsDelRaw.call(localStorage, LS_PREFIX + 'syncState'); }catch(e){}
+}
+// Background rhythm: at start, when the app comes back into view, and a
+// tiny probe every three minutes while it is open.
+setInterval(()=>{ if(document.visibilityState === 'visible' && syncState()) syncRun('tick'); }, 180000);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible' && syncState()) syncSoon(800); });
+window.addEventListener('online', ()=>{ if(syncState()) syncSoon(1500); });
+/* Extras -> Sync: link this device, show the code, sync now, unlink. */
+function openSyncSheet(){
+  const nl = appLang() === 'nl', st = syncState();
+  document.getElementById('syncSheet')?.remove();
+  const el = document.createElement('div');
+  el.className = 'deckpick-scrim'; el.id = 'syncSheet';
+  el.style.zIndex = 205; el.style.alignItems = 'flex-end';
+  const body = st ? `
+    <div class="br-actions bk-actions">
+      <button type="button" class="primary-btn" id="syncNow">↻ ${nl ? 'Nu synchroniseren' : 'Sync now'}</button>
+      <button type="button" class="ghost-btn" id="syncShare">${nl ? 'Code delen of kopiëren' : 'Share or copy the code'}</button>
+      <button type="button" class="ghost-btn" id="syncOff">${nl ? 'Ontkoppel dit apparaat' : 'Unlink this device'}</button>
+    </div>
+    <div class="bk-hint">${nl
+      ? 'Vul deze code in op je andere apparaat: Extra’s → Sync → <b>Ik heb al een code</b>. Houd hem voor jezelf: wie de code heeft, ziet je decks en collectie.'
+      : 'Enter this code on your other device: Extras → Sync → <b>I already have a code</b>. Keep it to yourself: whoever has it sees your decks and collection.'}</div>
+    <div class="sync-code" id="syncCodeTxt">${escapeHtml(syncNiceCode(st.code))}</div>
+    <div class="br-title"><b>☁ ${nl ? 'Gekoppeld' : 'Linked'}</b><span id="syncLastLine">${escapeHtml(syncLastLabel())}</span></div>`
+  : `
+    <div class="br-actions bk-actions">
+      <button type="button" class="primary-btn" id="syncNew">＋ ${nl ? 'Nieuwe koppeling starten' : 'Start a new link'}</button>
+      <button type="button" class="ghost-btn" id="syncJoin">${nl ? 'Ik heb al een code' : 'I already have a code'}</button>
+    </div>
+    <div class="bk-hint">${nl
+      ? '<b>Eerste apparaat:</b> start een nieuwe koppeling — je krijgt een code.<br><b>Volgende apparaten:</b> kies “Ik heb al een code”. Daar gaat wat al in de cloud staat voor; decks die alleen op dat apparaat staan blijven bewaard. Maak voor de zekerheid eerst een back-up.'
+      : '<b>First device:</b> start a new link — you get a code.<br><b>Next devices:</b> choose “I already have a code”. There, what the cloud already holds wins; decks that exist only on that device are kept. Make a backup first, to be safe.'}</div>
+    <div class="br-title"><b>☁ ${nl ? 'Synchroniseren tussen apparaten' : 'Sync between devices'}</b><span>${nl ? 'Decks, collectie, mappen, tags en instellingen — op je telefoon, tablet en pc tegelijk.' : 'Decks, collection, binders, tags and settings — on your phone, tablet and PC at once.'}</span></div>`;
+  el.innerHTML = `<div class="deckpick br-sheet bk-sheet">${body}</div>`;
+  brSheetOpen(el, 'syncSheet');
+  const close = ()=>brSheetClose('syncSheet');
+  el.addEventListener('click', (e)=>{ if(e.target === el) close(); });
+  const busy = (b, on)=>{ if(b){ b.disabled = on; b.style.opacity = on ? '0.6' : ''; } };
+  const report = (r)=>{
+    const s2 = syncState();
+    if(r === null && s2 && s2.err) toast((nl ? '⚠ Sync mislukt: ' : '⚠ Sync failed: ') + s2.err);
+    else toast(nl ? '☁ Gesynchroniseerd.' : '☁ Synced.');
+  };
+  el.querySelector('#syncNew')?.addEventListener('click', async (e)=>{
+    busy(e.currentTarget, true);
+    const r = await syncLink(syncNewCode(), true);
+    report(r);
+    close(); await brAfterPop(); openSyncSheet();
+  });
+  el.querySelector('#syncJoin')?.addEventListener('click', async ()=>{
+    close(); await brAfterPop();
+    openInAppPrompt(nl ? 'Koppelcode' : 'Link code', 'XXXX-XXXX-XXXX-XXXX', '', async (v)=>{
+      if(v == null) return;
+      if(syncCleanCode(v).length !== 16){ toast(nl ? 'Die code klopt niet — 16 tekens.' : 'That code is not right — 16 characters.'); return; }
+      toast(nl ? '☁ Koppelen…' : '☁ Linking…');
+      const r = await syncLink(v, false);
+      report(r);
+      openSyncSheet();
+    });
+  });
+  el.querySelector('#syncNow')?.addEventListener('click', async (e)=>{
+    busy(e.currentTarget, true);
+    const r = await syncRun('manual');
+    busy(e.currentTarget, false);
+    report(r);
+  });
+  el.querySelector('#syncShare')?.addEventListener('click', async ()=>{
+    const code = syncNiceCode(syncState().code);
+    try{ if(navigator.share){ await navigator.share({ title: 'Deckhand sync', text: code }); return; } }catch(err){ if(err && err.name === 'AbortError') return; }
+    try{ await navigator.clipboard.writeText(code); toast(nl ? 'Code gekopieerd.' : 'Code copied.'); }catch(err){ toast(code); }
+  });
+  el.querySelector('#syncOff')?.addEventListener('click', ()=>{
+    openInAppConfirm(nl ? 'Dit apparaat stopt met synchroniseren. Alles wat er nu op staat blijft staan.' : 'This device stops syncing. Everything on it now stays.', (ok)=>{
+      if(!ok) return;
+      syncUnlink(); close();
+      toast(nl ? 'Ontkoppeld.' : 'Unlinked.');
+    }, { ok: nl ? 'Ontkoppelen' : 'Unlink' });
+  });
+}
 function backupPayload(){
   // FULL backup: every piece of app data on this device -- decks, folders,
   // collection, settings, mode, learned catalogs -- as the complete set of
@@ -27574,7 +28160,7 @@ function backupPayload(){
   try{
     for(let i = 0; i < localStorage.length; i++){
       const k = localStorage.key(i);
-      if(k && k.indexOf(LS_PREFIX) === 0) ls[k] = localStorage.getItem(k);
+      if(k && k.indexOf(LS_PREFIX) === 0 && k !== LS_PREFIX + 'syncState' && k !== LS_PREFIX + 'syncMeta') ls[k] = localStorage.getItem(k);   // 1.26: a backup never carries the sync link
     }
   }catch(e){}
   // Decks live in IndexedDB: written into the same key layout, so the file
@@ -27958,6 +28544,7 @@ function wireSettingsPage(){
       }
     }
   });
+  document.getElementById('syncRow')?.addEventListener('click', ()=>openSyncSheet());
   document.getElementById('shareAppRow')?.addEventListener('click', async ()=>{
     const text = shareAppText(appLang());
     // Text only: the links live IN the message. A separate url field made
@@ -31549,7 +32136,278 @@ try{
 setTimeout(()=>{ try{ ensureCreatureTypes(); }catch(e){} }, 5000);
 setTimeout(()=>{ try{ pwTellNative(); }catch(e){} }, 1500);
 setTimeout(()=>{ try{ apkUpdateCheck(); }catch(e){} }, 4000);
+setTimeout(()=>{ try{ if(syncState()) syncRun('start'); }catch(e){} }, 3000);   // 1.26
 setTimeout(async ()=>{ try{ await dailyPricesReady(); }catch(e){} try{ pwStartupCheck(); }catch(e){} }, 9000);
+/* 1.25 Keyboard: the arrow keys step through cards on an open card page,
+   exactly like its chevrons. Typing in a field is left alone. */
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  if(e.altKey || e.ctrlKey || e.metaKey) return;
+  const t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if(document.getElementById('nselPop')) return;
+  const ovs = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
+  const top = ovs[ovs.length - 1];
+  if(!top) return;
+  const b = top.querySelector('.ci-nav-arrow.' + (e.key === 'ArrowRight' ? 'right' : 'left'));
+  if(!b) return;
+  e.preventDefault();
+  b.click();
+});
+/* ===== 1.26 PC: right-click card popup, shift-click, '/' and Ctrl+V ===== */
+function pcFinePointer(){ try{ return window.matchMedia('(hover: hover) and (pointer: fine)').matches; }catch(e){ return false; } }
+function cardImgShape(el){
+  if(!el || el.tagName !== 'IMG') return false;
+  const r = el.getBoundingClientRect();
+  if(r.width < 24) return false;
+  const q = r.height / r.width;
+  return q > 1.3 && q < 1.45;
+}
+/* What a right-click lands on: a card picture (or a decklist text row). */
+function ctxCardTarget(t){
+  if(!t || !t.closest) return null;
+  if(t.closest('.overlay.cs-pop, #hoverPrevBox, .cd-hero, .life-grid-v2')) return null;
+  const row = t.closest('[data-himg]'); if(row) return row;
+  let img = t.tagName === 'IMG' ? t : null;
+  if(!img){ const tile = t.closest('.sr-tile, .sc-tile, .vg-card, .col-tile, .pair-cell'); img = tile ? tile.querySelector('img') : null; }
+  return (img && cardImgShape(img)) ? img : null;
+}
+function csPopTop(){
+  const ovs = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
+  const top = ovs[ovs.length - 1];
+  return (top && top.classList.contains('cs-pop')) ? top : null;
+}
+/* Close the popup at once (its history entry stays behind, inert -- the
+   same as a nav-bar jump), so a new card can open in the same instant. */
+function csPopCloseNow(){
+  const pop = csPopTop(); if(!pop) return false;
+  const st = state.overlayStack;
+  const top = st.length ? st[st.length - 1] : null;
+  if(top && (top.id === 'cardInfo' || top.id === 'cardSheet')){ st.pop(); try{ top.closeFn(); }catch(e){} }
+  if(pop.isConnected) pop.remove();
+  return true;
+}
+function csPopApply(el){
+  const P = state._csPopAt;
+  if(P && Date.now() - P.t < 1200){
+    state._csPopAt = null;
+    el.classList.add('cs-pop');
+    el._csPopXY = { x: P.x, y: P.y };
+    if(!el._csPopWired){
+      el._csPopWired = true;
+      // Legality and Rulings start folded; their heading opens them.
+      el.addEventListener('click', (e)=>{
+        if(!el.classList.contains('cs-pop')) return;
+        const h = e.target.closest && e.target.closest('main.card-detail > .detail-sec > .detail-h');
+        if(!h) return;
+        const sec = h.parentElement;
+        if(sec.querySelector('#sheetOracle')) return;
+        el.classList.toggle(sec.querySelector('#csRulings') ? 'rul-open' : 'leg-open');
+      });
+    }
+  }
+  if(el.classList.contains('cs-pop')){
+    requestAnimationFrame(()=>csPopPlace(el));
+    setTimeout(()=>csPopPlace(el), 350);
+  }
+}
+/* Beside the mouse: right of it when there is room, else left; it grows
+   UPWARD from the pointer when there is more room above (bottom-up). */
+function csPopPlace(el){
+  const P = el && el._csPopXY;
+  if(!P || !el.isConnected || !el.classList.contains('cs-pop')) return;
+  const vw = window.innerWidth, vh = window.innerHeight, pad = 8, gap = 14;
+  const w = Math.min(460, vw - 2 * pad);
+  let x = P.x + gap;
+  if(x + w > vw - pad) x = P.x - gap - w;
+  if(x < pad) x = Math.max(pad, Math.min(vw - w - pad, P.x - w / 2));
+  const above = P.y - pad, below = vh - P.y - pad;
+  el.style.width = w + 'px'; el.style.left = Math.round(x) + 'px'; el.style.right = 'auto';
+  if(above >= below){ el.style.top = 'auto'; el.style.bottom = Math.round(vh - P.y) + 'px'; el.style.maxHeight = Math.round(Math.min(760, above)) + 'px'; }
+  else { el.style.bottom = 'auto'; el.style.top = Math.round(P.y) + 'px'; el.style.maxHeight = Math.round(Math.min(760, below)) + 'px'; }
+}
+// Right mouse button on a card: no long-press timers, no native menu.
+document.addEventListener('pointerdown', (e)=>{
+  if(e.button !== 2 || e.pointerType !== 'mouse') return;
+  if(ctxCardTarget(e.target)) e.stopPropagation();
+}, true);
+document.addEventListener('mousedown', (e)=>{
+  if(e.button === 2 && ctxCardTarget(e.target)) e.stopPropagation();
+}, true);
+document.addEventListener('contextmenu', (e)=>{
+  if(!pcFinePointer()) return;
+  const tg = ctxCardTarget(e.target);
+  if(!tg){ if(csPopTop() && !e.target.closest('.overlay.cs-pop')) csPopCloseNow(); return; }
+  e.preventDefault(); e.stopPropagation();
+  const scope = tg.closest('.overlay') || document.querySelector('.app > main') || document;
+  // While cards are being multi-selected, a click toggles -- leave it be.
+  if(scope.querySelector('.sr-tile.selected, .sc-tile.selected, .vg-card.dl-msel, .col-tile.csel')) return;
+  csPopCloseNow();
+  state._csPopAt = { x: e.clientX, y: e.clientY, t: Date.now() };
+  try{ tg.click(); }catch(err){}
+  setTimeout(()=>{ if(state._csPopAt && Date.now() - state._csPopAt.t >= 1100) state._csPopAt = null; }, 1250);
+}, true);
+// A left click on the page outside the popup closes it.
+document.addEventListener('pointerdown', (e)=>{
+  if(e.button !== 0) return;
+  const pop = csPopTop(); if(!pop) return;
+  if(pop.contains(e.target)) return;
+  if(!(e.target.closest && e.target.closest('.app'))) return;   // menus/sheets the popup opened stay
+  csPopCloseNow();
+}, true);
+window.addEventListener('resize', ()=>{ const p = csPopTop(); if(p) csPopPlace(p); });
+
+/* Shift-click: start a selection, or select everything from the last
+   picked card to this one -- the same selection a long-press makes. */
+(function shiftSelect(){
+  const SEL = '.sr-tile[data-name], .sc-tile, .col-tile[data-ci], .vg-card[data-loc="main"][data-idx], .vg-card[data-loc="maybe"][data-idx]';
+  const isSel = (t)=>t.classList.contains('selected') || t.classList.contains('dl-msel') || t.classList.contains('csel');
+  const hitEl = (t)=>t.querySelector('img, .vg-hit') || t;
+  const tap = (t)=>{ try{ hitEl(t).dispatchEvent(new MouseEvent('click', { bubbles:true, cancelable:true, view:window })); }catch(e){} };
+  let anchor = null;
+  const scopeOf = (t)=>t.closest('.overlay') || document.querySelector('.app > main') || document.body;
+  document.addEventListener('mousedown', (e)=>{ if(e.shiftKey && e.button === 0 && e.target.closest && e.target.closest(SEL) && !e.target.closest('button:not(.vg-hit)')) e.preventDefault(); }, true);
+  document.addEventListener('click', (e)=>{
+    const t = e.target.closest && e.target.closest(SEL);
+    if(!t) return;
+    if(!e.isTrusted) return;
+    if(e.target.closest('button:not(.vg-hit), .sel-check, .pair-pop-wrap')) return;
+    if(!e.shiftKey){ anchor = t; return; }
+    e.preventDefault(); e.stopPropagation();
+    const scope = scopeOf(t);
+    const tiles = Array.from(scope.querySelectorAll(SEL));
+    const active = tiles.some(isSel);
+    if(!active){
+      // Start the selection the way a long-press does.
+      const h = hitEl(t);
+      try{ h.dispatchEvent(new PointerEvent('pointerdown', { bubbles:true, pointerType:'mouse', button:0, isPrimary:true })); }catch(err){}
+      setTimeout(()=>{
+        try{ h.dispatchEvent(new PointerEvent('pointerup', { bubbles:true, pointerType:'mouse', button:0, isPrimary:true })); }catch(err){}
+        if(isSel(t)) tap(t);   // spends the long-press flag, so the next tap is a normal one
+        // tap() toggled it off again on some pages -- make sure it stays on
+        if(!isSel(t)) tap(t);
+      }, 520);
+      anchor = t;
+      return;
+    }
+    if(anchor && anchor.isConnected && tiles.includes(anchor)){
+      const a = tiles.indexOf(anchor), b = tiles.indexOf(t);
+      const lo = Math.min(a, b), hi = Math.max(a, b);
+      for(let i = lo; i <= hi; i++){ const x = tiles[i]; if(x.isConnected && !isSel(x)) tap(x); }
+    } else tap(t);
+    anchor = t;
+  }, true);
+})();
+
+/* Keyboard: '/' jumps to the search field of the page (Search when the page
+   has none). Typing in a field is left alone. */
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+  const vis = (el)=>{ if(!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const ovs = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
+  const top = ovs[ovs.length - 1];
+  let f = null;
+  if(top) f = Array.from(top.querySelectorAll('input[type="text"], input:not([type])')).find(vis);
+  else f = Array.from(document.querySelectorAll('.app > main #searchName, .app > main .searchbar input, .app > main input.col-filter-input, .app > main input[type="text"], .app > main input:not([type])')).find(vis);
+  e.preventDefault();
+  if(f){ f.focus(); try{ f.select(); }catch(err){} return; }
+  if(top) return;
+  try{ switchPage('search'); }catch(err){}
+  setTimeout(()=>{ const s2 = document.getElementById('searchName'); if(s2){ s2.focus(); try{ s2.select(); }catch(err){} } }, 80);
+});
+
+/* Ctrl+V of a deck list anywhere outside a text field: the import sheet
+   opens with the list already in it. */
+function looksLikeDeckList(txt){
+  const lines = String(txt || '').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(lines.length < 4) return false;
+  const qty = lines.filter(l=>/^\d{1,3}\s*x?\s+\S/i.test(l)).length;
+  return qty >= 4 && qty / lines.length >= 0.6;
+}
+document.addEventListener('paste', (e)=>{
+  const t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  let txt = '';
+  try{ txt = (e.clipboardData || window.clipboardData).getData('text') || ''; }catch(err){}
+  if(!looksLikeDeckList(txt)) return;
+  e.preventDefault();
+  try{ openPasteListSheet({ text: txt }); }catch(err){}
+});
+
+/* Mouse hover preview (PC / laptop only -- a real mouse, not touch): resting
+   the pointer on any card picture shows a big copy beside the pointer, on
+   whichever side has room: right, left, then below or above. It never
+   catches clicks. The big card page's own picture is skipped. */
+(function hoverPreview(){
+  let mq = null; try{ mq = window.matchMedia('(hover: hover) and (pointer: fine)'); }catch(e){}
+  if(!mq) return;
+  let box = null, cur = null, timer = 0, lastX = 0, lastY = 0;
+  const isCardImg = (el)=>{
+    if(!el || el.tagName !== 'IMG' || el.id === 'hoverPrev') return false;
+    if(el.closest('.cd-hero, #hoverPrevBox, .life-grid-v2')) return false;
+    const r = el.getBoundingClientRect();
+    if(r.width < 30 || r.width > 300) return false;
+    const ratio = r.height / r.width;
+    return ratio > 1.3 && ratio < 1.45;
+  };
+  const place = ()=>{
+    if(!box) return;
+    const vw = window.innerWidth, vh = window.innerHeight, gap = 18, pad = 8;
+    let h = Math.min(500, vh - 2*pad), w = Math.round(h * 488 / 680);
+    if(w > vw - 2*pad){ w = vw - 2*pad; h = Math.round(w * 680 / 488); }
+    box.style.width = w + 'px'; box.style.height = h + 'px';
+    let x, y;
+    const clampY = (v)=>Math.max(pad, Math.min(vh - h - pad, v));
+    const clampX = (v)=>Math.max(pad, Math.min(vw - w - pad, v));
+    if(lastX + gap + w + pad <= vw){ x = lastX + gap; y = clampY(lastY - h/2); }
+    else if(lastX - gap - w >= pad){ x = lastX - gap - w; y = clampY(lastY - h/2); }
+    else if(lastY + gap + h + pad <= vh){ y = lastY + gap; x = clampX(lastX - w/2); }
+    else if(lastY - gap - h >= pad){ y = lastY - gap - h; x = clampX(lastX - w/2); }
+    else { x = clampX(lastX + gap); y = clampY(lastY - h/2); }
+    box.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+  };
+  const hide = ()=>{ clearTimeout(timer); cur = null; if(box) box.style.display = 'none'; };
+  const show = (img)=>{
+    if(!box){
+      box = document.createElement('div'); box.id = 'hoverPrevBox';
+      box.innerHTML = '<img id="hoverPrev" alt="">';
+      document.body.appendChild(box);
+    }
+    let src = img.tagName === 'IMG' ? (img.currentSrc || img.src || '') : (img.getAttribute('data-himg') || '');
+    if(src.indexOf('cards.scryfall.io/small/') >= 0) src = src.replace('/small/', '/normal/');
+    const pi = box.firstChild;
+    if(pi.getAttribute('src') !== src) pi.setAttribute('src', src);
+    box.style.display = 'block';
+    place();
+  };
+  const start = (t, e)=>{
+    cur = t; lastX = e.clientX; lastY = e.clientY;
+    clearTimeout(timer);
+    if(box && box.style.display === 'block') show(t);
+    else timer = setTimeout(()=>{ if(cur === t && t.isConnected) show(t); }, 140);
+  };
+  document.addEventListener('mouseover', (e)=>{
+    if(!mq.matches) return;
+    let t = e.target;
+    // 1.26: a text row of the decklist shows its card too
+    if(t && t.closest && !isCardImg(t)){ const r = t.closest('[data-himg]'); if(r && !r.closest('#hoverPrevBox')) t = r; }
+    if(!isCardImg(t) && !(t && t.hasAttribute && t.hasAttribute('data-himg'))){ if(cur) hide(); return; }
+    if(t === cur) return;
+    start(t, e);
+  }, true);
+  document.addEventListener('mousemove', (e)=>{
+    // After a scroll or click hid it, moving on the same card brings it back.
+    if(!cur){ if(mq.matches && e.target && e.target.tagName === 'IMG' && isCardImg(e.target)) start(e.target, e); return; }
+    lastX = e.clientX; lastY = e.clientY;
+    if(!cur.isConnected){ hide(); return; }
+    place();
+  }, true);
+  document.addEventListener('mouseout', (e)=>{ if(cur && e.target === cur && !(e.relatedTarget && (e.relatedTarget === cur || (cur.contains && cur.contains(e.relatedTarget))))) hide(); }, true);
+  ['mousedown','wheel','keydown','scroll','blur'].forEach(ev=>window.addEventListener(ev, hide, true));
+  document.addEventListener('visibilitychange', hide);
+})();
 /* Any text input the user focuses gets the keyboard's 🔍 Enter key unless it
    opted for another hint — search is what Enter does in this app's fields. */
 document.addEventListener('focusin', (e)=>{
