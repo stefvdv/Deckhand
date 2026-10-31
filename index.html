@@ -3037,6 +3037,32 @@ html.desk :is(.sr-tile, .sc-tile, .vg-card, .col-tile) img{cursor:zoom-in;}
   .home-news .news-item .nw-img{width:72px;height:72px;}
   .home-news .news-item .nw-t{font-size:15.5px;}
 }
+
+/* ===== 1.29 Life counter: full screen, the Deckhand logo in the middle ===== */
+#lifeOverlay{padding-bottom:env(safe-area-inset-bottom) !important;}
+#lifeOverlay main{padding:max(10px, env(safe-area-inset-top)) 10px 10px !important;}
+#lifeOverlay .life-grid-v2{gap:10px;margin-top:0;}
+#lifeCogBtn{width:92px;height:92px;padding:0;overflow:hidden;border:3px solid var(--gold);background:#000 !important;background-image:none !important;box-shadow:0 6px 22px rgba(0,0,0,0.6);}
+#lifeCogBtn img{width:100%;height:100%;display:block;object-fit:contain;transform:scale(1.24);transform-origin:50% 50%;pointer-events:none;}
+/* the life total grows with its card */
+.life-card-v2{container-type:size;}
+.life-face.front .lval2:not(.pz-val){font-size:clamp(42px, 33cqmin, 110px);}
+.life-face.front .tap-glyph{font-size:clamp(30px, 15cqmin, 52px);}
+/* a thin status pill, the player's name under it */
+.life-face.front{padding-bottom:92px;}
+.life-face.front > .submenu-toggle.lbadge{bottom:40px;height:40px;min-width:118px;padding:0 18px;gap:12px;border-radius:999px;}
+.life-face.front > .submenu-toggle.lbadge .lb-grp{font-size:18px;}
+.life-face.front > .submenu-toggle.lbadge .lb-grp svg{width:16px !important;height:16px !important;}
+.life-face.front > .pname-input{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);margin:0;z-index:3;font-size:clamp(14px, 7cqmin, 19px);}
+.submenu-toggle.done{height:44px;}
+/* New game: the table shapes read clearly, the picked one in gold */
+.llay{background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.22);border-radius:12px;padding:7px;transition:transform .12s;}
+.llay.on{border:3px solid var(--gold);background:color-mix(in srgb, var(--gold) 22%, transparent);box-shadow:0 0 0 2px color-mix(in srgb, var(--gold) 35%, transparent), 0 6px 16px rgba(0,0,0,0.45);transform:scale(1.06);}
+.llay-grid{width:70px;}
+.llay-grid i{background:#f6f1e7;}
+.llay.on .llay-grid i{background:#fff6d8;}
+.llay-n{font-size:13.5px;font-weight:700;color:var(--ink-text);}
+.llay.on .llay-n{color:var(--gold);}
 </style>
 </head>
 <body>
@@ -6685,27 +6711,23 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.28';
+const APP_VERSION = '1.29';
 const CHANGELOG_NOTES = {
   en: [
-    'PC: menu bar on top, reads top-down',
-    'PC: calmer width, bigger text',
-    'PC: click a card to see it big',
-    'PC: right-click menu has a ✕',
-    'PC: buttons show their names',
-    'PC: bigger, wider news',
-    'Extras buttons work on PC again',
-    'Card menu closes when a page opens'
+    'Life counter fills the screen',
+    'Deckhand logo opens the table menu',
+    'Leave via the menu: Settings',
+    'Bigger life totals',
+    'Name under a thin status pill',
+    'Clearer table choice for new games'
   ],
   nl: [
-    'Pc: menubalk boven, van boven af',
-    'Pc: rustiger breedte, grotere tekst',
-    'Pc: klik op kaart toont hem groot',
-    'Pc: rechtsklikmenu heeft een ✕',
-    'Pc: knoppen tonen hun naam',
-    'Pc: groter en breder nieuws',
-    "Extra's-knoppen werken weer op pc",
-    'Kaartmenu sluit bij nieuwe pagina'
+    'Life counter vult het scherm',
+    'Deckhand-logo opent het tafelmenu',
+    'Verlaten via menu → Instellingen',
+    'Grotere levenstotalen',
+    'Naam onder een dunne statuspil',
+    'Tafelkeuze bij nieuw spel duidelijker'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6715,6 +6737,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-31';
 const CHANGELOG_HISTORY = [
+  { v: '1.28', d: '2026-10-31',
+    en: ['PC: menu bar on top, reads top-down', 'PC: calmer width, bigger text', 'PC: click a card to see it big', 'PC: right-click menu has a ✕', 'PC: buttons show their names', 'PC: bigger, wider news', 'Extras buttons work on PC again', 'Card menu closes when a page opens'],
+    nl: ['Pc: menubalk boven, van boven af', 'Pc: rustiger breedte, grotere tekst', 'Pc: klik op kaart toont hem groot', 'Pc: rechtsklikmenu heeft een ✕', 'Pc: knoppen tonen hun naam', 'Pc: groter en breder nieuws', "Extra's-knoppen werken weer op pc", 'Kaartmenu sluit bij nieuwe pagina'] },
   { v: '1.27', d: '2026-10-31',
     en: ['Restore earlier deck versions', 'Bring back deleted decks', 'Cuts removed; lands advice stays', 'PC: news in three columns', 'PC: card page in the middle'],
     nl: ['Eerdere deckversies terugzetten', 'Verwijderde decks terughalen', 'Cuts weg; lands-advies blijft', 'Pc: nieuws in drie kolommen', 'Pc: kaartpagina in het midden'] },
@@ -31310,21 +31335,15 @@ function renderLifeOverlay(){
     {k:'browse', l:'Inspiration', i:ICONS.inspire},
     {k:'settings', l:'Extras', i:ICONS.settings}
   ];
+  // 1.29: the table is FULL SCREEN -- no title bar, no nav row. It is left
+  // with the phone's back button, or the logo menu -> Settings -> Leave.
+  void navItems;
   el.innerHTML = `<div class="overlay-inner">
-    <div class="topbar" style="position:relative;justify-content:center;">
-      <div class="brand-txt" style="font-size:16px;">Life Totals</div>
-    </div>
     <main>
       <div id="lifeHistoryPanel"></div>
       <div id="lifeSettingsPanel"></div>
       <div id="lifeGrid"></div>
     </main>
-    <div class="brand-banner life-nav">
-      <div class="compass" id="lifeNavHome" title="Home">${ICONS.home}</div>
-      <button class="banner-tab" id="lifeNavBack" aria-label="Back" title="Back">${ICONS.back}</button>
-      <div class="spacer"></div>
-      <div class="banner-tabs">${navItems.map(it=>`<button class="banner-tab" data-lifenav="${it.k}" title="${it.l}" aria-label="${it.l}">${it.i}</button>`).join('')}</div>
-    </div>
     ${state.life.menuOpen ? `<div id="lifeMenuShield"></div>${lifeMenuPopHtml()}` : ''}
     ${state.life.diceOpen ? dicePopHtml() : ''}
     ${(state.life.historyOpen || state.life.settingsOpen) ? '<div id="lifePanelShield"></div>' : ''}
@@ -31338,9 +31357,7 @@ function renderLifeOverlay(){
     state.life.menuOpen = false;
     try{ switchPage(k, true); }catch(e){}
   };
-  document.getElementById('lifeNavHome').addEventListener('click', ()=>lifeNavGo('home'));
-  document.getElementById('lifeNavBack').addEventListener('click', closeLifeOverlayUI);
-  el.querySelectorAll('[data-lifenav]').forEach(b=>b.addEventListener('click', ()=>lifeNavGo(b.dataset.lifenav)));
+  void lifeNavGo;
   if(state.life.menuOpen){
     document.getElementById('mNewGame').addEventListener('click', ()=>{ state.life.menuOpen=false; restartLife(); });
     document.getElementById('mDice').addEventListener('click', ()=>{
@@ -31454,7 +31471,14 @@ function renderSettingsPanel(){
     <div class="toggle-row"><div><div>Rotate for Pass-and-Play</div><div style="color:var(--sub-text);font-size:11.5px;margin-top:2px;">Flip cards to face each seat around the table</div></div><label class="toggle-switch"><input type="checkbox" id="rotateToggle" ${state.life.rotate?'checked':''}><span class="track"></span><span class="knob"></span></label></div>
     ${canSetLifeBright() ? `<div class="toggle-row life-bright"><div style="flex:1;min-width:0;"><div>${_lnl ? 'Helderheid' : 'Brightness'} <b id="lifeBrightVal">${lifeBrightLabel(lifeBrightPct())}</b></div><div style="color:var(--sub-text);font-size:11.5px;margin-top:2px;">${_lnl ? 'Helemaal links: je telefoon bepaalt. Verder: vast op die stand zolang de life counter open is, en onthouden.' : 'All the way left: your phone decides. Further: locked at that level while the life counter is open, and remembered.'}</div><input type="range" id="lifeBrightRange" min="0" max="100" step="5" value="${lifeBrightPct()}" style="width:100%;margin-top:8px;accent-color:var(--brass);"></div></div>` : ''}
     <button class="ghost-btn" id="restartLifeBtn" style="width:100%;margin-top:12px;color:var(--danger);border-color:var(--danger);">↺ Restart Game</button>
+    <button class="primary-btn" id="leaveLifeBtn" style="width:100%;margin-top:10px;">${_lnl ? '\u2190 Life counter verlaten' : '\u2190 Leave the life counter'}</button>
   </div>`;
+  document.getElementById('leaveLifeBtn')?.addEventListener('click', ()=>{
+    // the panel and the counter come down together; the page beneath shows
+    state.life.settingsOpen = false; state.life.menuOpen = false;
+    try{ dismissAllOverlays(); }catch(e){}
+    try{ render(); }catch(e){}
+  });
   document.querySelectorAll('[data-lset]').forEach(chk=>{
     chk.addEventListener('change', ()=>{ state.life.settings[chk.dataset.lset] = chk.checked; });
   });
@@ -31577,7 +31601,7 @@ function renderLifeGrid(){
   // The cog lives at the table's centre (absolutely positioned, so it is no
   // grid cell); the cards around it get their facing corner cut in
   // layoutLifeCards, where their pixel sizes are known.
-  box.insertAdjacentHTML('beforeend', `<button id="lifeCogBtn" title="Menu" aria-label="Menu">${ICONS.settings}</button>`);
+  box.insertAdjacentHTML('beforeend', `<button id="lifeCogBtn" title="Menu" aria-label="Menu"><img src="${DECKHAND_BADGE}" alt=""></button>`);
   document.getElementById('lifeCogBtn').addEventListener('click', (e)=>{
     e.stopPropagation();
     state.life.menuOpen = !state.life.menuOpen;
@@ -31586,9 +31610,38 @@ function renderLifeGrid(){
   wireLifeGrid();
   requestAnimationFrame(layoutLifeCards);
 }
+/* 1.29: the logo sits where the most cards MEET -- a corner shared by four
+   cards beats a T, and a T beats the bare middle -- nearest the middle of
+   the table. Corner cuts leave every life total clear; a cut in the middle
+   of a narrow card's edge ran into its number. */
+function lifeHubPoint(grid){
+  const gr = grid.getBoundingClientRect();
+  const cells = Array.from(grid.querySelectorAll(':scope > .life-cell')).map(c=>c.getBoundingClientRect());
+  const mid = { x: gr.left + gr.width / 2, y: gr.top + gr.height / 2 };
+  if(cells.length < 3) return mid;
+  const pts = [];
+  cells.forEach((r, ci)=>{
+    [[r.left, r.top, -1, -1], [r.right, r.top, 1, -1], [r.left, r.bottom, -1, 1], [r.right, r.bottom, 1, 1]].forEach(([x, y, sx, sy])=>{
+      const px = x + sx * 5, py = y + sy * 5;
+      if(px < gr.left + 12 || px > gr.right - 12 || py < gr.top + 12 || py > gr.bottom - 12) return;   // the table's own rim
+      let hit = pts.find(q=>Math.abs(q.x - px) < 18 && Math.abs(q.y - py) < 18);
+      if(!hit){ hit = { x: px, y: py, cells: new Set() }; pts.push(hit); }
+      hit.cells.add(ci);
+    });
+  });
+  if(!pts.length) return mid;
+  pts.forEach(q=>{ q.n = q.cells.size; q.d = Math.hypot(q.x - mid.x, q.y - mid.y); });
+  pts.sort((a, b)=>(b.n - a.n) || (a.d - b.d));
+  return { x: pts[0].x, y: pts[0].y };
+}
 function layoutLifeCards(){
   const grid = document.getElementById('lifeGrid');
   const gr = grid ? grid.getBoundingClientRect() : null;
+  const hub = grid && gr ? lifeHubPoint(grid) : null;
+  if(hub){
+    const cog = document.getElementById('lifeCogBtn');
+    if(cog){ cog.style.left = Math.round(hub.x - gr.left) + 'px'; cog.style.top = Math.round(hub.y - gr.top) + 'px'; }
+  }
   document.querySelectorAll('.life-cell').forEach(cell=>{
     const card = cell.querySelector('.life-card-v2');
     if(!card) return;
@@ -31605,10 +31658,10 @@ function layoutLifeCards(){
     // index is (facing − rot/90) mod 4.
     if(gr){
       const cr = cell.getBoundingClientRect();
-      const gx = gr.left + gr.width/2, gy = gr.top + gr.height/2;
+      const gx = hub ? hub.x : gr.left + gr.width/2, gy = hub ? hub.y : gr.top + gr.height/2;
       const dx = (cr.left + cr.width/2) - gx;
       const dy = (cr.top + cr.height/2) - gy;
-      const C = 60, D = 44;
+      const C = 70, D = 58;   // 1.29: deeper cuts for the bigger logo button
       let clip = '';
       const steps = Math.round(((rot % 360) + 360) % 360 / 90) % 4;
       // 1.39: only a card that TOUCHES the cog gets a cut -- the nearest
