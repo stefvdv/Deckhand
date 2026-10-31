@@ -2689,70 +2689,7 @@ img.wb-card{border-radius:0 !important;background:#fff !important;}
    the sidebar (where the thumb found them on the phone), the page tabs above.
    --nav-h drops to 0, so everything that stood on the bottom bar now stands
    on the bottom edge. Every left-anchored fixed bar starts after the sidebar. */
-@media (min-width: 1000px){
-  :root{ --nav-h: 0px; --side-w: 72px; }
-  body{max-width:none;margin:0 0 0 var(--side-w);}
-  .app{max-width:none;}
-  main{padding-left:28px;padding-right:28px;}
-  .brand-banner, .overlay .brand-banner.ov-nav{
-    position:fixed;left:0;top:0;bottom:0;right:auto;width:var(--side-w);height:auto;max-width:none;margin:0;
-    flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:10px;
-    padding:14px 0 calc(14px + env(safe-area-inset-bottom));
-    border-top:none;border-right:2px solid var(--line);z-index:85;
-  }
-  .brand-banner .spacer{flex:1 1 auto;min-height:12px;}
-  .brand-banner .banner-tabs{flex-direction:column;gap:10px;}
-  .brand-banner .banner-tab, .brand-banner .compass{width:48px;height:48px;}
-  /* the bars and docks that ran edge to edge start after the sidebar */
-  .page-cap{left:var(--side-w);}
-  .app > main > .adv-panel, .app > main > #advSlot > .adv-panel, .app > main > #colAdvBox,
-  .app > main > .builder-tabs, #tradeBarHost{left:var(--side-w);}
-  .app > main > #spAdvToggle{left:calc(var(--side-w) + 16px);}
-  .deck-dock{left:var(--side-w);right:0;transform:none;max-width:none;}
-  .deck-fab, #fabMenu{right:24px;}
-  .toast{left:calc(50% + var(--side-w) / 2);}
-  .tag-add-row .tag-drop, #ciTagBox .tag-drop{left:calc(var(--side-w) + 10px);right:auto;width:min(560px, calc(100vw - var(--side-w) - 20px));}
-  .dl-popup{left:calc(var(--side-w) + 12px);}
-  /* overlays: beside the sidebar too (their own nav takes the sidebar's place), full width */
-  .overlay{left:0;}
-  .overlay .overlay-inner{max-width:none;margin:0 0 0 var(--side-w);}
-  /* An overlay without its own side nav (the card page) uses the full width. */
-  .overlay:not(:has(.ov-nav)) .overlay-inner{margin:0;}
-  /* The card page keeps the real side nav visible, like the bottom nav on a phone. */
-  [id^="cardSheetOverlay"]:not(.sheet-over-overlay){left:var(--side-w);}
-  /* Card page: picture + buttons on the left, rules text on the right. */
-  .overlay-inner > main.card-detail{display:grid;max-width:1180px;grid-template-columns:minmax(280px,400px) minmax(340px,640px);grid-template-rows:1fr auto auto auto;column-gap:44px;justify-content:center;align-content:end;}
-  main.card-detail > div:nth-child(1){grid-column:1;grid-row:1 / 3;align-self:end;}
-  main.card-detail > #csTagBox, main.card-detail > #ciTagBox{grid-column:1;grid-row:3;}
-  main.card-detail > div:nth-child(2){grid-column:1;grid-row:4;}
-  main.card-detail > .detail-sec:not(:has(#csRulings)):not(:has(#sheetOracle)){grid-column:2;grid-row:1;align-self:end;}
-  main.card-detail > .detail-sec:has(#csRulings){grid-column:2;grid-row:2;}
-  main.card-detail > .detail-sec:has(#sheetOracle){grid-column:2;grid-row:3 / 5;align-self:end;}
-  main.card-detail > .sheet-foot-spacer{display:none;}
-  main.card-detail .cd-hero{max-width:400px;}
-  /* Decklist: the leader keeps a card size instead of half the screen. */
-  .dl-bridge:not(.dl-bridge-60){grid-template-columns:minmax(0,280px) minmax(0,620px);}
-  /* 1.25: card rows are centred, so a row never ends in a wide empty strip. */
-  .sr-grid, .sc-grid, .visual-grid, .col-grid, .deck-grid{justify-content:center;}
-  /* 1.25: Stats and Deck log read as a column, not as bars across the screen. */
-  #builderBody:has(> .panel-card){max-width:980px;margin-left:auto;margin-right:auto;width:100%;box-sizing:border-box;}
-  /* 1.25: Extras: four tiles a row instead of two giant squares. */
-  .xt-tiles > .settings-section, .xt-tiles > .xt-spacer{flex-basis:calc((100% - 36px) / 4);}
-  /* 1.26: Stacks and Text lists stand in columns, one per card type, each
-     resting on the same foot line (wrap-reverse: the first row is lowest). */
-  #decklistBox:has(.vg-stack), #decklistBox:has(.vg-text){flex-direction:row;flex-wrap:wrap-reverse;align-items:flex-start;justify-content:center;gap:14px 18px;}
-  #decklistBox:has(.vg-stack) > .cat-group{flex:0 0 220px;width:220px;margin:0;}
-  #decklistBox:has(.vg-text) > .cat-group{flex:0 0 280px;width:280px;margin:0;}
-  #decklistBox .cat-group .visual-grid.vg-stack{width:100%;max-width:none;}
-  #decklistBox:has(.vg-stack) > :not(.cat-group), #decklistBox:has(.vg-text) > :not(.cat-group){flex:1 0 100%;}
-  /* 1.26: Search filters stand beside the results as a side panel. */
-  .app > main:has(> #advSlot > .adv-panel){padding-right:calc(400px + 28px);}
-  .app > main > #advSlot > .adv-panel{left:auto !important;right:0;top:44px;bottom:0;width:400px;max-height:none;border-radius:0;border-top:none;border-left:2px solid var(--line);box-shadow:-12px 0 30px rgba(0,0,0,0.4);box-sizing:border-box;}
-  /* card grids: bigger tiles, as many columns as fit */
-  .sr-grid > *, .sc-grid > *, .visual-grid > *, .col-grid > *, .deck-grid > *{flex:0 0 210px;max-width:210px;}
-  #spMainPage .sc-grid > *{flex-basis:210px;}
-  .pair-grid{grid-template-columns:repeat(auto-fill, 260px);}
-}
+/* 1.23-1.27 sidebar layout replaced by desk mode (1.28), at the end of the styles. */
 
 /* Depth fade: every solid surface — panels, tiles, fields, pop-ups — runs
    from its colour at the top into a slight black at its foot, and the page
@@ -2854,6 +2791,13 @@ main.card-detail{zoom:0.9;}
    (with a white square where the two scrollbars met). */
 .overlay main.card-detail, main.card-detail{overflow-x:hidden;}
 ::-webkit-scrollbar-corner{background:transparent;}
+/* 1.27 Deck versions: the newest version nearest the thumb. */
+.dv-list{display:flex;flex-direction:column-reverse;max-height:52vh;overflow-y:auto;gap:6px;margin:0 0 8px;}
+.dv-row{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1.5px solid var(--line);}
+.dv-row .dv-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.dv-row .dv-txt b{font-size:14px;color:var(--ink-text);}
+.dv-row .dv-txt span{font-size:12px;color:var(--sub-text);}
+.dv-row .ghost-btn{width:auto;flex:none;padding:7px 10px;font-size:12.5px;}
 /* 1.26 Sync: the link code, big and easy to read off another screen. */
 .sync-code{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;letter-spacing:0.08em;text-align:center;padding:12px 8px;margin:4px 0 6px;border:2px dashed var(--brass);border-radius:10px;color:var(--ink-text);user-select:all;}
 /* 1.26 Right-click popup (PC): the card page's buttons and text in a small
@@ -2895,6 +2839,204 @@ main.card-detail{zoom:0.9;}
 .binder-tile .folder-face, .binder-tile .folder-face span{color:var(--icon-pl, var(--main-lt));-webkit-text-fill-color:var(--icon-pl, var(--main-lt));background:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.45));}
 .binder-tile .folder-name{color:var(--plate-ink, var(--icon-pl, var(--main-lt)));-webkit-text-fill-color:var(--plate-ink, var(--icon-pl, var(--main-lt)));background:none;text-shadow:0 1px 2px rgba(0,0,0,0.45);}
 .guild-cur, .guild-cur svg{color:var(--ink-text);-webkit-text-fill-color:var(--ink-text);background:none;}
+/* ===================== 1.28 DESK MODE (html.desk, 1000 px and wider) =====================
+   A PC, a laptop or a tablet on its side reads like a web page: navigation
+   at the top, every page opening at its top, lists starting with their best
+   item at the top, menus dropping DOWN, dialogs in the middle with a cross.
+   The width is calmer too: the content stands in a column of at most
+   1240 px (Moxfield-like), and text is a size bigger. The phone keeps its
+   bottom-up design -- nothing here applies below 1000 px. */
+html.desk{
+  --nav-h: 0px;
+  --top-nav: 58px; --cap-h: 46px; --top-h: calc(var(--top-nav) + var(--cap-h));
+  --dw: min(1240px, calc(100vw - 48px));
+  --dl: max(16px, calc((100vw - var(--dw)) / 2));
+}
+html.desk body{max-width:none;margin:0;font-size:15px;}
+html.desk .app{max-width:var(--dw);}
+html.desk main{padding-left:16px;padding-right:16px;}
+html.desk .app > main{padding-top:calc(var(--top-h) + 18px) !important;padding-bottom:48px !important;flex-direction:column !important;justify-content:flex-start !important;}
+html.desk .app > main > *{order:0 !important;}
+html.desk .app > main::before{display:none !important;}
+
+/* ---- the top: navigation row, then the page's title row ---- */
+html.desk .brand-banner, html.desk .overlay .brand-banner.ov-nav{
+  position:fixed;top:0;bottom:auto;left:0;right:0;width:auto;height:var(--top-nav);max-width:none;margin:0;
+  flex-direction:row;justify-content:flex-start;align-items:center;gap:10px;
+  padding:0 var(--dl);border-top:none;border-bottom:2px solid var(--line);z-index:85;overflow:visible;
+}
+html.desk .overlay .brand-banner.ov-nav{position:static;flex:0 0 auto;order:-10 !important;}
+html.desk .brand-banner .spacer{flex:1 1 auto;}
+html.desk .brand-banner .banner-tabs{flex-direction:row;gap:8px;}
+html.desk .brand-banner .banner-tab, html.desk .brand-banner .compass{width:auto;height:40px;padding:0 14px 0 10px;gap:8px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;}
+html.desk .brand-banner .banner-tab svg, html.desk .brand-banner .compass svg{width:22px;height:22px;}
+html.desk .brand-banner .banner-tab::after, html.desk .brand-banner .compass::after{content:attr(title);font-size:14.5px;font-weight:600;letter-spacing:0.01em;white-space:nowrap;}
+html.desk .brand-banner .compass{border:2px solid var(--line);color:var(--sub-text);cursor:pointer;}
+html.desk .brand-banner .compass.active{color:var(--brass);border-color:var(--brass);background:var(--brass-glow);}
+html.desk .page-cap{top:var(--top-nav);height:var(--cap-h);left:0;right:0;padding:0 var(--dl);}
+html.desk .page-cap .brand-txt{font-size:20px;}
+html.desk #capDeckCount{left:var(--dl) !important;font-size:14px !important;}
+html.desk .page-cap .net-chip{left:var(--dl);}
+html.desk .page-cap:has(.net-chip) #capDeckCount{left:calc(var(--dl) + 96px) !important;}
+html.desk .page-cap .cap-note{right:var(--dl);font-size:13px;}
+html.desk .page-cap > span[style*="left:12px"]{left:var(--dl) !important;}
+
+/* ---- overlays: the nav row on top, then their title, the content in the column ---- */
+html.desk .overlay .overlay-inner{max-width:none !important;margin:0 !important;}
+html.desk .overlay .ov-cap, html.desk .overlay .overlay-inner > .topbar{order:-9 !important;}
+html.desk .overlay main{width:100%;max-width:var(--dw);margin-left:auto;margin-right:auto;box-sizing:border-box;padding-bottom:40px;}
+html.desk [id^="cardSheetOverlay"]:not(.sheet-over-overlay):not(.cs-pop){top:var(--top-nav);bottom:0;left:0;}
+html.desk #crOverlay #crBody{flex-direction:column;}
+
+/* ---- every bottom-up list and stack reads top-down ---- */
+html.desk :where(#crOverlay .cr-toc, .app > main.settings-main, .app > main:has(> div > #deckFilter), .adv-panel, #colAdvBox,
+  .adv-panel .cselect, #colAdvBox .cselect, .adv-panel .cselect-panel, #colAdvBox .cselect-panel, .app > main > #twResults, .app > main:has(> #colAdvBox),
+  #cotdBox, .sp-feed, .sp-group, #builderBody, #decklistBox, .otag-pop, .df-compact .cselect-panel, .st-detail, .tag-drop, .tag-drop-list,
+  .deck-grid.as-list, .scan-list, .br-dd .br-dd-panel, .cat-group, .visual-grid.vg-text, #colAddSheet .col-addlist, .home-news, .name-suggest,
+  .cselect.cs-foot .cselect-panel, .cselect.cs-up > .cselect-panel, .browse-selects .cselect > .cselect-panel, #recoOverlay .cselect > .cselect-panel,
+  .overlay .reco-themes .cselect > .cselect-panel, .df-compact .cselect > .cselect-panel, #logGameOverlay .cselect > .cselect-panel,
+  #nselPop, .browse-selects, .acc-up [data-banbox] > div:has(> .banlist-grid), #recoOverlay main, #similarOverlay main, #pairPopOverlay main,
+  #printOverlay main, #colAddSheet main, #addCollOverlay main, #budgetOverlay main, #cardRecoOverlay main, #metaDeckOverlay main, #deckPriceOverlay main,
+  .dpp-box, #mdBody, .acc-up:not([hidden]), .acc-up [data-fmtrule] > div, .acc-up [data-banfmt] > div, .ub-wrap, .ub-switches,
+  .acc-up [data-fmtruletxt]:not([hidden]), .acc-up [data-banbox]:not([hidden]), #bgBody, .budget-trio, .cj-try, .cr-tagpop,
+  .cselect:has(> .cselect-panel.inline), .cselect-panel.inline, .glog-list, .mu-list, .mu-sbblock, .mu-pick, .history-list, .dv-list,
+  [style*="flex-direction:column-reverse"]){flex-direction:column !important;}
+html.desk :where(#browseResults .insp-grid, #bsNameResults .insp-grid, #browseResults .sr-grid, #bsNameResults .sr-grid, .salt-grid, .deck-grid, .fp-grid,
+  .pt-row, .visual-grid, .col-grid, .sp-jump, .sr-grid, .sc-grid, .banlist-grid, .app > main.settings-main.xt-tiles, .cover-grid, .opp-chips, .cut-grid,
+  [style*="flex-wrap:wrap-reverse"]){flex-wrap:wrap !important;}
+/* sections the app wrote best-last (for the foot) stand best-first again */
+html.desk :has(> .edh-sec){display:flex;flex-direction:column-reverse;}
+html.desk :has(> .edh-sec) > .hint, html.desk :has(> .edh-sec) > p{order:99;}
+html.desk .edh-sec > .section-label{order:-1 !important;}
+html.desk .edh-sec > .edh-more{order:5;margin:6px 0 0 !important;}
+html.desk .overlay main .edh-sec > .section-label, html.desk #recoOverlay .edh-sec > .section-label{top:0 !important;bottom:auto !important;}
+/* headings above what they head */
+html.desk .detail-h{order:-1;}
+html.desk .sp-group > .sp-shelf, html.desk .sp-group > .chip-label{order:-1;}
+
+/* ---- search bars and filters at the top ---- */
+html.desk .app > main > .searchbar, html.desk .app > main > div:has(> #deckFilter){
+  position:sticky;top:var(--top-h);bottom:auto;margin:0 -16px 10px !important;padding:10px 16px;border-top:none;border-bottom:2px solid var(--line);
+}
+html.desk .app > main > .adv-toggle, html.desk .app > main > div:has(> #colAdvToggle){position:static;margin:0 0 10px !important;}
+html.desk .app > main > #spAdvToggle{position:static;left:auto;right:auto;bottom:auto;margin:0 0 10px;}
+html.desk .adv-go-row{position:sticky;bottom:0;order:99 !important;}
+/* filter panels: a side panel to the right of the results */
+html.desk .app > main > .adv-panel, html.desk .app > main > #advSlot > .adv-panel, html.desk .app > main > #colAdvBox, html.desk .app > main > #spAdvBox{
+  position:fixed;left:auto !important;right:0;top:var(--top-h);bottom:0;width:400px;max-height:none;border-radius:0;border-top:none;
+  border-left:2px solid var(--line);box-shadow:-12px 0 30px rgba(0,0,0,0.4);box-sizing:border-box;
+}
+html.desk .app > main:has(> #advSlot > .adv-panel), html.desk .app > main:has(> #colAdvBox), html.desk .app > main:has(> #spAdvBox){padding-right:calc(400px + 16px);}
+html.desk .browse-selects .cselect-panel, html.desk #recoOverlay .cselect-panel, html.desk .overlay .reco-themes .cselect-panel,
+html.desk .cselect-panel{top:calc(100% + 4px) !important;bottom:auto !important;}
+html.desk .otag-pop{top:calc(100% + 4px);bottom:auto;}
+html.desk .app > main.cs-open:has(> .browse-selects) > *:not(.browse-selects):not(.searchbar):not(.adv-panel):not(#colAdvBox):not(#advSlot){display:revert;}
+html.desk .app > main.cs-open:has(> .browse-selects) > :is(#inspireResults, #browseResults, #bsNameResults, .browse-hero){display:block;}
+/* the tag picker drops down under its field */
+html.desk .tag-add-row .tag-drop, html.desk #ciTagBox .tag-drop{position:absolute;top:calc(100% + 6px);bottom:auto;left:0;right:0;width:auto;max-height:min(60vh, 520px);box-shadow:0 14px 34px rgba(0,0,0,0.55);}
+html.desk .tag-drop-search{border-top:none;border-bottom:2px solid var(--pop-line);}
+
+/* ---- the deck page: its tabs and tools under the title row ---- */
+html.desk .app > main > .builder-tabs{top:var(--top-h);bottom:auto;left:var(--dl);right:auto;width:330px;height:50px;padding:6px 0;border-top:none;border-bottom:2px solid var(--line);background:var(--ink);z-index:41;}
+html.desk .deck-dock{top:var(--top-h);bottom:auto;left:calc(var(--dl) + 330px);right:var(--dl);width:auto;transform:none;max-width:none;box-shadow:none;height:50px;box-sizing:border-box;border-top:none;border-bottom:2px solid var(--line);background:var(--ink);justify-content:flex-end;gap:8px;}
+html.desk main.has-dock, html.desk main.has-dock:has(#builderBody), html.desk main.has-dock:has(#dlPanelBox .panel-card){padding-top:calc(var(--top-h) + 66px) !important;padding-bottom:48px !important;}
+html.desk .deck-dock .menu-pop{top:54px;bottom:auto;left:auto;right:0;}
+html.desk .deck-dock .dk-tool, html.desk .deck-dock #menuBtn{width:auto;height:36px;padding:0 10px 0 8px;gap:6px;display:inline-flex;align-items:center;flex:0 0 auto;}
+html.desk .deck-dock .dk-tool::after, html.desk .deck-dock #menuBtn::after{content:attr(title);font-size:13px;font-weight:600;white-space:nowrap;}
+html.desk .deck-dock .dk-mid:has(.dk-type){justify-content:flex-end;gap:14px;}
+html.desk #builderBody{min-height:0;justify-content:flex-start;}
+html.desk .dl-bridge-desc{justify-content:flex-start;}
+html.desk .dl-leader-cat{margin-top:0;}
+html.desk .dl-bridge:not(.dl-bridge-60){grid-template-columns:minmax(0,260px) minmax(0,620px);}
+html.desk #decklistBox:has(.vg-stack), html.desk #decklistBox:has(.vg-text){flex-direction:row !important;flex-wrap:wrap !important;align-items:flex-start;justify-content:flex-start;gap:16px 18px;}
+html.desk #decklistBox:has(.vg-stack) > .cat-group{flex:0 0 220px;width:220px;margin:0;}
+html.desk #decklistBox:has(.vg-text) > .cat-group{flex:0 0 290px;width:290px;margin:0;}
+html.desk #decklistBox .cat-group .visual-grid.vg-stack{width:100%;max-width:none;flex-direction:column !important;}
+html.desk #decklistBox:has(.vg-stack) > :not(.cat-group), html.desk #decklistBox:has(.vg-text) > :not(.cat-group){flex:1 0 100%;}
+html.desk .cat-group > .cat-head{border-bottom:2px solid var(--line);}
+html.desk .cat-head .t{font-size:15px;}
+html.desk #builderBody:has(> .panel-card){max-width:980px;margin-left:auto;margin-right:auto;width:100%;box-sizing:border-box;}
+html.desk #tradeBarHost{top:var(--top-h);bottom:auto;left:var(--dl);right:var(--dl);border-top:none;border-bottom:2px solid var(--line);}
+html.desk .app > main:has(> #twResults){padding-top:calc(var(--top-h) + 80px) !important;}
+
+/* ---- tiles: as many as fit, centred ---- */
+html.desk :is(.sr-grid, .sc-grid, .visual-grid:not(.vg-stack):not(.vg-text), .col-grid, .deck-grid:not(.as-list)) > *{flex:0 0 200px;max-width:200px;}
+html.desk :is(.sr-grid, .sc-grid, .visual-grid, .col-grid, .deck-grid){justify-content:center;}
+html.desk #spMainPage .sc-grid > *{flex-basis:200px;}
+html.desk .pair-grid{grid-template-columns:repeat(auto-fill, 250px);justify-content:center;}
+
+/* ---- Extras: four tiles a row; folds drop under the title row ---- */
+html.desk .xt-tiles > .settings-section, html.desk .xt-tiles > .xt-spacer{flex-basis:calc((100% - 36px) / 4);}
+html.desk .app > main.settings-main.xt-tiles{flex-direction:row !important;align-content:flex-start;}
+html.desk .xt-tiles .xt-body:not([hidden])::before{order:-1;}
+
+/* ---- Home: logo, then the news, wide and roomy ---- */
+html.desk .app > main.home-page{justify-content:flex-start !important;}
+html.desk .home-news{max-width:100%;width:100%;height:auto !important;max-height:none;padding:6px 20px;margin-top:18px;}
+html.desk .home-news .news-item{padding:14px 4px;gap:16px;}
+html.desk .home-news .news-item .nw-img{width:92px;height:92px;border-radius:10px;}
+html.desk .home-news .news-item .nw-t{font-size:16.5px;line-height:1.35;}
+html.desk .home-news .news-item .nw-m{font-size:13.5px;margin-top:4px;}
+html.desk .home-news.news-grid > .news-row{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:0 26px;border-bottom:1px solid var(--line);}
+html.desk .home-news.news-grid > .news-row:last-child{border-bottom:none;}
+html.desk .home-news.news-grid > .news-row:first-child{border-bottom:1px solid var(--line);}
+html.desk .home-news.news-grid .news-item{border-bottom:none;}
+
+/* ---- the card page (wide): picture and buttons left, text right, centred ---- */
+html.desk .overlay-inner > main.card-detail{display:grid;max-width:1180px;grid-template-columns:minmax(280px,400px) minmax(340px,640px);grid-template-rows:min-content min-content auto min-content min-content;column-gap:44px;justify-content:center;align-content:safe center;}
+html.desk main.card-detail > div:nth-child(1){grid-column:1;grid-row:1 / 4;align-self:start;}
+html.desk main.card-detail > #csTagBox, html.desk main.card-detail > #ciTagBox{grid-column:1;grid-row:4;}
+html.desk main.card-detail > div:nth-child(2){grid-column:1;grid-row:5;}
+html.desk main.card-detail > .detail-sec:has(#sheetOracle){grid-column:2;grid-row:1;align-self:start;}
+html.desk main.card-detail > .detail-sec:not(:has(#csRulings)):not(:has(#sheetOracle)){grid-column:2;grid-row:2;align-self:start;}
+html.desk main.card-detail > .detail-sec:has(#csRulings){grid-column:2;grid-row:3 / 6;align-self:start;}
+html.desk main.card-detail > .sheet-foot-spacer{display:none;}
+html.desk main.card-detail .cd-hero{max-width:400px;}
+/* the card menu by the mouse, top-down: text, buttons, then the folds */
+html.desk .overlay.cs-pop main.card-detail{display:flex !important;}
+html.desk .overlay.cs-pop main.card-detail > .detail-sec:has(#sheetOracle){order:1 !important;}
+html.desk .overlay.cs-pop main.card-detail > div:nth-child(2){order:2 !important;margin-top:10px;}
+html.desk .overlay.cs-pop main.card-detail > #csTagBox, html.desk .overlay.cs-pop main.card-detail > #ciTagBox{order:3 !important;}
+html.desk .overlay.cs-pop main.card-detail > .detail-sec:not(:has(#sheetOracle)):not(:has(#csRulings)){order:4 !important;}
+html.desk .overlay.cs-pop main.card-detail > .detail-sec:has(#csRulings){order:5 !important;}
+html.desk .overlay.cs-pop main{max-width:none;margin:0;}
+html.desk .overlay.cs-pop .topbar{padding-right:52px;}
+
+/* ---- dialogs in the middle, with a cross ---- */
+html.desk .deckpick-scrim{align-items:center !important;}
+html.desk .deckpick-scrim > .deckpick{border-radius:14px;max-width:560px;width:calc(100% - 48px);}
+.desk-x{position:absolute;top:8px;right:8px;z-index:20;width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:var(--panel);color:var(--ink-text);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+.desk-x:hover{border-color:var(--brass);color:var(--brass);}
+.overlay.cs-pop > .cs-pop-x{top:6px;right:8px;z-index:150;}
+html.desk .toast{bottom:28px;}
+
+/* ---- buttons say what they do ---- */
+html.desk .searchbar > button[title]:not(.in-chev):not(.sel-fab){gap:7px;padding:0 13px !important;display:inline-flex;align-items:center;}
+html.desk .searchbar > button[title]:not(.in-chev):not(.sel-fab)::after{content:attr(title);font-size:13.5px;font-weight:600;white-space:nowrap;}
+
+/* ---- a size bigger to read ---- */
+html.desk .hint{font-size:14px;}
+html.desk .ghost-btn, html.desk .primary-btn{font-size:15px;}
+html.desk .panel-h{font-size:14.5px;}
+html.desk .menu-pop button, html.desk .cselect-opt, html.desk #nselPop .cselect-opt, html.desk .tag-drop button{font-size:15px;}
+html.desk .searchbar input, html.desk .col-filter-input, html.desk .tag-add-row input{font-size:15.5px;}
+html.desk .oracle-text{font-size:15px;line-height:1.5;}
+html.desk .settings-row.xt-tile .l1{font-size:18px;}
+html.desk .sr-tile .st-price{font-size:14px;}
+html.desk .dl-desc-text{font-size:14.5px;}
+
+/* ---- the big card on a click ---- */
+#cardZoomBox{position:fixed;z-index:400;display:none;border-radius:4.75% / 3.5%;box-shadow:0 18px 60px rgba(0,0,0,0.75);background:#111;cursor:zoom-out;}
+#cardZoomBox img{width:100%;height:100%;display:block;object-fit:cover;border-radius:4.75% / 3.5%;}
+#cardZoomBox .cz-x{position:absolute;top:-12px;right:-12px;width:36px;height:36px;border-radius:50%;border:2px solid var(--brass);background:var(--panel);color:var(--ink-text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.5);}
+html.desk :is(.sr-tile, .sc-tile, .vg-card, .col-tile) img{cursor:zoom-in;}
+
+/* ---- tablet (portrait) news: wider and easier to read ---- */
+@media (min-width: 700px) and (max-width: 999px){
+  .home-news{max-width:680px;}
+  .home-news .news-item .nw-img{width:72px;height:72px;}
+  .home-news .news-item .nw-t{font-size:15.5px;}
+}
 </style>
 </head>
 <body>
@@ -3421,6 +3563,12 @@ function csFitBrowsePanel(){
     if(!p) return;
     const host = p.closest('.cselect');
     if(!host) return;
+    if(isDesk()){
+      const hb = host.getBoundingClientRect().bottom;
+      p.style.bottom = 'auto'; p.style.top = 'calc(100% + 4px)';
+      p.style.maxHeight = Math.max(200, Math.floor(window.innerHeight - hb - 20)) + 'px';
+      return;
+    }
     // De VLOER: de bovenkant van de laagste keuzebalk op de pagina. Elke
     // drop-up rust daarop, welke balk je ook opent -- anders houden de
     // hoger staande balken nauwelijks hoogte over, want de pagina scrolt
@@ -3995,8 +4143,14 @@ function openNselMenu(btn){
   // column-reverse, so the FIRST option sits at the foot, right above the field.
   pop.style.left = Math.max(8, r.left) + 'px';
   pop.style.width = Math.min(window.innerWidth - 16, Math.max(r.width, 200)) + 'px';
+  if(isDesk()){
+    // desk: a drop-DOWN under the field, first option at the top
+    pop.style.top = Math.round(r.bottom + 4) + 'px'; pop.style.bottom = 'auto';
+    pop.style.maxHeight = Math.max(160, window.innerHeight - r.bottom - 16) + 'px';
+  } else {
   pop.style.bottom = (window.innerHeight - r.top + 4) + 'px';
   pop.style.maxHeight = Math.max(160, r.top - 60) + 'px';
+  }
   Array.from(sel.options).forEach((o, i)=>{
     const b = document.createElement('button');
     b.type = 'button';
@@ -4016,7 +4170,7 @@ function openNselMenu(btn){
   });
   document.body.appendChild(shield);
   document.body.appendChild(pop);
-  pop.scrollTop = pop.scrollHeight;   // the foot (the first options) in view
+  pop.scrollTop = isDesk() ? 0 : pop.scrollHeight;   // the first options in view
 }
 try{
   let _enhQ = false;
@@ -6501,6 +6655,19 @@ function idClauseForDeck(d){
    browser, permanently until you clear site data (no Claude account or
    published-artifact requirement, but also no cross-device sync). */
 
+/* 1.28 DESK MODE: a screen of 1000 px and wider (PC, laptop, a tablet on
+   its side) reads like a web page -- top to bottom: navigation at the top,
+   pages opening at their top, menus dropping DOWN. The phone keeps its
+   bottom-up design untouched; every desk rule hangs off html.desk. */
+function isDesk(){ return document.documentElement.classList.contains('desk'); }
+(function(){
+  try{
+    const mq = window.matchMedia('(min-width: 1000px)');
+    const set = ()=>document.documentElement.classList.toggle('desk', mq.matches);
+    set();
+    mq.addEventListener('change', ()=>{ set(); try{ render(); window.scrollTo(0, 0); }catch(e){} });
+  }catch(e){}
+})();
 const LS_PREFIX = 'admiral_app:';
 
 /* ================= WHAT'S NEW =================
@@ -6518,27 +6685,27 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.26';
+const APP_VERSION = '1.28';
 const CHANGELOG_NOTES = {
   en: [
-    'Sync between phone, tablet and PC',
-    'Tag lists: search field, clear groups',
-    'PC: right-click a card for its menu',
-    'PC: Shift-click selects a range',
-    'PC: / jumps to search',
-    'PC: Ctrl+V a deck list to import',
-    'PC: decklist in columns per type',
-    'PC: search filters beside results'
+    'PC: menu bar on top, reads top-down',
+    'PC: calmer width, bigger text',
+    'PC: click a card to see it big',
+    'PC: right-click menu has a ✕',
+    'PC: buttons show their names',
+    'PC: bigger, wider news',
+    'Extras buttons work on PC again',
+    'Card menu closes when a page opens'
   ],
   nl: [
-    'Sync tussen telefoon, tablet en pc',
-    'Taglijst: zoekveld, duidelijke groepen',
-    'Pc: rechtsklik op kaart toont menu',
-    'Pc: Shift-klik selecteert een reeks',
-    'Pc: / springt naar zoeken',
-    'Pc: Ctrl+V decklijst om te importeren',
-    'Pc: decklijst in kolommen per type',
-    'Pc: zoekfilters naast de resultaten'
+    'Pc: menubalk boven, van boven af',
+    'Pc: rustiger breedte, grotere tekst',
+    'Pc: klik op kaart toont hem groot',
+    'Pc: rechtsklikmenu heeft een ✕',
+    'Pc: knoppen tonen hun naam',
+    'Pc: groter en breder nieuws',
+    "Extra's-knoppen werken weer op pc",
+    'Kaartmenu sluit bij nieuwe pagina'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6548,6 +6715,12 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-31';
 const CHANGELOG_HISTORY = [
+  { v: '1.27', d: '2026-10-31',
+    en: ['Restore earlier deck versions', 'Bring back deleted decks', 'Cuts removed; lands advice stays', 'PC: news in three columns', 'PC: card page in the middle'],
+    nl: ['Eerdere deckversies terugzetten', 'Verwijderde decks terughalen', 'Cuts weg; lands-advies blijft', 'Pc: nieuws in drie kolommen', 'Pc: kaartpagina in het midden'] },
+  { v: '1.26', d: '2026-10-31',
+    en: ['Sync between phone, tablet and PC', 'Tag lists: search field, clear groups', 'PC: right-click a card for its menu', 'PC: Shift-click selects a range', 'PC: / jumps to search', 'PC: Ctrl+V a deck list to import', 'PC: decklist in columns per type', 'PC: search filters beside results'],
+    nl: ['Sync tussen telefoon, tablet en pc', 'Taglijst: zoekveld, duidelijke groepen', 'Pc: rechtsklik op kaart toont menu', 'Pc: Shift-klik selecteert een reeks', 'Pc: / springt naar zoeken', 'Pc: Ctrl+V decklijst om te importeren', 'Pc: decklijst in kolommen per type', 'Pc: zoekfilters naast de resultaten'] },
   { v: '1.25', d: '2026-10-31',
     en: ['Similar cards: focus on one tag', 'Recommendations: focus on a tag', 'Next card no longer flickers', 'PC: arrow keys step through cards', 'PC: tidier Stats, Extras, rows'],
     nl: ['Similar cards: focus op één tag', 'Aanbevelingen: focus op een tag', 'Volgende kaart flikkert niet meer', 'Pc: pijltjes bladeren door kaarten', "Pc: nettere Stats, Extra's, rijen"] },
@@ -6703,11 +6876,11 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred; zit je deck boven de limiet, dan toont <strong>Cuts</strong> wat er het makkelijkst uit kan; met <strong>✦ Vraag de AI</strong> leest een AI hoe je kaarten samenwerken en kiest hij de cuts, met een reden per kaart), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>. Is het deck nog leeg, dan tik je op de grote <strong>＋</strong> en zoek je kaarten die direct in het deck gaan. In <strong>Bulk Edit</strong> stelt <strong>⛰ Suggest lands</strong> lands voor; ook daar geeft de AI op verzoek je aantal lands en de beste keuzes.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>. Is het deck nog leeg, dan tik je op de grote <strong>＋</strong> en zoek je kaarten die direct in het deck gaan. In <strong>Bulk Edit</strong> stelt <strong>⛰ Suggest lands</strong> lands voor; ook daar geeft de AI op verzoek je aantal lands en de beste keuzes.</p>
            <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred; when your deck runs over, <strong>Cuts</strong> shows what can go most easily; with <strong>✦ Ask the AI</strong> an AI reads how your cards work together and picks the cuts, with a reason for each), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>. While the deck is still empty, tap the big <strong>＋</strong> to search cards that go straight into it. In <strong>Bulk Edit</strong>, <strong>⛰ Suggest lands</strong> proposes lands; there too the AI can give your land count and the best picks.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>. While the deck is still empty, tap the big <strong>＋</strong> to search cards that go straight into it. In <strong>Bulk Edit</strong>, <strong>⛰ Suggest lands</strong> proposes lands; there too the AI can give your land count and the best picks.</p>
            <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
@@ -7246,10 +7419,184 @@ function compactAllDecks(skipId){
     }catch(e){}
   });
 }
+/* ===================== 1.27 DECK VERSIONS =====================
+   Every deck keeps its recent past in its own database (admiral-deckhist):
+   one version per editing session (a session ends after 10 quiet minutes),
+   a copy right before Sync replaces it, the copy that came in, and the
+   last state of a deleted deck. Up to 25 versions per deck; a deleted
+   deck's versions stay 60 days. Restore puts a version back in place, or
+   as a copy. */
+const DV_GAP = 10 * 60 * 1000, DV_MAX = 25, DV_KEEP_DEL = 60 * 86400000;
+let _dvDbP = null;
+const _dvSess = {}, _dvLast = {};
+function dvDbOpen(){
+  if(_dvDbP) return _dvDbP;
+  _dvDbP = new Promise((res)=>{
+    try{
+      const req = indexedDB.open('admiral-deckhist', 1);
+      req.onupgradeneeded = ()=>{ try{ req.result.createObjectStore('v'); }catch(e){} };
+      req.onsuccess = ()=>res(req.result);
+      req.onerror = ()=>res(null);
+      req.onblocked = ()=>res(null);
+    }catch(e){ res(null); }
+  });
+  _dvDbP.then(db=>{ if(!db) _dvDbP = null; });
+  return _dvDbP;
+}
+async function dvTx(mode, fn){
+  const db = await dvDbOpen(); if(!db) return null;
+  return await new Promise((res)=>{
+    try{
+      const tx = db.transaction('v', mode), st = tx.objectStore('v');
+      let out = null;
+      const r = fn(st, (v)=>{ out = v; });
+      tx.oncomplete = ()=>res(out);
+      tx.onerror = ()=>res(null); tx.onabort = ()=>res(null);
+    }catch(e){ res(null); }
+  });
+}
+// All versions of one deck, oldest first.
+async function dvList(id){
+  const r = await dvTx('readonly', (st, set)=>{
+    const q = st.getAll(IDBKeyRange.bound(id + '|', id + '|￿'));
+    q.onsuccess = ()=>set(q.result || []);
+  });
+  return (r || []).sort((a, b)=>a.start - b.start);
+}
+async function dvAll(){
+  const r = await dvTx('readonly', (st, set)=>{ const q = st.getAll(); q.onsuccess = ()=>set(q.result || []); });
+  return r || [];
+}
+async function dvPut(rec){ return dvTx('readwrite', (st)=>{ st.put(rec, rec.id + '|' + String(rec.start).padStart(15, '0')); }); }
+async function dvDelKeys(keys){ if(!keys.length) return; return dvTx('readwrite', (st)=>{ keys.forEach(k=>st.delete(k)); }); }
+/* Note the deck as it is now. why: 'edit' (merges into the open session),
+   'presync' / 'sync' / 'deleted' / 'restore' (always a version of its own). */
+async function dvNote(id, name, why, json, nCards){
+  try{
+    if(!id || !json) return;
+    const now = Date.now();
+    const sess = _dvSess[id];
+    let start = now;
+    if(why === 'edit' && sess && now - sess.t < DV_GAP) start = sess.start;
+    else { if(_dvLast[id] && start <= _dvLast[id]) start = _dvLast[id] + 1; _dvLast[id] = start; }   // two notes in one millisecond stay two
+    _dvSess[id] = why === 'edit' ? { start, t: now } : null;
+    await dvPut({ id, name: name || '', start, t: now, why, n: nCards || 0, j: json });
+    if(start === now){
+      const all = await dvList(id);
+      if(all.length > DV_MAX) await dvDelKeys(all.slice(0, all.length - DV_MAX).map(r=>r.id + '|' + String(r.start).padStart(15, '0')));
+    }
+  }catch(e){}
+}
+function dvNoteDeck(d, why){
+  try{
+    if(!d || !d.id) return;
+    const c = {}; Object.keys(d).forEach(k=>{ if(k !== '_saveStatus') c[k] = d[k]; });
+    dvNote(d.id, d.name, why, JSON.stringify(slimDeckForSave(c)), (d.cards || []).length);
+  }catch(e){}
+}
+// Old versions of decks deleted long ago are let go, once per start.
+async function dvPrune(){
+  try{
+    const all = await dvAll();
+    const live = new Set((state.decksIndex || []).map(d=>d.id));
+    const now = Date.now();
+    const byId = {};
+    all.forEach(r=>{ (byId[r.id] = byId[r.id] || []).push(r); });
+    const drop = [];
+    Object.keys(byId).forEach(id=>{
+      if(live.has(id)) return;
+      const newest = Math.max(...byId[id].map(r=>r.t));
+      if(now - newest > DV_KEEP_DEL) byId[id].forEach(r=>drop.push(r.id + '|' + String(r.start).padStart(15, '0')));
+    });
+    await dvDelKeys(drop);
+  }catch(e){}
+}
+function dvWhyLabel(w){
+  const nl = appLang() === 'nl';
+  return ({ edit: nl ? 'bewerkt' : 'edited', presync: nl ? 'vóór sync' : 'before sync', sync: nl ? 'van ander apparaat' : 'from other device',
+    deleted: nl ? 'verwijderd' : 'deleted', restore: nl ? 'teruggezet' : 'restored', prerestore: nl ? 'v\u00F3\u00F3r terugzetten' : 'before restore' })[w] || w;
+}
+function dvWhen(t){
+  const nl = appLang() === 'nl', d = new Date(t), today = new Date();
+  const same = d.toDateString() === today.toDateString();
+  const time = d.toLocaleTimeString(nl ? 'nl-NL' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
+  return same ? (nl ? 'Vandaag ' : 'Today ') + time : d.toLocaleDateString(nl ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'short' }) + ' ' + time;
+}
+async function dvRestore(rec, asCopy){
+  const nl = appLang() === 'nl';
+  let v = null; try{ v = JSON.parse(rec.j); }catch(e){}
+  if(!v){ toast(nl ? 'Deze versie is niet leesbaar.' : 'This version cannot be read.'); return; }
+  if(asCopy){
+    v.id = uid(); v.name = (v.name || rec.name || 'Deck') + (nl ? ' (versie)' : ' (version)');
+    v.createdAt = Date.now(); v.updatedAt = Date.now();
+    state.decksIndex.unshift(v);
+    await persistDeck(v);
+    toast(nl ? 'Versie als nieuw deck gezet.' : 'Version saved as a new deck.');
+    openDeck(v.id);
+    return;
+  }
+  const cur = getDeck(rec.id);
+  if(cur) dvNoteDeck(cur, 'prerestore');   // what it was, kept too
+  v.id = rec.id; v.updatedAt = Date.now(); v._dvWhy = 'restore';
+  const i = state.decksIndex.findIndex(x=>x.id === rec.id);
+  if(i >= 0) state.decksIndex[i] = v; else state.decksIndex.unshift(v);
+  await persistDeck(v);
+  toast(nl ? 'Versie teruggezet.' : 'Version restored.');
+  openDeck(v.id);
+}
+/* The versions sheet of one deck (or, with no id, every deleted deck). */
+async function openDeckVersions(id){
+  const nl = appLang() === 'nl';
+  let recs = [];
+  if(id){
+    recs = (await dvList(id)).reverse();   // newest first
+  } else {
+    const all = await dvAll(), live = new Set((state.decksIndex || []).map(d=>d.id));
+    const byId = {};
+    all.forEach(r=>{ if(!live.has(r.id) && (!byId[r.id] || r.t > byId[r.id].t)) byId[r.id] = r; });
+    recs = Object.values(byId).sort((a, b)=>b.t - a.t);
+  }
+  document.getElementById('dvSheet')?.remove();
+  const el = document.createElement('div');
+  el.className = 'deckpick-scrim'; el.id = 'dvSheet';
+  el.style.zIndex = 205; el.style.alignItems = 'flex-end';
+  const d = id ? getDeck(id) : null;
+  const rows = recs.map((r, i)=>{
+    const isNow = !!id && i === 0;   // every change is noted, so the newest is what is there now
+    return `<div class="dv-row">
+      <div class="dv-txt"><b>${escapeHtml(id ? dvWhen(r.t) : (r.name || '?'))}</b><span>${id ? '' : escapeHtml(dvWhen(r.t)) + ' · '}${r.n} ${nl ? (r.n === 1 ? 'kaart' : 'kaarten') : (r.n === 1 ? 'card' : 'cards')} · ${escapeHtml(dvWhyLabel(r.why))}${isNow ? (nl ? ' · <i>nu</i>' : ' · <i>now</i>') : ''}</span></div>
+      ${isNow ? '' : `<button type="button" class="ghost-btn" data-dvi="${i}" data-dvc="0">${nl ? 'Terugzetten' : 'Restore'}</button>`}
+      <button type="button" class="ghost-btn" data-dvi="${i}" data-dvc="1">${nl ? 'Als kopie' : 'As copy'}</button>
+    </div>`;
+  }).join('');
+  // column-reverse sheet: DOM-first = foot -- the newest version nearest the thumb
+  el.innerHTML = `<div class="deckpick br-sheet bk-sheet dv-sheet">
+    <div class="dv-list">${rows || `<div class="bk-hint" style="text-align:center;">${id ? (nl ? 'Nog geen eerdere versies — ze komen vanzelf zodra je het deck bewerkt.' : 'No earlier versions yet — they appear by themselves as you edit the deck.') : (nl ? 'Geen verwijderde decks om terug te zetten.' : 'No deleted decks to restore.')}</div>`}</div>
+    <div class="br-title"><b>${inlIco('restore', 16)}${id ? (nl ? 'Versies van ' : 'Versions of ') + escapeHtml(d ? d.name : '') : (nl ? 'Verwijderde decks' : 'Deleted decks')}</b><span>${id
+      ? (nl ? 'Eén versie per bewerksessie, plus een kopie vóór elke sync. Terugzetten bewaart ook wat er nu staat.' : 'One version per editing session, plus a copy before every sync. Restoring keeps what is there now as well.')
+      : (nl ? 'Verwijderde decks blijven 60 dagen bewaard.' : 'Deleted decks are kept for 60 days.')}</span></div>
+  </div>`;
+  brSheetOpen(el, 'dvSheet');
+  const close = ()=>brSheetClose('dvSheet');
+  el.addEventListener('click', (e)=>{ if(e.target === el) close(); });
+  el.querySelectorAll('[data-dvi]').forEach(b=>b.addEventListener('click', ()=>{
+    const r = recs[+b.dataset.dvi]; if(!r) return;
+    const copy = b.dataset.dvc === '1';
+    const msg = copy
+      ? (nl ? `Deze versie (${dvWhen(r.t)}) als nieuw deck toevoegen?` : `Add this version (${dvWhen(r.t)}) as a new deck?`)
+      : (nl ? `Het deck terugzetten naar ${dvWhen(r.t)}? Wat er nu staat, blijft als versie bewaard.` : `Restore the deck to ${dvWhen(r.t)}? What is there now stays as a version.`);
+    openInAppConfirm(msg, async (ok)=>{
+      if(!ok) return;
+      close(); await brAfterPop();
+      dvRestore(r, copy);
+    }, { ok: copy ? (nl ? 'Als kopie' : 'As copy') : (nl ? 'Terugzetten' : 'Restore') });
+  }));
+}
 async function persistDeck(d){
   try{ syncTouchDeck(d && d.id, false); }catch(e){}
   const clean = {}; Object.keys(d).forEach(k=>{ if(k!=='_saveStatus') clean[k]=d[k]; });
   const payload = JSON.stringify(slimDeckForSave(clean));
+  try{ if(!_syncQuiet) dvNote(d.id, d.name, d._dvWhy || 'edit', payload, (d.cards || []).length); delete d._dvWhy; }catch(e){}
   const key = LS_PREFIX+'deck:'+d.id;
   // IndexedDB first: room for as many decks as anyone builds. Once that
   // write is confirmed, any old localStorage copy goes (frees the small store).
@@ -7283,6 +7630,15 @@ async function persistDeck(d){
 }
 async function deleteDeckStorage(id){
   try{ syncTouchDeck(id, true); }catch(e){}
+  // 1.27: the deck's last state stays as a version (60 days)
+  try{
+    const key = LS_PREFIX + 'deck:' + id;
+    let raw = null;
+    const all = await deckDbAll();
+    if(all && all[key] != null) raw = typeof all[key] === 'string' ? all[key] : JSON.stringify(all[key]);
+    if(raw == null){ try{ raw = localStorage.getItem(key); }catch(e){} }
+    if(raw){ let nm = '', n = 0; try{ const o = JSON.parse(raw); nm = o.name; n = (o.cards || []).length; }catch(e){} await dvNote(id, nm, 'deleted', raw, n); }
+  }catch(e){}
   try{ localStorage.removeItem(LS_PREFIX+'deck:'+id); }catch(e){}
   try{ await deckDbDelete(LS_PREFIX+'deck:'+id); }catch(e){}
 }
@@ -7579,10 +7935,16 @@ function switchPage(p, topnav){
   else if(state.screen === 'collection'){ state.colFilter.q = ''; }   // leaving clears the search box too
   state.screen = p; state.menuOpen = false; state.openCSelect = null; state.colSel = null;
   pushHistory(p);
+  state._deskTop = true;
   render();
   scrollToPageFoot();
 }
 function scrollToPageFoot(){
+  if(isDesk()){
+    // desk: a page opens at its TOP; the bottom-up "show the foot" nudges rest
+    if(state._deskTop){ state._deskTop = false; requestAnimationFrame(()=>{ try{ window.scrollTo(0, 0); }catch(e){} }); }
+    return;
+  }
   // Pages OPEN at the bottom now — controls live there, so every landing
   // starts at the foot and scrolling UP reveals the rest: the complete
   // mirror of the old top-down orientation. Double rAF lets layout settle
@@ -7667,6 +8029,12 @@ function placeNameSuggest(){
   const vh = window.innerHeight || 700;
   el.style.left = Math.round(r.left) + 'px';
   el.style.width = Math.round(r.width) + 'px';
+  if(isDesk()){
+    el.style.top = Math.round(r.bottom + 6) + 'px'; el.style.bottom = 'auto';
+    el.style.maxHeight = Math.round(Math.max(110, Math.min(vh * 0.6, vh - r.bottom - 20))) + 'px';
+    return;
+  }
+  el.style.top = 'auto';
   el.style.bottom = Math.round(vh - r.top + 6) + 'px';
   el.style.maxHeight = Math.round(Math.max(110, Math.min(vh * 0.45, r.top - 64))) + 'px';
 }
@@ -8318,15 +8686,6 @@ document.addEventListener('click', (e)=>{
   // count of the rest).
   if(e.target && e.target.closest && e.target.closest('#capDeckCount') && state.screen === 'decklist'){
     const d = getDeck(state.activeDeckId);
-    // 1.14: too many cards (and a leader to weigh them by): straight to the
-    // deck's Inspiration page with Cuts already open, at its foot
-    if(d && d.admiral && deckCutOver(d) > 0){
-      state.inspireDeckId = d.id;
-      state._cutsDeck = d.id; state._cutsOpenFor = d.id; state._cutsMore = 0;
-      switchPage('inspiration');
-      requestAnimationFrame(()=>scrollToPageFoot());
-      return;
-    }
     if(d){
       const issues = checkDeckLegality(d);
       if(!issues.length) toast('\u2713 ' + trS('Deck is legal.'));
@@ -8434,7 +8793,7 @@ function openHomeAbout(){
         <li>Find commanders, staples, combos and budget swaps from play data</li>
         <li>Test opening hands, castability and power bracket before you sit down</li>
         <li>Ask the AI judge your rules questions — the official rules come with every answer</li>
-        <li>Let the AI pick cuts and lands by how your cards work together</li>
+        <li>Let the AI suggest lands and your mana base</li>
         <li>Count life, log games and share decks — everything offline-ready</li>
       </ul>
       <button class="ghost-btn" id="homeAboutClose" style="width:100%;margin-top:12px;">Close</button>
@@ -9161,6 +9520,7 @@ function refreshInstallPill(){
 /* The news box takes exactly the room between its own top and the nav bar
    — no dead strip beneath it on any screen height. */
 function fitHomeNews(){
+  if(isDesk()){ const nb0 = document.getElementById('homeNews'); if(nb0) nb0.style.height = ''; return; }
   try{
     const nb = document.getElementById('homeNews');
     if(!nb) return;
@@ -12088,7 +12448,7 @@ function deckMeterHtml(d){
   }
   // \u22EF at the far left, the tools after it, the \u203A chevron at the far right.
   return `<div class="deck-dock" id="deckMeterRow">
-    <button class="icon-btn" id="menuBtn">${ICONS.dots}</button>
+    <button class="icon-btn" id="menuBtn" title="${trS('Menu')}">${ICONS.dots}</button>
     <div class="dk-mid">${mid}</div>
     <button class="dk-arr" id="dockNext"${state._dlSel && state._dlSel.size ? ' hidden' : ''}>${ICONS.chevRight}</button>
     ${state.menuOpen ? menuPopHtml() : ''}
@@ -12137,7 +12497,7 @@ function decklistPageHtml(){
   </main>`;
 }
 function menuPopHtml(){
-  return `<div class="menu-pop" id="menuPop"><button id="mImpExp">Import / Export</button><button id="mSortBy">${trS('Sort by')} ⌄</button><button id="mFormat">Format ⌄</button><button id="mAddFolder">Move to folder…</button><button id="mDuplicate">Duplicate deck</button><button id="mShare">Share deck</button><hr><button id="mDelete" class="danger">Delete deck</button><hr>${[['grid',viewIco('grid') + trS('Tile view')],['stack',viewIco('stack') + trS('Stack view')],['text',viewIco('text') + trS('Text view')]].filter(o=>o[0] !== dlView()).map(o=>`<button data-dlview="${o[0]}">${o[1]}</button>`).join('')}</div>`;
+  return `<div class="menu-pop" id="menuPop"><button id="mImpExp">Import / Export</button><button id="mSortBy">${trS('Sort by')} ⌄</button><button id="mFormat">Format ⌄</button><button id="mAddFolder">Move to folder…</button><button id="mDuplicate">Duplicate deck</button><button id="mVersions">${appLang() === 'nl' ? 'Versies…' : 'Versions…'}</button><button id="mShare">Share deck</button><hr><button id="mDelete" class="danger">Delete deck</button><hr>${[['grid',viewIco('grid') + trS('Tile view')],['stack',viewIco('stack') + trS('Stack view')],['text',viewIco('text') + trS('Text view')]].filter(o=>o[0] !== dlView()).map(o=>`<button data-dlview="${o[0]}">${o[1]}</button>`).join('')}</div>`;
 }
 /* ---- legality ----------------------------------------------------------
    Re-derived from scratch on every deck change, so swapping your Admiral or
@@ -14022,6 +14382,7 @@ function wireMenu(d){
   document.getElementById('mAddFolder')?.addEventListener('click', ()=>{ popDeckMenu(); render(); openFolderPicker(d); });
   document.getElementById('mFormat')?.addEventListener('click', ()=>{ popDeckMenu(); openFormatPicker(d); });
   document.getElementById('mDuplicate')?.addEventListener('click', ()=>{ popDeckMenu(); duplicateDeck(d); });
+  document.getElementById('mVersions')?.addEventListener('click', ()=>{ popDeckMenu(); render(); openDeckVersions(d.id); });
   document.getElementById('mShare')?.addEventListener('click', ()=>{ popDeckMenu(); updateDeckMeter(d); shareDeck(d); });
   document.getElementById('mDelete')?.addEventListener('click', ()=>{ popDeckMenu(); openModal('delete'); });
   document.querySelectorAll('#menuPop [data-dlview]').forEach(b=>b.addEventListener('click', ()=>{
@@ -14704,7 +15065,7 @@ function dlGroupGridHtml(groups, arr, loc){
   // Stack: the group's FIRST card is the bottom one, shown whole; every next
   // card peeks out above it by its name bar (later DOM paints on top, so the
   // list is written last-to-first).
-  if(v === 'stack') return `<div class="visual-grid vg-stack">${groups.slice().reverse().map(g=>cardTileHtml(arr[g.i], g.i, loc, g.qty)).join('')}</div>`;
+  if(v === 'stack') return `<div class="visual-grid vg-stack">${(isDesk() ? groups.slice() : groups.slice().reverse()).map(g=>cardTileHtml(arr[g.i], g.i, loc, g.qty)).join('')}</div>`;
   if(v === 'text') return `<div class="visual-grid vg-text">${groups.map(g=>cardRowHtml(arr[g.i], g.i, loc, g.qty)).join('')}</div>`;
   return `<div class="visual-grid">${groups.map(g=>cardTileHtml(arr[g.i], g.i, loc, g.qty)).join('')}</div>`;
 }
@@ -16192,6 +16553,7 @@ function oracleBlockHtml(card){
   }).join('');
 }
 function openCardActionSheet(d, card, loc, idx){
+  if(zoomTake(card)) return;   // 1.28 desk: a click shows the card big
   pushOverlay('cardSheet', ()=>{ document.getElementById('cardSheetOverlay')?.remove(); });
   renderCardSheet(d, card, loc, idx);
 }
@@ -16549,6 +16911,7 @@ function _tagNorm(t){ return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '');
    space that opens between them. Same rule as every other panel: opening one
    shows the foot again. */
 function keepSheetFoot(el){
+  if(isDesk()) return;
   const m = el && el.closest && el.closest('main');
   if(!m) return;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -18944,6 +19307,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
   }, 250);
 }
 function openCardInfo(card, opts){
+  if(!(opts && opts._replace) && zoomTake(card)) return;   // 1.28 desk: a click shows the card big
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   opts = opts || {};
   // A remembered printing upgrades the sheet to that exact printing — art,
@@ -20794,6 +21158,17 @@ async function loadMtgNews(box){
       const fl = newsFmtLabel(a);
       return `<a class="news-item" data-ni="${ni}" href="${escapeHtml(a.u)}" target="_blank" rel="noopener noreferrer">${im}<span class="nw-body"><span class="nw-t">${escapeHtml(a.t)}</span><span class="nw-m">${fl ? `<span class="nw-fmt">${escapeHtml(fl)}</span>` : ''}${escapeHtml(a.src || '')}${ds ? ' · ' + ds : ''}</span></span></a>`;
     }).join('');
+    // 1.27: a wide screen reads the news in rows of three. The box stays
+    // column-reverse, so the first row (newest) sits at its foot.
+    try{
+      if(window.matchMedia('(min-width: 1000px)').matches){
+        const items = Array.from(box.querySelectorAll(':scope > .news-item'));
+        const frag = document.createDocumentFragment();
+        for(let i = 0; i < items.length; i += 3){ const row = document.createElement('div'); row.className = 'news-row'; items.slice(i, i + 3).forEach(x=>row.appendChild(x)); frag.appendChild(row); }
+        box.innerHTML = ''; box.appendChild(frag);
+        box.classList.add('news-grid');
+      }
+    }catch(e){}
   }catch(e){
     box.innerHTML = '<span class="l2">Couldn’t load articles right now — check your connection, or the news function isn’t deployed yet.</span>';
   }
@@ -21489,13 +21864,12 @@ function inspirationPageHtml(){
   // Too many cards: Theme AND Kindred can both be set (the cuts weigh both),
   // and a Cuts row sits ABOVE Theme (DOM-last in the reversed stack): opened,
   // its list grows upward and Theme / Kindred stay in view beneath it.
-  const over = deckCutOver(d), both = over > 0 || !!(sel.kindred && sel.theme);
+  const both = !!(sel.kindred && sel.theme);   // 1.27: no Cuts any more -- one theme page at a time
   return `
   <main>
     <div class="browse-selects">
       ${sel.theme && !both ? '' : `<div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>`}
       ${sel.kindred && !both ? '' : `<div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.theme||'', trS('Theme — none'), {search:true, tiles:true})}</div>`}
-      ${over > 0 ? `<div class="bs-row cut-slot" id="cutSlot"></div>` : ''}
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -21534,8 +21908,8 @@ function wireInspirationPage(){
   // EDHREC serves one theme page at a time: picking a Kindred clears the
   // Theme and the other way round.
   // With too many cards both can be set: the cuts weigh Theme and Kindred.
-  _csHandlers.inspKindred = v=>{ const both = deckCutOver(d) > 0; state.inspireSel = { kindred: v || '', theme: both ? (state.inspireSel.theme || '') : '' }; state._inspShown = {}; render(); };
-  _csHandlers.inspTheme = v=>{ const both = deckCutOver(d) > 0; state.inspireSel = { kindred: both ? (state.inspireSel.kindred || '') : '', theme: v || '' }; state._inspShown = {}; render(); };
+  _csHandlers.inspKindred = v=>{ const both = false; state.inspireSel = { kindred: v || '', theme: both ? (state.inspireSel.theme || '') : '' }; state._inspShown = {}; render(); };
+  _csHandlers.inspTheme = v=>{ const both = false; state.inspireSel = { kindred: both ? (state.inspireSel.kindred || '') : '', theme: v || '' }; state._inspShown = {}; render(); };
   wireCSelects();
   if(state._cutsDeck !== d.id){ state._cutsDeck = d.id; state._cutsOpenFor = null; state._cutsMore = 0; }
   paintCuts(d);
@@ -22371,7 +22745,6 @@ function renderInspEdh(d, entry, keepScroll, partial, okSet){
   document.getElementById('inspJump')?.addEventListener('click', (e)=>{
     e.stopPropagation();
     const items = groups.map((g, i)=>({ label: g.title, fn: ()=>{ document.querySelector(`.edh-sec[data-isec="${i}"]`)?.scrollIntoView({ behavior:'smooth', block:'end' }); } }));
-    if(document.getElementById('cutSlot')) items.push({ label: 'Cuts', fn: ()=>{ state._cutsOpenFor = d.id; paintCuts(d); scrollToPageFoot(); } });
     openTileMenu(e.currentTarget, items);
   });
   box.querySelectorAll('.edh-more').forEach(btn=>btn.addEventListener('click', ()=>{
@@ -27512,7 +27885,7 @@ function newAdmiralPill(key){
 function aboutHtml(){
   const NL = appLang() === 'nl';
   const items = NL ? [
-    ['Een complete ervaring', 'decks, collectie, zoeken, spoilers, life counter, drafttools, een AI-judge voor je regelvragen en AI-hulp bij cuts en lands: alles wat je als Magic-speler nodig hebt, in één app.'],
+    ['Een complete ervaring', 'decks, collectie, zoeken, spoilers, life counter, drafttools, een AI-judge voor je regelvragen en AI-hulp bij je lands: alles wat je als Magic-speler nodig hebt, in één app.'],
     ['Open source', 'de code staat openbaar op GitHub (GPL v3). Kijk erin, leer ervan, maak hem beter.'],
     ['Voor altijd gratis', 'geen betaalde versie, geen abonnement, niets achter een betaalmuur.'],
     ['Geen reclame', 'niets dat in de weg zit, niets dat je verkocht wordt.'],
@@ -27523,7 +27896,7 @@ function aboutHtml(){
     ['Zuinig op de community', 'kaartdata van Scryfall, thema’s van EDHREC: altijd met naam genoemd, en nooit vaker gevraagd dan nodig.'],
     ['Door Magic-spelers, voor Magic-spelers', 'gebouwd uit wat we aan onze eigen tafels misten. Ideeën zijn welkom.']
   ] : [
-    ['A complete experience', 'decks, collection, search, spoilers, life counter, draft tools, an AI judge for your rules questions and AI help with cuts and lands: everything a Magic player needs, in one app.'],
+    ['A complete experience', 'decks, collection, search, spoilers, life counter, draft tools, an AI judge for your rules questions and AI help with your lands: everything a Magic player needs, in one app.'],
     ['Open source', 'the code is public on GitHub (GPL v3). Look inside, learn from it, make it better.'],
     ['Free forever', 'no paid version, no subscription, nothing behind a paywall.'],
     ['No ads', 'nothing in your way, nothing being sold to you.'],
@@ -27540,7 +27913,7 @@ function aboutHtml(){
     ['Meldingen zonder account', 'de Android-app kijkt zelf op je telefoon of er spoilers of updates zijn. Er wordt niets over jou opgeslagen om je een melding te kunnen sturen.'],
     ['Feedback', 'wat je via Over Deckhand stuurt, gaat via de Deckhand-site (Netlify) als e-mail naar de maker, met je appversie en telefoontype. Je e-mailadres alleen als je het zelf invult.'],
     ['De AI-judge', 'je vraag gaat met de officiële regels en de tekst van de kaarten die je tagt via de Deckhand-site naar een AI-dienst: Google Gemini, met Groq als reserve. Zonder naam of account: alleen een willekeurig toestelnummer, om de 20 vragen per dag te tellen. Google mag wat via zijn gratis laag binnenkomt gebruiken om zijn diensten te verbeteren; er gaat niets mee dat naar jou wijst. Voor een antwoord is dus internet nodig.'],
-    ['AI-hulp bij cuts en lands', 'vraag je de AI om cuts of lands, dan gaan de kaartnamen, kaartteksten en cijfers van dat deck via de Deckhand-site naar dezelfde AI-dienst. Je deck zelf wordt daar niet bewaard, alleen het antwoord, zodat hetzelfde deck de volgende keer niets kost. Ook hier alleen het toestelnummer, om de 10 analyses per dag te tellen.'],
+    ['AI-hulp bij lands', 'vraag je de AI om lands, dan gaan de kaartnamen, kaartteksten en cijfers van dat deck via de Deckhand-site naar dezelfde AI-dienst. Je deck zelf wordt daar niet bewaard, alleen het antwoord, zodat hetzelfde deck de volgende keer niets kost. Ook hier alleen het toestelnummer, om de 10 analyses per dag te tellen.'],
     ['Wis je de app, dan is alles weg', 'app-gegevens wissen, de app verwijderen of je telefoon resetten haalt alles mee. Daarom de back-up in Extra\u2019s: één bestand met alles, dat je in je eigen cloud zet en op elk toestel terugzet.'],
     ['Sync, alleen als je het aanzet', 'koppel je apparaten in Extra\u2019s \u2192 Sync, dan staat een kopie van je decks, collectie, mappen, tags en instellingen op de Deckhand-site (Netlify), onder je koppelcode. Zonder naam of account; de site bewaart alleen een versleutelde vingerafdruk van de code. Wie de code heeft, kan erbij \u2014 deel hem dus niet. Ontkoppelen kan altijd.'],
     ['Beschermde opslag', 'de app vraagt Android of zijn opslag beschermd mag blijven, zodat het systeem hem niet opruimt als je telefoon vol raakt. In Extra\u2019s → Back-up zie je of dat gelukt is.']
@@ -27550,7 +27923,7 @@ function aboutHtml(){
     ['Notifications without an account', 'the Android app checks for spoilers and updates on your phone itself. Nothing about you is stored to be able to notify you.'],
     ['Feedback', 'what you send from About Deckhand goes through the Deckhand site (Netlify) as an email to the maker, with your app version and phone type. Your email address only if you fill it in.'],
     ['The AI judge', 'your question goes, with the official rules and the text of the cards you tag, through the Deckhand site to an AI service: Google Gemini, with Groq as the reserve. No name, no account: only a random device number, to count the 20 questions a day. Google may use what comes in through its free tier to improve its services; nothing that points to you goes along. So an answer needs an internet connection.'],
-    ['AI help with cuts and lands', 'when you ask the AI for cuts or lands, the card names, card texts and numbers of that deck go through the Deckhand site to the same AI service. Your deck itself is not kept there, only the answer, so the same deck costs nothing next time. Here too only the device number, to count the 10 analyses a day.'],
+    ['AI help with lands', 'when you ask the AI for lands, the card names, card texts and numbers of that deck go through the Deckhand site to the same AI service. Your deck itself is not kept there, only the answer, so the same deck costs nothing next time. Here too only the device number, to count the 10 analyses a day.'],
     ['Clear the app and it is all gone', 'clearing app data, uninstalling or resetting your phone takes everything with it. That is why there is the backup in Extras: one file with everything, kept in your own cloud and restored on any device.'],
     ['Sync, only if you turn it on', 'link your devices in Extras \u2192 Sync and a copy of your decks, collection, binders, tags and settings is kept on the Deckhand site (Netlify), under your link code. No name, no account; the site keeps only a scrambled fingerprint of the code. Whoever has the code can get in \u2014 so don\u2019t share it. You can unlink any time.'],
     ['Protected storage', 'the app asks Android to keep its storage protected, so the system does not clean it up when your phone runs full. Extras → Backup shows whether that worked.']
@@ -27596,6 +27969,13 @@ function xtPlace(body){
   const gap = 10;
   body.style.left = Math.round(left) + 'px';
   body.style.width = Math.round(right - left) + 'px';
+  if(isDesk()){
+    body.style.top = Math.round(topLim + gap) + 'px';
+    body.style.bottom = 'auto';
+    body.style.maxHeight = Math.max(160, Math.round(window.innerHeight - topLim - 2 * gap)) + 'px';
+    body.dataset.side = 'down';
+    return;
+  }
   body.style.top = 'auto';
   body.style.bottom = Math.round(window.innerHeight - botLim + gap) + 'px';
   body.style.maxHeight = Math.max(160, Math.round(botLim - topLim - 2 * gap)) + 'px';
@@ -27706,6 +28086,7 @@ function settingsPageHtml(){
           <button class="ghost-btn" id="backupBtn" style="padding:9px 12px;font-size:13px;">${inlIco('save')}${T('Back-up maken', 'Make a backup')}</button>
           <button class="ghost-btn" id="restoreBtn" style="padding:9px 12px;font-size:13px;">${inlIco('restore')}${T('Terugzetten', 'Restore')}</button>
         </div>
+        <button class="ghost-btn" id="deletedDecksBtn" style="padding:9px 12px;font-size:13px;margin:0 0 6px;">${inlIco('restore')}${T('Verwijderde decks', 'Deleted decks')}</button>
         <input type="file" id="restoreFile" accept="application/json,.json,application/octet-stream,text/plain" style="display:none;">
       </div>
       ${tile('backupRow', ICONS.shield, T('Back-up', 'Backup'))}
@@ -27969,12 +28350,15 @@ async function syncApply(changes){
         const id = k.slice(5);
         const i = (state.decksIndex || []).findIndex(x=>x.id === id);
         if(c.del){
+          if(i >= 0) dvNoteDeck(state.decksIndex[i], 'deleted');
           if(i >= 0) state.decksIndex.splice(i, 1);
           if(state.activeDeckId === id) state.activeDeckId = null;
           try{ await deleteDeckStorage(id); }catch(e){}
         } else {
           let d = null; try{ d = JSON.parse(c.v); }catch(e){}
           if(!d || !d.id) continue;
+          if(i >= 0) dvNoteDeck(state.decksIndex[i], 'presync');   // 1.27: what was here, kept
+          dvNote(d.id, d.name, 'sync', c.v, (d.cards || []).length);
           if(i >= 0) state.decksIndex[i] = d; else state.decksIndex.push(d);
           try{ if(!(await deckDbPutMany([[LS_PREFIX + k, c.v]]))) localStorage.setItem(LS_PREFIX + k, c.v); }catch(e){}
         }
@@ -28545,6 +28929,7 @@ function wireSettingsPage(){
     }
   });
   document.getElementById('syncRow')?.addEventListener('click', ()=>openSyncSheet());
+  document.getElementById('deletedDecksBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); openDeckVersions(null); });
   document.getElementById('shareAppRow')?.addEventListener('click', async ()=>{
     const text = shareAppText(appLang());
     // Text only: the links live IN the message. A separate url field made
@@ -31575,7 +31960,7 @@ ${FMT_ORDER.map(f=>`<button type="button" data-ndfmt="${f}">${FMT_LABELS[f]}${f 
     });
   } else if(m.type==='delete'){
     const d = getDeck(state.activeDeckId);
-    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>Delete "${escapeHtml(d.name)}"?</h3><p style="font-size:14px;color:var(--sub-text);margin:0 0 14px;">This can't be undone.</p><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm danger" id="delBtn">Delete</button></div></div></div>`;
+    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet"><h3>Delete "${escapeHtml(d.name)}"?</h3><p style="font-size:14px;color:var(--sub-text);margin:0 0 14px;">${appLang() === 'nl' ? 'Je kunt hem 60 dagen terugzetten: Extra’s → Back-up → Verwijderde decks.' : 'You can bring it back for 60 days: Extras → Backup → Deleted decks.'}</p><div class="modal-actions"><button class="cancel" id="cancelBtn">Cancel</button><button class="confirm danger" id="delBtn">Delete</button></div></div></div>`;
     document.getElementById('delBtn').addEventListener('click', async ()=>{
       await deleteDeckStorage(d.id);
       state.decksIndex = state.decksIndex.filter(x=>x.id!==d.id);
@@ -32136,7 +32521,9 @@ try{
 setTimeout(()=>{ try{ ensureCreatureTypes(); }catch(e){} }, 5000);
 setTimeout(()=>{ try{ pwTellNative(); }catch(e){} }, 1500);
 setTimeout(()=>{ try{ apkUpdateCheck(); }catch(e){} }, 4000);
+try{ localStorage.removeItem(LS_PREFIX + 'cutsAI'); }catch(e){}   // 1.27: Cuts is gone
 setTimeout(()=>{ try{ if(syncState()) syncRun('start'); }catch(e){} }, 3000);   // 1.26
+setTimeout(()=>{ try{ dvPrune(); }catch(e){} }, 20000);   // 1.27
 setTimeout(async ()=>{ try{ await dailyPricesReady(); }catch(e){} try{ pwStartupCheck(); }catch(e){} }, 9000);
 /* 1.25 Keyboard: the arrow keys step through cards on an open card page,
    exactly like its chevrons. Typing in a field is left alone. */
@@ -32216,6 +32603,13 @@ function csPopApply(el){
 function csPopPlace(el){
   const P = el && el._csPopXY;
   if(!P || !el.isConnected || !el.classList.contains('cs-pop')) return;
+  if(!el.querySelector(':scope > .cs-pop-x')){
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'cs-pop-x desk-x'; x.textContent = '✕';
+    x.title = appLang() === 'nl' ? 'Sluiten' : 'Close';
+    x.addEventListener('click', (e)=>{ e.stopPropagation(); csPopCloseNow(); });
+    el.appendChild(x);
+  }
   const vw = window.innerWidth, vh = window.innerHeight, pad = 8, gap = 14;
   const w = Math.min(460, vw - 2 * pad);
   let x = P.x + gap;
@@ -32256,6 +32650,43 @@ document.addEventListener('pointerdown', (e)=>{
   csPopCloseNow();
 }, true);
 window.addEventListener('resize', ()=>{ const p = csPopTop(); if(p) csPopPlace(p); });
+/* Any page the menu opens (Similar cards, Recommendations, Change printing)
+   replaces it: the menu closes instead of hanging over the new page. A
+   desk dialog without a close button gets a cross. */
+try{
+  new MutationObserver((muts)=>{
+    muts.forEach(m=>m.addedNodes.forEach(n=>{
+      if(!n || n.nodeType !== 1) return;
+      if(n.classList.contains('overlay') && !n.classList.contains('cs-pop') && !n.classList.contains('swipe-leaving')){
+        document.querySelectorAll('body > .overlay.cs-pop').forEach(pop=>{
+          if(pop === n) return;
+          const st = state.overlayStack;
+          for(let i = st.length - 1; i >= 0; i--){ if(st[i].id === 'cardInfo' || st[i].id === 'cardSheet'){ if(i < st.length - 1 || !document.getElementById('cardSheetOverlay') || document.getElementById('cardSheetOverlay') === pop){ st.splice(i, 1); } break; } }
+          pop.remove();
+        });
+      }
+      if(isDesk()) deskAddCross(n);
+    }));
+  }).observe(document.body, { childList: true });
+}catch(e){}
+function deskAddCross(n){
+  try{
+    if(!n.matches || !n.matches('.deckpick-scrim, .modal-backdrop, #appointOverlay, #cutWhyOverlay')) return;
+    const sheet = n.querySelector('.deckpick, .modal-sheet, .appoint-sheet');
+    if(!sheet || sheet.querySelector('.desk-x, #appointClose, #cwClose, .appoint-head .icon-btn')) return;
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'desk-x'; x.textContent = '✕';
+    x.title = appLang() === 'nl' ? 'Sluiten' : 'Close';
+    x.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      // the dialog's own outside-tap close, as if its backdrop was clicked
+      try{ n.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); }catch(err){}
+      setTimeout(()=>{ if(n.isConnected){ const c = n.querySelector('#iacCancel, #iapCancel, #cancelBtn, .dp-cancel'); if(c) c.click(); } }, 60);
+    });
+    sheet.style.position = sheet.style.position || 'relative';
+    sheet.appendChild(x);
+  }catch(e){}
+}
 
 /* Shift-click: start a selection, or select everything from the last
    picked card to this one -- the same selection a long-press makes. */
@@ -32340,74 +32771,66 @@ document.addEventListener('paste', (e)=>{
    the pointer on any card picture shows a big copy beside the pointer, on
    whichever side has room: right, left, then below or above. It never
    catches clicks. The big card page's own picture is skipped. */
-(function hoverPreview(){
-  let mq = null; try{ mq = window.matchMedia('(hover: hover) and (pointer: fine)'); }catch(e){}
-  if(!mq) return;
-  let box = null, cur = null, timer = 0, lastX = 0, lastY = 0;
-  const isCardImg = (el)=>{
-    if(!el || el.tagName !== 'IMG' || el.id === 'hoverPrev') return false;
-    if(el.closest('.cd-hero, #hoverPrevBox, .life-grid-v2')) return false;
-    const r = el.getBoundingClientRect();
-    if(r.width < 30 || r.width > 300) return false;
-    const ratio = r.height / r.width;
-    return ratio > 1.3 && ratio < 1.45;
+/* 1.28 PC: a click on a card shows it BIG beside the mouse; the right
+   mouse button opens its menu. (The hover preview of 1.24 is gone.) */
+const cardZoom = (function(){
+  let box = null, open = false;
+  const hide = ()=>{ if(box) box.style.display = 'none'; open = false; };
+  const ensure = ()=>{
+    if(box) return box;
+    box = document.createElement('div'); box.id = 'cardZoomBox';
+    box.innerHTML = '<img id="cardZoomImg" alt=""><button type="button" class="cz-x" aria-label="Close" title="Close">✕</button>';
+    document.body.appendChild(box);
+    box.querySelector('.cz-x').addEventListener('click', (e)=>{ e.stopPropagation(); hide(); });
+    box.addEventListener('click', (e)=>{ e.stopPropagation(); hide(); });
+    return box;
   };
-  const place = ()=>{
-    if(!box) return;
-    const vw = window.innerWidth, vh = window.innerHeight, gap = 18, pad = 8;
-    let h = Math.min(500, vh - 2*pad), w = Math.round(h * 488 / 680);
-    if(w > vw - 2*pad){ w = vw - 2*pad; h = Math.round(w * 680 / 488); }
-    box.style.width = w + 'px'; box.style.height = h + 'px';
-    let x, y;
-    const clampY = (v)=>Math.max(pad, Math.min(vh - h - pad, v));
-    const clampX = (v)=>Math.max(pad, Math.min(vw - w - pad, v));
-    if(lastX + gap + w + pad <= vw){ x = lastX + gap; y = clampY(lastY - h/2); }
-    else if(lastX - gap - w >= pad){ x = lastX - gap - w; y = clampY(lastY - h/2); }
-    else if(lastY + gap + h + pad <= vh){ y = lastY + gap; x = clampX(lastX - w/2); }
-    else if(lastY - gap - h >= pad){ y = lastY - gap - h; x = clampX(lastX - w/2); }
-    else { x = clampX(lastX + gap); y = clampY(lastY - h/2); }
-    box.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+  const show = (src, x, y)=>{
+    if(!src) return;
+    ensure();
+    const vw = window.innerWidth, vh = window.innerHeight, pad = 12, gap = 22;
+    let h = Math.min(760, vh - 2 * pad), w = Math.round(h * 488 / 680);
+    if(w > vw - 2 * pad){ w = vw - 2 * pad; h = Math.round(w * 680 / 488); }
+    let left = x + gap;
+    if(left + w > vw - pad) left = x - gap - w;
+    if(left < pad) left = Math.max(pad, Math.round((vw - w) / 2));
+    const top = Math.max(pad, Math.min(vh - h - pad, Math.round(y - h / 2)));
+    const im = box.querySelector('img');
+    if(im.getAttribute('src') !== src) im.setAttribute('src', src);
+    box.style.cssText = `display:block;left:${left}px;top:${top}px;width:${w}px;height:${h}px;`;
+    open = true;
   };
-  const hide = ()=>{ clearTimeout(timer); cur = null; if(box) box.style.display = 'none'; };
-  const show = (img)=>{
-    if(!box){
-      box = document.createElement('div'); box.id = 'hoverPrevBox';
-      box.innerHTML = '<img id="hoverPrev" alt="">';
-      document.body.appendChild(box);
-    }
-    let src = img.tagName === 'IMG' ? (img.currentSrc || img.src || '') : (img.getAttribute('data-himg') || '');
-    if(src.indexOf('cards.scryfall.io/small/') >= 0) src = src.replace('/small/', '/normal/');
-    const pi = box.firstChild;
-    if(pi.getAttribute('src') !== src) pi.setAttribute('src', src);
-    box.style.display = 'block';
-    place();
-  };
-  const start = (t, e)=>{
-    cur = t; lastX = e.clientX; lastY = e.clientY;
-    clearTimeout(timer);
-    if(box && box.style.display === 'block') show(t);
-    else timer = setTimeout(()=>{ if(cur === t && t.isConnected) show(t); }, 140);
-  };
-  document.addEventListener('mouseover', (e)=>{
-    if(!mq.matches) return;
-    let t = e.target;
-    // 1.26: a text row of the decklist shows its card too
-    if(t && t.closest && !isCardImg(t)){ const r = t.closest('[data-himg]'); if(r && !r.closest('#hoverPrevBox')) t = r; }
-    if(!isCardImg(t) && !(t && t.hasAttribute && t.hasAttribute('data-himg'))){ if(cur) hide(); return; }
-    if(t === cur) return;
-    start(t, e);
-  }, true);
-  document.addEventListener('mousemove', (e)=>{
-    // After a scroll or click hid it, moving on the same card brings it back.
-    if(!cur){ if(mq.matches && e.target && e.target.tagName === 'IMG' && isCardImg(e.target)) start(e.target, e); return; }
-    lastX = e.clientX; lastY = e.clientY;
-    if(!cur.isConnected){ hide(); return; }
-    place();
-  }, true);
-  document.addEventListener('mouseout', (e)=>{ if(cur && e.target === cur && !(e.relatedTarget && (e.relatedTarget === cur || (cur.contains && cur.contains(e.relatedTarget))))) hide(); }, true);
-  ['mousedown','wheel','keydown','scroll','blur'].forEach(ev=>window.addEventListener(ev, hide, true));
-  document.addEventListener('visibilitychange', hide);
+  document.addEventListener('mousedown', (e)=>{ if(open && !(box && box.contains(e.target))) hide(); }, true);
+  window.addEventListener('wheel', ()=>{ if(open) hide(); }, { passive: true, capture: true });
+  window.addEventListener('resize', ()=>{ if(open) hide(); });
+  document.addEventListener('keydown', (e)=>{ if(open && e.key === 'Escape') hide(); }, true);
+  return { show, hide, isOpen: ()=>open };
 })();
+// A plain left click on a card (desk, mouse): note where, and let the
+// click run -- the card page it would open shows the big card instead.
+document.addEventListener('click', (e)=>{
+  if(!isDesk() || !pcFinePointer() || !e.isTrusted || e.button !== 0) return;
+  if(e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+  const tg = ctxCardTarget(e.target);
+  if(!tg) return;
+  if(e.target.closest('button:not(.vg-hit), .sel-check, .pair-pop-wrap, .dfc-flip, a')) return;
+  const scope = tg.closest('.overlay') || document.querySelector('.app > main') || document;
+  if(scope.querySelector('.sr-tile.selected, .sc-tile.selected, .vg-card.dl-msel, .col-tile.csel')) return;
+  state._zoomAt = { x: e.clientX, y: e.clientY, t: Date.now(), src: tg.tagName === 'IMG' ? (tg.currentSrc || tg.src) : tg.getAttribute('data-himg') };
+}, true);
+function zoomTake(card){
+  const z = state._zoomAt;
+  if(!z || Date.now() - z.t > 800) return false;
+  state._zoomAt = null;
+  let src = '';
+  try{
+    const iu = card && (card.image_uris || (card.card_faces && card.card_faces[0] && card.card_faces[0].image_uris));
+    src = (printPrefFor(card) && cardImageLarge(card)) || (iu && (iu.large || iu.normal)) || cardImageLarge(card) || '';
+  }catch(e){}
+  if(!src) src = String(z.src || '').replace('/small/', '/large/').replace('/normal/', '/large/');
+  cardZoom.show(src, z.x, z.y);
+  return true;
+}
 /* Any text input the user focuses gets the keyboard's 🔍 Enter key unless it
    opted for another hint — search is what Enter does in this app's fields. */
 document.addEventListener('focusin', (e)=>{
