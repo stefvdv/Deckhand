@@ -356,14 +356,15 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 /* 1.37 (phone): the gold button floats at the foot again (Stef: floating
    over text is fine), and the "Show everything" row stays put beside it --
    the filters scroll behind both. */
-html:not(.desk) .adv-panel > .adv-showall{position:sticky;bottom:-12px;z-index:7;background:inherit;margin:0 -16px !important;padding:4px 16px 12px !important;}
-html:not(.desk) .adv-panel > .adv-showall{grid-template-columns:96px minmax(0,1fr) auto;}
+/* 1.40: the packages drop-up rides beside the gold button */
+.adv-go-row > .adv-go-pkg{pointer-events:auto;flex:1 1 auto;min-width:0;margin-left:14px;align-self:center;}
+.adv-go-row > .adv-go-pkg .nsel-btn{width:100%;}
 /* 1.35: "Show everything" starts where the fields start, so the gold
    button rises into the free space beside it (phone, bottom-up) */
 .adv-panel > .adv-showall{display:grid;grid-template-columns:96px minmax(0,1fr) auto;column-gap:10px;}
 .adv-panel > .adv-showall > div:first-child{grid-column:2;}
 .adv-panel > .adv-showall > .toggle-switch{grid-column:3;}
-html:not(.desk) .adv-panel > .adv-go-row:has(+ .adv-showall){margin-top:-50px !important;}
+
 .adv-row > label .info-i{margin-left:5px;width:16px;height:16px;font-size:11px;}
 .adv-panel .cselect-panel,
 #colAdvBox .cselect-panel{position:static;margin:0 0 4px;max-height:240px;display:flex;flex-direction:column-reverse;}
@@ -965,6 +966,15 @@ html .tag-drop .tag-drop-list > .tag-drop-h b{opacity:0.75;}
 .pt-gy-cards{display:flex;gap:5px;max-width:100%;overflow:hidden;}
 .pt-gy-cards .pt-card{width:44px;flex:0 0 44px;}
 .pt-gy-l{font-size:11px;color:var(--sub-text);}
+.pkg-row{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.pkg-row-t{display:flex;flex-direction:column;gap:2px;}
+.pkg-row-t span{font-size:12.5px;color:var(--sub-text);}
+.pkg-row-b{display:flex;gap:8px;}
+.pkg-row-b .ghost-btn{flex:1 1 0;margin:0;}
+.add-sheet .primary-btn{width:100%;margin:0;}
+.add-qty{display:flex;align-items:center;justify-content:center;gap:14px;padding:4px 0;}
+.add-qty .ghost-btn{width:48px;flex:none;margin:0;font-size:20px;padding:6px 0;}
+.add-qty b{font-family:'JetBrains Mono',monospace;font-size:22px;min-width:36px;text-align:center;color:var(--ink-text);}
 .pt-pile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:62vh;overflow-y:auto;padding:2px;}
 .pt-pile-grid .pt-card{width:100%;max-width:none;}
 .pt-nc{flex-wrap:wrap;}
@@ -1357,11 +1367,19 @@ html{--accent-ink:var(--head-ink);}   /* the page's own light accent, computed a
 .dl-desc-text{cursor:pointer;}
 .dl-bracket{font-size:12.5px;color:var(--brass);letter-spacing:0.04em;margin:0 0 6px;}
 .bkt-mini{color:var(--brass);font-weight:600;font-size:15px;}
-.cap-note.cap-tap, #csPrice, #csSaltRow{border:2.5px solid var(--brass);border-radius:999px;padding:2px 9px;cursor:pointer;}
-/* 1.39: the price pill reads as a BUTTON -- raised, filled, a chart mark */
-#csPrice{background:linear-gradient(180deg, color-mix(in srgb, var(--brass) 30%, var(--field)), var(--field));box-shadow:0 3px 0 rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.35);padding:4px 11px 4px 9px !important;font-weight:700;color:var(--ink-text) !important;display:inline-flex;align-items:center;gap:5px;}
-#csPrice::before{content:'';width:13px;height:13px;flex:0 0 auto;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12l4-4 3 3 5-6'/%3E%3Cpath d='M10 5h4v4'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12l4-4 3 3 5-6'/%3E%3Cpath d='M10 5h4v4'/%3E%3C/svg%3E") center/contain no-repeat;}
-#csPrice:active{transform:translateY(calc(-50% + 2px)) !important;box-shadow:0 1px 0 rgba(0,0,0,0.45);}
+/* 1.41: ONE button pill for the card's price, its salt score and the
+   totals in the page cap -- raised and filled, 24px high like the old salt
+   pill, so no title bar grows. Prices carry a small chart mark. */
+.cap-note.cap-tap, #csPrice, #csSaltRow{height:24px;box-sizing:border-box;line-height:1;padding:0 10px !important;display:inline-flex !important;align-items:center;gap:5px;
+  border:2px solid var(--brass);border-radius:999px;background:var(--panel);
+  box-shadow:0 2px 0 rgba(0,0,0,0.45), 0 3px 8px rgba(0,0,0,0.3);font-weight:700;color:var(--icon-pl, var(--main-lt)) !important;font-size:12px !important;cursor:pointer;}
+#csSaltRow[style*="display:none"], #csSaltRow[style*="display: none"]{display:none !important;}
+.cap-note.cap-tap, #csPrice{padding-left:8px !important;}
+.cap-note.cap-tap::before, #csPrice::before{content:'';width:12px;height:12px;flex:0 0 auto;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12l4-4 3 3 5-6'/%3E%3Cpath d='M10 5h4v4'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12l4-4 3 3 5-6'/%3E%3Cpath d='M10 5h4v4'/%3E%3C/svg%3E") center/contain no-repeat;}
+.cap-note.cap-tap:active, #csPrice:active, #csSaltRow:active{transform:translateY(calc(-50% + 2px)) !important;box-shadow:0 0 0 rgba(0,0,0,0.45);}
+html.desk .page-cap .cap-note.cap-tap{font-size:13px !important;height:26px;}
+.page-cap .cap-note.cap-tap, .page-cap .cap-note.cap-tap *{-webkit-text-fill-color:currentColor !important;background-clip:border-box !important;-webkit-background-clip:border-box !important;text-shadow:none !important;}
+.page-cap .cap-note.cap-tap{background:var(--panel) !important;color:var(--icon-pl, var(--main-lt)) !important;}
 /* Card sheet: the name bar stays on top of everything that slides, so a
    card gliding in can never show above the page name. */
 #cardSheetOverlay > .overlay-inner > .topbar{z-index:140;}
@@ -1953,7 +1971,7 @@ button.cl-head{background:none;border:none;padding:10px 2px;font-family:inherit;
    button at the foot, its body opens UPWARD -- settings, then the list. */
 .bs-row.cut-slot{display:block;}
 .bs-row.insp-land-row{padding-right:56px;}
-.bs-row.insp-land-row .ghost-btn{width:100%;margin:0;}
+.bs-row.insp-land-row .ghost-btn{flex:1 1 0;min-width:0;width:auto;margin:0;}
 html.desk .bs-row.insp-land-row{padding-right:0;}
 .cut-block{display:flex;flex-direction:column-reverse;gap:6px;width:100%;}
 .cut-body{display:flex;flex-direction:column-reverse;gap:6px;}
@@ -6860,29 +6878,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.39';
+const APP_VERSION = '1.41';
 const CHANGELOG_NOTES = {
   en: [
-    'Playtest: Smart opponents switch',
-    'Playtest: drag cards to any zone',
-    'Playtest: graveyard beside commander',
-    'Playtest: battlefield sorts itself',
-    'Playtest: new draws on the left',
-    'Swipe: shorter drag, quick flick',
-    'Trackpad swipe steps through cards',
-    'Price pill looks like a button',
-    'Land AI removed'
+    'Price and salt pills look like buttons',
+    'Deck and collection totals too',
+    'Title bars no longer grow'
   ],
   nl: [
-    'Speeltest: Smart-tegenstanders',
-    'Speeltest: sleep kaarten naar zones',
-    'Speeltest: graveyard naast commander',
-    'Speeltest: slagveld sorteert zichzelf',
-    'Speeltest: nieuwe kaart links in hand',
-    'Swipe: kortere veeg, snelle flick',
-    'Trackpad-swipe bladert door kaarten',
-    'Prijsknop ziet eruit als knop',
-    'Land-AI verwijderd'
+    'Prijs- en saltpil lijken knoppen',
+    'Ook bij deck- en collectietotaal',
+    'Titelbalken worden niet hoger'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6892,6 +6898,12 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-31';
 const CHANGELOG_HISTORY = [
+  { v: '1.40', d: '2026-10-31',
+    en: ['Card packages: make your own', 'Packages in Inspiration and Search', 'Add: pick amount, deck or collection', 'Select: collection & maybe buttons', 'Jump opens a folded Maybeboard', 'Smart: you choose to block or not', 'Show everything on top in filters', 'Extras tiles rearranged'],
+    nl: ['Kaartpakketten: maak je eigen', 'Pakketten bij Inspiratie en Zoeken', 'Add: aantal, deck of collectie', 'Selectie: collectie- en maybeknop', 'Springen opent een dichte Maybeboard', 'Smart: jij kiest blokken of niet', 'Show everything bovenaan in filters', 'Tegels bij Extra\u2019s herschikt'] },
+  { v: '1.39', d: '2026-10-31',
+    en: ['Playtest: Smart opponents switch', 'Playtest: drag cards to any zone', 'Playtest: graveyard beside commander', 'Playtest: battlefield sorts itself', 'Playtest: new draws on the left', 'Swipe: shorter drag, quick flick', 'Trackpad swipe steps through cards', 'Price pill looks like a button', 'Land AI removed'],
+    nl: ['Speeltest: Smart-tegenstanders', 'Speeltest: sleep kaarten naar zones', 'Speeltest: graveyard naast commander', 'Speeltest: slagveld sorteert zichzelf', 'Speeltest: nieuwe kaart links in hand', 'Swipe: kortere veeg, snelle flick', 'Trackpad-swipe bladert door kaarten', 'Prijsknop ziet eruit als knop', 'Land-AI verwijderd'] },
   { v: '1.38', d: '2026-10-31',
     en: ['Card view: same buttons everywhere', 'Tags on every card view', 'No more rows with one button'],
     nl: ['Kaartweergave: overal dezelfde knoppen', 'Tags bij elke kaartweergave', 'Geen regels meer met één knop'] },
@@ -7086,11 +7098,11 @@ function tourSteps(){
       t: NL ? '📜 De decklijst' : '📜 The decklist',
       b: soon + (NL
         ? `<p style="margin:6px 0;">Houd een kaart <strong>lang ingedrukt</strong> om te selecteren (met ✓); daarna selecteert elke tik er één bij. De <strong>＋</strong> zet de selectie in je collectie of verplaatst hem tussen main deck en maybeboard; terug heft de selectie op.</p>
-           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>. Is het deck nog leeg, dan tik je op de grote <strong>＋</strong> en zoek je kaarten die direct in het deck gaan. In <strong>Bulk Edit</strong> stelt <strong>⛰ Suggest lands</strong> lands voor; ook daar geeft de AI op verzoek je aantal lands en de beste keuzes.</p>
+           <p style="margin:6px 0;">In de werkbalk: <strong>Inspiration</strong> (✦ — alle EDHREC-aanbevelingen voor je commander, zonder wat je al hebt, met Theme of Kindred, plus <strong>Landbase</strong> en je eigen <strong>Pakketten</strong>, die je maakt bij Extra's), kaarten toevoegen, ${inlIco('search', 14)}<strong>zoeken in je deck</strong> en ☰ om naar een kaartsoort te <strong>springen</strong>. Onderaan het <strong>⋯</strong>-menu kies je tegels, <strong>stapel</strong> of <strong>tekstlijst</strong>. Is het deck nog leeg, dan tik je op de grote <strong>＋</strong> en zoek je kaarten die direct in het deck gaan. In <strong>Bulk Edit</strong> stelt <strong>⛰ Suggest lands</strong> lands voor; ook daar geeft de AI op verzoek je aantal lands en de beste keuzes.</p>
            <p style="margin:6px 0;">Tik op de <strong>prijs</strong> bovenin: je ziet de <strong>gemiddelde prijs per kaart</strong> en alle kaarten op prijs, met een schuif om te filteren. Stel er een <strong>kaartbudget</strong> en <strong>deckbudget</strong> in: voeg je een te dure kaart toe, dan krijg je een melding. De munten openen de <strong>budgetalternatieven</strong>.</p>
            <p style="margin:6px 0;">De tabbladen onderin: <strong>Stats</strong> (mana curve, kleurverdeling, cast-ability met de lastigste kaarten op curve en een tip, combo's) en <strong>Deck Log</strong> (primer, potjes noteren, handtester, en de <strong>Speeltest</strong>: speel een heel potje alleen, met mulligan, lands, tokens en scry; sleep kaarten naar een zone, en met <strong>Smart</strong> vallen tegenstanders aan, ruimen op en counteren ze).</p>`
         : `<p style="margin:6px 0;"><strong>Long-press</strong> a card to select it (it gets a ✓); after that every tap adds one. The <strong>＋</strong> puts the picks in your collection or moves them between main deck and maybeboard; back clears the selection.</p>
-           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>. While the deck is still empty, tap the big <strong>＋</strong> to search cards that go straight into it. In <strong>Bulk Edit</strong>, <strong>⛰ Suggest lands</strong> proposes lands; there too the AI can give your land count and the best picks.</p>
+           <p style="margin:6px 0;">The toolbar: <strong>Inspiration</strong> (✦ — every EDHREC recommendation for your commander minus what you have, with Theme or Kindred, plus <strong>Land base</strong> and your own <strong>Packages</strong>, made in Extras), adding cards, ${inlIco('search', 14)}<strong>find in deck</strong> and ☰ to <strong>jump</strong> to a card type. At the foot of the <strong>⋯</strong> menu pick tiles, <strong>stack</strong> or <strong>text list</strong>. While the deck is still empty, tap the big <strong>＋</strong> to search cards that go straight into it. In <strong>Bulk Edit</strong>, <strong>⛰ Suggest lands</strong> proposes lands; there too the AI can give your land count and the best picks.</p>
            <p style="margin:6px 0;">Tap the <strong>price</strong> at the top: you get the <strong>average price per card</strong> and every card by price, with a slider to filter. Set a <strong>card budget</strong> and a <strong>deck budget</strong> there: add a card that is too pricey and you get a warning. The coins open the <strong>Budget alternatives</strong>.</p>
            <p style="margin:6px 0;">The tabs at the foot: <strong>Stats</strong> (mana curve, colors, cast-ability with the hardest cards on curve and a tip, combos), <strong>Deck Log</strong> (primer, game log, hand tester, and the <strong>Playtest</strong>: play a whole game on your own, with mulligans, lands, tokens and scry; drag cards to a zone, and with <strong>Smart</strong> opponents attack, remove and counter).</p>`) },
     { k:'card', go:()=>{ const d = d0(); const c = d && (d.admiral || (d.cards || [])[0]); if(c){ try{ openCardInfo(c); }catch(e){} } },
@@ -12642,7 +12654,8 @@ function deckMeterHtml(d){
       // ＋ opens what to do with the picks: into the collection, or across
       // the main deck / maybeboard line (both ways when both are picked).
       mid = `<span style="flex:1;font-size:14px;">${state._dlSel.size} selected</span>
-        <button class="dk-tool" id="dlSelMenu" title="${trS('Add to collection…')}">${ICONS.plus}</button>
+        <button class="dk-tool" id="dlSelColl" title="${trS('Add to collection…')}">${ICONS.binder}</button>
+        <button class="dk-tool" id="dlSelMaybe" title="${Array.from(state._dlSel).some(k=>k.startsWith('main:')) ? trS('Move to ' + sideName(d)) : trS('Move to main deck')}">${ICONS.maybe}</button>
         <button class="dk-tool" id="dlSelDel" title="Delete" style="color:var(--danger);">${ICONS.trash}</button>
         <button class="dk-tool" id="dlSelX" title="Cancel">✕</button>`;
     } else     mid = state.dlSearchOpen
@@ -16598,7 +16611,14 @@ function wireMeterRow(d){
       const heads = Array.from(document.querySelectorAll('.cat-group > .cat-head'));
       const items = heads.map(h=>{
         const t = h.querySelector('.t');
-        return { label: t ? t.textContent.trim() : '—', fn: ()=>h.scrollIntoView({ behavior:'smooth', block:'end' }) };
+        // 1.40: a folded section (the Maybeboard starts folded) opens first,
+        // then its name lands at the foot with its cards above it
+        return { label: t ? t.textContent.trim() : '—', fn: ()=>{
+          const key = h.dataset.cat;
+          const go = ()=>{ let nh = null; try{ nh = document.querySelector('.cat-head[data-cat="' + CSS.escape(key) + '"]'); }catch(e){} (nh || h).scrollIntoView({ behavior:'smooth', block:'end' }); };
+          if(key && state.collapsed[key]){ state.collapsed[key] = false; refreshDecklistBox(d); requestAnimationFrame(()=>requestAnimationFrame(go)); }
+          else go();
+        } };
       }).filter(x=>x.label && x.label !== '—');
       // The menu mirrors the page: the deck reads bottom-up, so the list
       // flips — Creatures at the menu's foot, Maybeboard at its head.
@@ -16678,16 +16698,13 @@ function wireMeterRow(d){
   document.getElementById('dockNext')?.addEventListener('click', ()=>{ state.dockSet = ((state.dockSet||0) + 1) % 2; updateDeckMeter(d); });
   document.getElementById('dlSelX')?.addEventListener('click', ()=>dlSelClear());
   const selN = ()=>state._dlSel ? state._dlSel.size : 0;
-  document.getElementById('dlSelMenu')?.addEventListener('click', (e)=>{
+  // 1.40: no hidden menu -- the binder adds to the collection, the
+  // maybeboard button moves the picks (deck cards to the maybeboard; a
+  // pick of maybeboard cards only goes to the deck)
+  document.getElementById('dlSelColl')?.addEventListener('click', ()=>openAddManyToCollection(dlSelCards(d), ()=>dlSelClear()));
+  document.getElementById('dlSelMaybe')?.addEventListener('click', ()=>{
     const keys = Array.from(state._dlSel || []);
-    const hasMain = keys.some(k=>k.startsWith('main:'));
-    const hasMaybe = keys.some(k=>k.startsWith('maybe:'));
-    // Drop-up, bottom-up: the first choice sits nearest the thumb (last here).
-    const items = [];
-    if(hasMaybe) items.push({ label:'\u2191 ' + trS('Move to main deck'), fn:()=>dlSelApply(d, 'main') });
-    if(hasMain) items.push({ label:'\u2193 ' + trS('Move to ' + sideName(d)), fn:()=>dlSelApply(d, 'maybe') });
-    items.push({ label:mIco('binder') + trS('Add to collection…'), fn:()=>openAddManyToCollection(dlSelCards(d), ()=>dlSelClear()) });
-    openTileMenu(e.currentTarget, items);
+    dlSelApply(d, keys.some(k=>k.startsWith('main:')) ? 'maybe' : 'main');
   });
   document.getElementById('dlSelDel')?.addEventListener('click', ()=>openInAppConfirm(`Delete ${selN()} card${selN()===1?'':'s'} from the deck?`, (ok)=>{ if(ok) dlSelApply(d, 'del'); }));
   // Bracket chip: refine with 2-card combos when the fast lane answers
@@ -16816,7 +16833,7 @@ function renderCardSheet(d, card, loc, idx){
     // Add one | Recommendations · Remove one | Similar · To maybeboard |
     // Share · Change printing | Tags · ∞. A card that can lead takes
     // Share's place with Set as leader; Share joins the icon trio.
-    actions.push(`<button class="ghost-btn" id="csAddOne" style="width:100%;"><span class="ib">${ICONS.addOne}</span>${trS('Add one')}</button>`, _reco);
+    actions.push(`<button class="ghost-btn" id="csAddOne" style="width:100%;"><span class="ib">${ICONS.addOne}</span>${trS('Add')}</button>`, _reco);
     actions.push(`<button class="ghost-btn" id="csRemove" style="width:100%;color:var(--danger);border-color:var(--danger);"><span class="ib">${ICONS.removeOne}</span>${trS('Remove one')}</button>`, _sim);
     const _move = loc==='main'
       ? `<button class="ghost-btn" id="csToMaybe" style="width:100%;"><span class="ib">${ICONS.maybe}</span>${trS('To maybeboard')}</button>`
@@ -16907,7 +16924,52 @@ function renderCardSheet(d, card, loc, idx){
     closeTopOverlay(); refreshDecklistBox(d);
   });
   document.getElementById('csCollSheet')?.addEventListener('click', ()=>openAddToCollection(card));
+  // 1.40: Add asks where -- this deck (as many as you set), the collection,
+  // or another deck
   document.getElementById('csAddOne')?.addEventListener('click', ()=>{
+    const nl = appLang() === 'nl';
+    document.getElementById('csAddSheet')?.remove();
+    const m = document.createElement('div');
+    m.className = 'deckpick-scrim'; m.id = 'csAddSheet'; m.style.zIndex = 1300; m.style.alignItems = 'flex-end';
+    let q = 1, chosen = null;
+    m.innerHTML = `<div class="deckpick br-sheet pt-menu add-sheet">
+      <button type="button" class="primary-btn" data-addk="deck">${nl ? 'Toevoegen aan' : 'Add to'} ${escapeHtml(d.name)}</button>
+      <button type="button" class="ghost-btn" data-addk="coll"><span class="ib">${ICONS.binder}</span>${nl ? 'Naar je collectie' : 'To your collection'}</button>
+      <button type="button" class="ghost-btn" data-addk="other"><span class="ib">${ICONS.addOne}</span>${nl ? 'Naar een ander deck…' : 'To another deck…'}</button>
+      <div class="add-qty"><button type="button" class="ghost-btn" data-q="-1">\u2212</button><b id="csAddQ">1</b><button type="button" class="ghost-btn" data-q="1">\uFF0B</button></div>
+      <div class="br-title"><b>${escapeHtml(card.name)}</b><span>${nl ? 'Hoeveel, en waarheen?' : 'How many, and where to?'}</span></div></div>`;
+    m.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click', ()=>{ q = Math.max(1, Math.min(99, q + (+b.dataset.q))); m.querySelector('#csAddQ').textContent = q; }));
+    m.querySelectorAll('[data-addk]').forEach(b=>b.addEventListener('click', ()=>{ chosen = b.dataset.addk; brSheetClose('csAddSheet'); }));
+    m.addEventListener('click', (e)=>{ if(e.target === m) brSheetClose('csAddSheet'); });
+    brSheetOpen(m, 'csAddSheet', ()=>{
+      const k = chosen; chosen = null; if(!k) return;
+      setTimeout(()=>{
+        if(k === 'coll'){
+          openAddToCollection(card);
+          setTimeout(()=>{ const qi = document.getElementById('acQty'); if(qi) qi.value = q; }, 60);
+        } else if(k === 'other') openDeckPickPopup(card, 'main', ()=>{});
+        else csAddCopies(q);
+      }, 0);
+    });
+  });
+  const csAddCopies = (q)=>{
+    if(loc==='maybe' && !deckIsConstructed(d)){ toast('The Maybeboard keeps one of each — move it into the deck first.'); return; }
+    let added = 0;
+    for(let i = 0; i < q; i++){
+      if(deckIsConstructed(d)){
+        if(atCopyLimit(d, card)){ if(!added) toast(copyLimit(card, d) === 1 ? 'Restricted in Vintage — one copy only.' : 'Four copies is the most a deck may run.'); break; }
+        if(loc==='maybe'){ ensureMaybeboard(d).push(JSON.parse(JSON.stringify(card))); logDeckChange(d, {type:'addMaybe', name:card.name, card}); added++; continue; }
+      } else if(!allowsDuplicates(card)){ toast('Singleton rules: only basic lands (and cards that say otherwise) may repeat.'); break; }
+      d.cards.push(JSON.parse(JSON.stringify(card)));
+      logDeckChange(d, {type:'add', name:card.name, card});
+      added++;
+    }
+    if(!added) return;
+    scheduleSave(d);
+    toast(added === 1 ? `Another ${card.name} added.` : `${added} × ${card.name} added.`);
+    closeTopOverlay(); refreshDecklistBox(d);
+  };
+  document.getElementById('csAddOneLegacy')?.addEventListener('click', ()=>{
     if(loc==='maybe' && !deckIsConstructed(d)){ toast('The Maybeboard keeps one of each — move it into the deck first.'); return; }
     if(deckIsConstructed(d)){
       if(atCopyLimit(d, card)){ toast(copyLimit(card, d) === 1 ? 'Restricted in Vintage — one copy only.' : 'Four copies is the most a deck may run.'); return; }
@@ -17889,8 +17951,8 @@ function advInfo(key){
   };
   return infoBtnHtml(T[key] || '');
 }
-function advGoHtml(id){
-  return `<div class="adv-go-row"><button type="button" class="adv-go" id="${id}" title="${trS('Search')}" aria-label="${trS('Search')}">${ICONS.search}</button></div>`;
+function advGoHtml(id, extra){
+  return `<div class="adv-go-row"><button type="button" class="adv-go" id="${id}" title="${trS('Search')}" aria-label="${trS('Search')}">${ICONS.search}</button>${extra || ''}</div>`;
 }
 function opSelectHtml(id, val){
   const ops = [{v:'',l:'Any'},{v:'=',l:'Equals'},{v:'<',l:'<'},{v:'<=',l:'≤'},{v:'>',l:'>'},{v:'>=',l:'≥'}];
@@ -17924,8 +17986,7 @@ function advancedPanelHtml(){
   }catch(e){}
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
   return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;">
-    ${advGoHtml('advGo')}
-    ${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) || (s.searchFormat && s.searchFormat !== 'any') ? `<div class="toggle-row adv-showall" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Show everything')}${advInfo((state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) ? 'allDeck' : 'allFmt')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
+    ${advGoHtml('advGo', (()=>{ const pk = pkgAll().filter(p=>p.cards.length); return pk.length ? `<div class="adv-go-pkg"><select id="advPkgSel"><option value="">${appLang() === 'nl' ? 'Pakketten' : 'Packages'}</option>${pk.map(p=>`<option value="${p.id}">${pkgLabel(p)}</option>`).join('')}</select></div>` : ''; })())}
     <div class="adv-row"><label>Format</label>
       ${cselectHtml('fmtSel', [{v:'',l:'Any format'}].concat(SEARCH_FORMATS.map(([v,l])=>({v, l}))), s.searchFormat, 'Any format', {cls:'cs-up'})}
     </div>
@@ -17991,6 +18052,7 @@ function advancedPanelHtml(){
       {v:'asc', l:'Ascending'},
       {v:'desc', l:'Descending'}
     ], s.searchSortDir, 'Ascending')}</div>
+    ${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) || (s.searchFormat && s.searchFormat !== 'any') ? `<div class="adv-row adv-showall-top"><label>${trS('Show everything')}${advInfo((state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) ? 'allDeck' : 'allFmt')}</label><div style="display:flex;justify-content:flex-end;"><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div></div>` : ''}
   </div>`;
 }
 function wireSearchPage(){
@@ -18109,6 +18171,18 @@ function wireAdvancedPanel(){
   });
   document.querySelectorAll('.adv-panel input[type="text"], .adv-panel input:not([type])').forEach(inp=>{
     inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); state.advOpen = false; render(); runAdvancedSearch(); } });
+  });
+  // 1.40: a package as the search: its cards are the results
+  document.getElementById('advPkgSel')?.addEventListener('change', async (e)=>{
+    const p = pkgAll().find(x=>x.id === e.target.value);
+    if(!p) return;
+    state.advOpen = false; state.searchRan = true; state.searching = true; render();
+    let got = [];
+    try{ got = await resolveEdhrecNames(p.cards, ()=>true); }catch(err){}
+    state.searching = false;
+    state.searchResults = searchSortList(got.filter(isRealCard));
+    renderSearchResultsBox();
+    toast(pkgLabel(p).replace(/&[^;]+;/g, ' ') + ' \u00b7 ' + got.length);
   });
   document.getElementById('advOffColor')?.addEventListener('change', (e)=>{
     state.searchShowOffColor = e.target.checked;
@@ -21900,6 +21974,124 @@ function landKinScore(src, cand){
   p += Math.min(6, same * 2);
   return p - Math.min(12, miss * 4);
 }
+/* ===== 1.40 CARD PACKAGES =====
+   Ready groups of cards for one job (ramp, draw, removal...): built in
+   Extras -> Packages, offered on a deck's Inspiration page (grouped by
+   package, recommendation style) and in Search (the drop-up beside the
+   gold button). Stored as admiral_app:packages, synced like tags. */
+const PKG_KEY = 'packages';
+const PKG_SEED = [
+  { name: 'Ramp staples', fn: 'Ramp', cards: ['Sol Ring', 'Arcane Signet', 'Fellwar Stone', 'Mind Stone', 'Thought Vessel', "Commander's Sphere", "Wayfarer's Bauble", 'Cultivate', "Kodama's Reach", 'Rampant Growth', "Nature's Lore", 'Three Visits', 'Farseek', 'Skyshroud Claim'] },
+  { name: 'Card draw', fn: 'Draw', cards: ['Rhystic Study', 'Mystic Remora', 'Phyrexian Arena', 'Skullclamp', 'Guardian Project', 'Beast Whisperer', 'Harmonize', 'Sign in Blood', "Night's Whisper", 'Read the Bones', 'Fact or Fiction', 'Brainstorm', 'Ponder'] },
+  { name: 'Spot removal', fn: 'Removal', cards: ['Swords to Plowshares', 'Path to Exile', 'Generous Gift', 'Beast Within', 'Chaos Warp', 'Infernal Grasp', 'Go for the Throat', 'Pongify', 'Rapid Hybridization', "Nature's Claim", "Assassin's Trophy", 'Anguished Unmaking', 'Despark'] },
+  { name: 'Board wipes', fn: 'Wipe', cards: ['Wrath of God', 'Damnation', 'Blasphemous Act', 'Toxic Deluge', 'Farewell', 'Austere Command', 'Cyclonic Rift', 'Evacuation', 'Vanquish the Horde'] },
+  { name: 'Protection', fn: 'Protection', cards: ['Heroic Intervention', "Teferi's Protection", 'Lightning Greaves', 'Swiftfoot Boots', 'Flawless Maneuver', 'Deflecting Swat', 'Boros Charm'] }
+];
+function pkgAll(){
+  let a = null;
+  try{ a = JSON.parse(localStorage.getItem(LS_PREFIX + PKG_KEY) || 'null'); }catch(e){}
+  if(!Array.isArray(a)){
+    a = PKG_SEED.map((p, i)=>Object.assign({ id: 'pk' + (i + 1) }, p, { cards: p.cards.slice() }));
+    pkgSave(a);
+  }
+  return a.filter(p=>p && p.id && Array.isArray(p.cards));
+}
+function pkgSave(a){ try{ localStorage.setItem(LS_PREFIX + PKG_KEY, JSON.stringify(a)); }catch(e){} }
+function pkgLabel(p){ return escapeHtml(p.name) + (p.fn ? ' \u00b7 ' + escapeHtml(p.fn) : ''); }
+/* Extras -> Packages: the list, and a simple editor per package. */
+function openPackagesEditor(){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  pushOverlay('pkgEdit', ()=>{ document.getElementById('pkgEditOverlay')?.remove(); });
+  let el = document.getElementById('pkgEditOverlay');
+  if(!el){ el = document.createElement('div'); el.className = 'overlay'; el.id = 'pkgEditOverlay'; }
+  document.body.appendChild(el);
+  const list = ()=>{
+    const a = pkgAll();
+    el.innerHTML = `<div class="overlay-inner">${overlayCapHtml(T('Kaartpakketten', 'Card packages'))}
+      <main class="pkg-main"><div class="pkg-list">
+        <p class="hint" style="text-align:center;margin:0 0 10px;">${T('Groepen kaarten voor één taak. Ze verschijnen bij Inspiratie van een deck en bij Zoeken.', 'Groups of cards for one job. They show up on a deck\u2019s Inspiration page and in Search.')}</p>
+        ${a.map(p=>`<div class="panel-card pkg-row"><div class="pkg-row-t"><b>${escapeHtml(p.name)}</b><span>${p.fn ? escapeHtml(p.fn) + ' \u00b7 ' : ''}${p.cards.length} ${T('kaarten', 'cards')}</span></div>
+          <div class="pkg-row-b"><button type="button" class="ghost-btn" data-pkedit="${p.id}"><span class="ib">${ICONS.edit || ''}</span>${T('Bewerken', 'Edit')}</button><button type="button" class="ghost-btn" data-pkdel="${p.id}" style="color:var(--danger);border-color:var(--danger);">${T('Verwijderen', 'Delete')}</button></div></div>`).join('')}
+        <button type="button" class="primary-btn" id="pkgNew" style="width:100%;margin-top:6px;">\uFF0B ${T('Nieuw pakket', 'New package')}</button>
+      </div></main>${overlayNavHtml()}</div>`;
+    wireOverlayNav(el);
+    el.querySelector('#pkgNew').addEventListener('click', ()=>form(null));
+    el.querySelectorAll('[data-pkedit]').forEach(b=>b.addEventListener('click', ()=>form(b.dataset.pkedit)));
+    el.querySelectorAll('[data-pkdel]').forEach(b=>b.addEventListener('click', ()=>{
+      const p = pkgAll().find(x=>x.id === b.dataset.pkdel); if(!p) return;
+      openInAppConfirm(T(`Pakket “${p.name}” verwijderen?`, `Delete the package “${p.name}”?`), (ok)=>{ if(!ok) return; pkgSave(pkgAll().filter(x=>x.id !== p.id)); list(); });
+    }));
+    const mn = el.querySelector('main'); if(mn) mn.scrollTop = mn.scrollHeight;
+  };
+  const form = (id)=>{
+    const p = id ? pkgAll().find(x=>x.id === id) : { name: '', fn: '', cards: [] };
+    if(!p) return list();
+    el.querySelector('.pkg-list').innerHTML = `<div class="panel-card pkg-form">
+      <div class="panel-h">${id ? T('Pakket bewerken', 'Edit package') : T('Nieuw pakket', 'New package')}</div>
+      <div class="adv-row"><label>${T('Naam', 'Name')}</label><input id="pkName" type="text" maxlength="40" value="${escapeHtml(p.name)}" placeholder="${T('bijv. Ramp-basis', 'e.g. Ramp staples')}"></div>
+      <div class="adv-row"><label>${T('Functie', 'Function')}</label><input id="pkFn" type="text" maxlength="24" value="${escapeHtml(p.fn || '')}" placeholder="${T('bijv. Ramp', 'e.g. Ramp')}"></div>
+      <div class="adv-row stacked"><label>${T('Kaarten (één per regel)', 'Cards (one per line)')}</label><textarea id="pkCards" class="bulk-textarea" style="min-height:180px;">${escapeHtml(p.cards.join('\n'))}</textarea></div>
+      <div class="action-row"><button type="button" class="ghost-btn" id="pkCancel">${T('Annuleren', 'Cancel')}</button><button type="button" class="primary-btn" id="pkSave">${T('Opslaan', 'Save')}</button></div>
+    </div>`;
+    el.querySelector('#pkCancel').addEventListener('click', list);
+    el.querySelector('#pkSave').addEventListener('click', async ()=>{
+      const name = el.querySelector('#pkName').value.trim();
+      if(!name){ toast(T('Geef het pakket een naam.', 'Give the package a name.')); return; }
+      const raw = el.querySelector('#pkCards').value.split(/\n+/).map(x=>x.replace(/^\s*\d+x?\s+/i, '').trim()).filter(Boolean);
+      const cards = raw.filter((x, i)=>raw.findIndex(y=>y.toLowerCase() === x.toLowerCase()) === i);
+      const all = pkgAll();
+      const rec = { id: id || ('pk' + Date.now().toString(36)), name, fn: el.querySelector('#pkFn').value.trim(), cards };
+      const at = all.findIndex(x=>x.id === rec.id);
+      if(at >= 0) all[at] = rec; else all.push(rec);
+      pkgSave(all);
+      list();
+      // names checked against the card database: proper spelling, and a word about unknowns
+      try{
+        const got = await resolveEdhrecNames(cards, ()=>true);
+        const byLow = new Map(got.map(c=>[String(c.name).toLowerCase(), c.name]));
+        const fixed = cards.map(n=>byLow.get(n.toLowerCase()) || n);
+        const unknown = cards.filter(n=>!byLow.has(n.toLowerCase()));
+        const all2 = pkgAll(); const k = all2.findIndex(x=>x.id === rec.id);
+        if(k >= 0){ all2[k].cards = fixed; pkgSave(all2); }
+        if(unknown.length) toast(T('Niet gevonden: ', 'Not found: ') + unknown.slice(0, 3).join(', ') + (unknown.length > 3 ? ' \u2026' : ''));
+      }catch(e){}
+    });
+  };
+  list();
+}
+/* A deck's packages page: every package, its cards that fit this deck,
+   grouped under the package's name -- the recommendation layout. */
+async function openDeckPackages(d){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  pushOverlay('pkgDeck', ()=>{ document.getElementById('pkgDeckOverlay')?.remove(); });
+  let el = document.getElementById('pkgDeckOverlay');
+  if(!el){ el = document.createElement('div'); el.className = 'overlay'; el.id = 'pkgDeckOverlay'; }
+  document.body.appendChild(el);
+  el.innerHTML = `<div class="overlay-inner">${overlayCapHtml(T('Pakketten', 'Packages') + ' \u00b7 ' + d.name)}<main><div id="pkgDeckBody"><div class="status"><div class="spinner"></div></div></div></main>${overlayNavHtml()}</div>`;
+  wireOverlayNav(el);
+  const a = pkgAll().filter(p=>p.cards.length);
+  const box = ()=>document.getElementById('pkgDeckBody');
+  if(!a.length){ box().innerHTML = `<div class="empty-note">${T('Nog geen pakketten — maak ze bij Extra\u2019s \u2192 Pakketten.', 'No packages yet — make them in Extras \u2192 Packages.')}</div>`; return; }
+  const names = []; a.forEach(p=>p.cards.forEach(n=>{ if(names.indexOf(n) < 0) names.push(n); }));
+  let got = [];
+  try{ got = await resolveEdhrecNames(names, (c)=>!isBanned(c) && (deckIsConstructed(d) ? !deckBlockReason(c, d) : colorIdentityOkDeck(c, d))); }catch(e){}
+  if(!box()) return;
+  const byLow = new Map(got.map(c=>[String(c.name).toLowerCase(), c]));
+  const groups = a.map(p=>({ p, cards: p.cards.map(n=>byLow.get(n.toLowerCase())).filter(Boolean) })).filter(g=>g.cards.length);
+  if(!groups.length){ box().innerHTML = `<div class="empty-note">${T('Geen pakketkaarten passen bij dit deck.', 'No package cards fit this deck.')}</div>`; return; }
+  const pool = [].concat(...groups.map(g=>g.cards));
+  const paint = ()=>{
+    const b = box(); if(!b) return;
+    // bottom-up: the first package lands at the foot (DOM-last)
+    b.innerHTML = groups.slice().reverse().map(g=>`<div class="edh-sec"><div class="section-label" style="margin-top:14px;">${pkgLabel(g.p)}</div><div class="sr-grid">${g.cards.map(c=>searchRowHtml(c, d)).join('')}</div></div>`).join('');
+    wireResultButtons(pool, d, paint);
+    wireOverlayPick(el, b, pool, (nm)=>{ const i = pool.findIndex(x=>x.name === nm); if(i >= 0) openCardInfo(pool[i], { pool, poolIdx: i }); });
+    loadTilePrices(pool);
+    // bottom-up: open on the foot, where the first package sits
+    requestAnimationFrame(()=>{ const mn = el.querySelector('.overlay-inner > main'); if(mn) mn.scrollTop = mn.scrollHeight; });
+  };
+  paint();
+}
 function phraseFeats(card){
   const faces = (card.card_faces && card.card_faces.length) ? card.card_faces : [card];
   const t = faces.map(f=>f.oracle_text||'').join(' ').toLowerCase().replace(/\u2019/g, "'");
@@ -22294,7 +22486,7 @@ function inspirationPageHtml(){
     <div class="browse-selects">
       ${sel.theme && !both ? '' : `<div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>`}
       ${sel.kindred && !both ? '' : `<div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.theme||'', trS('Theme — none'), {search:true, tiles:true})}</div>`}
-      ${deckKind(d) !== 'admiral' ? `<div class="bs-row insp-land-row"><button type="button" class="ghost-btn" id="inspLandBase">\u26f0 ${appLang() === 'nl' ? 'Landbase voorstellen' : 'Suggest land base'}</button></div>` : ''}
+      <div class="bs-row insp-land-row">${deckKind(d) !== 'admiral' ? `<button type="button" class="ghost-btn" id="inspLandBase">\u26f0 ${appLang() === 'nl' ? 'Landbase' : 'Land base'}</button>` : ''}<button type="button" class="ghost-btn" id="inspPackages"><span class="ib">${ICONS.collection}</span>${appLang() === 'nl' ? 'Pakketten' : 'Packages'}</button></div>
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -22326,6 +22518,7 @@ function wireInspirationPage(){
   document.getElementById('goDecklistBtn')?.addEventListener('click', ()=>{ state.activeDeckId = d.id; switchPage('decklist'); });
   // 1.37: lands for THIS deck (its commander's EDHREC landbase, its own pips)
   document.getElementById('inspLandBase')?.addEventListener('click', ()=>openLandSuggest(d));
+  document.getElementById('inspPackages')?.addEventListener('click', ()=>openDeckPackages(d));   // 1.40
   if(deckIsConstructed(d)){ loadDeckMeta(d); return; }
   if(!d.admiral) return;
   // Drop-up tiles: pull every stored art into the sync ready-map before a
@@ -28543,28 +28736,25 @@ function settingsPageHtml(){
   const g = GUILDS.find(x=>x.k===state.guild) || GUILDS[0];
   const browser = !(window.matchMedia('(display-mode: standalone)').matches || inAndroidApp());
   const _pp = pushPrefs();
-  // 1.36: two columns, wrap-reverse -- the first tile in the markup is
-  // bottom-left, by the thumb, and each pair is one row: Draft|Life,
-  // Language|Judge, Ban lists|Format rules, Colour|Notifications,
-  // Share|Backup, (Install|Android app), the credits|About on top.
+  // 1.40: two columns, wrap-reverse -- the first tile in the markup is
+  // bottom-left, by the thumb, and each pair is one row: Packages|Life,
+  // Draft|Judge, Language|Format rules, Ban lists|Notifications,
+  // Colour|Sync, Share|Backup, (Install|Android app), credits|About.
   // A tile's fold floats over the tiles (xtSync), nothing is pushed aside.
   return `
   <main class="settings-main xt-tiles">
-    <div class="settings-section">${tile('draftRow', ICONS.draft, 'Draft tools')}</div>
+    <div class="settings-section">${tile('pkgRow', ICONS.collection, T('Pakketten', 'Packages'))}</div>
     <div class="settings-section">${tile('lifeRow', ICONS.heart, 'Life Counter')}</div>
-    <div class="settings-section">${tile('langRow', ICONS.globe, T('Taal', 'Language'), `<div class="seg seg-inline">${APP_LANGS.map(L=>`<button data-lang-choice="${L.code}" class="${appLang()===L.code?'active':''}">${L.code.toUpperCase()}</button>`).join('')}</div>`)}</div>
+    <div class="settings-section">${tile('draftRow', ICONS.draft, 'Draft tools')}</div>
     <div class="settings-section">${tile('crRow', ICONS.gavel, T('Vraag de AI-judge', 'Ask AI judge'))}</div>
-    <div class="settings-section">
-      ${tile('banListsRow', ICONS.ban, T('Banlijsten', 'Ban lists'))}
-      <div id="banListsBody" class="acc-down xt-body" hidden style="padding:0 12px 6px;"></div>
-    </div>
+    <div class="settings-section">${tile('langRow', ICONS.globe, T('Taal', 'Language'), `<div class="seg seg-inline">${APP_LANGS.map(L=>`<button data-lang-choice="${L.code}" class="${appLang()===L.code?'active':''}">${L.code.toUpperCase()}</button>`).join('')}</div>`)}</div>
     <div class="settings-section">
       ${tile('fmtRulesRow', ICONS.library, T('Format&shy;regels', 'Format rules') + newAdmiralPill())}
       <div id="fmtRulesBody" class="acc-down xt-body" hidden style="padding:0 12px 6px;"></div>
     </div>
     <div class="settings-section">
-      <div id="guildBody" class="guild-list xt-body" hidden>${GUILDS.map(x=>`<button type="button" class="guild-opt ${x.k===state.guild?'sel':''}" data-guild="${x.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[x.main][0]};--gs:${GUILD_SWATCH[x.side][1]};"></span>${manaIconSvg(x.main,16)}${manaIconSvg(x.side,16)}<span>${x.n}</span></button>`).join('')}</div>
-      <div class="settings-row xt-tile" id="guildRow"><span class="xt-ico" id="guildCur">${manaIconSvg(g.main,22)}${manaIconSvg(g.side,22)}</span><div class="l1">${T('Kleuren&shy;schema', 'Color scheme')}</div></div>
+      ${tile('banListsRow', ICONS.ban, T('Banlijsten', 'Ban lists'))}
+      <div id="banListsBody" class="acc-down xt-body" hidden style="padding:0 12px 6px;"></div>
     </div>
     <div class="settings-section">
       <div id="notifBody" class="acc-up xt-body" hidden style="padding:4px 12px 0;">${!nativeNotify()
@@ -28574,8 +28764,12 @@ function settingsPageHtml(){
       <div class="settings-body" style="padding:10px 2px;"><div style="font-size:12px;color:var(--sub-text);">${T('Meldingen komen tussen 09:00 en 21:00.', 'Notifications arrive between 09:00 and 21:00.')}</div><div style="font-size:12px;color:var(--sub-text);margin-top:4px;" id="pushStatus"></div></div>`}</div>
       ${tile('notifRow', ICONS.bell, T('Meldingen', 'Notifications'))}
     </div>
-    <div class="settings-section">${tile('shareAppRow', ICONS.share, T('Deel de app', 'Share the app'))}</div>
+    <div class="settings-section">
+      <div id="guildBody" class="guild-list xt-body" hidden>${GUILDS.map(x=>`<button type="button" class="guild-opt ${x.k===state.guild?'sel':''}" data-guild="${x.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[x.main][0]};--gs:${GUILD_SWATCH[x.side][1]};"></span>${manaIconSvg(x.main,16)}${manaIconSvg(x.side,16)}<span>${x.n}</span></button>`).join('')}</div>
+      <div class="settings-row xt-tile" id="guildRow"><span class="xt-ico" id="guildCur">${manaIconSvg(g.main,22)}${manaIconSvg(g.side,22)}</span><div class="l1">${T('Kleuren&shy;schema', 'Color scheme')}</div></div>
+    </div>
     <div class="settings-section">${tile('syncRow', SYNC_ICON, 'Sync', `<div class="l2">${syncState() ? T('Gekoppeld', 'Linked') : T('Meerdere apparaten', 'Several devices')}</div>`)}</div>
+    <div class="settings-section">${tile('shareAppRow', ICONS.share, T('Deel de app', 'Share the app'))}</div>
     <div class="settings-section">
       <div id="backupBody" class="acc-up xt-body" hidden style="padding:4px 14px 2px;">
         <div class="l2">${T('Decks, collectie en instellingen in één bestand — bewaar het in je eigen cloud.', 'Decks, collection and settings in one file — keep it in your own cloud.')}</div>
@@ -28596,7 +28790,7 @@ function settingsPageHtml(){
     </div>
     ${browser ? `<div class="settings-section">${tile('installAppRow', ICONS.imp, T('Installeer als app', 'Install as an app'))}</div>` : ''}
     ${browser && /Android/i.test(navigator.userAgent) ? `<div class="settings-section" id="apkRow">${tile('apkBtn', ICONS.phone, T('Android-app', 'Android app'), '<div class="l2" id="apkNote"></div>')}</div>` : ''}
-    ${((browser ? 1 : 0) + (browser && /Android/i.test(navigator.userAgent) ? 1 : 0)) % 2 === 0 ? '<div class="xt-spacer" aria-hidden="true"></div>' : ''}
+    ${((browser ? 1 : 0) + (browser && /Android/i.test(navigator.userAgent) ? 1 : 0)) % 2 === 1 ? '<div class="xt-spacer" aria-hidden="true"></div>' : ''}
     <div class="settings-section xt-note" id="appFootCell">
     <p class="hint" id="appFootNote" style="text-align:center;line-height:1.45;font-size:11px;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
       ${CHANGELOG_HISTORY.length ? `<button type="button" class="xt-mini" id="changelogBtn">${inlIco('spark', 14)}${T('Wat is nieuw', 'What\u2019s new')}</button>
@@ -28751,7 +28945,7 @@ function banPillarsHtml(){
    device last changed it; the newest change wins, piece by piece.
    A probe every few minutes costs a few bytes; data only moves when
    something changed. Caches, prices and device-only switches never sync. */
-const SYNC_KEYS = new Set(['collection', 'folders', 'globalTags', 'printPrefs', 'printPrefsPlaced', 'trade', 'priceWatch', 'draftNames', 'authorName', 'lang', 'settings:app', 'budgetFloor', 'lifeFmt']);
+const SYNC_KEYS = new Set(['packages', 'collection', 'folders', 'globalTags', 'printPrefs', 'printPrefsPlaced', 'trade', 'priceWatch', 'draftNames', 'authorName', 'lang', 'settings:app', 'budgetFloor', 'lifeFmt']);
 const SYNC_URL = '/.netlify/functions/sync';
 let _syncQuiet = 0, _syncTimer = null, _syncBusy = false, _syncMetaT = null;
 const _lsSetRaw = Storage.prototype.setItem, _lsDelRaw = Storage.prototype.removeItem;
@@ -30352,20 +30546,47 @@ function openPlaytest(d){
         sendAway(x, ex ? 'ex' : 'gy');
         ev.push(`${who}: ${ex ? 'exile' : 'removal'} ${T('op', 'on')} ${x.c.name}${isLeader(x) ? T(' (terug naar de command zone)', ' (back to the command zone)') : ''}`);
       }
-      // an attack: odds and damage grow with the turn; blockers soften it
+      // an attack: odds and damage grow with the turn. 1.40: YOU decide --
+      // block an attacker or take it all (asked when it happens)
       if(Math.random() < (t < 2 ? 0.08 : t < 4 ? 0.3 : 0.45)){
-        let dmg = Math.max(1, Math.round((1 + 0.9 * t) * (0.6 + Math.random() * 0.8)));
-        const bl = S.bf.filter(x=>ptIsCreatureX(x) && !x.tapped);
-        let lost = '';
-        if(bl.length){
-          dmg = Math.round(dmg * (bl.length >= 2 ? 0.55 : 0.75));
-          if(Math.random() < 0.3){ const weak = bl.slice().sort((a, b)=>threat(a) - threat(b))[0]; sendAway(weak, 'gy'); lost = T(` \u00b7 ${weak.c.name} sneuvelt bij het blokken`, ` \u00b7 ${weak.c.name} dies blocking`); }
-        }
-        if(dmg > 0){ S.life -= dmg; ev.push(`${who}: ${T('valt aan', 'attacks')} \u2014 ${dmg} ${T('schade', 'damage')}${lost}`); }
-        else if(lost) ev.push(`${who}: ${T('valt aan', 'attacks')}${lost}`);
+        const dmg = Math.max(1, Math.round((1 + 0.9 * t) * (0.6 + Math.random() * 0.8)));
+        const n = Math.max(1, Math.min(3, 1 + Math.floor(t / 4), dmg));
+        ev.push({ attack: true, who, dmg, n });
       }
     }
     return ev;
+  };
+  // the round plays out step by step; an attack waits for your choice
+  const runRound = (steps, done)=>{
+    const lines = [];
+    const next = ()=>{
+      while(steps.length){
+        const st = steps.shift();
+        if(typeof st === 'string'){ lines.push(st); continue; }
+        const bl = S.bf.filter(x=>ptIsCreatureX(x) && !x.tapped);
+        const per = Math.max(1, Math.round(st.dmg / st.n));
+        if(!bl.length){ S.life -= st.dmg; lines.push(`${st.who}: ${T('valt aan', 'attacks')} \u2014 ${st.dmg} ${T('schade', 'damage')}`); continue; }
+        const head = `${st.who}: ${T('valt aan met', 'attacks with')} ${st.n} ${st.n === 1 ? T('wezen', 'creature') : T('wezens', 'creatures')} \u2014 ${st.dmg} ${T('schade', 'damage')}`;
+        const opts = [['take', T(`${st.dmg} schade nemen`, `Take ${st.dmg} damage`)]]
+          .concat(bl.slice(0, 6).map(x=>['b:' + x.id, T('Blokkeer met ', 'Block with ') + escapeHtml(x.c.name)]));
+        ptMenu(head, opts, (k)=>{
+          if(k && k.indexOf('b:') === 0){
+            const f = find(k.slice(2)); const x = f && f.x;
+            const taken = Math.max(0, st.dmg - per);
+            S.life -= taken;
+            const tough = x && !x.c.token ? (parseFloat(x.c.toughness) || 1) : 1;
+            const dies = x && tough <= per;
+            if(dies) sendAway(x, 'gy');
+            lines.push(`${st.who}: ${T('valt aan', 'attacks')} \u2014 ${x ? x.c.name : '?'} ${T('blokt', 'blocks')}${dies ? T(' en sneuvelt', ' and dies') : ''} \u00b7 ${taken} ${T('schade', 'damage')}`);
+          } else { S.life -= st.dmg; lines.push(`${st.who}: ${T('valt aan', 'attacks')} \u2014 ${st.dmg} ${T('schade', 'damage')}`); }
+          paint(); next();
+        }, ()=>{ S.life -= st.dmg; lines.push(`${st.who}: ${T('valt aan', 'attacks')} \u2014 ${st.dmg} ${T('schade', 'damage')}`); paint(); next(); });
+        return;
+      }
+      done();
+      showRound(lines);
+    };
+    next();
   };
   const showRound = (ev)=>{
     if(!ev.length){ toast(T('Tegenstanders deden niets tegen jou.', 'The opponents left you alone.')); return; }
@@ -30426,13 +30647,13 @@ function openPlaytest(d){
       moveTo(x, k); paint();
     });
   };
-  const ptMenu = (title, opts, pick)=>{
+  const ptMenu = (title, opts, pick, onNone)=>{
     document.getElementById('ptMenu')?.remove();
     const m = document.createElement('div');
     m.className = 'deckpick-scrim'; m.id = 'ptMenu'; m.style.zIndex = 210; m.style.alignItems = 'flex-end';
     m.innerHTML = `<div class="deckpick br-sheet pt-menu">${opts.map(([k, l])=>`<button type="button" class="ghost-btn" data-ptk="${k}">${l}</button>`).join('')}<div class="br-title"><b>${escapeHtml(title)}</b></div></div>`;
     let chosen = null;
-    brSheetOpen(m, 'ptMenu', ()=>{ if(chosen != null){ const k = chosen; chosen = null; setTimeout(()=>pick(k), 0); } });
+    brSheetOpen(m, 'ptMenu', ()=>{ if(chosen != null){ const k = chosen; chosen = null; setTimeout(()=>pick(k), 0); } else if(onNone) setTimeout(onNone, 0); });
     m.addEventListener('click', (e)=>{ if(e.target === m) brSheetClose('ptMenu'); });
     m.querySelectorAll('[data-ptk]').forEach(b=>b.addEventListener('click', ()=>{ chosen = b.dataset.ptk; brSheetClose('ptMenu'); }));
   };
@@ -30558,10 +30779,10 @@ function openPlaytest(d){
     });
     el.querySelector('#ptDraw')?.addEventListener('click', ()=>{ draw(1); paint(); });
     el.querySelector('#ptNext')?.addEventListener('click', ()=>{
-      // 1.39: with Smart on, the opponents take their turns first
-      const ev = (ptSmartOn() && S.turn >= 1) ? smartRound() : null;
+      // 1.39: with Smart on, the opponents take their turns first -- your
+      // creatures are still tapped from your turn until you untap after it
+      if(ptSmartOn() && S.turn >= 1){ runRound(smartRound(), ()=>{ nextTurn(); paint(); }); return; }
       nextTurn(); paint();
-      if(ev) showRound(ev);
     });
     el.querySelector('#ptSmart')?.addEventListener('change', (e)=>{
       ptSmartSet(e.target.checked);
@@ -32115,6 +32336,7 @@ function renderHistoryPanel(){
   if(!state.life.historyOpen){ box.innerHTML=''; return; }
   box.innerHTML = `<div class="life-panel"><h4>History</h4><div class="history-list">${state.life.history.length ? state.life.history.map(h=>`<div>${escapeHtml(h)}</div>`).join('') : '<div>No events yet.</div>'}</div></div>`;
 }
+document.addEventListener('click', (e)=>{ const t = e.target && e.target.closest && e.target.closest('#pkgRow'); if(t) openPackagesEditor(); });   // 1.40
 function renderSettingsPanel(){
   const box = document.getElementById('lifeSettingsPanel');
   if(!box) return;
