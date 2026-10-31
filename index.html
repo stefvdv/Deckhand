@@ -571,6 +571,11 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .modal-backdrop{overflow:visible;}
 .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink-text);font:inherit;font-size:13.5px;padding:7px 9px;border-radius:7px;cursor:pointer;}
 .otag-pop button:hover{background:var(--brass-glow);color:var(--brass);}
+.otag-pop button.on{color:var(--brass);font-weight:700;}
+.otag-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.otag-chips:empty{display:none;}
+.otag-chip{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:13px;font-weight:700;color:#241A04 !important;-webkit-text-fill-color:#241A04;text-shadow:none;background:linear-gradient(180deg,#F2D37A,#C99A30) !important;border:1.5px solid rgba(255,244,210,0.75);border-radius:999px;padding:4px 10px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.35);}
+.otag-chip span{font-size:11px;opacity:0.8;}
 /* Inside .searchbar the generic button rule paints brass — override back
    to the app's dark menu rows. */
 .searchbar .otag-pop button, .tw-poprow{display:flex !important;align-items:center;gap:8px;text-align:left;background:none !important;color:var(--ink-text) !important;font-weight:400;border:none;border-radius:7px;padding:7px 9px;}
@@ -1629,6 +1634,7 @@ html[data-main="W"] :is(.sr-tile, .pair-cell) .st-meta-row .add-btn svg{color:#2
 .budget-star img{width:min(56%,200px);border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,0.45);cursor:pointer;aspect-ratio:63/88;background:#0006;}
 .budget-star .bs-nm{font-size:14.5px;font-weight:700;margin-top:8px;}
 .budget-star .bs-pr{font-size:13px;color:var(--brass);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.budget-star .tag-focus-row{margin:8px auto 0;}
 .budget-subs{margin-top:6px;}
 .tile-info{background:none;border:2px solid var(--line);border-radius:6px;color:var(--sub-text);font-size:11.5px;padding:3px 8px;cursor:pointer;flex:0 0 auto;font-family:'Inter';}
 .tile-info:active{border-color:var(--brass);color:var(--brass);}
@@ -3063,6 +3069,29 @@ html.desk :is(.sr-tile, .sc-tile, .vg-card, .col-tile) img{cursor:zoom-in;}
 .llay.on .llay-grid i{background:#fff6d8;}
 .llay-n{font-size:13.5px;font-weight:700;color:var(--ink-text);}
 .llay.on .llay-n{color:var(--gold);}
+
+/* ===== 1.30 Result tiles: plus green, minus red =====
+   Solid plates with a light rim, so they read on every scheme; on a red
+   scheme the minus turns a brighter coral, on a green one the plus a
+   brighter green (with dark ink), so neither melts into its tile. */
+:is(.sr-tile, .pair-cell) .st-meta-row .add-btn[data-name]:not([data-admiral]),
+:is(.sr-tile, .pair-cell) .st-meta-row .add-btn-rm{
+  background:var(--pm-bg) !important;color:var(--pm-ink) !important;
+  border:2px solid color-mix(in srgb, #ffffff 65%, var(--pm-bg)) !important;
+  box-shadow:0 2px 6px rgba(0,0,0,0.35);font-weight:800;
+}
+:is(.sr-tile, .pair-cell) .st-meta-row .add-btn[data-name]:not([data-admiral]){--pm-bg:#2E9B57;--pm-ink:#ffffff;}
+:is(.sr-tile, .pair-cell) .st-meta-row .add-btn-rm{--pm-bg:#C93C34;--pm-ink:#ffffff;}
+html[data-main="G"] :is(.sr-tile, .pair-cell) .st-meta-row .add-btn[data-name]:not([data-admiral]){--pm-bg:#6EE597;--pm-ink:#0B2A15;}
+html[data-main="R"] :is(.sr-tile, .pair-cell) .st-meta-row .add-btn-rm{--pm-bg:#FF8A7A;--pm-ink:#3A0906;}
+:is(.sr-tile, .pair-cell) .st-meta-row .add-btn[data-name]:not([data-admiral]):disabled{filter:grayscale(1);opacity:0.38;box-shadow:none;}
+:is(.sr-tile, .pair-cell) .st-meta-row .add-btn svg{color:inherit !important;}
+
+/* 1.31 Color distribution: the percentages on a solid dark chip with a light
+   rim -- readable over any symbol or bar colour, only a touch bigger. */
+.ms-pct i{font-family:'Inter',sans-serif;font-size:15px;font-weight:800;letter-spacing:0;color:#fff;background:rgba(14,11,8,0.9);border:1.5px solid rgba(255,255,255,0.85);border-radius:999px;padding:2px 8px;line-height:1.2;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px rgba(0,0,0,0.45);}
+.ms-prod{height:22px;}
+.ms-prod-n b{font-family:'Inter',sans-serif;font-size:13px;font-weight:800;color:#fff;background:rgba(14,11,8,0.88);border:1px solid rgba(255,255,255,0.6);border-radius:999px;padding:0 8px;line-height:16px;text-shadow:none;font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -5296,6 +5325,70 @@ function cardImageLarge(card){
 function rawManaCost(card){
   return card.mana_cost || (card.card_faces && card.card_faces[0].mana_cost) || '';
 }
+/* 1.32: which colours a card can make. Scryfall's produced_mana when the card
+   carries it. Cards that came from the phone's own database don't (the weekly
+   file leaves the field out) -- Birds of Paradise and Bloom Tender went
+   uncounted that way -- so their rules text answers instead. Reminder text
+   is skipped in the "Add" reading; Treasure makers count through their
+   token (1.34). Cards that fetch a land (Nature's Lore, Farseek, Rampant
+   Growth, fetchlands) bring the colours of the lands they can find. */
+const _PM_ALL = ['W','U','B','R','G'];
+const _PM_BASIC = { plains:'W', island:'U', swamp:'B', mountain:'R', forest:'G' };
+const _pmMemo = new WeakMap();
+function manaFromRulesText(text, typeLine, withAdd){
+  const out = new Set();
+  const o = String(text || '').replace(/\([^)]*\)/g, ' ');
+  const tl = String(typeLine || '');
+  if(withAdd){
+    // land subtypes: a Plains Island makes W and U even without its reminder text
+    tl.split('//').forEach(part=>{
+      if(!/\bLand\b/.test(part)) return;
+      const sub = (part.split('\u2014')[1] || '').toLowerCase();
+      Object.keys(_PM_BASIC).forEach(b=>{ if(new RegExp('\\b' + b + '\\b').test(sub)) out.add(_PM_BASIC[b]); });
+    });
+    const re = /\badd\b([^.]*)/gi;
+    let m;
+    while((m = re.exec(o))){
+      const cl = m[1];
+      (cl.match(/\{[^}]+\}/g) || []).forEach(sym=>sym.slice(1, -1).toUpperCase().split('/').forEach(p=>{ if(/^[WUBRGC]$/.test(p)) out.add(p); }));
+      if(/mana of any (one )?colou?r|any combination of colou?rs|mana of (that|the chosen) colou?r|colou?r identity|of any colou?r/i.test(cl)) _PM_ALL.forEach(k=>out.add(k));
+      if(/mana of any type/i.test(cl)){ _PM_ALL.forEach(k=>out.add(k)); out.add('C'); }
+    }
+  }
+  // 1.34: mana TOKENS count too -- Treasure and Gold make any colour,
+  // Powerstones and Eldrazi Spawn/Scions make colourless.
+  const lo = String(text || '').toLowerCase();
+  if(/\bcreates?\b[^.]*\b(treasure|gold)\b/.test(lo)) _PM_ALL.forEach(k=>out.add(k));
+  if(/\bcreates?\b[^.]*\b(powerstone|eldrazi spawn|eldrazi scion)\b/.test(lo)) out.add('C');
+  // land fetching. 1.34: only a BASIC-only search is held to its types
+  // ("basic Forest card" = green). "a Forest card" also finds Temple
+  // Garden, Breeding Pool, a triome... so Nature's Lore, Farseek, Knight of
+  // the White Orchid and the fetchlands can bring every colour.
+  const fr = /search your library for ([^.]*)/gi;
+  let f;
+  while((f = fr.exec(o))){
+    const seg = f[1].toLowerCase();
+    const types = Object.keys(_PM_BASIC).filter(b=>new RegExp('\\b' + b + '\\b').test(seg));
+    if(types.length){
+      if(/\bbasic\b/.test(seg)) types.forEach(b=>out.add(_PM_BASIC[b]));
+      else _PM_ALL.forEach(k=>out.add(k));
+    } else if(/\blands?\b|\bgates?\b/.test(seg)) _PM_ALL.forEach(k=>out.add(k));
+  }
+  return out;
+}
+function producedManaOf(c){
+  if(!c || typeof c !== 'object') return [];
+  if(_pmMemo.has(c)) return _pmMemo.get(c);
+  const faces = Array.isArray(c.card_faces) ? c.card_faces : [];
+  const pm = c.produced_mana || (faces[0] && faces[0].produced_mana) || null;
+  const text = c.oracle_text || faces.map(f=>f.oracle_text || '').join('\n');
+  const tl = c.type_line || faces.map(f=>f.type_line || '').join(' // ');
+  const set = manaFromRulesText(text, tl, !(pm && pm.length));
+  if(pm && pm.length) pm.forEach(k=>set.add(k));
+  const out = ['W','U','B','R','G','C'].filter(k=>set.has(k));
+  try{ _pmMemo.set(c, out); }catch(e){}
+  return out;
+}
 function countsForCurve(c){
   // The mana curve is a curve of castable SPELLS. A land stays out if it can
   // provide mana in any form: producing it directly (produced_mana), or the
@@ -6711,23 +6804,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.29';
+const APP_VERSION = '1.34';
 const CHANGELOG_NOTES = {
   en: [
-    'Life counter fills the screen',
-    'Deckhand logo opens the table menu',
-    'Leave via the menu: Settings',
-    'Bigger life totals',
-    'Name under a thin status pill',
-    'Clearer table choice for new games'
+    'Treasure makers count as production',
+    'Land search counts every colour',
+    'Similar cards: tag weight tuned'
   ],
   nl: [
-    'Life counter vult het scherm',
-    'Deckhand-logo opent het tafelmenu',
-    'Verlaten via menu → Instellingen',
-    'Grotere levenstotalen',
-    'Naam onder een dunne statuspil',
-    'Tafelkeuze bij nieuw spel duidelijker'
+    'Treasure-makers tellen als productie',
+    'Land zoeken telt alle kleuren',
+    'Similar cards: tag-gewicht bijgesteld'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6737,6 +6824,21 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-31';
 const CHANGELOG_HISTORY = [
+  { v: '1.33', d: '2026-10-31',
+    en: ['Similar lands that do the same job', 'Budget lands ranked the same way', 'Search: pick several tags at once', 'Search filters without help texts'],
+    nl: ['Similar lands die hetzelfde doen', 'Budget-lands net zo gerangschikt', 'Zoeken: meerdere tags tegelijk', 'Zoekfilters zonder uitlegtekst'] },
+  { v: '1.32', d: '2026-10-31',
+    en: ['Mana production counts all producers', 'Ramp that fetches lands counts too', 'Similar cards: tags weigh more', 'Budget ranks just like Similar', 'Budget: focus on one tag per card'],
+    nl: ['Mana production telt alle producers', 'Ramp die lands zoekt telt ook mee', 'Similar cards: tags wegen zwaarder', 'Budget rangschikt net als Similar', 'Budget: focus op één tag per kaart'] },
+  { v: '1.31', d: '2026-10-31',
+    en: ['Clearer percentages in Stats'],
+    nl: ['Duidelijkere percentages bij Stats'] },
+  { v: '1.30', d: '2026-10-31',
+    en: ['Plus buttons green, minus red', 'No more IN DECK label on tiles'],
+    nl: ['Plusjes groen, minnetjes rood', 'Geen IN DECK-label meer op tegels'] },
+  { v: '1.29', d: '2026-10-31',
+    en: ['Life counter fills the screen', 'Deckhand logo opens the table menu', 'Leave via the menu: Settings', 'Bigger life totals', 'Name under a thin status pill', 'Clearer table choice for new games'],
+    nl: ['Life counter vult het scherm', 'Deckhand-logo opent het tafelmenu', 'Verlaten via menu → Instellingen', 'Grotere levenstotalen', 'Naam onder een dunne statuspil', 'Tafelkeuze bij nieuw spel duidelijker'] },
   { v: '1.28', d: '2026-10-31',
     en: ['PC: menu bar on top, reads top-down', 'PC: calmer width, bigger text', 'PC: click a card to see it big', 'PC: right-click menu has a ✕', 'PC: buttons show their names', 'PC: bigger, wider news', 'Extras buttons work on PC again', 'Card menu closes when a page opens'],
     nl: ['Pc: menubalk boven, van boven af', 'Pc: rustiger breedte, grotere tekst', 'Pc: klik op kaart toont hem groot', 'Pc: rechtsklikmenu heeft een ✕', 'Pc: knoppen tonen hun naam', 'Pc: groter en breder nieuws', "Extra's-knoppen werken weer op pc", 'Kaartmenu sluit bij nieuwe pagina'] },
@@ -15164,7 +15266,7 @@ function castabilityReport(d){
   const N = cards.length;
   if(!N) return null;
   const COLS = ['W','U','B','R','G'];
-  const pmOf = (c)=>c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
+  const pmOf = (c)=>producedManaOf(c);
   const src = {}; COLS.forEach(k=>{ src[k] = 0; });
   cards.forEach(c=>new Set(pmOf(c)).forEach(k=>{ if(src[k] != null) src[k]++; }));
   const lnF = (a)=>{ let t = 0; for(let i = 2; i <= a; i++) t += Math.log(i); return t; };
@@ -15305,7 +15407,7 @@ function statsTabHtml(d){
       {
         const all = deckLeaders(d).concat(d.cards);
         all.forEach(c=>{
-          const pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
+          const pm = producedManaOf(c);
           const seen = new Set(pm);
           Object.keys(prod).forEach(k=>{ if(seen.has(k)) prod[k]++; });
         });
@@ -15334,7 +15436,7 @@ function statsTabHtml(d){
         return `<div class="ms-cell">
           <div class="ms-big" data-msym="${k}" style="cursor:pointer;">${manaIconSvg(k, 92)}<span class="ms-pct"><i>${symPct}%</i></span></div>
           ${showBar ? `<div class="ms-prod-lbl">${CNAME[k]} production</div>
-          <div class="ms-prod" data-mprod="${k}" style="cursor:pointer;"><div class="ms-prod-fill" style="width:${(prod[pk]/prodTotal)*100}%;background:${colorFill[pk]||'#8a8f98'}"></div><span class="ms-prod-n">${prodPct}%</span></div>` : ''}
+          <div class="ms-prod" data-mprod="${k}" style="cursor:pointer;"><div class="ms-prod-fill" style="width:${(prod[pk]/prodTotal)*100}%;background:${colorFill[pk]||'#8a8f98'}"></div><span class="ms-prod-n"><b>${prodPct}%</b></span></div>` : ''}
         </div>`;
       };
       return `<div class="panel-card"><div class="panel-h">Color Distribution <span style="text-transform:none;color:var(--sub-text);font-weight:400;">— tap a symbol or bar to see those cards</span></div>
@@ -15422,7 +15524,7 @@ function wireStatsTab(d){
     const res = document.getElementById('castResult');
     if(inp && pop && res){
       const N = d.cards.length;
-      const srcOf = (k)=>{ let n = 0; d.cards.forEach(c=>{ const pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || []; if(pm.includes(k)) n++; }); return n; };
+      const srcOf = (k)=>{ let n = 0; d.cards.forEach(c=>{ const pm = producedManaOf(c); if(pm.includes(k)) n++; }); return n; };
       const lnF = (a2)=>{ let t = 0; for(let i = 2; i <= a2; i++) t += Math.log(i); return t; };
       const logC = (n, k)=>(k < 0 || k > n) ? -Infinity : lnF(n) - lnF(k) - lnF(n - k);
       const pAtLeast = (S, k, draw)=>{
@@ -15537,7 +15639,7 @@ function wireStatsTab(d){
     });
     const prodCards = {W:[],U:[],B:[],R:[],G:[],C:[]};
     deckLeaders(d).concat(d.cards).forEach(c=>{
-      const pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || [];
+      const pm = producedManaOf(c);
       new Set(pm).forEach(k=>{ if(prodCards[k]) prodCards[k].push(c); });
     });
     let msSel = null;
@@ -17689,25 +17791,23 @@ function advancedPanelHtml(){
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
   return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;">
     ${advGoHtml('advGo')}
-    ${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) || (s.searchFormat && s.searchFormat !== 'any') ? `<div class="toggle-row" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Show everything')}</div><div style="color:var(--sub-text);font-size:11.5px;margin-top:2px;">${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) ? trS('Off — only cards this deck may hold. On — everything, off-color and not legal included.') : trS('Off — only cards legal in the chosen format. On — everything.')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
+    ${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) || (s.searchFormat && s.searchFormat !== 'any') ? `<div class="toggle-row" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Show everything')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
     <div class="adv-row"><label>Card Name</label><input id="advName" type="text" placeholder="Any words in the name" value="${escapeHtml(s.searchName)}"></div>
     <div class="adv-row"><label>Format</label>
       ${cselectHtml('fmtSel', [{v:'',l:'Any format'}].concat(SEARCH_FORMATS.map(([v,l])=>({v, l}))), s.searchFormat, 'Any format', {cls:'cs-up'})}
-      ${state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId) ? `<p class="adv-hint">Pre-set to the deck you\u2019re adding to.</p>` : ''}
     </div>
     <div class="adv-row"><label>Set / Expansion</label>
       ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name), icons:setIconHtml(code)}))), s.searchSetCode, 'Any Set', {search:true, cls:'cs-up cs-foot'})}
       ${sets.length?'':`<p class="adv-hint">Set list still loading…</p>`}
     </div>
     <div class="adv-row"><label>Oracle Text</label><input id="oracleText" type="text" placeholder="Any text, e.g. draw a card" value="${escapeHtml(s.searchOracleText)}">
-      <p class="adv-hint">For exact phrases, put quotes (") around your search query.</p>
     </div>
     <div class="adv-row"><label>Card Type</label><input id="typeText" type="text" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(s.searchTypeText)}"></div>
-    <div class="adv-row"><label>Tag</label><div class="otag-wrap">
-      <input id="otagText" type="text" placeholder="e.g. removal, ramp, tutor" value="${escapeHtml(s.searchOtag || '')}" autocomplete="off" autocapitalize="off">
+    <div class="adv-row"><label>Tags</label><div class="otag-wrap">
+      <input id="otagText" type="text" placeholder="e.g. removal, ramp, tutor" value="" autocomplete="off" autocapitalize="off">
       <div id="otagPop" class="otag-pop" hidden></div>
+      <div class="otag-chips" id="otagChips"></div>
     </div>
-      <p class="adv-hint">Scryfall function tags — what a card DOES. Type to filter the list, tap to pick.</p>
     </div>
     <div class="adv-row"><label>Colors</label>${colorChecks('data-ccolor', s.searchCardColors)}
       <div class="adv-sub" style="max-width:220px;">${cselectHtml('ccmSel', [
@@ -17744,7 +17844,6 @@ function advancedPanelHtml(){
       ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-rarity="${v}" ${s.searchRarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
     </div></div>
     <div class="adv-row"><label>Price</label>${priceSliderHtml('srchPr', s.searchEurMin, s.searchEurMax)}
-      <p class="adv-hint">Cardmarket price. The top end is open — leave the right thumb on \u221E for no limit.</p>
     </div>
     <div class="adv-row"><label>Flavor Text</label><input id="flavText" type="text" placeholder="e.g. dragon" value="${escapeHtml(s.searchFlavorText)}"></div>
     <div class="adv-row"><label>Artist</label><input id="artistText" type="text" placeholder="e.g. Rebecca Guay" value="${escapeHtml(s.searchArtist)}"></div>
@@ -17901,23 +18000,55 @@ function wireAdvancedPanel(){
   // catalog (~170 slugs — the same list Similar/Budget rank with, so no
   // network and no wait). Column-reverse: best matches sit by the input.
   {
+    // 1.33: SEVERAL tags. The picked ones live in state.searchOtag as a
+    // comma list and show as chips under the field (tap a chip to drop it);
+    // the field itself only filters the list. A card must carry them all.
     const inp = document.getElementById('otagText');
     const pop = document.getElementById('otagPop');
+    const chips = document.getElementById('otagChips');
+    const setList = (arr)=>{ state.searchOtag = arr.join(','); };
+    const drawChips = ()=>{
+      if(!chips) return;
+      chips.innerHTML = otagSearchList(state.searchOtag).map(t=>`<button type="button" class="otag-chip" data-otagrm="${escapeHtml(t)}">${escapeHtml(t)} <span aria-hidden="true">\u2715</span></button>`).join('');
+      chips.querySelectorAll('[data-otagrm]').forEach(b=>b.addEventListener('click', ()=>{
+        setList(otagSearchList(state.searchOtag).filter(t=>t !== b.dataset.otagrm));
+        drawChips();
+        if(pop && !pop.hidden) fill();
+      }));
+    };
+    const toggle = (t)=>{
+      const cur = otagSearchList(state.searchOtag);
+      setList(cur.includes(t) ? cur.filter(x=>x !== t) : cur.concat([t]));
+      drawChips();
+    };
     const fill = ()=>{
       if(!inp || !pop) return;
       const q = inp.value.trim().toLowerCase().replace(/\s+/g, '-');
+      const on = new Set(otagSearchList(state.searchOtag));
       const hits = BUDGET_OTAGS.filter(t=>!q || t.includes(q)).slice().sort((a,b)=>a.localeCompare(b)).slice(0, 400);
-      pop.innerHTML = hits.map(t=>`<button type="button" data-otagpick="${t}">${t}</button>`).join('');
+      pop.innerHTML = hits.map(t=>`<button type="button" data-otagpick="${t}" class="${on.has(t) ? 'on' : ''}">${on.has(t) ? '\u2713 ' : ''}${t}</button>`).join('');
       pop.hidden = !hits.length;
       pop.querySelectorAll('[data-otagpick]').forEach(o=>o.addEventListener('click', ()=>{
-        state.searchOtag = o.dataset.otagpick;
-        inp.value = o.dataset.otagpick;
-        pop.hidden = true;
+        toggle(o.dataset.otagpick);
+        inp.value = '';
+        fill();                 // the list stays open: pick the next one
       }));
     };
-    inp?.addEventListener('input', ()=>{ state.searchOtag = inp.value; fill(); });
+    // a tap in the list must not take the focus away (that would fold it)
+    pop?.addEventListener('mousedown', (e)=>e.preventDefault());
+    inp?.addEventListener('input', fill);
     inp?.addEventListener('focus', fill);
     inp?.addEventListener('blur', ()=>setTimeout(()=>{ if(pop) pop.hidden = true; }, 250));
+    // Enter on a typed tag that matches one exactly picks it before searching
+    inp?.addEventListener('keydown', (e)=>{
+      if(e.key !== 'Enter') return;
+      const q = inp.value.trim().toLowerCase().replace(/\s+/g, '-');
+      if(!q) return;
+      const hit = BUDGET_OTAGS.includes(q) ? q : (BUDGET_OTAGS.filter(t=>t.includes(q)).length === 1 ? BUDGET_OTAGS.find(t=>t.includes(q)) : q);
+      if(!otagSearchList(state.searchOtag).includes(hit)) toggle(hit);
+      inp.value = '';
+    }, true);
+    drawChips();
   }
   document.getElementById('flavText')?.addEventListener('input', e=>state.searchFlavorText=e.target.value);
   document.getElementById('artistText')?.addEventListener('input', e=>state.searchArtist=e.target.value);
@@ -17976,8 +18107,7 @@ function buildAdvancedClause(){
     });
   }
   if(state.searchKeyword.trim()) parts.push(`keyword:"${state.searchKeyword.trim().replace(/"/g,'')}"`);
-  if(state.searchOtag && String(state.searchOtag).trim())
-    parts.push('otag:' + String(state.searchOtag).trim().toLowerCase().replace(/"/g,'').replace(/\s+/g,'-'));
+  otagSearchList(state.searchOtag).forEach(t=>parts.push('otag:' + t));   // 1.33: every picked tag
   if(state.searchFlavorText.trim()) parts.push(`ft:"${state.searchFlavorText.trim().replace(/"/g,'')}"`);
   if(state.searchArtist.trim()) parts.push(`a:"${state.searchArtist.trim().replace(/"/g,'')}"`);
 
@@ -18118,7 +18248,7 @@ async function localSearch(limit){
       .map(low).filter(Boolean);
   }
   const kw = low((st.searchKeyword || '').trim());
-  const otag = normTagKey(String(st.searchOtag || '').trim().replace(/"/g,''));
+  const otagWant = otagSearchList(st.searchOtag).map(normTagKey);   // 1.33: all of them
   const idWant = Object.keys(st.searchColors || {}).filter(c=>c !== 'C' && st.searchColors[c]);
   const idColorless = !!(st.searchColors && st.searchColors.C) && !idWant.length;
   const ccWant = Object.keys(st.searchCardColors || {}).filter(c=>c !== 'C' && st.searchCardColors[c]);
@@ -18151,9 +18281,9 @@ async function localSearch(limit){
     if(st.searchPowOp && st.searchPowVal !== '' && !_lsOp(c.pw, st.searchPowOp, st.searchPowVal)) continue;
     if(st.searchTouOp && st.searchTouVal !== '' && !_lsOp(c.tg, st.searchTouOp, st.searchTouVal)) continue;
     if(kw && !(c.kw || []).some(k=>low(k) === kw)) continue;
-    if(otag){
-      const tags = (ix.tagByOid && c.o) ? (ix.tagByOid.get(c.o) || []) : [];
-      if(!tags.some(t=>normTagKey(t) === otag)) continue;
+    if(otagWant.length){
+      const tags = new Set(((ix.tagByOid && c.o) ? (ix.tagByOid.get(c.o) || []) : []).map(normTagKey));
+      if(!otagWant.every(t=>tags.has(t))) continue;
     }
     if(rars.length && !rars.includes(low(c.r))) continue;
     if(st.searchEurMin > 0 && !(c.eur != null && +c.eur >= st.searchEurMin)) continue;
@@ -18644,7 +18774,7 @@ function searchRowHtml(c, d, opts){
     if(banned){tag='banned';tagTxt=deckBlockReason(c, d) || 'Banned';}
     else if(noAdmiral){tag='dupe';tagTxt='Pick '+fmtName(d)+' first';}
     else if(!colorOk){tag='banned';tagTxt='Off-color';}
-    else if(alreadyIn){tag='dupe';tagTxt='In deck';}
+    // 1.30: no IN DECK pill -- the red minus already says the card is in
   } else if(banned){ tag='banned'; tagTxt='Banned'; }
   const canBeAdmiral = opts.showAdmiralBtn && leaderTypeOk(c) && hasPowerToughness(c) && isNonlandFront(c) && !banned;
   // 1.5: in the deck (main deck, not in command) -> a "-" takes one out again;
@@ -21415,10 +21545,14 @@ const SIM_POINTS = {
   missRate: 0.6, missCap: 8,   // 1.20: 0.4 -> 0.6
   // The same idea for curated tags, gentler still: a candidate wearing
   // functions the source doesn't have drifts down, softly.
-  tagMissRate: 0.7, tagMissCap: 6,   // 1.20: 0.5 -> 0.7
+  tagMissRate: 1.0, tagMissCap: 9,   // 1.20: 0.5 -> 0.7; 1.32: -> 1.0, cap 9
   // 1.20: a shared tag (same function) weighs more: 4 -> 6 a tag, cap 18 -> 27
-  tagRate: 6, tagCap: 27,
+  // 1.32: heavier still, Stef's call: 10 a tag, cap 50. 1.34: 8 a tag,
+  // cap 40 -- four shared functions still outweigh every magic-word point
+  tagRate: 8, tagCap: 40,
   colorSame: 2, colorOverlap: 1,
+  // 1.32: Budget ranks with the SAME points as Similar (it is Similar under
+  // a price line). The budget* knobs below are kept but no longer used.
   // Same primary TYPE earns points on BOTH profiles now — an instant's
   // cousin should be an instant; Budget (a literal stand-in hunt) weighs
   // it heavier still.
@@ -21550,6 +21684,56 @@ const PHRASE_FEATS = [
   { k:'landfall',       w:5, re:/landfall|whenever a land (you control )?enters/, q:'o:"whenever a land"' },
   { k:'etb',            w:1, re:/when(ever)? [^.]{0,40}enters/, q:null }
 ];
+/* 1.33: lands are judged by the JOB they do, not by popularity alone.
+   Gaea's Cradle's kin are the lands that make mana that SCALES (Serra's
+   Sanctum, Three Tree City, Cabal Coffers, Nykthos), not the most played
+   fetchland. Shared jobs earn points, jobs the source lacks cost some, and
+   lands that make the same colours get a small nudge. One table for
+   Similar cards AND Budget. */
+const LAND_FEATS = [
+  { k:'scale',     w:24, re:/add [^.]*\b(for each|equal to)\b|add an amount of|\badd x\b|devotion/, q:'(o:"for each" or o:"equal to" or o:devotion)' },
+  { k:'double',    w:10, re:/add \{[wubrgc]\}\{[wubrgc]\}|add (two|three) mana/, q:'(o:"{c}{c}" or o:"add two mana")' },
+  { k:'fetch',     w:16, re:/search your library for [^.]*\b(lands?|plains|island|swamp|mountain|forest|gates?)\b/, q:'o:"search your library"' },
+  { k:'anycolor',  w:8,  re:/mana of any (one )?colou?r|any combination of colou?rs|colou?r identity/, q:'o:"any color"' },
+  { k:'manland',   w:16, re:/becomes? an? [^.]*\bcreature\b/, q:'o:becomes o:creature' },
+  { k:'draw',      w:12, re:/draws? (a|two|three|x) cards?|\binvestigate\b/, q:'o:draw' },
+  { k:'removal',   w:14, re:/(destroy|exile) target|deals? \d+ damage to (any|target)|gets? -\d+\/-\d+/, q:'(o:"destroy target" or o:"exile target")' },
+  { k:'recursion', w:12, re:/from your graveyard to (your hand|the battlefield)|return target [^.]*card from your graveyard/, q:'o:"from your graveyard"' },
+  { k:'tokens',    w:12, re:/create [^.]*\btokens?\b/, q:'o:create o:token' },
+  { k:'untap',     w:10, re:/\buntap (target|all|up to|another)/, q:'o:untap' },
+  { k:'protect',   w:10, re:/\bhexproof\b|\bindestructible\b|protection from/, q:null },
+  { k:'channel',   w:8,  re:/\bchannel\b/, q:'o:channel' },
+  { k:'bounceland',w:8,  re:/return a land you control to its owner's hand/, q:null },
+  { k:'nomaxhand', w:6,  re:/no maximum hand size/, q:null },
+  { k:'cycling',   w:5,  re:/\bcycling\b/, q:null },
+  { k:'pain',      w:3,  re:/deals? 1 damage to you|pay \d+ life/, q:null },
+  { k:'tapped',    w:2,  re:/enters (the battlefield )?tapped/, q:null },
+];
+const LAND_FEAT_W = LAND_FEATS.reduce((o, f)=>{ o[f.k] = f.w; return o; }, { typed: 4 });
+function landFeats(card){
+  const faces = (card.card_faces && card.card_faces.length) ? card.card_faces : [card];
+  const t = faces.map(f=>f.oracle_text || '').join(' ').toLowerCase().replace(/\u2019/g, "'").replace(/\([^)]*\)/g, ' ');
+  return LAND_FEATS.filter(f=>f.re.test(t));
+}
+function landFeatKeys(card){
+  if(card._lfk) return card._lfk;
+  const out = new Set(landFeats(card).map(f=>f.k));
+  const tl = String(card.type_line || '').split('//')[0];
+  if(/\b(Plains|Island|Swamp|Mountain|Forest)\b/.test((tl.split('\u2014')[1] || '')) && !/\bBasic\b/.test(tl)) out.add('typed');
+  try{ card._lfk = out; }catch(e){}
+  return out;
+}
+function landKinScore(src, cand){
+  const a = landFeatKeys(src), b = landFeatKeys(cand);
+  let p = 0, miss = 0;
+  a.forEach(k=>{ if(b.has(k)) p += (LAND_FEAT_W[k] || 0); });
+  b.forEach(k=>{ if(!a.has(k) && (LAND_FEAT_W[k] || 0) >= 5) miss++; });
+  const pa = producedManaOf(src).filter(x=>x !== 'C');
+  const pb = new Set(producedManaOf(cand).filter(x=>x !== 'C'));
+  let same = 0; pa.forEach(k=>{ if(pb.has(k)) same++; });
+  p += Math.min(6, same * 2);
+  return p - Math.min(12, miss * 4);
+}
 function phraseFeats(card){
   const faces = (card.card_faces && card.card_faces.length) ? card.card_faces : [card];
   const t = faces.map(f=>f.oracle_text||'').join(' ').toLowerCase().replace(/\u2019/g, "'");
@@ -21636,8 +21820,8 @@ async function openSimilarCards(card, colorScope){
     if(!simCtx.pools[key]){
       let got = [];
       try{
-        const r = await searchAndVerifyLegal((simCtx.idClause + 'otag:' + tag).trim(), 'edhrec', 60);
-        got = ((r&&r.results)||[]).filter(x=>isNonlandFront(x) && !isBanned(x));
+        const r = await searchAndVerifyLegal((simCtx.idClause + (simCtx.land ? 't:land ' : '') + 'otag:' + tag).trim(), 'edhrec', 60);
+        got = ((r&&r.results)||[]).filter(x=>(simCtx.land ? !isNonlandFront(x) : isNonlandFront(x)) && !isBanned(x));
       }catch(e){}
       simCtx.pools[key] = got;
       got.forEach((x, i)=>{
@@ -21658,8 +21842,58 @@ async function openSimilarCards(card, colorScope){
     const idClause = scopeDeck ? (idClauseForDeck(scopeDeck) + ' ') : (colorScope && ci.length) ? ('id<=' + ci.join('').toLowerCase() + ' ') : '';
     let ranked = [], typeFallback = false;
     if(isLand){
-      const r = await searchAndVerifyLegal((idClause + 't:land').trim(), 'edhrec', 80).catch(()=>({results:[]}));
-      ranked = ((r&&r.results)||[]).filter(x=>!isBanned(x) && x.name!==card.name);
+      // 1.33: real kin for lands. Every legal land in the phone's corpus is
+      // a candidate (scoring decides, not popularity), plus online pools:
+      // the most played lands, one per land job, one per function tag.
+      const _eMapPL = edhrecPageNames(card);
+      const mL = await detectOtagsForCards([card]);
+      const tagsAllL = (mL[card.name] || []);
+      const ciSetL = (scopeDeck || (colorScope && ci.length)) ? new Set(ci.map(x=>String(x).toUpperCase())) : null;
+      const cand = new Map();
+      const addC = (x, i, tag)=>{
+        if(!x || x.name === card.name || isNonlandFront(x) || isBanned(x)) return;
+        let e = cand.get(x.name);
+        if(!e){ e = { x, best: i, tags: new Set() }; cand.set(x.name, e); }
+        else e.best = Math.min(e.best, i);
+        if(tag) e.tags.add(tag);
+      };
+      let _corpusL = 0;
+      try{
+        const ix = await bulkIndexReady();
+        if(ix && ix.cards) for(const bc of ix.cards){
+          if(bc.lg !== 'legal' || bc.n === card.name) continue;
+          if(!/\bLand\b/.test(String(bc.tl || '').split('//')[0])) continue;
+          if(ciSetL && ![...(bc.ci || '')].every(ch=>ciSetL.has(ch))) continue;
+          if(isBanned({name: bc.n})) continue;
+          addC(bulkToCardish(bc), 500); _corpusL++;
+        }
+      }catch(e){}
+      const lqs = [['top', (idClause + 't:land').trim()]];
+      landFeats(card).filter(f=>f.q).forEach(f=>lqs.push(['lf:' + f.k, (idClause + 't:land ' + f.q).trim()]));
+      tagsAllL.slice(0, 3).forEach(t=>lqs.push(['otag:' + t, (idClause + 't:land otag:' + t).trim()]));
+      const poolsL = {};
+      await runLimited(lqs, async (pair)=>{
+        try{ const r = await searchAndVerifyLegal(pair[1], 'edhrec', 60); poolsL[pair[0]] = ((r&&r.results)||[]); }
+        catch(e){ poolsL[pair[0]] = []; }
+      }, 3);
+      Object.entries(poolsL).forEach(([k, arr])=>arr.forEach((x, i)=>addC(x, i, k.startsWith('otag:') ? k.slice(5) : null)));
+      const _eRL = await Promise.race([_eMapPL, new Promise(r=>setTimeout(()=>r('late'), 3000))]);
+      const eMapL = (_eRL && _eRL !== 'late') ? _eRL : new Map();
+      const srcWordsL = magicWordSet(card);
+      const weightsL = await magicWordWeights();
+      const hasL = (e, t)=>{ const l = localTagSetSync(e.x); return (l ? l.has(t) : false) || e.tags.has(t); };
+      const scoreL = (e)=>{
+        e.s = similarityScore(card, e.x, { srcWords: srcWordsL, weights: weightsL, srcTags: tagsAllL, eMap: eMapL,
+          tagHas: (cc, t)=>hasL(e, t), fallbackPop: e.best });
+        e.s.lk = landKinScore(card, e.x);
+        e.s.pts += e.s.lk;
+      };
+      cand.forEach(scoreL);
+      simCtx = { cand, pools: poolsL, idClause, tagsAll: tagsAllL, land: true, scoreE: scoreL, has: hasL };
+      const _allL = Array.from(cand.values()).sort(cmpSimilarity);
+      ranked = _allL.slice(0, 20).map(e=>e.x);
+      sfJournal('similar land: ' + card.name + ' · corpus:' + _corpusL + ' cand:' + cand.size + ' feats[' + Array.from(landFeatKeys(card)).join(',') + ']'
+        + (_allL.length ? ' top: ' + _allL[0].x.name + ' pts:' + Math.round(_allL[0].s.pts) + ' lk:' + _allL[0].s.lk : ''));
     }else{
       const srcFeats = phraseFeats(card);
       const _eMapP = edhrecPageNames(card);   // in flight while the pools load
@@ -22245,13 +22479,10 @@ function cutColorSources(lands){
   const src = { W: 0, U: 0, B: 0, R: 0, G: 0 };
   const BASIC = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
   (lands || []).forEach(c=>{
-    let pm = c.produced_mana || (c.card_faces && c.card_faces[0] && c.card_faces[0].produced_mana) || null;
-    if(!pm || !pm.length){
+    let pm = producedManaOf(c);
+    if(!pm.length){
       pm = [];
       Object.keys(BASIC).forEach(b=>{ if(new RegExp('\\b' + b + '\\b').test(c.type_line || '')) pm.push(BASIC[b]); });
-      const o = String(c.oracle_text || '');
-      ['W', 'U', 'B', 'R', 'G'].forEach(x=>{ if(o.includes('{' + x + '}')) pm.push(x); });
-      if(/any colou?r/i.test(o)) pm.push('W', 'U', 'B', 'R', 'G');
     }
     new Set(pm).forEach(x=>{ if(src[x] !== undefined) src[x]++; });
   });
@@ -23184,6 +23415,15 @@ function edhrecTagCatalogFrom(data){
 /* EDHREC uses one canonical slug per theme, but commander pages sometimes
    carry a hyphenless variant (pillow-fort vs pillowfort). Comparing on a
    normalized key — letters and digits only — makes those the same theme. */
+/* 1.33: the advanced search's picked tags, from their comma list. */
+function otagSearchList(v){
+  const out = [];
+  String(v || '').split(',').forEach(t=>{
+    const k = t.trim().toLowerCase().replace(/"/g, '').replace(/\s+/g, '-');
+    if(k && !out.includes(k)) out.push(k);
+  });
+  return out;
+}
 function normTagKey(slug){ return String(slug||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 function dedupeTagList(list){
   // Highest census count wins its key, so the real EDHREC catalog entry
@@ -26321,6 +26561,7 @@ async function loadBudgetAlternatives(d){
         <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">
         <div class="bs-nm">${escapeHtml(c.name)}</div>
         <div class="bs-pr">${fmtEur(v)}</div>
+        <div class="tag-focus-row" id="bgTagRow${trioRefs.length}" data-sel="bgTagSel${trioRefs.length}" hidden></div>
       </div>
       <div class="sr-grid budget-subs"><div class="status" style="grid-column:1/-1;padding:8px 0;"><div class="spinner"></div></div></div>`;
     box.appendChild(trio);
@@ -26329,6 +26570,7 @@ async function loadBudgetAlternatives(d){
   }
   const idClause = d.admiral ? idClauseForDeck(d) : '';
   const inDeck = new Set(all.map(c=>c.name));
+  const deckNames = new Set(inDeck);   // 1.32: the real deck; inDeck also grows with picks
   const priceOf = (x)=>{
     const hit = state.priceCache[x.name];
     if(hit && typeof hit.v==='number') return hit.v;
@@ -26363,10 +26605,11 @@ async function loadBudgetAlternatives(d){
   const landPriced = priced.filter(p=>isLandC(p.c));
   const nonLandPriced = priced.filter(p=>!isLandC(p.c));
   const otagByName = nonLandPriced.length ? await detectOtagsForCards(nonLandPriced.map(p=>p.c)) : {};
+  const otagLand = landPriced.length ? await detectOtagsForCards(landPriced.map(p=>p.c)) : {};   // 1.33: as Similar
   // Pools are candidate SOURCES only now (scoring reads local tags), so
   // the fetch fan-out caps at each card's first four tags.
   state._budgetLogOnce = true;
-  const tagUnion = new Set(); Object.values(otagByName).forEach(a=>a.slice(0, 4).forEach(t=>tagUnion.add(t)));
+  const tagUnion = new Set(); Object.values(otagByName).forEach(a=>a.slice(0, 6).forEach(t=>tagUnion.add(t)));   // 1.32: six, as Similar
   // Pools are identity-scoped, not deck-scoped — cache them for the session so
   // reopening this page (any deck in the same colours) skips the searches.
   const poolCache = (state._budgetPoolCache = state._budgetPoolCache || {});
@@ -26440,13 +26683,14 @@ async function loadBudgetAlternatives(d){
     // no private per-card heuristic may overrule what the slider says.
     const ceiling = BUDGET_FLOOR;
     const scored = [];
+    let focusB = null;   // 1.32: kept for this card's tag focus
     // TEXT-feature pools — the same first-priority signal Similar cards
     // trusts (the exact rules language the card uses), under the budget
     // ceiling. Cached per feature+identity, so cards sharing language share
     // the one search across the whole page and across reopenings.
     const srcFeatsB = land ? [] : phraseFeats(c);
     const featPools = [];
-    const featQs = land ? [] : srcFeatsB.filter(f=>f.q).sort((a,b)=>b.w-a.w).slice(0, 2);
+    const featQs = land ? [] : srcFeatsB.filter(f=>f.q).sort((a,b)=>b.w-a.w).slice(0, 3);   // 1.32: three, as Similar
     if(featQs.length){
       await runLimited(featQs, async (f)=>{
         const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|txt:' + f.k;
@@ -26461,18 +26705,20 @@ async function loadBudgetAlternatives(d){
       if(!alive()) return;                           // closed, or superseded, while fetching
     }
     if(land){
-      // Lands answer lands: same identity, cheapest, most played — with a nudge
-      // toward lands that make the same colours this one did.
-      const myProd = new Set(c.produced_mana || []);
+      // Lands answer lands, ranked exactly as Similar cards ranks a land
+      // (1.33): the job it does first, then words, tags and colours.
+      const srcWordsL = magicWordSet(c);
+      const weightsL = await magicWordWeights();
+      const tagsL = otagLand[c.name] || [];
       for(let i=0; i<landPool.length; i++){
         const x = landPool[i];
         if(inDeck.has(x.name)) continue;
         const pv = priceOf(x);
-        if(pv!==null && pv > ceiling) continue;
-        let sc = 0;
-        (x.produced_mana||[]).forEach(m=>{ if(myProd.has(m)) sc += 1; });
-        sc -= i * 0.01;                                           // earlier = more played
-        scored.push([sc, x]);
+        if(pv===null || pv > ceiling) continue;
+        const sc = similarityScore(c, x, { srcWords: srcWordsL, weights: weightsL, srcTags: tagsL,
+          tagHas: (cc, t)=>{ const l = localTagSetSync(cc); return l ? l.has(t) : false; }, fallbackPop: i });
+        sc.lk = landKinScore(c, x); sc.pts += sc.lk; sc.eur = pv;
+        scored.push({ s: sc, x });
       }
     } else if(myTags.length || featPools.some(a=>a.length) || deckKind(d) !== 'admiral'){
       // Stef's four steps under the budget ceiling — magic words, curated
@@ -26502,22 +26748,33 @@ async function loadBudgetAlternatives(d){
         }catch(e){}
       }
       const weightsB = await magicWordWeights();
-      const eMapB = (await Promise.race([edhrecPageNames(c), new Promise(r=>setTimeout(()=>r(null), 3000))])) || new Map();
-      for(const e of cand.values()){
-        const x = e.x;
-        if(inDeck.has(x.name)) continue;
-        const pv = priceOf(x);
-        if(pv===null || pv > ceiling) continue;
-        const tagsHave = candTags[x.name] || e.tags || new Set();
-        // Same point table; the theme signal stays neutral here — three
-        // extra fetches per pricey card would drag the whole page.
-        const sc = similarityScore(c, x, { srcWords: srcWordsB, weights: weightsB, eMap: eMapB,
-          srcTags: myTags, budget: true,
-          tagHas: (cc, t)=>{ const l = localTagSetSync(cc); return (l ? l.has(t) : false) || tagsHave.has(t); },
-          fallbackPop: e.best });
+      // 1.32: Budget IS Similar cards under a price line -- the very same
+      // points, themes included (week-cached, read from the same card page),
+      // one shared three-second deadline for the EDHREC signals.
+      const _deadB = new Promise(r=>setTimeout(()=>r(null), 3000));
+      const _thPB = (async ()=>{
+        const th = await edhrecCardThemes(c);
+        const sets = await Promise.all(th.map(t=>edhrecThemeNames(t).catch(()=>null)));
+        return sets.filter(x=>x && x.size);
+      })().catch(()=>[]);
+      const eMapB = (await Promise.race([edhrecPageNames(c), _deadB])) || new Map();
+      const themeSetsB = (await Promise.race([_thPB, _deadB])) || [];
+      const hasB = (e, t)=>{ const l = localTagSetSync(e.x); return (l ? l.has(t) : false) || e.tags.has(t) || !!(candTags[e.x.name] && candTags[e.x.name].has(t)); };
+      const scoreB = (e)=>{
+        const pv = priceOf(e.x);
+        if(pv===null || pv > ceiling){ e.s = null; return null; }
+        const sc = similarityScore(c, e.x, { srcWords: srcWordsB, weights: weightsB, eMap: eMapB, themeSets: themeSetsB,
+          srcTags: myTags, tagHas: (cc, t)=>hasB(e, t), fallbackPop: e.best });
         sc.eur = pv;
-        scored.push({ s: sc, x });
+        return (e.s = sc);
+      };
+      for(const e of cand.values()){
+        if(deckNames.has(e.x.name)) continue;
+        const sc = scoreB(e);
+        if(!sc || inDeck.has(e.x.name)) continue;
+        scored.push({ s: sc, x: e.x });
       }
+      focusB = { cand, scoreB, hasB, got: {} };
     } else {
       // No curated tags found for this card: fall back to the played-staples
       // pool with the old theme heuristic (labels stay hidden either way).
@@ -26552,11 +26809,57 @@ async function loadBudgetAlternatives(d){
     const subs = scored.slice(0, 2).map(sx=>sx.x || sx[1]);
     const subsBox = trio.querySelector('.budget-subs');
     if(!subsBox || !subsBox.isConnected) return;
-    if(!subs.length){ subsBox.innerHTML = `<div class="empty-note" style="grid-column:1/-1;padding:6px 0;">No cheap stand-ins found for this one.</div>`; continue; }
     subs.forEach(x=>inDeck.add(x.name));   // don't recommend the same card twice
-    subsBox.innerHTML = subs.map(x=>searchRowHtml(x, d, {showAdmiralBtn:false})).join('');
-    wireResultButtons(subs, d, ()=>{}, undefined);
-    loadTilePrices(subs);
+    const paintB = (list)=>{
+      if(!subsBox.isConnected) return;
+      if(!list.length){ subsBox.innerHTML = `<div class="empty-note" style="grid-column:1/-1;padding:6px 0;">${trS('No cheap stand-ins found for this one.')}</div>`; return; }
+      subsBox.innerHTML = list.map(x=>searchRowHtml(x, d, {showAdmiralBtn:false})).join('');
+      wireResultButtons(list, d, ()=>{}, undefined);
+      loadTilePrices(list);
+    };
+    paintB(subs);
+    // 1.32: the same tag focus as Similar cards, under the pricey card:
+    // pick one of its functions and its cheap stand-ins for that one job
+    // appear (four of them), still under the budget line.
+    const fRow = trio.querySelector('.tag-focus-row');
+    if(focusB && fRow && myTags.length){
+      const fx = focusB, selId = fRow.dataset.sel;
+      tagFocusRowFill(fRow.id, selId, myTags, async (tag)=>{
+        if(!tag){ paintB(subs); return; }
+        if(!subsBox.isConnected) return;
+        subsBox.innerHTML = `<div class="status" style="grid-column:1/-1;padding:8px 0;"><div class="spinner"></div></div>`;
+        if(!fx.got[tag]){
+          fx.got[tag] = true;
+          let arr = [];
+          try{
+            const lp = deckKind(d) === 'admiral' ? null : localBudgetPools([tag], identList, BUDGET_FLOOR, deckNames);
+            if(lp && lp.byTag[tag]) arr = lp.byTag[tag].filter(x=>!_bgBad(x));
+          }catch(e){}
+          if(arr.length < 20){
+            const ck = 'f' + BUDGET_FLOOR + '|' + idClause + '|' + tag;
+            if(!poolCache[ck]){
+              try{
+                const r = await searchAndVerifyLegal((idClause + ' eur<=' + BUDGET_FLOOR + ' otag:' + tag).trim(), 'edhrec', 60);
+                poolCache[ck] = ((r && r.results) || []).filter(x=>isNonlandFront(x) && !_bgBad(x) && underLine(x));
+              }catch(e){ poolCache[ck] = []; }
+            }
+            arr = arr.concat(poolCache[ck]);
+          }
+          arr.forEach((x, i)=>{
+            if(x.name === c.name || deckNames.has(x.name)) return;
+            let e = fx.cand.get(x.name);
+            if(!e){ e = { x, best: i, tags: new Set([tag]) }; fx.cand.set(x.name, e); }
+            else e.tags.add(tag);
+            fx.scoreB(e);
+          });
+        }
+        if((document.getElementById(selId)?.value || '') !== tag) return;   // another pick meanwhile
+        const list = Array.from(fx.cand.values())
+          .filter(e=>e.s && !deckNames.has(e.x.name) && fx.hasB(e, tag))
+          .sort(cmpSimilarity).slice(0, 4).map(e=>e.x);
+        paintB(list);
+      });
+    }
   }
 }
 
