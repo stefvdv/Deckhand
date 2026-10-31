@@ -351,6 +351,20 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .adv-go svg{width:24px;height:24px;stroke-width:2.6;}
 /* The deck filter scrolls with the PAGE, whose foot is under the dock stack. */
 .df-compact > .adv-go-row{bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom));}
+/* 1.35: while typing in a field the gold button stays in its own spot at
+   the foot instead of floating over the labels above the keyboard */
+/* 1.37 (phone): the gold button floats at the foot again (Stef: floating
+   over text is fine), and the "Show everything" row stays put beside it --
+   the filters scroll behind both. */
+html:not(.desk) .adv-panel > .adv-showall{position:sticky;bottom:-12px;z-index:7;background:inherit;margin:0 -16px !important;padding:4px 16px 12px !important;}
+html:not(.desk) .adv-panel > .adv-showall{grid-template-columns:96px minmax(0,1fr) auto;}
+/* 1.35: "Show everything" starts where the fields start, so the gold
+   button rises into the free space beside it (phone, bottom-up) */
+.adv-panel > .adv-showall{display:grid;grid-template-columns:96px minmax(0,1fr) auto;column-gap:10px;}
+.adv-panel > .adv-showall > div:first-child{grid-column:2;}
+.adv-panel > .adv-showall > .toggle-switch{grid-column:3;}
+html:not(.desk) .adv-panel > .adv-go-row:has(+ .adv-showall){margin-top:-50px !important;}
+.adv-row > label .info-i{margin-left:5px;width:16px;height:16px;font-size:11px;}
 .adv-panel .cselect-panel,
 #colAdvBox .cselect-panel{position:static;margin:0 0 4px;max-height:240px;display:flex;flex-direction:column-reverse;}
 .adv-panel .cselect-panel .cselect-opt,
@@ -679,6 +693,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 /* ---------- tags ---------- */
 .tag-editor{background:var(--panel);border:2px solid var(--line);border-radius:8px;padding:12px;margin:10px auto 0;max-width:330px;}
 .tag-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.tag-chip.tag-scry{border-style:dashed;padding-right:10px;}
 .tag-chip{display:inline-flex;align-items:center;gap:5px;background:var(--brass-glow);border:2px solid var(--line);color:var(--brass);border-radius:14px;padding:4px 6px 4px 10px;font-size:12.5px;font-weight:600;}
 .tag-chip button{background:none;border:none;color:var(--brass);cursor:pointer;font-size:15px;line-height:1;padding:0 3px;opacity:0.7;}
 .tag-chip button:hover{opacity:1;color:var(--danger);}
@@ -1054,6 +1069,11 @@ html.native-cam #scanVideo, html.native-cam #scanOverlay .scan-uv{display:none;}
 body.dl-searching .dl-bridge > :not(#dlPanelBox){display:none !important;}
 body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 .dock-search-wrap .dock-search{padding-right:36px;}
+/* 1.35: the chevron sits INSIDE the field; the field no longer pokes 8px
+   past its wrap into the loupe beside it */
+.dock-search-wrap .in-chev{margin-left:-32px;margin-right:2px;}
+.df-compact .otag-wrap{width:100%;min-width:0;}
+.df-compact .otag-wrap > input{width:100%;box-sizing:border-box;}
 .dock-search{flex:1;min-width:0;background:rgba(10,26,40,0.55);border:1.5px solid var(--field-line);border-radius:10px;color:var(--text);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:14px;-webkit-appearance:none;appearance:none;}
 .dock-search:focus{outline:none;border-color:var(--brass);}
 #dockSearchBtn svg{width:20px;height:20px;display:block;}
@@ -1321,6 +1341,10 @@ html{--accent-ink:var(--head-ink);}   /* the page's own light accent, computed a
 /* Half-width pair in the action grid: Tags (or Share) with the ∞ combos. */
 .cs-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0;}
 .cs-pair > .ghost-btn{min-width:0;width:100%;}
+/* 1.38: Share · Tags · ∞ as three equal icon buttons */
+.cs-pair.cs-trio{grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.cs-pair.cs-trio > .ghost-btn{grid-column:auto !important;padding:6px 0 !important;}
+.cs-pair.cs-trio .ib{margin-right:0;}
 .topbar .sheet-title{max-width:calc(100% - 200px);font-size:clamp(14px, 4.6vw, 21px);line-height:1.14;}
 .dl-desc-text{font-size:13px;line-height:1.4;color:var(--ink-text);overflow-wrap:anywhere;}
 .dk-type svg{width:14px;height:14px;opacity:0.8;flex:none;}
@@ -1901,6 +1925,9 @@ button.cl-head{background:none;border:none;padding:10px 2px;font-family:inherit;
 /* Cuts: the top row of the Inspiration menus (above Theme). Bottom-up: the
    button at the foot, its body opens UPWARD -- settings, then the list. */
 .bs-row.cut-slot{display:block;}
+.bs-row.insp-land-row{padding-right:56px;}
+.bs-row.insp-land-row .ghost-btn{width:100%;margin:0;}
+html.desk .bs-row.insp-land-row{padding-right:0;}
 .cut-block{display:flex;flex-direction:column-reverse;gap:6px;width:100%;}
 .cut-body{display:flex;flex-direction:column-reverse;gap:6px;}
 .cut-body > .cut-list{margin:0;}
@@ -3598,6 +3625,8 @@ function csFitSheetFoot(){
   try{
     document.querySelectorAll('.adv-panel, #colAdvBox').forEach(sheet=>{
       if(getComputedStyle(sheet).position !== 'fixed') return;
+      // desk: the side panel runs from the cap to the window's foot
+      if(isDesk()){ sheet.style.bottom = ''; return; }
       const m = sheet.closest('main') || document;
       // Everything that is pinned to the foot below the sheet.
       const bars = Array.from(m.querySelectorAll('.searchbar, .adv-toggle, div:has(> #colAdvToggle), div:has(> #deckFilter)'))
@@ -6804,17 +6833,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.34';
+const APP_VERSION = '1.38';
 const CHANGELOG_NOTES = {
   en: [
-    'Treasure makers count as production',
-    'Land search counts every colour',
-    'Similar cards: tag weight tuned'
+    'Card view: same buttons everywhere',
+    'Tags on every card view',
+    'No more rows with one button'
   ],
   nl: [
-    'Treasure-makers tellen als productie',
-    'Land zoeken telt alle kleuren',
-    'Similar cards: tag-gewicht bijgesteld'
+    'Kaartweergave: overal dezelfde knoppen',
+    'Tags bij elke kaartweergave',
+    'Geen regels meer met één knop'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6824,6 +6853,18 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-10-31';
 const CHANGELOG_HISTORY = [
+  { v: '1.37', d: '2026-10-31',
+    en: ['Suggest land base in Inspiration', 'Search card view shows Scryfall tags', 'Show everything stays at the foot'],
+    nl: ['Landbase voorstellen bij Inspiratie', 'Zoeken toont Scryfall-tags bij kaart', 'Show everything blijft onderaan'] },
+  { v: '1.36', d: '2026-10-31',
+    en: ['Green + back on Similar cards', 'Green + on recommendations too', 'Gold search button scrolls along'],
+    nl: ['Groene + terug bij Similar cards', 'Groene + ook bij aanbevelingen', 'Gouden zoekknop scrolt mee'] },
+  { v: '1.35', d: '2026-10-31',
+    en: ['PC: search filter panel full height', 'Find in deck no longer hits the loupe', 'Search deck opens without bouncing', 'Search filters: tidier, no Name row', 'Set filter sits above Color Identity', 'i-buttons explain harder filters'],
+    nl: ['Pc: zoekfilterpaneel weer volle hoogte', 'Zoeken in deck raakt de loep niet', 'Search deck opent zonder wiebelen', 'Zoekfilters netter, zonder Name', 'Set staat boven Color Identity', 'i-knopjes leggen filters uit'] },
+  { v: '1.34', d: '2026-10-31',
+    en: ['Treasure makers count as production', 'Land search counts every colour', 'Similar cards: tag weight tuned'],
+    nl: ['Treasure-makers tellen als productie', 'Land zoeken telt alle kleuren', 'Similar cards: tag-gewicht bijgesteld'] },
   { v: '1.33', d: '2026-10-31',
     en: ['Similar lands that do the same job', 'Budget lands ranked the same way', 'Search: pick several tags at once', 'Search filters without help texts'],
     nl: ['Similar lands die hetzelfde doen', 'Budget-lands net zo gerangschikt', 'Zoeken: meerdere tags tegelijk', 'Zoekfilters zonder uitlegtekst'] },
@@ -12387,6 +12428,8 @@ function wireOverlayPick(el, box, pool, onOpen){
     // capture: decide before the picture's own tap handler sees the click
     tile.addEventListener('click', (e)=>{
       if(fired){ fired = false; e.stopPropagation(); e.preventDefault(); return; }
+      // 1.36: the + / − (and other tile buttons) do their own job
+      if(e.target.closest && e.target.closest('button') && e.target.closest('button') !== tile) return;
       if(sel.size){ e.stopPropagation(); e.preventDefault(); toggle(); return; }
       if(onOpen){ e.stopPropagation(); onOpen(nm); }
     }, true);
@@ -14875,7 +14918,6 @@ function dlPanelHtml(d){
     return `<div class="panel-card">
       <div class="panel-h" style="display:flex;align-items:center;"><span>Bulk Edit</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
       <textarea id="bulkText" class="bulk-textarea">${lines.join('\n')}</textarea>
-      ${deckKind(d) !== 'admiral' ? '<button type="button" class="ghost-btn" id="blSuggestLands" style="width:100%;margin:0 0 8px;">⛰ Suggest lands</button>' : ''}
       <button class="primary-btn" id="applyBulkBtn">Check &amp; Save Changes</button>
       <div id="bulkReport"></div>
     </div>`;
@@ -14886,17 +14928,18 @@ function dlPanelHtml(d){
     // fields on the right, the hand-drawn mana icons as checkboxes, and the
     // ≤/=/≥ choice as a page-style dropdown — one filter language app-wide.
     const colorOrder = ['W','U','B','R','G','C'];
+    // 1.35: no Name field -- "Find in deck" in the dock already searches names
+    if(f.name) f.name = '';
     return `<div class="panel-card df-compact" style="display:flex;flex-direction:column-reverse;">
       ${advGoHtml('dfGo')}
-      <div class="adv-row"><label>${trS('Name')}</label><input id="dfName" class="col-filter-input" placeholder="${trS('Card name…')}" value="${escapeHtml(f.name||'')}" autocomplete="off"></div>
-      <div class="adv-row"><label>${trS('Oracle text')}</label><input id="dfText" class="col-filter-input" placeholder="${trS('Any text, e.g. draw a card')}" value="${escapeHtml(f.text||'')}" autocomplete="off"></div>
+      <div class="adv-row"><label>${trS('Oracle text')}${advInfo('oracle')}</label><input id="dfText" class="col-filter-input" placeholder="${trS('Any text, e.g. draw a card')}" value="${escapeHtml(f.text||'')}" autocomplete="off"></div>
       <div class="adv-row"><label>Type</label><input id="dfType" class="col-filter-input" placeholder="${trS('e.g. Dragon, Equipment')}" value="${escapeHtml(f.type||'')}" autocomplete="off"></div>
-      <div class="adv-row"><label>${trS('Colors')}</label><div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" data-dfci="${c}" ${f.ci && f.ci.includes(c)?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div></div>
+      <div class="adv-row"><label>${trS('Colors')}${advInfo('deckColors')}</label><div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" data-dfci="${c}" ${f.ci && f.ci.includes(c)?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div></div>
       <div class="adv-row"><label>${trS('Mana Value')}</label><div style="display:flex;gap:8px;align-items:center;">
         <div style="flex:0 0 92px;">${cselectHtml('dfMvOp', [{v:'<=',l:'≤'},{v:'=',l:'='},{v:'>=',l:'≥'}], f.mvOp||'<=', '≤')}</div>
         <input id="dfMvVal" class="col-filter-input" type="number" inputmode="numeric" style="flex:1;" value="${escapeHtml(f.mvVal||'')}">
       </div></div>
-      <div class="adv-row"><label>Tag</label><div class="otag-wrap"><input id="dfTag" class="col-filter-input" placeholder="Tag…" value="${escapeHtml(f.tag||'')}" autocomplete="off"><div id="dfTagPop" class="otag-pop" hidden></div></div></div>
+      <div class="adv-row"><label>Tag${advInfo('tag')}</label><div class="otag-wrap"><input id="dfTag" class="col-filter-input" placeholder="Tag…" value="${escapeHtml(f.tag||'')}" autocomplete="off"><div id="dfTagPop" class="otag-pop" hidden></div></div></div>
       <div class="panel-h" style="display:flex;align-items:center;"><span>${trS('Search deck')}</span><button type="button" class="icon-btn dl-panel-x">✕</button></div>
     </div>`;
   }
@@ -16126,9 +16169,8 @@ function wireDlPanel(d){
       state.openCSelect = null;
       closeDeckFilterPanel(d, true);
     });
-    // The panel opens ready to type: cursor in Name, keyboard up (the tap
-    // that opened the panel is the gesture the keyboard needs).
-    setTimeout(()=>{ try{ document.getElementById('dfName')?.focus({ preventScroll: true }); }catch(e){} }, 60);
+    // 1.35: no auto-focus any more. Focusing a field right after the tap
+    // closed the keyboard and opened it again -- the panel bounced.
     // Color identity rides the same checkbox-under-mana-icon control the
     // Collection filter uses.
     document.querySelectorAll('#dlPanelBox [data-dfci]').forEach(chk=>chk.addEventListener('change', ()=>{
@@ -16565,9 +16607,13 @@ function wireMeterRow(d){
   document.getElementById('dockFilterChev')?.addEventListener('click', (e)=>{
     e.preventDefault();
     closeNameSuggest();
+    // 1.35: the keyboard goes down ONCE, before the panel opens; once it is
+    // gone the page settles on its foot again.
+    try{ document.activeElement && document.activeElement.blur && document.activeElement.blur(); }catch(err){}
     toggleDlPanel(d, 'dsearch');
     const ch = document.getElementById('dockFilterChev');
     if(ch) ch.textContent = state.dlPanel === 'dsearch' ? '▴' : '▾';
+    if(state.dlPanel === 'dsearch') setTimeout(()=>{ try{ scrollToPageFoot(); }catch(err){} }, 380);
   });
   {
     const dsi = document.getElementById('dockSearchInput');
@@ -16705,29 +16751,41 @@ function renderCardSheet(d, card, loc, idx){
   const _shr  = `<button class="ghost-btn" id="csShare" style="width:100%;"><span class="ib">${ICONS.share}</span>${trS('Share')}</button>`;
   const _prt  = `<button class="ghost-btn" id="csChangePrinting" style="width:100%;"><span class="ib">${ICONS.swap}</span>${trS('Change printing')}</button>`;
   const _cmb  = `<button type="button" class="ghost-btn" data-cmbbtn style="width:100%;">∞</button>`;
-  const _pair = (a)=>`<div class="cs-pair">${a}${_cmb}</div>`;
+  const _tag  = `<button class="ghost-btn" id="csTags" style="width:100%;"><span class="ib">${ICONS.tag}</span>${trS('Tags')}</button>`;
+  // 1.38: one layout on every sheet -- Recommendations top right, Similar
+  // under it, Change printing | Tags · ∞ at the foot. An odd count folds
+  // Share · Tags · ∞ into three icon buttons: never a row of one.
+  const _pairTC = `<div class="cs-pair">${_tag}${_cmb}</div>`;
+  const _trio = `<div class="cs-pair cs-trio"><button class="ghost-btn" id="csShare" title="${trS('Share')}" aria-label="${trS('Share')}"><span class="ib">${ICONS.share}</span></button><button class="ghost-btn" id="csTags" title="${trS('Tags')}" aria-label="${trS('Tags')}"><span class="ib">${ICONS.tag}</span></button>${_cmb}</div>`;
+  const _coll = `<button class="ghost-btn" id="csCollSheet" style="width:100%;"><span class="ib">${ICONS.collection}</span>${trS('Add to collection')}</button>`;
   if(loc==='admiral'){
-    actions.push(_prt, _reco);
-    actions.push(`<button class="ghost-btn" id="csCollSheet" style="width:100%;"><span class="ib">${ICONS.collection}</span>${trS('Add to collection')}</button>`, _sim);
-    actions.push(`<button class="ghost-btn" id="csSwitchAdmiral" style="width:100%;">${fmtFolderGlyph(deckFormat(d), 14)} Switch ${fmtName(d)}</button>`, _pair(_shr));
-    if(!d.partner && pairAbility(card)) actions.push(`<button class="ghost-btn" id="csAddPartner" style="width:100%;grid-column:1/-1;color:var(--brass);border-color:var(--brass);">＋ Add second ${fmtName(d)} (${escapeHtml(pairAbility(card).label)})</button>`);
+    actions.push(`<button class="ghost-btn" id="csSwitchAdmiral" style="width:100%;">${fmtFolderGlyph(deckFormat(d), 14)} Switch ${fmtName(d)}</button>`, _reco);
+    actions.push(_coll, _sim);
+    if(!d.partner && pairAbility(card)){
+      actions.push(`<button class="ghost-btn" id="csAddPartner" style="width:100%;color:var(--brass);border-color:var(--brass);">＋ Add second ${fmtName(d)} (${escapeHtml(pairAbility(card).label)})</button>`, _shr);
+      actions.push(_prt, _pairTC);
+    } else actions.push(_prt, _trio);
   } else if(loc==='partner'){
-    actions.push(_prt, _reco);
-    actions.push(`<button class="ghost-btn" id="csCollSheet" style="width:100%;"><span class="ib">${ICONS.collection}</span>${trS('Add to collection')}</button>`, _sim);
-    actions.push(`<button class="ghost-btn" id="csSwitchPartner" style="width:100%;">${deckFormat(d)==="commander"?"⚔":anchorSvg(14)} Switch second ${fmtName(d)}</button>`, _pair(_shr));
-    actions.push(`<button class="ghost-btn" id="csRemovePartner" style="width:100%;grid-column:1/-1;color:var(--danger);border-color:var(--danger);">Step down (to main deck)</button>`);
+    actions.push(`<button class="ghost-btn" id="csSwitchPartner" style="width:100%;">${deckFormat(d)==="commander"?"⚔":anchorSvg(14)} Switch second ${fmtName(d)}</button>`, _reco);
+    actions.push(_coll, _sim);
+    actions.push(`<button class="ghost-btn" id="csRemovePartner" style="width:100%;color:var(--danger);border-color:var(--danger);">Step down (to main deck)</button>`, _shr);
+    actions.push(_prt, _pairTC);
   } else {
-    // Spec layout — Add one | Recommendations · Remove one | Similar ·
-    // To maybeboard | Share · Tags | Change printing. Set-as-leader keeps
-    // its own full-width brass row beneath when the card qualifies.
+    // Add one | Recommendations · Remove one | Similar · To maybeboard |
+    // Share · Change printing | Tags · ∞. A card that can lead takes
+    // Share's place with Set as leader; Share joins the icon trio.
     actions.push(`<button class="ghost-btn" id="csAddOne" style="width:100%;"><span class="ib">${ICONS.addOne}</span>${trS('Add one')}</button>`, _reco);
     actions.push(`<button class="ghost-btn" id="csRemove" style="width:100%;color:var(--danger);border-color:var(--danger);"><span class="ib">${ICONS.removeOne}</span>${trS('Remove one')}</button>`, _sim);
-    if(loc==='main') actions.push(`<button class="ghost-btn" id="csToMaybe" style="width:100%;"><span class="ib">${ICONS.maybe}</span>${trS('To maybeboard')}</button>`, _shr);
-    else actions.push(`<button class="ghost-btn" id="csToMain" style="width:100%;"><span class="ib">${ICONS.maybe}</span>${trS('To main deck')}</button>`, _shr);
-    actions.push(_prt);
-  if(state.screen !== 'collection') actions.push(_pair(`<button class="ghost-btn" id="csTags" style="width:100%;"><span class="ib">${ICONS.tag}</span>${trS('Tags')}</button>`));
-  else actions.push(_cmb);
-    if(admiralEligible) actions.push(`<button class="ghost-btn" id="csMakeAdmiral" style="width:100%;grid-column:1/-1;color:var(--brass);border-color:var(--brass);">${deckFormat(d)==="commander"?"⚔":anchorSvg(14)} Set as ${fmtName(d)}</button>`);
+    const _move = loc==='main'
+      ? `<button class="ghost-btn" id="csToMaybe" style="width:100%;"><span class="ib">${ICONS.maybe}</span>${trS('To maybeboard')}</button>`
+      : `<button class="ghost-btn" id="csToMain" style="width:100%;"><span class="ib">${ICONS.maybe}</span>${trS('To main deck')}</button>`;
+    if(admiralEligible){
+      actions.push(_move, `<button class="ghost-btn" id="csMakeAdmiral" style="width:100%;color:var(--brass);border-color:var(--brass);">${deckFormat(d)==="commander"?"⚔":anchorSvg(14)} Set as ${fmtName(d)}</button>`);
+      actions.push(_prt, _trio);
+    } else {
+      actions.push(_move, _shr);
+      actions.push(_prt, _pairTC);
+    }
   }
 
   el.innerHTML = `<div class="overlay-inner">
@@ -17100,14 +17158,21 @@ function renderTagEditor(d, card, box){
     detectOtagsForCards([card]).then(m=>{
       autoTags = (m[card.name] || []).slice();
       if(!box.isConnected) return;
-      if(d && autoTags.length){ const _l = drop && drop.querySelector('.tag-drop-list'); const keep = drop && !drop.hidden ? (_l ? _l.scrollTop : 0) : null; box._keepDrop = keep; renderTagEditor(d, card, box); }
+      if(autoTags.length){ const _l = drop && drop.querySelector('.tag-drop-list'); const keep = drop && !drop.hidden ? (_l ? _l.scrollTop : 0) : null; box._keepDrop = keep; renderTagEditor(d, card, box); }
       else renderDrop();
     }).catch(()=>{});
   }
   const pickerSections = ()=>buildTagPickerSections(getCardTags(d, card.name), autoTags, allAppTags(), BUDGET_OTAGS);
   box.innerHTML = `<div class="tag-editor">
     <div class="detail-h" style="margin-top:0;">Tags on this card ${infoBtnHtml('Tags follow a card into all your decks; removing one hides it in this deck only. Sort the decklist by Tags to group cards by them.')}</div>
-    <div class="tag-chips">${tags.length ? tags.map(t=>`<span class="tag-chip">${escapeHtml(t)}<button data-rmtag="${encodeURIComponent(t)}">×</button></span>`).join('') : '<span class="tag-none">No tags yet.</span>'}</div>
+    <div class="tag-chips">${(()=>{
+      // 1.37: outside a deck (Search, Similar, Inspiration...) the card shows
+      // the tags Scryfall gives it too -- as in a deck, minus the remove
+      const scry = d ? [] : autoTags.filter(t=>!tags.some(x=>String(x).toLowerCase() === String(t).toLowerCase()));
+      if(!tags.length && !scry.length) return '<span class="tag-none">No tags yet.</span>';
+      return tags.map(t=>`<span class="tag-chip">${escapeHtml(t)}<button data-rmtag="${encodeURIComponent(t)}">×</button></span>`).join('')
+        + scry.map(t=>`<span class="tag-chip tag-scry" title="Scryfall">${escapeHtml(t)}</span>`).join('');
+    })()}</div>
     <div class="tag-add-row" style="position:relative;">
       <input id="tagInput" type="text" placeholder="Add or pick a tag…" maxlength="24" autocomplete="off">
       <button class="ghost-btn" id="tagCatChev" title="Browse all tags" style="width:auto;flex:0 0 auto;padding:9px 12px;">▴</button>
@@ -17755,6 +17820,33 @@ function searchPageHtml(){
    First child of the column-reverse panel = the panel's FOOT, bottom-left
    under the Name row; position:sticky keeps it at the bottom edge while the
    panel scrolls. It lives inside the panel, so a folded panel has none. */
+/* 1.35: the small i-buttons behind the harder filters (a toast explains). */
+function advInfo(key){
+  const nl = appLang() === 'nl';
+  const T = {
+    tags: nl ? 'Scryfall-functietags: wat een kaart doet (removal, ramp, tutor\u2026). Kies er meerdere: een kaart moet ze allemaal hebben.'
+             : 'Scryfall function tags: what a card does (removal, ramp, tutor\u2026). Pick several: a card must have them all.',
+    tag: nl ? 'Scryfall-functietag: wat een kaart doet (removal, ramp, tutor\u2026).'
+            : 'Scryfall function tag: what a card does (removal, ramp, tutor\u2026).',
+    oracle: nl ? 'Elk woord mag overal in de regeltekst staan. Zet aanhalingstekens (") om woorden voor een exacte zin.'
+               : 'Each word may appear anywhere in the rules text. Put quotes (") around words for an exact phrase.',
+    colors: nl ? 'De kleuren van de kaart zelf, uit de manakosten.'
+               : 'The colours of the card itself, from its mana cost.',
+    ident: nl ? 'Alle kleuren in kosten \u00e9n regeltekst. Dat bepaalt of een kaart in een commander-deck past.'
+              : 'Every colour in the cost and the rules text. That decides whether a card fits a commander deck.',
+    cost: nl ? 'Symbolen die in de manakosten moeten zitten, bijvoorbeeld {2}{G}{G}.'
+             : 'Symbols the mana cost must contain, for example {2}{G}{G}.',
+    price: nl ? 'Cardmarket-prijs. Laat de rechterknop op \u221e staan voor geen bovengrens.'
+              : 'Cardmarket price. Leave the right thumb on \u221e for no upper limit.',
+    allDeck: nl ? 'Uit: alleen kaarten die in dit deck mogen. Aan: alles, ook buiten de kleuren en niet legaal.'
+                : 'Off: only cards this deck may hold. On: everything, off-colour and not legal included.',
+    allFmt: nl ? 'Uit: alleen kaarten die legaal zijn in het gekozen format. Aan: alles.'
+               : 'Off: only cards legal in the chosen format. On: everything.',
+    deckColors: nl ? 'Kleurenidentiteit: alle kleuren in kosten \u00e9n regeltekst van de kaart.'
+                   : 'Colour identity: every colour in the card\u2019s cost and rules text.'
+  };
+  return infoBtnHtml(T[key] || '');
+}
 function advGoHtml(id){
   return `<div class="adv-go-row"><button type="button" class="adv-go" id="${id}" title="${trS('Search')}" aria-label="${trS('Search')}">${ICONS.search}</button></div>`;
 }
@@ -17791,43 +17883,42 @@ function advancedPanelHtml(){
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
   return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;">
     ${advGoHtml('advGo')}
-    ${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) || (s.searchFormat && s.searchFormat !== 'any') ? `<div class="toggle-row" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Show everything')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
-    <div class="adv-row"><label>Card Name</label><input id="advName" type="text" placeholder="Any words in the name" value="${escapeHtml(s.searchName)}"></div>
+    ${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) || (s.searchFormat && s.searchFormat !== 'any') ? `<div class="toggle-row adv-showall" style="border-bottom:none;padding:4px 0 12px;"><div><div>${trS('Show everything')}${advInfo((state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) ? 'allDeck' : 'allFmt')}</div></div><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div>` : ''}
     <div class="adv-row"><label>Format</label>
       ${cselectHtml('fmtSel', [{v:'',l:'Any format'}].concat(SEARCH_FORMATS.map(([v,l])=>({v, l}))), s.searchFormat, 'Any format', {cls:'cs-up'})}
     </div>
-    <div class="adv-row"><label>Set / Expansion</label>
-      ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name), icons:setIconHtml(code)}))), s.searchSetCode, 'Any Set', {search:true, cls:'cs-up cs-foot'})}
-      ${sets.length?'':`<p class="adv-hint">Set list still loading…</p>`}
-    </div>
-    <div class="adv-row"><label>Oracle Text</label><input id="oracleText" type="text" placeholder="Any text, e.g. draw a card" value="${escapeHtml(s.searchOracleText)}">
+    <div class="adv-row"><label>Oracle Text${advInfo('oracle')}</label><input id="oracleText" type="text" placeholder="Any text, e.g. draw a card" value="${escapeHtml(s.searchOracleText)}">
     </div>
     <div class="adv-row"><label>Card Type</label><input id="typeText" type="text" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(s.searchTypeText)}"></div>
-    <div class="adv-row"><label>Tags</label><div class="otag-wrap">
+    <div class="adv-row"><label>Tags${advInfo('tags')}</label><div class="otag-wrap">
       <input id="otagText" type="text" placeholder="e.g. removal, ramp, tutor" value="" autocomplete="off" autocapitalize="off">
       <div id="otagPop" class="otag-pop" hidden></div>
       <div class="otag-chips" id="otagChips"></div>
     </div>
     </div>
-    <div class="adv-row"><label>Colors</label>${colorChecks('data-ccolor', s.searchCardColors)}
+    <div class="adv-row"><label>Colors${advInfo('colors')}</label>${colorChecks('data-ccolor', s.searchCardColors)}
       <div class="adv-sub" style="max-width:220px;">${cselectHtml('ccmSel', [
         {v:'all', l:'Must have all selected'},
         {v:'exact', l:'Exactly these colors'},
         {v:'atmost', l:'At most these colors'}
       ], s.searchCardColorMode, 'Match mode')}</div>
     </div>
-    <div class="adv-row"><label>Color Identity</label>${colorChecks('data-color', s.searchColors)}
+    <div class="adv-row"><label>Color Identity${advInfo('ident')}</label>${colorChecks('data-color', s.searchColors)}
       <div class="adv-sub" style="max-width:220px;">${cselectHtml('cmSel', [
         {v:'atmost', l:'At most these colors'},
         {v:'exact', l:'Exactly these colors'},
         {v:'including', l:'Including these colors'}
       ], s.searchColorMode, 'Match mode')}</div>
     </div>
+    <div class="adv-row"><label>Set / Expansion</label>
+      ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name), icons:setIconHtml(code)}))), s.searchSetCode, 'Any Set', {search:true, cls:'cs-up cs-foot'})}
+      ${sets.length?'':`<p class="adv-hint">Set list still loading…</p>`}
+    </div>
     <div class="adv-row"><label>Mana Value</label><div class="cmc-row">
       ${opSelectHtml('cmcOp', s.searchCmcOp)}
       <input id="cmcVal" type="number" min="0" placeholder="" value="${s.searchCmcVal}">
     </div></div>
-    <div class="adv-row"><label>Mana Cost</label><input id="manaCost" type="text" placeholder="(e.g., {2}{G})" value="${escapeHtml(s.searchManaCost)}"></div>
+    <div class="adv-row"><label>Mana Cost${advInfo('cost')}</label><input id="manaCost" type="text" placeholder="(e.g., {2}{G})" value="${escapeHtml(s.searchManaCost)}"></div>
     <div class="adv-row"><label>Power</label><div class="cmc-row">
       ${opSelectHtml('powOp', s.searchPowOp)}
       <input id="powVal" type="text" placeholder="" value="${escapeHtml(s.searchPowVal)}">
@@ -17843,7 +17934,7 @@ function advancedPanelHtml(){
     <div class="adv-row"><label>Rarity</label><div class="rarity-row">
       ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-rarity="${v}" ${s.searchRarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
     </div></div>
-    <div class="adv-row"><label>Price</label>${priceSliderHtml('srchPr', s.searchEurMin, s.searchEurMax)}
+    <div class="adv-row"><label>Price${advInfo('price')}</label>${priceSliderHtml('srchPr', s.searchEurMin, s.searchEurMax)}
     </div>
     <div class="adv-row"><label>Flavor Text</label><input id="flavText" type="text" placeholder="e.g. dragon" value="${escapeHtml(s.searchFlavorText)}"></div>
     <div class="adv-row"><label>Artist</label><input id="artistText" type="text" placeholder="e.g. Rebecca Guay" value="${escapeHtml(s.searchArtist)}"></div>
@@ -19539,22 +19630,30 @@ function openCardInfo(card, opts){
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:330px;margin:0 auto 6px;">
         <div class="cs-actions-grid" style="margin:0;">
-          ${colIdx!=null ? `
+          ${(()=>{
+            // 1.38: the deck sheet's layout -- Recommendations top right,
+            // Similar under it, Change printing | Tags · ∞ at the foot; an
+            // odd count folds Share · Tags · ∞ into three icon buttons.
+            const _cmbI = `<button type="button" class="ghost-btn" data-cmbbtn style="width:100%;">∞</button>`;
+            const _recoI = `<button class="ghost-btn" id="ciReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>`;
+            const _simI = `<button class="ghost-btn" id="ciSimilar" style="width:100%;"><span class="ib">${ICONS.similar}</span>${trS('Similar cards')}</button>`;
+            const _shareI = `<button class="ghost-btn" id="ciShare" style="width:100%;"><span class="ib">${ICONS.share}</span>${trS('Share')}</button>`;
+            const _pairI = `<div class="cs-pair"><button class="ghost-btn" id="ciTags" style="width:100%;"><span class="ib">${ICONS.tag}</span>${trS('Tags')}</button>${_cmbI}</div>`;
+            const _trioI = `<div class="cs-pair cs-trio"><button class="ghost-btn" id="ciShare" title="${trS('Share')}" aria-label="${trS('Share')}"><span class="ib">${ICONS.share}</span></button><button class="ghost-btn" id="ciTags" title="${trS('Tags')}" aria-label="${trS('Tags')}"><span class="ib">${ICONS.tag}</span></button>${_cmbI}</div>`;
+            if(colIdx!=null) return `
           <button class="ghost-btn" id="ciAddOne" style="width:100%;color:var(--brass);border-color:var(--brass);">＋ ${trS('Add one')}</button>
-          <button class="ghost-btn" id="ciReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>
+          ${_recoI}
           <button class="ghost-btn" id="ciRemOne" style="width:100%;color:var(--danger);border-color:var(--danger);">− ${trS('Remove one')}</button>
-          <button class="ghost-btn" id="ciSimilar" style="width:100%;"><span class="ib">${ICONS.similar}</span>${trS('Similar cards')}</button>
-          <div class="cs-pair"><button class="ghost-btn" id="ciShare" style="width:100%;"><span class="ib">${ICONS.share}</span>${trS('Share')}</button><button type="button" class="ghost-btn" data-cmbbtn style="width:100%;">∞</button></div>
+          ${_simI}
           <button class="ghost-btn" id="ciPrint2" style="width:100%;"><span class="ib">${ICONS.swap}</span>${trS('Change printing')}</button>
-          ` : `
-          <button class="ghost-btn" id="ciAdd" style="width:100%;color:var(--brass);border-color:var(--brass);" ${ciBlockWhy(card, pinned)?'disabled':''}>${ciBlockWhy(card, pinned) ? escapeHtml(trS(ciBlockWhy(card, pinned))) : pinned ? (pinnedHasCard() ? `− Remove from ${escapeHtml(pinned.name)}` : `+ Add to ${escapeHtml(pinned.name)}`) : `${modeGlyph()} ${trS('Add to…')}`}</button>
-          <button class="ghost-btn" id="ciReco" style="width:100%;"><span class="ib">${ICONS.reco}</span>${trS('Recommendations')}</button>
-          <button class="ghost-btn" id="ciShare" style="width:100%;"><span class="ib">${ICONS.share}</span>${trS('Share')}</button>
-          <button class="ghost-btn" id="ciSimilar" style="width:100%;"><span class="ib">${ICONS.similar}</span>${trS('Similar cards')}</button>
-          <div class="cs-pair"><button class="ghost-btn" id="ciTags" style="width:100%;"><span class="ib">${ICONS.tag}</span>${trS('Tags')}</button><button type="button" class="ghost-btn" data-cmbbtn style="width:100%;">∞</button></div>
-          <button class="ghost-btn" id="ciPrint" style="width:100%;"><span class="ib">${ICONS.swap}</span>${trS('Change printing')}</button>
-          `}
-          ${opts.wantName ? `<button class="ghost-btn" id="ciWantRm" style="width:100%;grid-column:1/-1;color:var(--danger);border-color:var(--danger);">${trS('Remove from Wants')}</button>` : ''}
+          ${_trioI}`;
+            const _addI = `<button class="ghost-btn" id="ciAdd" style="width:100%;color:var(--brass);border-color:var(--brass);" ${ciBlockWhy(card, pinned)?'disabled':''}>${ciBlockWhy(card, pinned) ? escapeHtml(trS(ciBlockWhy(card, pinned))) : pinned ? (pinnedHasCard() ? `− Remove from ${escapeHtml(pinned.name)}` : `+ Add to ${escapeHtml(pinned.name)}`) : `${modeGlyph()} ${trS('Add to…')}`}</button>`;
+            const _printI = `<button class="ghost-btn" id="ciPrint" style="width:100%;"><span class="ib">${ICONS.swap}</span>${trS('Change printing')}</button>`;
+            if(opts.wantName) return `${_addI}${_recoI}
+          <button class="ghost-btn" id="ciWantRm" style="width:100%;color:var(--danger);border-color:var(--danger);">${trS('Remove from Wants')}</button>
+          ${_simI}${_printI}${_trioI}`;
+            return `${_addI}${_recoI}${_shareI}${_simI}${_printI}${_pairI}`;
+          })()}
         </div>
       </div>
       <div id="ciTagBox"></div>
@@ -21801,13 +21900,12 @@ async function openSimilarCards(card, colorScope){
     if(!box) return;
     ranked = ranked.slice(0, 40);
     if(!ranked.length){ box.innerHTML = `<div class="empty-note">${trS('No similar cards found.')}</div>`; return; }
+    // 1.36: the house tile with its green + (and the red − once it is in)
     box.innerHTML = (note ? `<p class="hint" style="text-align:center;margin:0 0 8px;">${note}</p>` : '')
-      + `<div class="sr-grid">${ranked.map((c,i)=>`<div class="sr-tile sim-tile" role="button" tabindex="0" data-i="${i}" data-name="${encodeURIComponent(c.name)}">
-        <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}
-        <div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg" data-pricecard="${encodeURIComponent(c.name)}">…</div></div></div>
-      </div>`).join('')}</div>`;
+      + `<div class="sr-grid">${ranked.map(c=>searchRowHtml(c, scopeDeck || null)).join('')}</div>`;
     // 1.8: the house multi-select; a plain tap opens the card
     wireOverlayPick(box.closest('.overlay'), box, ranked, (nm)=>{ const i = ranked.findIndex(x=>x.name === nm); if(i >= 0) openCardInfo(ranked[i], { pool: ranked, poolIdx: i }); });
+    wireResultButtons(ranked, scopeDeck || null, ()=>simPaint(ranked, note));
     loadTilePrices(ranked);
   };
   const simFocus = async (tag)=>{
@@ -22129,6 +22227,7 @@ function inspirationPageHtml(){
     <div class="browse-selects">
       ${sel.theme && !both ? '' : `<div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>`}
       ${sel.kindred && !both ? '' : `<div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.theme||'', trS('Theme — none'), {search:true, tiles:true})}</div>`}
+      ${deckKind(d) !== 'admiral' ? `<div class="bs-row insp-land-row"><button type="button" class="ghost-btn" id="inspLandBase">\u26f0 ${appLang() === 'nl' ? 'Landbase voorstellen' : 'Suggest land base'}</button></div>` : ''}
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -22158,6 +22257,8 @@ function wireInspirationPage(){
   const d = getDeck(state.inspireDeckId);
   if(!d){ wireNeedDeck(); return; }
   document.getElementById('goDecklistBtn')?.addEventListener('click', ()=>{ state.activeDeckId = d.id; switchPage('decklist'); });
+  // 1.37: lands for THIS deck (its commander's EDHREC landbase, its own pips)
+  document.getElementById('inspLandBase')?.addEventListener('click', ()=>openLandSuggest(d));
   if(deckIsConstructed(d)){ loadDeckMeta(d); return; }
   if(!d.admiral) return;
   // Drop-up tiles: pull every stored art into the sync ready-map before a
@@ -22368,6 +22469,13 @@ function placeInspJump(){
     // at the foot the burger would sit on the Cuts button -- it steps out
     // until the menus' top is back in view.
     if(top < 90 && document.querySelector('#cutSlot .cut-body') && sel.getBoundingClientRect().bottom > 0) hide = true;
+  }
+  // 1.37: the land-base button row leaves room on its right: the burger
+  // rides level with it instead of floating over an empty strip above it
+  const lr = document.querySelector('.app > main .insp-land-row');
+  if(lr && !hide){
+    const r = lr.getBoundingClientRect();
+    if(r.height && r.top > 0){ const jh = row.offsetHeight || 42; b = Math.max(min, window.innerHeight - r.bottom + (r.height - jh) / 2); }
   }
   row.style.bottom = Math.round(b) + 'px';
   row.style.visibility = hide ? 'hidden' : '';
@@ -24141,7 +24249,7 @@ function renderEdhrecSections(box, key, S, keepScroll){
   const chunks = [
     section(trS('New') + ' ' + noun, newCmd, {showAdmiralBtn:true}, leaderSub, leaderWire),
     section(trS('Top') + ' ' + noun, topCmd, {showAdmiralBtn:true}, leaderSub, leaderWire)
-  ].concat(secs.map(cs=> section(trS(cs.header), fOkCard(cs.list), {noAdd:true}, synSub, {})));   // 1.7: card tiles: look, no +
+  ].concat(secs.map(cs=> section(trS(cs.header), fOkCard(cs.list), {}, synSub, {})));   // 1.36: card tiles carry their + again
   box.innerHTML = `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="edhJump" title="${trS('Jump to section')}">☰</button></div>`
     + chunks.filter(Boolean).reverse().join('')
     + relHtml
@@ -25602,7 +25710,7 @@ function renderColorBrowse(box, key, cmd, keepScroll){
     return { sub: t };
   };
   const cardSec = (id, title, list)=>({ id, title, items: list,
-    html: (part)=>part.map(c=>searchRowHtml(c, pinned, Object.assign({noAdd:true}, subOf(c)))).join(''),   // 1.7: card tiles: look, no +
+    html: (part)=>part.map(c=>searchRowHtml(c, pinned, Object.assign({}, subOf(c)))).join(''),   // 1.36: + again
     after: (chunk, all)=>{ wireResultButtons(all, pinned, ()=>renderBrowseResults(key, true), {}); loadTilePrices(chunk); } });
   // reading order: Commanders first (the foot), then Staples, then Mana Staples
   const secs = [{ id: 'cmd', title: trS('Top') + ' ' + leaderNoun(browseFmt(), true), items: cmd.items,
@@ -26207,26 +26315,26 @@ async function loadCardReco(card, themes, forDeck, comboKey){
   const rewire = ()=>{ const t = document.getElementById('crTagSel')?.value; if(t) cardRecoFocus(card, forDeck, comboKey, t); else loadCardReco(card, themes, forDeck, comboKey); };
   const crEl = box.closest('.overlay');
   if(groups.length < 2){
-    pagedGrid(box, pool, (c)=>searchRowHtml(c, null, {noAdd:true}),
-      (chunk)=>{ wireResultButtons(pool, null, rewire); wireOverlayPick(crEl, box, pool); loadTilePrices(chunk); });
+    pagedGrid(box, pool, (c)=>searchRowHtml(c, forDeck || null),
+      (chunk)=>{ wireResultButtons(pool, forDeck || null, rewire); wireOverlayPick(crEl, box, pool); loadTilePrices(chunk); });
     return;
   }
   // Bottom-up: #crBody sits ABOVE the card in a column-reverse main, so its
   // DOM-last child is nearest the foot -- EDHREC's first section goes last.
   // Inside a section the label rides under its cards (.edh-sec order).
   const CAP = 12;
-  const secHtml = (g, i)=>`<div class="edh-sec" data-csec="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > CAP ? `<button class="ghost-btn edh-more" data-csec="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid" data-csg="${i}">${g.cards.slice(0, CAP).map(c=>searchRowHtml(c, null, {noAdd:true})).join('')}</div></div>`;
+  const secHtml = (g, i)=>`<div class="edh-sec" data-csec="${i}"><div class="section-label" style="margin-top:14px;">${escapeHtml(g.title)}</div>${g.cards.length > CAP ? `<button class="ghost-btn edh-more" data-csec="${i}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}<div class="sr-grid" data-csg="${i}">${g.cards.slice(0, CAP).map(c=>searchRowHtml(c, forDeck || null)).join('')}</div></div>`;
   box.insertAdjacentHTML('beforeend', groups.map((g, i)=>({ g, i })).reverse().map(x=>secHtml(x.g, x.i)).join('')
     + `<div class="edh-jump-row insp-jump"><button class="icon-btn edh-jump" id="crJump" title="${trS('Jump to section')}">☰</button></div>`);
-  wireResultButtons(pool, null, rewire);
+  wireResultButtons(pool, forDeck || null, rewire);
   wireOverlayPick(crEl, box, pool);   // 1.8
   loadTilePrices(groups.flatMap(g=>g.cards.slice(0, CAP)));   // every shown tile (bottom-up: the first section is drawn last)
   box.querySelectorAll('.edh-more[data-csec]').forEach(btn=>btn.addEventListener('click', ()=>{
     const g = groups[+btn.dataset.csec]; const gr = box.querySelector(`.sr-grid[data-csg="${btn.dataset.csec}"]`);
     if(!g || !gr) return;
     const have = gr.children.length, next = Math.min(g.cards.length, have + CAP);
-    gr.insertAdjacentHTML('beforeend', g.cards.slice(have, next).map(c=>searchRowHtml(c, null, {noAdd:true})).join(''));
-    wireResultButtons(pool, null, rewire); wireOverlayPick(crEl, box, pool); loadTilePrices(g.cards.slice(have, next));
+    gr.insertAdjacentHTML('beforeend', g.cards.slice(have, next).map(c=>searchRowHtml(c, forDeck || null)).join(''));
+    wireResultButtons(pool, forDeck || null, rewire); wireOverlayPick(crEl, box, pool); loadTilePrices(g.cards.slice(have, next));
     if(next >= g.cards.length) btn.remove();
   }));
   document.getElementById('crJump')?.addEventListener('click', (e)=>{
@@ -26260,8 +26368,8 @@ async function cardRecoFocus(card, forDeck, comboKey, tag){
   b2.innerHTML = `<p class="hint" style="margin:0 0 4px;text-align:center;">${nl ? 'Focus op' : 'Focused on'} <b>${escapeHtml(otagLabel(tag))}</b>${first.length ? (nl ? ' — eerst kaarten die met ' : ' — cards played with ') + escapeHtml(card.name) + (nl ? ' gespeeld worden' : ' first') : ''}.</p>`;
   const crEl = b2.closest('.overlay');
   const rewire = ()=>cardRecoFocus(card, forDeck, comboKey, tag);
-  pagedGrid(b2, pool, (c)=>searchRowHtml(c, null, {noAdd:true}),
-    (chunk)=>{ wireResultButtons(pool, null, rewire); wireOverlayPick(crEl, b2, pool); loadTilePrices(chunk); });
+  pagedGrid(b2, pool, (c)=>searchRowHtml(c, forDeck || null),
+    (chunk)=>{ wireResultButtons(pool, forDeck || null, rewire); wireOverlayPick(crEl, b2, pool); loadTilePrices(chunk); });
 }
 
 /* ---------------- BUDGET ALTERNATIVES ----------------
