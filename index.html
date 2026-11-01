@@ -359,11 +359,19 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 /* 1.40: the packages drop-up rides beside the gold button */
 .adv-go-row > .adv-go-pkg{pointer-events:auto;flex:1 1 auto;min-width:0;margin-left:14px;align-self:center;}
 .adv-go-row > .adv-go-pkg .nsel-btn{width:100%;}
+/* 1.52: Packages is an ordinary row now (it scrolls with the filters) */
+.adv-row > .adv-go-pkg{min-width:0;}
+.adv-row > .adv-go-pkg .nsel-btn, .adv-row > .adv-go-pkg select{width:100%;}
+/* 1.52: every Advanced filter wears the Collection's framed inner panel.
+   Column-reverse like its sheet: DOM-first = the foot. */
+.adv-panel > .adv-frame{display:flex;flex-direction:column-reverse;margin:0 0 12px;flex:0 0 auto;}
+/* In a reversed panel the LAST row is the top one -- it keeps its gap */
+.adv-panel .adv-row:last-child, #colAdvBox .adv-row:last-child{margin-bottom:6px;}
 /* 1.35: "Show everything" starts where the fields start, so the gold
    button rises into the free space beside it (phone, bottom-up) */
-.adv-panel > .adv-showall{display:grid;grid-template-columns:96px minmax(0,1fr) auto;column-gap:10px;}
-.adv-panel > .adv-showall > div:first-child{grid-column:2;}
-.adv-panel > .adv-showall > .toggle-switch{grid-column:3;}
+.adv-panel .adv-showall{display:grid;grid-template-columns:96px minmax(0,1fr) auto;column-gap:10px;}
+.adv-panel .adv-showall > div:first-child{grid-column:2;}
+.adv-panel .adv-showall > .toggle-switch{grid-column:3;}
 
 .adv-row > label .info-i{margin-left:5px;width:16px;height:16px;font-size:11px;}
 .adv-panel .cselect-panel,
@@ -532,6 +540,15 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
   display:flex;align-items:center;gap:6px;padding:0 8px env(safe-area-inset-bottom);overflow:hidden;max-width:100%;
 }
 .banner-tabs{display:flex;gap:6px;flex:0 0 auto;}
+/* 1.52: the phone bar scales with the screen -- seven buttons (Home, Back,
+   five pages) and their gaps always fit, from 320px up; 44px stays the cap */
+:root{--nb:min(44px, calc((100vw - 66px) / 7));--nbg:clamp(3px, 1.4vw, 6px);}
+html:not(.desk) .brand-banner{gap:var(--nbg);padding-left:clamp(4px, 2vw, 8px);padding-right:clamp(4px, 2vw, 8px);}
+html:not(.desk) .brand-banner .banner-tabs{gap:var(--nbg);}
+html:not(.desk) .brand-banner .banner-tab{width:var(--nb);height:var(--nb);}
+html:not(.desk) .brand-banner .banner-tab svg{width:calc(var(--nb) * 0.66);height:calc(var(--nb) * 0.66);}
+html:not(.desk) .brand-banner .compass{width:calc(var(--nb) - 6px);height:calc(var(--nb) - 6px);}
+html:not(.desk) .brand-banner .compass svg{width:calc(var(--nb) * 0.57);height:calc(var(--nb) * 0.57);}
 .banner-tab{
   display:flex;align-items:center;justify-content:center;background:none;border:2px solid var(--line);color:var(--sub-text);
   width:44px;height:44px;border-radius:11px;cursor:pointer;flex:0 0 auto;
@@ -1902,6 +1919,10 @@ main.card-detail .cs-actions-grid{width:100%;box-sizing:border-box;}
 /* 1.1: a tile stays square even when the credits cell beside it is taller
    (credits + What's new + feedback); it no longer stretches to that row */
 .xt-tiles > .settings-section:not(.xt-note){align-self:center;}
+/* 1.52: the credits cell is taller than a tile -- About and the credits both
+   sit on the row below (flex-start = the foot in wrap-reverse), so the gap
+   under them is the same 12px as everywhere else */
+.xt-tiles > .settings-section.xt-note, .xt-tiles > .settings-section:has(> #aboutRow){align-self:flex-start;}
 .xt-tiles > .settings-section > .settings-row.xt-tile{flex:1 1 auto;min-width:0;}
 /* 1.41: the credits cell -- no tile, just the text and a small What's new button */
 .xt-tiles > .settings-section.xt-note{aspect-ratio:auto;align-self:center;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:none;background-image:none;border:none;box-shadow:none;overflow:visible;}
@@ -6963,13 +6984,23 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.51';
+const APP_VERSION = '1.52';
 const CHANGELOG_NOTES = {
   en: [
-    'Life counter: thicker pill and Done'
+    'Cards wear your own printing',
+    'Filters get a framed panel',
+    'Packages: own row in the filter',
+    'Trade: suggestions while typing',
+    'Nav bar fits every screen size',
+    'Extras and filter spacing fixed'
   ],
   nl: [
-    'Life counter: dikkere pil en Klaar'
+    'Kaarten tonen je eigen printing',
+    'Filters krijgen een omlijsting',
+    'Pakketten: eigen regel in filter',
+    'Ruilen: suggesties tijdens typen',
+    'Navigatiebalk past op elk scherm',
+    'Ruimte in Extra’s en filter klopt'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -6979,6 +7010,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-01';
 const CHANGELOG_HISTORY = [
+  { v: '1.51', d: '2026-11-01',
+    en: ['Life counter: thicker pill and Done'],
+    nl: ['Life counter: dikkere pil en Klaar'] },
   { v: '1.50', d: '2026-11-01',
     en: ['Short tour: only the highlights', 'Tour arrows point at each feature', 'Card scanner removed', 'Search filter: sort rows removed'],
     nl: ['Korte rondleiding: alleen highlights', 'Pijltjes wijzen naar elke feature', 'Kaartscanner verwijderd', 'Zoekfilter: sorteerregels weg'] },
@@ -14093,7 +14127,7 @@ function spoilersPageHtml(){
       const setOpts = [{v:'', l:'All sets'}].concat(sets.map(x=>({v:x.code, l:x.name, icons:setIconHtml(x.code)})));
       const colorOrder = ['W','U','B','R','G','C'];
       return `<button class="adv-toggle" id="spAdvToggle">Advanced filter ${foldIcoHtml(state.spAdvOpen)}</button>
-      <div class="adv-panel" id="spAdvBox" style="${state.spAdvOpen?'':'display:none;'}">
+      <div class="adv-panel" id="spAdvBox" style="${state.spAdvOpen?'':'display:none;'}"><div class="panel-card adv-frame" style="display:flex;flex-direction:column-reverse;">
         ${advGoHtml('spGo')}
         <div class="adv-row"><label>Name</label><input id="spFq" class="col-filter-input" placeholder="Card name\u2026" value="${escapeHtml(sf.q)}"></div>
         <div class="adv-row"><label>Set</label>${cselectHtml('spSet', setOpts, active||'', 'All sets')}</div>
@@ -14108,7 +14142,7 @@ function spoilersPageHtml(){
         <div class="adv-row"><label>Rarity</label><div class="rarity-row">
           ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-sprarity="${v}" ${sf.rarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
         </div></div>
-      </div>`;
+      </div></div>`;
     })() : ''}
   </main>`;
 }
@@ -14707,6 +14741,7 @@ function wireDecklistPage(){
   // the user taps. By the time Budget is opened, its data is usually ready.
   {
     const d0 = getDeck(state.activeDeckId);
+    if(d0) setTimeout(()=>syncOwnedPrintings(d0), 1800);   // 1.52
     if(d0) setTimeout(()=>{
       priceDeck(d0, null, true)
         .then(()=>{ refreshCapPrice(); return prefetchBudgetData(d0); })
@@ -18113,8 +18148,9 @@ function advancedPanelHtml(){
     });
   }catch(e){}
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
-  return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;">
-    ${advGoHtml('advGo', (()=>{ const pk = pkgAll().filter(p=>p.cards.length); return pk.length ? `<div class="adv-go-pkg"><select id="advPkgSel"><option value="">${appLang() === 'nl' ? 'Pakketten' : 'Packages'}</option>${pk.map(p=>`<option value="${p.id}">${pkgLabel(p)}</option>`).join('')}</select></div>` : ''; })())}
+  return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;"><div class="panel-card adv-frame" style="display:flex;flex-direction:column-reverse;">
+    ${advGoHtml('advGo')}
+    ${(()=>{ const pk = pkgAll().filter(p=>p.cards.length); return pk.length ? `<div class="adv-row"><label>${appLang() === 'nl' ? 'Pakketten' : 'Packages'}</label><div class="adv-go-pkg"><select id="advPkgSel"><option value="">${appLang() === 'nl' ? 'Kies een pakket' : 'Pick a package'}</option>${pk.map(p=>`<option value="${p.id}">${pkgLabel(p)}</option>`).join('')}</select></div></div>` : ''; })()}
     <div class="adv-row"><label>Format</label>
       ${cselectHtml('fmtSel', [{v:'',l:'Any format'}].concat(SEARCH_FORMATS.map(([v,l])=>({v, l}))), s.searchFormat, 'Any format', {cls:'cs-up'})}
     </div>
@@ -18170,7 +18206,7 @@ function advancedPanelHtml(){
     <div class="adv-row"><label>Flavor Text</label><input id="flavText" type="text" placeholder="e.g. dragon" value="${escapeHtml(s.searchFlavorText)}"></div>
     <div class="adv-row"><label>Artist</label><input id="artistText" type="text" placeholder="e.g. Rebecca Guay" value="${escapeHtml(s.searchArtist)}"></div>
     ${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) || (s.searchFormat && s.searchFormat !== 'any') ? `<div class="adv-row adv-showall-top"><label>${trS('Show everything')}${advInfo((state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) ? 'allDeck' : 'allFmt')}</label><div style="display:flex;justify-content:flex-end;"><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div></div>` : ''}
-  </div>`;
+  </div></div>`;
 }
 function wireSearchPage(){
   document.getElementById('srSelFab')?.addEventListener('click', (e)=>openSearchSelMenu(e.currentTarget));
@@ -19109,8 +19145,11 @@ function searchRowHtml(c, d, opts){
   // 1.21: a card that can share command shows its pairings in a popup
   const canPairPop = !!opts.showAdmiralBtn && !!pairAbility(c);
   if(canPairPop){ (window._pairPopReg = window._pairPopReg || new Map()).set(c.name, c); }
+  // 1.52: a card you own shows YOUR printing on its tile
+  const _own = ownedPrintingOf(c.name);
+  const _oImg = (_own && _own.img && !(String(c.set || '').toLowerCase() === String(_own.set).toLowerCase() && String(c.collector_number || '') === String(_own.cn))) ? _own.img : null;
   return `<div class="sr-tile" data-name="${encodeURIComponent(c.name)}">
-    <img class="${wbClass(c)}" src="${cardImageMed(c)}" data-preview="${cardImageLarge(c)}" data-wb="${wbClass(c)?1:''}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}${gcMarkHtml(c)}${canPairPop ? `<span class="pair-pop-wrap"><button type="button" class="pair-pop-btn" data-pairpop="${encodeURIComponent(c.name)}" title="${trS('Partner pairings')}" aria-label="${trS('Partner pairings')}">${PAIR_ICON}</button></span>` : ''}
+    <img class="${wbClass(c)}" src="${_oImg || cardImageMed(c)}" data-preview="${_oImg ? _oImg.replace('/normal/', '/large/') : cardImageLarge(c)}" data-wb="${wbClass(c)?1:''}" alt="${escapeHtml(c.name)}" loading="lazy">${cardBadgesHtml(c)}${gcMarkHtml(c)}${canPairPop ? `<span class="pair-pop-wrap"><button type="button" class="pair-pop-btn" data-pairpop="${encodeURIComponent(c.name)}" title="${trS('Partner pairings')}" aria-label="${trS('Partner pairings')}">${PAIR_ICON}</button></span>` : ''}
     <div class="st-body">
       ${tag!=='ok' ? `<div class="st-meta"><span class="tag ${tag}">${tagTxt}</span></div>` : ''}
       <div class="st-meta-row">
@@ -19151,6 +19190,51 @@ async function useOwnedPrinting(d, arr, c){
     arr[i] = full;
     scheduleSave(d);
     if(state.screen === 'decklist' && state.activeDeckId === d.id){ try{ refreshDecklistBox(d); }catch(e){} }
+  }catch(e){}
+}
+/* 1.52: a deck's cards wear your collection's printing unless you picked
+   one by hand (Change printing pins it). One batched Scryfall lookup per
+   75 cards, once per deck per collection state. */
+const _ownSyncDone = new Set();
+async function syncOwnedPrintings(d){
+  try{
+    const items = (state.collection && state.collection.items) || [];
+    if(!d || !items.length) return;
+    const key = d.id + ':' + items.length;
+    if(_ownSyncDone.has(key)) return;
+    _ownSyncDone.add(key);
+    const todo = [];
+    [d.cards || [], d.maybeboard || []].forEach(arr=>arr.forEach(c=>{
+      if(!c || !c.name || c.pin || c._foilPick) return;
+      const it = ownedPrintingOf(c.name);
+      if(!it) return;
+      if(String(c.set || '').toLowerCase() === String(it.set).toLowerCase() && String(c.collector_number || '') === String(it.cn)) return;
+      todo.push({ arr, c, it });
+    }));
+    if(!todo.length) return;
+    let changed = 0;
+    for(let k = 0; k < todo.length; k += 75){
+      const chunk = todo.slice(k, k + 75);
+      let got = [];
+      try{
+        const r = await postWithTimeout(`${SF_BASE}/cards/collection`, { identifiers: chunk.map(x=>({ set: String(x.it.set).toLowerCase(), collector_number: String(x.it.cn) })) }, 6000);
+        if(r && r.ok){ const j = await r.json(); got = (j && j.data) || []; }
+      }catch(e){}
+      const by = new Map(got.map(f=>[String(f.set).toLowerCase() + '|' + f.collector_number, f]));
+      chunk.forEach(x=>{
+        const full = by.get(String(x.it.set).toLowerCase() + '|' + String(x.it.cn));
+        if(!full || full.name !== x.c.name) return;
+        const i = x.arr.indexOf(x.c);
+        if(i < 0) return;
+        const nc = Object.assign({}, full);
+        if(x.it.foil && !items_hasNonFoil(x.c.name)) nc._foilPick = true;
+        x.arr[i] = nc; changed++;
+      });
+    }
+    if(changed){
+      scheduleSave(d);
+      if(state.screen === 'decklist' && state.activeDeckId === d.id){ try{ refreshDecklistBox(d); }catch(e){} }
+    }
   }catch(e){}
 }
 function items_hasNonFoil(name){ return ((state.collection && state.collection.items) || []).some(it=>it && it.name === name && !it.foil); }
@@ -22580,7 +22664,7 @@ function openTradeAdd(side){
   </div>`;
   wireOverlayNav(el);
   setTimeout(()=>{ try{ document.getElementById('taName')?.focus(); }catch(e){} }, 60);
-  const go = async ()=>{
+  const go = async (exact)=>{
     const q = (document.getElementById('taName')?.value||'').trim();
     const box = document.getElementById('taResults');
     if(!q || !box) return;
@@ -22592,7 +22676,7 @@ function openTradeAdd(side){
     // printing chooser: the YOU side keeps the In-your-collection shelf so
     // your own copies are one tap away; the ME side hides it (noOwned).
     try{
-      const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent(q+' game:paper')}`);
+      const r = await sfFetch(`${SF_BASE}/cards/search?unique=cards&q=${encodeURIComponent((exact ? '!"' + q.replace(/"/g, '') + '"' : q) + ' game:paper')}`);
       if(!r.ok){ box.innerHTML = '<p class="hint">No cards found.</p>'; return; }
       const d = await r.json();
       const cards = (d.data||[]).slice(0,30);
@@ -22634,6 +22718,12 @@ function openTradeAdd(side){
     }catch(e){ box.innerHTML = '<p class="hint">Couldn\'t reach Scryfall.</p>'; }
   };
   document.getElementById('taName').addEventListener('keydown', e=>{ if(e.key==='Enter') go(); });
+  // 1.52: suggestions while typing, like Search -- tap one to see its printings
+  wireNameSuggest(document.getElementById('taName'), allCardNamesFor, (name)=>{
+    const inp = document.getElementById('taName');
+    if(inp){ inp.value = name; try{ inp.blur(); }catch(e){} }
+    go(true);
+  });
   setTimeout(()=>{ try{ document.getElementById('taName')?.focus(); }catch(e){} }, 60);
 }
 function openTradePrints(side, card){
