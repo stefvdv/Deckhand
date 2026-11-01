@@ -585,6 +585,9 @@ html:not(.desk) .brand-banner .compass svg{width:calc(var(--nb) * 0.57);height:c
 .pp-imghold{position:relative;display:block;}
 .pp-own{position:absolute;left:10px;bottom:10px;width:26px;height:26px;border-radius:50%;background:#1e8a4c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;}
 .otag-wrap{position:relative;}
+.otag-wrap.type-wrap{width:100%;min-width:0;}
+.otag-wrap.type-wrap > input{width:100%;box-sizing:border-box;}
+.type-wrap > .otag-pop button{display:block;width:100%;text-align:left;background:none;border:none;border-radius:7px;padding:9px 10px;font-size:14px;color:var(--ink-text);cursor:pointer;flex:none;}
 .otag-pop[hidden]{display:none !important;}
 .otag-pop{position:absolute;bottom:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--ink);border:1.5px solid var(--pop-line);border-radius:10px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column-reverse;padding:4px;box-shadow:0 -6px 18px rgba(0,0,0,0.45);}
 .otag-pop{top:auto;bottom:calc(100% + 4px);display:flex;flex-direction:column-reverse;overflow-y:auto;max-height:min(48vh,380px);z-index:40;}
@@ -1339,7 +1342,7 @@ html[data-theme="light"] img.set-ico.r-common, html[data-theme="light"] img.set-
 .df-compact{padding:12px;}
 .df-compact .panel-h{margin:0 0 8px;}
 .df-compact .adv-row{grid-template-columns:82px minmax(0,1fr);gap:3px 10px;margin-bottom:8px;}
-.df-compact .adv-row label{font-size:13.5px;}
+.df-compact .adv-row label{font-size:14px;}
 .df-compact .col-filter-input{padding:8px 10px;font-size:14.5px;}
 .df-compact .cselect-btn{padding:8px 10px;font-size:14.5px;}
 .df-compact .mana-check svg{width:24px;height:24px;}
@@ -1562,7 +1565,7 @@ img.art-missing::after{
 .adv-panel select{text-overflow:ellipsis;}
 .adv-row:last-child{margin-bottom:0;}
 .adv-row.stacked{display:block;}
-.adv-row > label{font-size:12.5px;color:var(--ink-text);font-weight:500;margin:0;}
+.adv-row > label{font-size:14px;color:var(--ink-text);font-weight:500;margin:0;}
 .adv-row .adv-hint{grid-column:2;font-size:11px;color:var(--sub-text-2);margin:0;line-height:1.4;}
 .adv-row .adv-sub{grid-column:2;}
 .color-check-row{display:flex;gap:5px;flex-wrap:wrap;}
@@ -1968,6 +1971,9 @@ button.cl-head{background:none;border:none;padding:10px 2px;font-family:inherit;
 .xt-tiles .settings-row.xt-tile{flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:16px 8px;min-height:0;}
 .settings-row.xt-tile .l1{font-size:18px;font-weight:700;line-height:1.2;hyphens:manual;overflow-wrap:normal;}
 .xt-ico{display:inline-flex;align-items:center;justify-content:center;gap:2px;width:auto;min-width:38px;height:38px;color:var(--brass);}
+/* 1.60: line icons on tiles wear the tile's own text colour -- dark on the
+   light tiles, light on the dark ones (the Commander glyph's contrast) */
+.xt-ico > svg:not(.mana-ic), .folder-tile .folder-face > svg, .fp-tile .folder-face > svg{color:var(--panel-text) !important;}
 .xt-ico svg{width:38px;height:38px;}
 /* A tile's fold floats over the tiles (placed by xtSync next to its tile,
    on the side with the most room); a dimmed scrim behind it closes it. */
@@ -2454,6 +2460,8 @@ html:has(#crOverlay){overflow:hidden;}
 /* 1.57: any overlay with foot-sticky section labels: no bottom padding, or
    cards show through the strip under the label */
 html:not(.desk) .overlay main:has(.edh-sec > .section-label){padding-bottom:0;}
+/* 1.59: on the phone a section's label scrolls along with its cards */
+html:not(.desk) .overlay main .edh-sec > .section-label, html:not(.desk) #recoOverlay .edh-sec > .section-label{position:static !important;}
 #recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);margin:0;padding:8px 0;}
 #recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;transition:bottom 0.2s;}
 /* While the selection + fab is visible, the burger steps up to make room —
@@ -2612,12 +2620,13 @@ body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !impo
 .hist-row:last-child{border-bottom:none;}
 /* 1.56: the whole name gets the width (it may wrap); time and the action
    button share the second line */
-.hist-row{display:grid;grid-template-columns:18px minmax(0, 1fr) auto;grid-template-areas:"ico name name" ". when btn";column-gap:8px;row-gap:6px;align-items:center;padding:10px 0;}
+.hist-row{display:grid;grid-template-columns:18px minmax(0, 2fr) minmax(0, 1fr);grid-template-areas:"ico name when" "ico name btn";column-gap:10px;row-gap:5px;align-items:center;padding:10px 0;}
 .hist-row > .hist-ico{grid-area:ico;}
 .hist-row > .hist-txt{display:contents;}
 .hist-row .ht-n{grid-area:name;white-space:normal !important;overflow:visible !important;text-overflow:clip !important;line-height:1.3;}
-.hist-row .ht-s{grid-area:when;margin:0;}
-.hist-row > .undo-btn{grid-area:btn;justify-self:end;}
+.hist-row .ht-s{grid-area:when;margin:0;justify-self:end;align-self:end;}
+.hist-row > .undo-btn{grid-area:btn;justify-self:end;align-self:start;}
+.hist-row > .hist-ico{align-self:center;}
 .hist-ico{flex:0 0 auto;width:18px;text-align:center;}
 .hist-txt{flex:1;min-width:0;}
 .hist-txt .ht-n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -2655,20 +2664,25 @@ body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !impo
 .lmonarch{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);width:clamp(30px, 17cqmin, 60px);color:var(--gold);filter:drop-shadow(0 2px 3px rgba(0,0,0,0.55));pointer-events:none;line-height:0;}
 .lmonarch svg{width:100%;height:auto;display:block;}
 /* 1.55: Monarch and Initiative beside the life total -- status, never a button */
+.life-face.front:has(.ldungeon) .lval-row{transform:translateY(9px);}   /* 1.59 */
 .lstat{position:absolute;left:100%;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;margin-left:4px;pointer-events:none;}
 .lstat i{display:block;width:clamp(24px, 15cqmin, 44px);color:var(--gold);filter:drop-shadow(0 2px 3px rgba(0,0,0,0.55));line-height:0;}
 .lstat i svg{width:100%;height:auto;display:block;}
-.ldungeon{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:2;display:inline-flex;align-items:center;gap:5px;max-width:70%;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,0.32);color:#fff;font-size:12px;font-weight:700;pointer-events:none;white-space:nowrap;}
+.ldungeon{position:absolute;top:3px;left:50%;transform:translateX(-50%);z-index:2;display:inline-flex;align-items:center;gap:5px;max-width:70%;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,0.32);color:#fff;font-size:12px;font-weight:700;pointer-events:none;white-space:nowrap;}
 .ldungeon svg{width:14px;height:14px;flex:none;}
 /* 1.55 planechase */
 #lifePlaneChip{position:absolute;z-index:9;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;width:112px;aspect-ratio:680 / 488;padding:0;border:2px solid var(--gold);border-radius:8px;overflow:hidden;background:#000;box-shadow:0 6px 18px rgba(0,0,0,0.6);cursor:pointer;}
-#lifePlaneChip img{width:100%;height:100%;object-fit:cover;display:block;}
+/* 1.59: Scryfall stores planes as portrait images with the card lying on
+   its side -- a quarter turn shows them the way they are printed */
+.pc-rot{position:relative;display:block;width:100%;aspect-ratio:680 / 488;overflow:hidden;border-radius:inherit;}
+.pc-rot > img{position:absolute;top:50%;left:50%;width:71.765%;height:auto;aspect-ratio:488 / 680;transform:translate(-50%, -50%) rotate(90deg);object-fit:cover;display:block;}
+#lifePlaneChip .pc-rot{height:100%;}
 #lifePlaneChip span{display:block;padding:6px;color:#fff;font-size:11px;font-weight:700;}
 .pc-sheet{display:flex;flex-direction:column-reverse;gap:10px;}
 .pc-acts{display:flex;gap:8px;}
 .pc-acts > button{flex:1 1 0;margin:0;min-width:0;}
 .pc-cost{color:var(--gold);}
-.pc-plane img{width:100%;border-radius:12px;display:block;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+.pc-plane .pc-rot{border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
 .pc-res{font-weight:700;font-size:14px;padding:8px 10px;border-radius:10px;background:var(--field);border:1.5px solid var(--line);color:var(--ink-text);}
 .pc-res.pc-walk{border-color:var(--gold);}
 .pc-res.pc-chaos{border-color:#d98a6b;}
@@ -2678,7 +2692,7 @@ body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !impo
 .pd-grid{gap:8px;max-height:52vh;overflow-y:auto;overscroll-behavior:contain;}
 .pd-tile{flex:0 0 calc(50% - 4px);display:flex;flex-direction:column;gap:3px;padding:3px;border:2px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink-text);cursor:pointer;opacity:.45;text-align:left;}
 .pd-tile.on{opacity:1;border-color:var(--gold);}
-.pd-tile img{width:100%;aspect-ratio:680 / 488;object-fit:cover;border-radius:7px;display:block;}
+.pd-tile .pc-rot{border-radius:7px;}
 .pd-tile span{font-size:11px;line-height:1.2;padding:0 2px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dg-init{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0;font-weight:700;}
 .dg-init svg{width:20px;height:20px;flex:none;color:var(--gold);}
@@ -2734,6 +2748,14 @@ body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !impo
 .win-fx{position:absolute;inset:0;z-index:4;overflow:hidden;pointer-events:none;}
 .win-fx i{position:absolute;bottom:-12px;left:calc(4% + var(--i) * 6.7%);width:7px;height:12px;border-radius:2px;background:hsl(calc(var(--i) * 47), 85%, 62%);opacity:0;animation:winRise calc(2.2s + var(--i) * 0.13s) calc(var(--i) * 0.17s) linear infinite;}
 @keyframes winRise{0%{transform:translateY(0) rotate(0);opacity:0;}10%{opacity:1;}100%{transform:translateY(-110cqh) rotate(540deg);opacity:0;}}
+/* 1.59: starter, Monarch and Initiative in one row in the card's outer
+   corner (placeLifeCorners picks the corner farthest from the centre) */
+.lcorner{position:absolute;z-index:3;display:flex;align-items:center;gap:8px;pointer-events:none;line-height:0;}
+.lcorner.c-tl{top:8px;left:10px;} .lcorner.c-tr{top:8px;right:10px;flex-direction:row-reverse;}
+.lcorner.c-bl{bottom:8px;left:10px;} .lcorner.c-br{bottom:8px;right:10px;flex-direction:row-reverse;}
+.lcorner > i{display:block;width:27px;height:27px;color:var(--gold);filter:drop-shadow(0 1px 2px rgba(0,0,0,0.6));font-style:normal;}
+.lcorner > i svg{width:100%;height:100%;display:block;}
+.lcorner > i.lc-medal{font-size:27px;line-height:1;width:auto;height:auto;}
 .medal-badge{position:absolute;top:8px;right:10px;font-size:27px;line-height:1;z-index:2;color:var(--gold);filter:drop-shadow(0 1px 2px rgba(0,0,0,0.6));}
 .life-card-v2.medal-alt .medal-badge{right:auto;left:10px;}
 .defeat-banner{position:absolute;inset:0;background:rgba(0,0,0,0.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px;z-index:3;}
@@ -6614,6 +6636,71 @@ try{
   new MutationObserver(()=>{ if(_wscT) return; _wscT = requestAnimationFrame(()=>{ _wscT = 0; try{ wireSearchClears(); }catch(e){} }); })
     .observe(document.documentElement, { childList: true, subtree: true });
 }catch(e){}
+/* 1.60: Magic's types for every Card type field -- the drop-up the Tags
+   field has: it opens on focus, narrows as you type, a tap fills in the
+   type (the part after the last comma). Creature types come from the
+   app's live catalogue when it has it. */
+const MTG_TYPES_BASE = ['Legendary','Basic','Snow','World','Artifact','Battle','Creature','Enchantment','Instant','Kindred','Land','Planeswalker','Sorcery',
+  'Equipment','Vehicle','Aura','Saga','Class','Case','Room','Background','Shrine','Curse','Role','Cartouche','Rune','Shard','Food','Treasure','Clue','Blood','Map','Gold','Incubator','Powerstone','Fortification','Contraption','Attraction','Spacecraft',
+  'Plains','Island','Swamp','Mountain','Forest','Desert','Gate','Cave','Lair','Locus','Sphere','Town','Urza\u2019s','Mine','Power-Plant','Tower','Planet',
+  'Adventure','Arcane','Lesson','Trap','Omen','Siege'];
+function mtgTypeList(){
+  const set = new Set(MTG_TYPES_BASE);
+  (state._creatureTypes || []).forEach(t=>set.add(t));
+  // every subtype printed on a card, from the phone's own card database
+  if(_bulkIdx && _bulkIdx.cards){
+    if(!mtgTypeList._c || mtgTypeList._src !== _bulkIdx){
+      const sub = new Set();
+      _bulkIdx.cards.forEach(c=>String(c && c.tl || '').split('//').forEach(f=>{ const i = f.indexOf('\u2014'); if(i >= 0) f.slice(i + 1).trim().split(/\s+/).forEach(x=>{ if(/^[A-Z][\w'\u2019-]+$/.test(x)) sub.add(x); }); }));
+      mtgTypeList._c = Array.from(sub); mtgTypeList._src = _bulkIdx;
+    }
+    mtgTypeList._c.forEach(t=>set.add(t));
+  }
+  return Array.from(set);
+}
+function wireTypeSuggests(){
+  document.querySelectorAll('#typeText, #colTypeText, #spTypeText, #dfType').forEach(inp=>{
+    if(inp._tsw) return;
+    inp._tsw = true;
+    try{ ensureCreatureTypes(); }catch(e){}
+    const wrap = document.createElement('div');
+    wrap.className = 'otag-wrap type-wrap';
+    inp.parentNode.insertBefore(wrap, inp);
+    wrap.appendChild(inp);
+    const pop = document.createElement('div');
+    pop.className = 'otag-pop'; pop.hidden = true;
+    wrap.appendChild(pop);
+    inp.setAttribute('autocomplete', 'off');
+    const fill = ()=>{
+      const parts = inp.value.split(',');
+      const q = parts[parts.length - 1].trim().toLowerCase();
+      const all = mtgTypeList();
+      const hits = all.filter(t=>!q || t.toLowerCase().includes(q))
+        .sort((x, y)=>{ const ax = x.toLowerCase().startsWith(q) ? 0 : 1, ay = y.toLowerCase().startsWith(q) ? 0 : 1; return (ax - ay) || (q ? x.localeCompare(y) : 0); })
+        .slice(0, 300);
+      pop.innerHTML = hits.map(t=>`<button type="button" data-tpick="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join('');
+      pop.hidden = !hits.length;
+      pop.querySelectorAll('[data-tpick]').forEach(o=>o.addEventListener('click', ()=>{
+        const ps = inp.value.split(',');
+        ps[ps.length - 1] = (ps.length > 1 ? ' ' : '') + o.dataset.tpick;
+        inp.value = ps.join(',');
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+        pop.hidden = true;
+      }));
+    };
+    pop.addEventListener('mousedown', (e)=>e.preventDefault());
+    pop.addEventListener('pointerdown', (e)=>e.preventDefault());
+    inp.addEventListener('focus', fill);
+    inp.addEventListener('input', fill);
+    inp.addEventListener('blur', ()=>setTimeout(()=>{ pop.hidden = true; }, 220));
+  });
+}
+try{
+  let _wtsT = 0;
+  new MutationObserver(()=>{ if(_wtsT) return; _wtsT = requestAnimationFrame(()=>{ _wtsT = 0; try{ wireTypeSuggests(); }catch(e){} }); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+}catch(e){}
 function ownedNames(){
   if(!state._ownedSet) state._ownedSet = new Set((state.collection.items||[]).map(it=>it.name));
   return state._ownedSet;
@@ -7053,17 +7140,21 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.58';
+const APP_VERSION = '1.60';
 const CHANGELOG_NOTES = {
   en: [
-    'Trade history: every step, restorable',
-    'Clear-× inside every search bar',
-    'Price rises shown in green'
+    'Card type field lists all types',
+    'Filter fields without example text',
+    'Filter labels a bit larger',
+    'Search: Rarity right above Colors',
+    'Tile icons easier to see'
   ],
   nl: [
-    'Ruilgeschiedenis: elke stap terug',
-    'Wis-kruisje in elke zoekbalk',
-    'Prijsstijgingen in het groen'
+    'Kaarttype-veld toont alle types',
+    'Filtervelden zonder voorbeeldtekst',
+    'Filterlabels iets groter',
+    'Zoeken: Rarity boven de kleuren',
+    'Tegel-iconen beter zichtbaar'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7073,6 +7164,12 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-01';
 const CHANGELOG_HISTORY = [
+  { v: '1.59', d: '2026-11-01',
+    en: ['Planes shown landscape', 'Crown, torch, starter: outer corner', 'Dungeon name no longer over life', 'Section labels scroll with cards', 'History: time above the button'],
+    nl: ['Planes liggend getoond', 'Kroon, fakkel, starter: buitenhoek', 'Dungeonnaam niet meer over je life', 'Koppen scrollen mee met kaarten', 'Geschiedenis: tijd boven de knop'] },
+  { v: '1.58', d: '2026-11-01',
+    en: ['Trade history: every step, restorable', 'Clear-× inside every search bar', 'Price rises shown in green'],
+    nl: ['Ruilgeschiedenis: elke stap terug', 'Wis-kruisje in elke zoekbalk', 'Prijsstijgingen in het groen'] },
   { v: '1.57', d: '2026-11-01',
     en: ['Land base uses EDHREC again', 'No leftover gold rim after a tap', 'Package labels scroll cleanly', 'Extras credits a bit larger'],
     nl: ['Landbase gebruikt EDHREC weer', 'Geen gouden rand meer na een tik', 'Pakketkoppen scrollen netjes', 'Tekst in Extra\u2019s iets groter'] },
@@ -10904,7 +11001,7 @@ function collectionPageHtml(){
         ${advGoHtml('colGo')}
         <div class="adv-row"><label>Name</label><input id="colFq" class="col-filter-input" placeholder="Card name…" value="${escapeHtml(f.q)}"></div>
         <div class="adv-row"><label>Set</label>${cselectHtml('colSet', setOpts, f.set, 'All sets', {search:true})}</div>
-        <div class="adv-row"><label>Type</label><input id="colTypeText" class="col-filter-input" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(f.type)}"></div>
+        <div class="adv-row"><label>Type</label><input id="colTypeText" class="col-filter-input" value="${escapeHtml(f.type)}"></div>
         <div class="adv-row"><label>Colors</label><div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" data-colcolor="${c}" ${f.colors[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>
           <div class="adv-sub" style="max-width:220px;">${cselectHtml('colCM', [
             {v:'all', l:'Must have all selected'},
@@ -14157,7 +14254,7 @@ function spoilersPageHtml(){
         ${advGoHtml('spGo')}
         <div class="adv-row"><label>Name</label><input id="spFq" class="col-filter-input" placeholder="Card name\u2026" value="${escapeHtml(sf.q)}"></div>
         <div class="adv-row"><label>Set</label>${cselectHtml('spSet', setOpts, active||'', 'All sets')}</div>
-        <div class="adv-row"><label>Type</label><input id="spTypeText" class="col-filter-input" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(sf.type)}"></div>
+        <div class="adv-row"><label>Type</label><input id="spTypeText" class="col-filter-input" value="${escapeHtml(sf.type)}"></div>
         <div class="adv-row"><label>Colors</label><div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" data-spcolor="${c}" ${sf.colors[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>
           <div class="adv-sub" style="max-width:220px;">${cselectHtml('spCM', [
             {v:'all', l:'Must have all selected'},
@@ -15170,8 +15267,8 @@ function dlPanelHtml(d){
     if(f.name) f.name = '';
     return `<div class="panel-card df-compact" style="display:flex;flex-direction:column-reverse;">
       ${advGoHtml('dfGo')}
-      <div class="adv-row"><label>${trS('Oracle text')}${advInfo('oracle')}</label><input id="dfText" class="col-filter-input" placeholder="${trS('Any text, e.g. draw a card')}" value="${escapeHtml(f.text||'')}" autocomplete="off"></div>
-      <div class="adv-row"><label>Type</label><input id="dfType" class="col-filter-input" placeholder="${trS('e.g. Dragon, Equipment')}" value="${escapeHtml(f.type||'')}" autocomplete="off"></div>
+      <div class="adv-row"><label>${trS('Oracle text')}${advInfo('oracle')}</label><input id="dfText" class="col-filter-input" value="${escapeHtml(f.text||'')}" autocomplete="off"></div>
+      <div class="adv-row"><label>Type</label><input id="dfType" class="col-filter-input" value="${escapeHtml(f.type||'')}" autocomplete="off"></div>
       <div class="adv-row"><label>${trS('Colors')}${advInfo('deckColors')}</label><div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" data-dfci="${c}" ${f.ci && f.ci.includes(c)?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div></div>
       <div class="adv-row"><label>${trS('Mana Value')}</label><div style="display:flex;gap:8px;align-items:center;">
         <div style="flex:0 0 92px;">${cselectHtml('dfMvOp', [{v:'<=',l:'≤'},{v:'=',l:'='},{v:'>=',l:'≥'}], f.mvOp||'<=', '≤')}</div>
@@ -18204,11 +18301,11 @@ function advancedPanelHtml(){
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
   return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;"><div class="panel-card adv-frame" style="display:flex;flex-direction:column-reverse;">
     ${advGoHtml('advGo')}
-    <div class="adv-row"><label>Oracle Text${advInfo('oracle')}</label><input id="oracleText" type="text" placeholder="Any text, e.g. draw a card" value="${escapeHtml(s.searchOracleText)}">
+    <div class="adv-row"><label>Oracle Text${advInfo('oracle')}</label><input id="oracleText" type="text" value="${escapeHtml(s.searchOracleText)}">
     </div>
-    <div class="adv-row"><label>Card Type</label><input id="typeText" type="text" placeholder="e.g. Dragon, Equipment" value="${escapeHtml(s.searchTypeText)}"></div>
+    <div class="adv-row"><label>Card Type</label><input id="typeText" type="text" value="${escapeHtml(s.searchTypeText)}"></div>
     <div class="adv-row"><label>Tags${advInfo('tags')}</label><div class="otag-wrap">
-      <input id="otagText" type="text" placeholder="e.g. removal, ramp, tutor" value="" autocomplete="off" autocapitalize="off">
+      <input id="otagText" type="text" value="" autocomplete="off" autocapitalize="off">
       <div id="otagPop" class="otag-pop" hidden></div>
       <div class="otag-chips" id="otagChips"></div>
     </div>
@@ -18227,6 +18324,9 @@ function advancedPanelHtml(){
         {v:'including', l:'Including these colors'}
       ], s.searchColorMode, 'Match mode')}</div>
     </div>
+    <div class="adv-row"><label>Rarity</label><div class="rarity-row">
+      ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-rarity="${v}" ${s.searchRarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
+    </div></div>
     <div class="adv-row"><label>Set / Expansion</label>
       ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name), icons:setIconHtml(code)}))), s.searchSetCode, 'Any Set', {search:true, cls:'cs-up cs-foot'})}
       ${sets.length?'':`<p class="adv-hint">Set list still loading…</p>`}
@@ -18252,13 +18352,10 @@ function advancedPanelHtml(){
       ${opSelectHtml('loyOp', s.searchLoyOp)}
       <input id="loyVal" type="text" placeholder="" value="${escapeHtml(s.searchLoyVal)}">
     </div></div>
-    <div class="adv-row"><label>Rarity</label><div class="rarity-row">
-      ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-rarity="${v}" ${s.searchRarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
-    </div></div>
     <div class="adv-row"><label>Price${advInfo('price')}</label>${priceSliderHtml('srchPr', s.searchEurMin, s.searchEurMax)}
     </div>
-    <div class="adv-row"><label>Flavor Text</label><input id="flavText" type="text" placeholder="e.g. dragon" value="${escapeHtml(s.searchFlavorText)}"></div>
-    <div class="adv-row"><label>Artist</label><input id="artistText" type="text" placeholder="e.g. Rebecca Guay" value="${escapeHtml(s.searchArtist)}"></div>
+    <div class="adv-row"><label>Flavor Text</label><input id="flavText" type="text" value="${escapeHtml(s.searchFlavorText)}"></div>
+    <div class="adv-row"><label>Artist</label><input id="artistText" type="text" value="${escapeHtml(s.searchArtist)}"></div>
     ${(state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) || (s.searchFormat && s.searchFormat !== 'any') ? `<div class="adv-row adv-showall-top"><label>${trS('Show everything')}${advInfo((state.searchPinnedDeckId && getDeck(state.searchPinnedDeckId)) ? 'allDeck' : 'allFmt')}</label><div style="display:flex;justify-content:flex-end;"><label class="toggle-switch"><input type="checkbox" id="advOffColor" ${s.searchShowOffColor?'checked':''}><span class="track"></span><span class="knob"></span></label></div></div>` : ''}
   </div></div>`;
 }
@@ -31475,7 +31572,7 @@ async function openPlaneSheet(rolled){
       </div>
       ${res ? `<div class="pc-res pc-${face}">${res}</div>` : ''}
       ${cur.ph ? `<div class="pc-res pc-chaos">${nl ? 'Phenomenon: voer het uit en planeswalk dan verder.' : 'Phenomenon: resolve it, then planeswalk on.'}</div>` : ''}
-      <div class="pc-plane">${cur.lg ? `<img src="${cur.lg}" alt="${escapeHtml(cur.n)}">` : `<b>${escapeHtml(cur.n)}</b>`}</div>
+      <div class="pc-plane">${cur.lg ? `<span class="pc-rot"><img src="${cur.lg}" alt="${escapeHtml(cur.n)}"></span>` : `<b>${escapeHtml(cur.n)}</b>`}</div>
       <div class="pc-turn"><span>${nl ? `Worpen deze beurt: ${cost}. De eerste is gratis, elke volgende kost {1} meer.` : `Rolls this turn: ${cost}. The first is free, each next one costs {1} more.`}</span><button type="button" class="ghost-btn" id="pcTurn">${nl ? 'Nieuwe beurt' : 'New turn'}</button></div>
       <div class="br-title"><b>Planechase</b><span>${escapeHtml(cur.n)} · ${(pc.pos % pc.order.length) + 1}/${pc.order.length}</span></div>`;
     m.querySelector('#pcRoll').addEventListener('click', ()=>{ const f = pcRoll(); lifeAutosave(); paint(f); });
@@ -31512,7 +31609,7 @@ async function openPlanarDeckEditor(){
       ${warn ? `<div class="pc-res pc-chaos">${warn}</div>` : ''}
       <div class="px-quick"><button type="button" class="ghost-btn" data-pdq="planes">${nl ? 'Alle planes' : 'All planes'}</button><button type="button" class="ghost-btn" data-pdq="rand">${nl ? '10 willekeurig' : 'Random 10'}</button><button type="button" class="ghost-btn" data-pdq="none">${nl ? 'Niets' : 'None'}</button></div>
       <div class="searchbar" style="margin:0;"><input id="pdQ" placeholder="${nl ? 'Zoek een plane…' : 'Find a plane…'}" value="${escapeHtml(q)}" autocomplete="off"></div>
-      <div class="pd-grid" style="display:flex;flex-wrap:wrap-reverse;">${shown.map(x=>`<button type="button" class="pd-tile${sel.has(x.n) ? ' on' : ''}" data-pd="${escapeHtml(x.n)}">${x.img ? `<img src="${x.img}" alt="" loading="lazy">` : ''}<span>${escapeHtml(x.n)}${x.ph ? ' · Phenomenon' : ''}</span></button>`).join('')}</div>
+      <div class="pd-grid" style="display:flex;flex-wrap:wrap-reverse;">${shown.map(x=>`<button type="button" class="pd-tile${sel.has(x.n) ? ' on' : ''}" data-pd="${escapeHtml(x.n)}">${x.img ? `<span class="pc-rot"><img src="${x.img}" alt="" loading="lazy"></span>` : ''}<span>${escapeHtml(x.n)}${x.ph ? ' · Phenomenon' : ''}</span></button>`).join('')}</div>
       <div class="br-title"><b>${nl ? 'Planar deck' : 'Planar deck'}</b><span>${nl ? 'Tik een kaart om hem erin of eruit te doen. Regels: minstens 10 kaarten, maximaal 2 phenomena.' : 'Tap a card to put it in or take it out. Rules: at least 10 cards, at most 2 phenomena.'}</span></div>`;
     m.querySelectorAll('[data-pd]').forEach(b=>b.addEventListener('click', ()=>{
       const n0 = b.dataset.pd;
@@ -31535,6 +31632,20 @@ async function openPlanarDeckEditor(){
 /* 1.56: the current plane lies ON the centre logo. One tap zooms in (the
    plane sheet); a double tap or a long press opens the menu -- the logo
    shows while it is open, and the plane comes back when it closes. */
+function placeLifeCorners(){
+  const cog = document.getElementById('lifeCogBtn'); if(!cog) return;
+  const cr = cog.getBoundingClientRect(), hx = cr.left + cr.width / 2, hy = cr.top + cr.height / 2;
+  document.querySelectorAll('#lifeOverlay .lcorner').forEach(el=>{
+    let best = 'c-tr', far = -1;
+    ['c-tl', 'c-tr', 'c-bl', 'c-br'].forEach(k=>{
+      el.classList.remove('c-tl', 'c-tr', 'c-bl', 'c-br'); el.classList.add(k);
+      const r = el.getBoundingClientRect(); const dx = r.left + r.width / 2 - hx, dy = r.top + r.height / 2 - hy;
+      const dist = dx * dx + dy * dy;
+      if(dist > far){ far = dist; best = k; }
+    });
+    el.classList.remove('c-tl', 'c-tr', 'c-bl', 'c-br'); el.classList.add(best);
+  });
+}
 async function placePlaneChip(){
   const box = document.querySelector('#lifeOverlay .life-grid-v2');
   document.getElementById('lifePlaneChip')?.remove();
@@ -31545,7 +31656,7 @@ async function placePlaneChip(){
   if(!cog) return;
   const b = document.createElement('button');
   b.type = 'button'; b.id = 'lifePlaneChip'; b.title = cur.n;
-  b.innerHTML = cur.img ? `<img src="${cur.img}" alt="${escapeHtml(cur.n)}">` : `<span>${escapeHtml(cur.n)}</span>`;
+  b.innerHTML = cur.img ? `<span class="pc-rot"><img src="${cur.img}" alt="${escapeHtml(cur.n)}"></span>` : `<span>${escapeHtml(cur.n)}</span>`;
   const openMenu = ()=>{ state.life.menuOpen = true; renderLifeOverlay(); };
   let tapT = null, lpT = null, lpFired = false;
   b.addEventListener('pointerdown', ()=>{ lpFired = false; clearTimeout(lpT); lpT = setTimeout(()=>{ lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(e){} openMenu(); }, 480); });
@@ -32264,13 +32375,13 @@ function lifeCardHtml(p, idx, count){
   return `<div class="life-cell"><div class="life-card-v2 ${isTurn?'active-turn':''}${won ? ' winner' : ''}" data-idx="${idx}" data-rot="${rot}" style="${style}">
     ${won ? `<div class="win-fx" aria-hidden="true">${Array.from({length: 14}, (_, i)=>`<i style="--i:${i}"></i>`).join('')}</div><div class="win-banner">\u{1F3C6} ${appLang() === 'nl' ? 'Winnaar!' : 'Winner!'}</div>` : ''}
     <div class="life-face front ${p.defeated?'defeated':''}">
-      ${p.medal?`<div class="medal-badge" title="High roll winner">${modeGlyph()}</div>`:''}
+      ${(p.medal || p.monarch || p.initiative) ? `<div class="lcorner c-tr" aria-hidden="true">${p.medal ? `<i class="lc-medal" title="High roll winner">${modeGlyph()}</i>` : ''}${p.monarch ? `<i title="Monarch">${CROWN_SVG}</i>` : ''}${p.initiative ? `<i title="Initiative">${INIT_SVG}</i>` : ''}</div>` : ''}
       <div class="tap-zone left" data-idx="${idx}" data-side="minus"><span class="tap-glyph">−</span></div>
       <div class="tap-zone right" data-idx="${idx}" data-side="plus"><span class="tap-glyph">+</span></div>
       <input class="pname-input" data-idx="${idx}" value="${escapeHtml(p.name)}" size="${Math.max(4, Math.min(14, p.name.length || 8))}">
       ${p.dg ? `<div class="ldungeon">${DUNGEON_SVG}<span>${escapeHtml(p.dg.room)}</span></div>` : ''}
       <div class="lval-row">
-        ${(p.monarch || p.initiative) ? `<span class="lstat" aria-hidden="true">${p.monarch ? `<i title="Monarch">${CROWN_SVG}</i>` : ''}${p.initiative ? `<i title="Initiative">${INIT_SVG}</i>` : ''}</span>` : ''}
+
         <span class="ldelta minus ${p._delta<0?'show':''} ${p._delta<0&&p._deltaFresh?'pop':''}">${p._delta<0?'−'+Math.abs(p._delta):''}</span>
         <div class="lval2" data-setlife="${idx}" title="Tap to set life">${p.life}</div>
         <span class="ldelta plus ${p._delta>0?'show':''} ${p._delta>0&&p._deltaFresh?'pop':''}">${p._delta>0?'+'+p._delta:''}</span>
@@ -32307,7 +32418,7 @@ function renderLifeGrid(){
   });
   wireLifeGrid();
   requestAnimationFrame(layoutLifeCards);
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{ try{ placePlaneChip(); }catch(e){} }));   // 1.55
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ try{ placeLifeCorners(); }catch(e){} try{ placePlaneChip(); }catch(e){} }));   // 1.55 / 1.59
   if(state.life.setupDone) lifeAutosave();   // 1.46
   { // 1.48: the win goes into the history once
     const alive = players.filter(q=>!q.defeated);
