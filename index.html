@@ -3825,6 +3825,15 @@ function cselectHtml(id, options, value, placeholder, o){
    search row and its Advanced toggle -- instead of floating a fixed 120px
    above the nav and leaving a strip of page showing through. Measured live,
    because the stack is one bar on some pages and two on others. */
+/* 1.62: the sheet's height is measured against the screen as it is NOW --
+   a keyboard that was up when the sheet opened no longer leaves it short.
+   Re-fit whenever the window or the visible viewport changes size. */
+try{
+  let _csfT = 0;
+  const refit = ()=>{ clearTimeout(_csfT); _csfT = setTimeout(()=>{ try{ csFitSheetFoot(); }catch(e){} }, 60); };
+  window.addEventListener('resize', refit);
+  if(window.visualViewport) window.visualViewport.addEventListener('resize', refit);
+}catch(e){}
 function csFitSheetFoot(){
   try{
     document.querySelectorAll('.adv-panel, #colAdvBox').forEach(sheet=>{
@@ -3843,7 +3852,9 @@ function csFitSheetFoot(){
       // 1.61: the sheet may grow up to just under the page name
       const cap = document.querySelector('.page-cap');
       const capB = cap ? Math.round(cap.getBoundingClientRect().bottom) : 50;
-      sheet.style.maxHeight = Math.max(200, innerHeight - gap - capB - 4) + 'px';
+      // as tall as the room between the page name and the bars (top), so
+      // the number does not depend on a keyboard being up or down
+      sheet.style.maxHeight = Math.max(200, Math.round(top) - capB - 4) + 'px';
     });
   }catch(e){}
 }
@@ -7144,15 +7155,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.61';
+const APP_VERSION = '1.62';
 const CHANGELOG_NOTES = {
   en: [
-    'Filters use the screen up to the top',
-    'Filter labels larger'
+    'Filter reaches the page name again'
   ],
   nl: [
-    'Filters benutten scherm tot boven',
-    'Filterlabels groter'
+    'Filter loopt weer tot de paginanaam'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7160,8 +7169,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-01';
+const APP_DATE = '2026-11-02';
 const CHANGELOG_HISTORY = [
+  { v: '1.61', d: '2026-11-02',
+    en: ['Filters use the screen up to the top', 'Filter labels larger'],
+    nl: ['Filters benutten scherm tot boven', 'Filterlabels groter'] },
   { v: '1.60', d: '2026-11-01',
     en: ['Card type field lists all types', 'Filter fields without example text', 'Filter labels a bit larger', 'Search: Rarity right above Colors', 'Tile icons easier to see'],
     nl: ['Kaarttype-veld toont alle types', 'Filtervelden zonder voorbeeldtekst', 'Filterlabels iets groter', 'Zoeken: Rarity boven de kleuren', 'Tegel-iconen beter zichtbaar'] },
