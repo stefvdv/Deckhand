@@ -213,6 +213,9 @@ button{font-family:'Inter';}
 ::-webkit-scrollbar{width:6px;height:6px;} ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
 /* 1.56: phones scroll by touch -- the thin bars only got in the way */
 @media (pointer:coarse){ ::-webkit-scrollbar{width:0;height:0;display:none;} *{scrollbar-width:none;} }
+/* 1.65: everywhere but the PC layout -- some phones report a fine pointer */
+html:not(.desk) ::-webkit-scrollbar{width:0 !important;height:0 !important;display:none !important;}
+html:not(.desk), html:not(.desk) *{scrollbar-width:none !important;}
 
 /* ---------- chrome ---------- */
 .topbar{
@@ -1118,6 +1121,13 @@ html .tag-drop .tag-drop-list > .tag-drop-h b{opacity:0.75;}
 .sell-q{font-family:'JetBrains Mono',monospace;color:var(--ink-text);}
 .upg-row{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-text);}
 .upg-row input{flex:1;min-width:0;}
+.upg-val{font-family:'JetBrains Mono',monospace;color:var(--brass);font-size:16px;}
+.upg-row .sell-tot{margin-left:auto;}
+.upg-range{width:100%;margin:4px 0;height:28px;-webkit-appearance:none;appearance:none;background:none;}
+.upg-range::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:rgba(255,255,255,0.55);}
+.upg-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;margin-top:-9px;border-radius:50%;background:#1E5F8F;border:2px solid rgba(255,255,255,0.85);box-shadow:0 1px 3px rgba(0,0,0,0.55);}
+.upg-range::-moz-range-track{height:6px;border-radius:3px;background:rgba(255,255,255,0.55);}
+.upg-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#1E5F8F;border:2px solid rgba(255,255,255,0.85);}
 /* 1.58 the clear-× inside search fields */
 .in-clear, .searchbar > button.in-clear{position:absolute !important;z-index:3;width:30px !important;height:30px !important;min-height:0 !important;margin:0 !important;padding:6px !important;border:none !important;border-radius:50% !important;background:transparent !important;background-image:none !important;box-shadow:none !important;cursor:pointer;opacity:.75;display:flex;align-items:center;justify-content:center;}
 .in-clear[hidden], .searchbar > button.in-clear[hidden]{display:none !important;}
@@ -1743,9 +1753,9 @@ html[data-main="W"] :is(.sr-tile, .pair-cell) .st-meta-row .add-btn svg{color:#2
 .pr-track{position:relative;height:28px;}
 .pr-track input[type=range]{position:absolute;left:0;right:0;top:0;width:100%;height:28px;margin:0;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;}
 .pr-track input[type=range]::-webkit-slider-runnable-track{background:none;border:none;height:28px;}
-.pr-track input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:21px;height:21px;margin-top:3.5px;border-radius:50%;background:var(--brass);border:2px solid rgba(26,18,8,0.9);box-shadow:0 1px 3px rgba(0,0,0,0.55);cursor:pointer;}
+.pr-track input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:21px;height:21px;margin-top:3.5px;border-radius:50%;background:#1E5F8F;border:2px solid rgba(255,255,255,0.85);box-shadow:0 1px 3px rgba(0,0,0,0.55);cursor:pointer;}
 .pr-track input[type=range]::-moz-range-track{background:none;border:none;}
-.pr-track input[type=range]::-moz-range-thumb{pointer-events:auto;width:18px;height:18px;border-radius:50%;background:var(--brass);border:2px solid rgba(26,18,8,0.9);cursor:pointer;}
+.pr-track input[type=range]::-moz-range-thumb{pointer-events:auto;width:18px;height:18px;border-radius:50%;background:#1E5F8F;border:2px solid rgba(255,255,255,0.85);cursor:pointer;}
 .hv-add{color:var(--success);}
 .hv-rem{color:var(--danger);}
 .hv-mov{color:var(--brass);}
@@ -2484,6 +2494,7 @@ html:has(#crOverlay){overflow:hidden;}
 .dfc-flip.flipped{transform:rotate(180deg);background:linear-gradient(145deg,#2E4A66,#152A3F);color:var(--brass);border-color:var(--brass-dim);box-shadow:0 0 0 2px rgba(20,14,26,0.55),0 3px 10px rgba(0,0,0,0.6),0 0 14px rgba(46,74,102,0.55);}
 .dfc-flip.flipped:active{transform:rotate(180deg) scale(0.9);}
 *:has(> .dfc-flip-box){position:relative;}
+*:has(> .dfc-flip-box > .card-rot.flipped) > img{position:relative;z-index:3;}   /* 1.66 */
 .edh-jump-row{position:sticky;top:6px;z-index:6;display:flex;justify-content:flex-end;height:0;pointer-events:none;}
 .edh-jump{pointer-events:auto;width:42px;height:42px;border-radius:50%;background:var(--field);border:2.5px solid var(--brass);color:var(--brass);font-size:17px;box-shadow:0 3px 10px rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;}
 .edh-sec{scroll-margin-top:74px;}
@@ -2665,13 +2676,15 @@ body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !impo
 .hist-row:last-child{border-bottom:none;}
 /* 1.56: the whole name gets the width (it may wrap); time and the action
    button share the second line */
-.hist-row{display:grid;grid-template-columns:18px minmax(0, 2fr) minmax(0, 1fr);grid-template-areas:"ico name when" "ico name btn";column-gap:10px;row-gap:5px;align-items:center;padding:10px 0;}
-.hist-row > .hist-ico{grid-area:ico;}
-.hist-row > .hist-txt{display:contents;}
-.hist-row .ht-n{grid-area:name;white-space:normal !important;overflow:visible !important;text-overflow:clip !important;line-height:1.3;}
-.hist-row .ht-s{grid-area:when;margin:0;justify-self:end;align-self:end;}
-.hist-row > .undo-btn{grid-area:btn;justify-self:end;align-self:start;}
-.hist-row > .hist-ico{align-self:center;}
+.hist-row.hr2{display:flex;align-items:center;gap:12px;padding:10px 0;}
+.hr-thumb{flex:none;width:60px;aspect-ratio:488 / 680;border-radius:4px;overflow:hidden;background:rgba(0,0,0,0.22);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--sub-text);font-style:normal;}
+.hr-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.hr-thumb i{font-style:normal;}
+.hr-body{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px;}
+.hr-body .ht-n{display:block;white-space:normal;overflow:visible;line-height:1.3;font-weight:600;}
+.hr-body .ht-s{font-size:12px;color:var(--sub-text-2);margin:0;}
+.hr-body .undo-btn{margin-top:1px;}
+.hist-row.undone .hr-thumb{opacity:0.5;}
 .hist-ico{flex:0 0 auto;width:18px;text-align:center;}
 .hist-txt{flex:1;min-width:0;}
 .hist-txt .ht-n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -2743,8 +2756,11 @@ body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !impo
 .dg-init svg{width:20px;height:20px;flex:none;color:var(--gold);}
 .dg-init.on{border-color:var(--gold);}
 .ldungeon span{overflow:hidden;text-overflow:ellipsis;}
-.lf-extras{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);z-index:4;display:flex;gap:12px;justify-content:center;pointer-events:none;}
-@container (min-width: 300px){ .lf-extras{bottom:84px;width:auto;gap:12px;justify-content:center;} }   /* 1.63: three buttons in a row above Done */
+.lf-extras{position:absolute;bottom:12px;left:10px;right:10px;height:62px;z-index:4;display:flex;align-items:center;justify-content:space-between;pointer-events:none;}
+.lf-grp{display:flex;align-items:center;gap:10px;}
+/* 1.65: Monarch and Dungeon left of Done, Counters right of it -- the poison
+   total keeps the whole middle of the card */
+@container (max-width: 379px){ .pz-face .submenu-toggle.done{min-width:100px;padding:0 12px;font-size:17px;} .lf-x{width:38px;height:38px;} .lf-x svg{width:19px;height:19px;} .lf-grp{gap:6px;} .lf-extras{left:6px;right:6px;} }
 .lf-x{pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-radius:50%;border:1.5px solid rgba(255,255,255,0.45);background:rgba(0,0,0,0.3);color:#fff;cursor:pointer;}
 .lf-x svg{width:22px;height:22px;flex:none;}
 .lf-x span{display:none;}
@@ -3343,11 +3359,23 @@ html.desk :is(.sr-tile, .sc-tile, .vg-card, .col-tile) img{cursor:zoom-in;}
 .lctr i{display:block;width:16px;height:16px;color:var(--gold);}
 .lctr i svg{width:100%;height:100%;display:block;}
 .lctr-wrap{position:relative;pointer-events:auto;}
-.lctr-pop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border-radius:999px;background:rgba(0,0,0,0.55);border:1.5px solid rgba(255,255,255,0.3);z-index:6;}
+.lctr-pop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100cqw - 12px);box-sizing:border-box;gap:6px;padding:6px;border-radius:26px;background:rgba(0,0,0,0.55);border:1.5px solid rgba(255,255,255,0.3);z-index:6;}
 .lctr-pop[hidden]{display:none;}
 .lctr-pop button{width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);color:#fff;padding:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .lctr-pop button.on{border-color:var(--gold);color:var(--gold);background:rgba(232,190,88,0.18);}
 .lctr-pop button svg{width:100%;height:100%;display:block;}
+.lctr-pop button.m{padding:3px;}
+.lctr-pop button.m.on{background:rgba(232,190,88,0.25);box-shadow:0 0 0 2px var(--gold);}
+.lctr-pop button.lctr-back{padding:9px;}
+/* 1.65: smaller counter pills; the poison button steps up a little when
+   they are there, so the two never touch */
+.lname-row > .lctr{height:30px;padding:0 8px;gap:4px;font-size:14.5px;}
+.lname-row > .lctr i{width:15px;height:15px;}
+.lname-row > .lctr.lctr-m i{width:17px;height:17px;}
+.lname-row:has(> .lctr){overflow-x:auto;scrollbar-width:none;}
+.life-face.front:has(> .lname-row > .lctr) > .submenu-toggle.lbadge{bottom:44px;height:56px;}
+.lctr-tip{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:9;padding:7px 16px;border-radius:999px;background:rgba(0,0,0,0.78);border:1.5px solid rgba(255,255,255,0.35);color:#fff;font-size:15px;font-weight:700;white-space:nowrap;pointer-events:none;animation:lctrTip 1.5s ease forwards;}
+@keyframes lctrTip{0%{opacity:0;transform:translate(-50%, -6px);}12%{opacity:1;transform:translate(-50%, 0);}78%{opacity:1;}100%{opacity:0;}}
 .submenu-toggle.done{height:62px;min-width:150px;font-size:21px;border-radius:999px;}   /* 1.51 thicker */
 /* New game: the table shapes read clearly, the picked one in gold */
 .llay{background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.22);border-radius:12px;padding:7px;transition:transform .12s;}
@@ -3990,6 +4018,8 @@ function csRerender(){
   }
   const dpPick = document.querySelector('#deckPickScrim #recoColorPick');
   if(dpPick && dpPick._paint){ try{ dpPick._paint(); }catch(e){} }
+  const bldPick = document.querySelector('#buildOverlay #bldPick');   // 1.65
+  if(bldPick && bldPick._paint){ try{ bldPick._paint(); }catch(e){} }
   csFitBrowsePanel();
   csFitSheetFoot();
   try{
@@ -4099,6 +4129,7 @@ document.addEventListener('click', async (e)=>{
   const host = btn.closest('.dfc-flip-box') && btn.closest('.dfc-flip-box').parentElement;
   const img = host && host.querySelector('img');
   if(!img) return;
+  if(btn.classList.contains('card-rot')){ cardRotToggle(btn, img); return; }   // 1.66
   // Meld halves fetch their COMPLETE meld result on first flip.
   if(btn.dataset.meld && !btn.dataset.back){
     if(btn.dataset.loading) return;
@@ -4115,6 +4146,21 @@ document.addEventListener('click', async (e)=>{
   dfcPaint(btn, toBack);
   document.querySelectorAll('.dfc-flip').forEach(b=>{ if(b !== btn && dfcKey(b.dataset.front) === key && (b.dataset.showing === 'back') !== toBack) dfcPaint(b, toBack); });
 }, true);
+/* 1.66: a quarter turn shrinks the card so its long side fits the width it
+   had standing; in the full view it grows as wide as the screen allows. */
+function cardRotToggle(btn, img){
+  const on = !btn.classList.contains('flipped');
+  const deg = +btn.dataset.rot || 90;
+  let sc = 1;
+  if(Math.abs(deg) === 90){
+    const bd = img.closest('#pbd');
+    const w = img.offsetWidth || 1, h = img.offsetHeight || w * 88 / 63;
+    sc = bd ? Math.min((bd.clientWidth * 0.96) / h, (bd.clientHeight * 0.9) / w) : w / h;
+  }
+  img.style.transition = 'transform .3s ease';
+  img.style.transform = on ? `rotate(${deg}deg) scale(${sc.toFixed(3)})` : '';
+  btn.classList.toggle('flipped', on);
+}
 /* Which two-faced cards are turned over right now (by card id). */
 const _dfcBack = new Set();
 function dfcKey(u){ const m = String(u || '').match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i); return m ? m[1].toLowerCase() : String(u || '').split('?')[0]; }
@@ -4143,7 +4189,12 @@ try{
    showing, and carries the same flip button at the same spot on the card. */
 function showCardPreview(card, src){
   const d = card ? dfcBackFace(card) : null;
-  if(!d){ showPreview(src, card && card.border_color === 'white'); return; }
+  if(!d){
+    showPreview(src, card && card.border_color === 'white');
+    const r = cardSideRot(card);
+    if(r && state.preview){ state.preview.rot = r; renderPreview(); }   // 1.66
+    return;
+  }
   const big = (u)=>String(u).replace('/normal/', '/large/');
   // The card's own two faces (its printing), large; the id in their paths
   // ties this view to the remembered face.
@@ -5991,17 +6042,41 @@ function undoDeckChange(d, entryId){
   toast(msg);
   return ok;
 }
+/* 1.65: a history row is a small card on the left; to its right, top to
+   bottom: what happened, when, and the button that does the opposite. */
+function histVerb(e){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  switch(e.type){
+    case 'add': return ['hv-add', T('Toegevoegd', 'Added')];
+    case 'addMaybe': return ['hv-add', T('Toegevoegd aan maybe', 'Added to maybe')];
+    case 'remove': return ['hv-rem', T('Verwijderd', 'Removed')];
+    case 'removeMaybe': return ['hv-rem', T('Uit maybe verwijderd', 'Removed from maybe')];
+    case 'toMaybe': return ['hv-mov', T('Naar maybe', 'To maybe')];
+    case 'toMain': return ['hv-mov', T('Naar main', 'To main')];
+    case 'admiral': return ['hv-mov', T('Aangesteld', 'Appointed')];
+    case 'admiralOff': return ['hv-rem', T('Ontslagen', 'Relieved')];
+    default: return ['', ''];
+  }
+}
+function histStamp(ts){
+  try{ return new Date(ts).toLocaleString(appLang() === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+  catch(e){ return histWhen(ts); }
+}
 function histRowHtml(e){
   const l = histLabel(e);
-  const img = e.card ? (cardImageLarge(e.card) || cardImage(e.card)) : '';
-  return `<div class="hist-row ${e.undone?'undone':''}">
-    <span class="hist-ico">${l.ico}</span>
-    <span class="hist-txt"><span class="ht-n ${img?'card-link':''}" ${img?`data-himg="${img}"`:''}>${l.html}</span><span class="ht-s">${histWhen(e.ts)}${e.undone?' · undone':''}${e.viaUndo?' · undo':''}</span></span>
-    ${(()=>{ const a = histActionFor(e); return a ? `<button class="undo-btn" data-undo="${e.id}">${a.label}</button>` : ''; })()}
+  const big = e.card ? (cardImageLarge(e.card) || cardImage(e.card)) : '';
+  const small = e.card ? (cardImage(e.card) || big) : '';
+  const [cls, verb] = histVerb(e);
+  const nl = appLang() === 'nl';
+  const what = verb ? `<b class="${cls}">${verb}</b> ${escapeHtml(e.name || '')}` : l.html;
+  const a = histActionFor(e);
+  return `<div class="hist-row hr2 ${e.undone?'undone':''}">
+    <span class="hr-thumb ${big?'card-link':''}" ${big?`data-himg="${big}"`:''}>${small ? `<img src="${small}" alt="" loading="lazy">` : `<i>${l.ico}</i>`}</span>
+    <span class="hr-body"><span class="ht-n">${what}</span><span class="ht-s">${histStamp(e.ts)}${e.undone ? (nl ? ' · ongedaan' : ' · undone') : ''}${e.viaUndo ? (nl ? ' · terugdraai' : ' · undo') : ''}</span>${a ? `<button class="undo-btn" data-undo="${e.id}">${a.label}</button>` : ''}</span>
   </div>`;
 }
 function wireHistImages(root){
-  (root||document).querySelectorAll('.ht-n[data-himg]').forEach(n=>{
+  (root||document).querySelectorAll('[data-himg]').forEach(n=>{
     if(n.dataset.w) return; n.dataset.w='1';
     n.addEventListener('click', ()=>showPreview(n.dataset.himg));
   });
@@ -6606,9 +6681,27 @@ function dfcBackFace(card){
   }
   return (front && back) ? { front, back } : null;
 }
+/* 1.66: cards printed sideways turn instead of flip -- split cards (fuse,
+   rooms) a quarter to the right, aftermath a quarter to the left (its
+   second half), Kamigawa flip cards upside down, planes flat. */
+function cardSideRot(c){
+  if(!c) return 0;
+  const ly = String(c.layout || '');
+  const kw = (c.keywords || []).join(' ');
+  if(ly === 'split') return /Aftermath/i.test(kw) || /Aftermath/.test(String(c.oracle_text || '') + (c.card_faces || []).map(f=>f.oracle_text || '').join(' ')) ? -90 : 90;
+  if(ly === 'flip') return 180;
+  if(ly === 'planar') return 90;
+  return 0;
+}
+const CARD_ROT_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>';
+function cardRotHtml(c){
+  const r = cardSideRot(c);
+  return r ? `<span class="dfc-flip-box"><button class="dfc-flip card-rot" title="${appLang() === 'nl' ? 'Draai de kaart' : 'Turn the card'}" data-rot="${r}">${CARD_ROT_SVG}</button></span>` : '';
+}
 function dfcFlipHtml(c){
   const d = dfcBackFace(c);
   if(!d){
+    if(cardSideRot(c)) return cardRotHtml(c);   // 1.66
     // Meld halves flip too — but their back is the COMPLETE meld result
     // (both halves joined into one card), fetched once per name on first
     // tap and cached for the session; never just a rotated half.
@@ -6664,7 +6757,27 @@ function wbClass(c){ return (c && c.border_color === 'white') ? 'wb-card' : ''; 
 /* 1.53: the page the app opens on (Extras → Color scheme) */
 /* 1.63 text size: the whole page zoomed a step (Appearance in Extras) */
 function uiScale(){ try{ const v = parseFloat(localStorage.getItem(LS_PREFIX + 'uiScale')); return v > 0.5 && v < 2 ? v : 1; }catch(e){ return 1; } }
-function applyUiScale(){ try{ const v = uiScale(); document.documentElement.style.zoom = v === 1 ? '' : String(v); document.documentElement.style.setProperty('--z', String(v)); setTimeout(()=>{ try{ csFitSheetFoot(); }catch(e){} }, 60); }catch(e){} }
+/* 1.65: on a phone the viewport itself is set (a narrower page drawn
+   larger), so every layout -- sheets, centring, the nav bar -- works as at
+   normal size. Zoom stays only for the PC layout, or as a fallback when a
+   WebView ignores the viewport tag. */
+function applyUiScale(){ try{
+  const v = uiScale(), de = document.documentElement;
+  const meta = document.querySelector('meta[name="viewport"]');
+  const tail = 'user-scalable=no, viewport-fit=cover';
+  const zoomTo = (z)=>{ de.style.zoom = z === 1 ? '' : String(z); de.style.setProperty('--z', String(z)); };
+  zoomTo(1);
+  if(meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1, ' + tail);
+  if(v !== 1){
+    const phone = !de.classList.contains('desk') && window.matchMedia && matchMedia('(pointer:coarse)').matches;
+    if(phone && meta){
+      const sw = Math.round((screen.width || window.innerWidth) / v);
+      meta.setAttribute('content', `width=${sw}, initial-scale=${v}, minimum-scale=${v}, maximum-scale=${v}, ${tail}`);
+      setTimeout(()=>{ if(uiScale() === v && Math.abs(window.innerWidth - sw) > 8) zoomTo(v); }, 400);
+    } else zoomTo(v);
+  }
+  setTimeout(()=>{ try{ csFitSheetFoot(); }catch(e){} }, 60);
+}catch(e){} }
 try{ applyUiScale(); }catch(e){}
 function startPage(){ try{ return localStorage.getItem(LS_PREFIX + 'startPage') || 'home'; }catch(e){ return 'home'; } }
 /* 1.53: one page-level listener per job. A render that wires a document
@@ -6846,67 +6959,114 @@ function openPlainOverlay(id, title, onClose){
 async function openBuildable(){
   const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
   const main = openPlainOverlay('buildOverlay', T('Wat kan ik bouwen', 'What can I build'));
-  const ix = await bulkIndexReady().catch(()=>null);
-  if(!ix || !ix.byName){ main.innerHTML = `<div class="empty-note">${T('De kaartendatabase is nog niet klaar. Probeer het zo nog eens.', 'The card database is not ready yet. Try again in a moment.')}</div>`; return; }
-  const items = state.collection.items || [];
-  const owned = new Set(items.map(it=>it.name));
-  // candidates: commanders you own, then the year's top commanders
-  const cands = [], seenC = new Set();
-  const addC = (nm)=>{
-    const r = _bulkRec(ix, nm); if(!r || seenC.has(r.n)) return;
-    const tl = String(r.tl || ''), ot = String(r.ot || '');
-    if(!(/Legendary/.test(tl) && /Creature/.test(tl)) && !/can be your commander/i.test(ot)) return;
-    seenC.add(r.n); cands.push(r);
+  // 1.65: colours first, like Recommendations -- then only commanders of
+  // exactly that identity are compared (yours and EDHREC's top), so it is quick.
+  main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
+  main.innerHTML = `<div id="bldPick" class="bld-pick"></div><div id="bldOut"><p class="hint" style="text-align:center;margin:10px 0;">${T('Kies eerst de kleuren. Dan vergelijken we alleen commanders in die kleuren: die van jou en de populairste van EDHREC.', 'Pick the colours first. Then only commanders in those colours are compared: yours and EDHREC\u2019s most popular.')}</p></div>`;
+  const countOpts = [['1', 'Monocolored'], ['2', '2 colors'], ['3', '3 colors'], ['45', '4 & 5 colors']];
+  let pickCount = '2', combo = '', run = 0;
+  const paintPick = ()=>{
+    const bp = main.querySelector('#bldPick'); if(!bp) return;
+    bp._paint = paintPick;   // outside taps and hardware back repaint via csRerender
+    const combos = COLOR_COMBOS[pickCount] || [];
+    bp.innerHTML = `
+      <div style="margin:10px 0 0;">${cselectHtml('bldCount', countOpts.map(([v, l])=>({v, l: trS(l)})), pickCount, trS('2 colors'), {inline: true})}</div>
+      <div style="margin:8px 0 0;">${cselectHtml('bldCombo', combos.map(cb=>({v: cb.key, l: escapeHtml(cb.label), icons: cb.key === 'c' ? manaIconSvg('C', 16) : manaRowSvg(cb.key.toUpperCase(), 16)})), combo, trS('Choose a combination…'), {inline: true})}</div>`;
+    _csHandlers['bldCount'] = v=>{ pickCount = v; combo = ''; state.openCSelect = null; paintPick(); };
+    _csHandlers['bldCombo'] = v=>{ combo = v; state.openCSelect = null; paintPick(); runBuild(v, ++run); };
+    bp.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', e=>{
+      e.stopPropagation();
+      state.openCSelect = state.openCSelect === b.dataset.cs ? null : b.dataset.cs;
+      paintPick();
+    }));
+    bp.querySelectorAll('[data-csopt]').forEach(opt=>opt.addEventListener('click', e=>{
+      e.stopPropagation();
+      const id = opt.dataset.csopt, val = opt.dataset.val;
+      state.openCSelect = null;
+      const h = _csHandlers[id];
+      if(h) h(val); else paintPick();
+    }));
+    requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
   };
-  items.forEach(it=>addC(it.name));
-  const ownN = cands.length;
-  try{ ((await _inspFeedWinNames('year')) || []).slice(0, 40).forEach(addC); }catch(e){}
-  if(!cands.length){ main.innerHTML = `<div class="empty-note">${T('Geen commanders gevonden.', 'No commanders found.')}</div>`; return; }
-  // your cards, with their tags, once
-  const pool = [];
-  owned.forEach(nm=>{ const r = _bulkRec(ix, nm); if(r && !_BASIC_RE.test(r.n)) pool.push({ n: r.n, r, ci: String(r.ci || ''), land: /\bLand\b/.test(String(r.tl || '').split('//')[0]), tags: _tagsLocal(ix, r.n) }); });
-  const results = [];
-  const paintProgress = (i)=>{ main.innerHTML = `<div class="status"><div class="spinner"></div><p class="hint" style="text-align:center;">${T('Decks vergelijken', 'Comparing decks')} ${i}/${cands.length}</p></div>`; };
-  for(let i = 0; i < cands.length; i++){
-    if(!document.getElementById('buildOverlay')) return;
-    paintProgress(i + 1);
-    const c = cands[i];
-    let names = [];
-    try{ names = await edhAvgDeckNames({ name: c.n }); }catch(e){}
-    names = names.filter(n=>!_BASIC_RE.test(n));
-    if(names.length < 30) continue;
-    const ciSet = new Set(String(c.ci || '').split(''));
-    const have = names.filter(n=>owned.has(n));
-    const miss = names.filter(n=>!owned.has(n));
-    const inDeck = new Set(names);
-    const free = pool.filter(p=>!inDeck.has(p.n) && p.n !== c.n && p.ci.split('').every(x=>ciSet.has(x)) && p.tags.length);
-    const used = new Set(), subs = [];
-    miss.forEach(nm=>{
-      const mr = _bulkRec(ix, nm); if(!mr) return;
-      const mt = _tagsLocal(ix, nm); if(!mt.length) return;
-      const ml = /\bLand\b/.test(String(mr.tl || '').split('//')[0]);
-      let best = null, bs = 0;
-      free.forEach(p=>{
-        if(used.has(p.n) || p.land !== ml) return;
-        const sc = p.tags.filter(t=>mt.indexOf(t) >= 0).length;
-        if(sc > bs){ bs = sc; best = p; }
+  const runBuild = async (key, token)=>{
+    const out = main.querySelector('#bldOut'); if(!out) return;
+    const alive = ()=>!!document.getElementById('buildOverlay') && token === run;
+    out.innerHTML = `<div class="status"><div class="spinner"></div></div>`;
+    const ix = await bulkIndexReady().catch(()=>null);
+    if(!alive()) return;
+    if(!ix || !ix.byName){ out.innerHTML = `<div class="empty-note">${T('De kaartendatabase is nog niet klaar. Probeer het zo nog eens.', 'The card database is not ready yet. Try again in a moment.')}</div>`; return; }
+    const ciK = (ci)=>String(ci || '').toUpperCase().replace(/[^WUBRG]/g, '').split('').sort().join('');
+    const want = key === 'c' ? '' : ciK(key);
+    const items = state.collection.items || [];
+    const owned = new Set(items.map(it=>it.name));
+    const cands = [], seenC = new Set();
+    const addC = (nm)=>{
+      const r = _bulkRec(ix, nm); if(!r || seenC.has(r.n)) return;
+      const tl = String(r.tl || ''), ot = String(r.ot || '');
+      if(!(/Legendary/.test(tl) && /Creature/.test(tl)) && !/can be your commander/i.test(ot)) return;
+      if(ciK(r.ci) !== want) return;
+      seenC.add(r.n); cands.push(r);
+    };
+    items.forEach(it=>addC(it.name));
+    const ownN = cands.length;
+    for(const cs of (EDHREC_COMBO_SLUGS[key] || [])){
+      let data = null;
+      try{ data = await edhrecFetchJson('/pages/commanders/' + cs + '.json'); }catch(e){}
+      if(!alive()) return;
+      if(!data) continue;
+      const m = edhrecDeckCountsFrom(data);
+      const top = Object.keys(m).sort((x, y)=>m[y] - m[x]);
+      const before = cands.length;
+      for(const n of top){ if(cands.length - before >= 20) break; addC(n); }
+      if(cands.length > before) break;
+    }
+    if(!cands.length){ out.innerHTML = `<div class="empty-note">${T('Geen commanders gevonden in deze kleuren.', 'No commanders found in these colours.')}</div>`; return; }
+    const pool = [];
+    owned.forEach(nm=>{ const r = _bulkRec(ix, nm); if(r && !_BASIC_RE.test(r.n)) pool.push({ n: r.n, r, ci: String(r.ci || ''), land: /\bLand\b/.test(String(r.tl || '').split('//')[0]), tags: _tagsLocal(ix, r.n) }); });
+    const results = [];
+    for(let i = 0; i < cands.length; i++){
+      if(!alive()) return;
+      out.innerHTML = `<div class="status"><div class="spinner"></div><p class="hint" style="text-align:center;">${T('Decks vergelijken', 'Comparing decks')} ${i + 1}/${cands.length}</p></div>`;
+      const c = cands[i];
+      let names = [];
+      try{ names = await edhAvgDeckNames({ name: c.n }); }catch(e){}
+      names = names.filter(n=>!_BASIC_RE.test(n));
+      if(names.length < 30) continue;
+      const ciSet = new Set(String(c.ci || '').split(''));
+      const have = names.filter(n=>owned.has(n));
+      const miss = names.filter(n=>!owned.has(n));
+      const inDeck = new Set(names);
+      const free = pool.filter(p=>!inDeck.has(p.n) && p.n !== c.n && p.ci.split('').every(x=>ciSet.has(x)) && p.tags.length);
+      const used = new Set(), subs = [];
+      miss.forEach(nm=>{
+        const mr = _bulkRec(ix, nm); if(!mr) return;
+        const mt = _tagsLocal(ix, nm); if(!mt.length) return;
+        const ml = /\bLand\b/.test(String(mr.tl || '').split('//')[0]);
+        let best = null, bs = 0;
+        free.forEach(p=>{
+          if(used.has(p.n) || p.land !== ml) return;
+          const sc = p.tags.filter(t=>mt.indexOf(t) >= 0).length;
+          if(sc > bs){ bs = sc; best = p; }
+        });
+        if(best && bs >= Math.min(2, mt.length)){ used.add(best.n); subs.push({ miss: nm, sub: best.n, score: bs }); }
       });
-      if(best && bs >= Math.min(2, mt.length)){ used.add(best.n); subs.push({ miss: nm, sub: best.n, score: bs }); }
-    });
-    results.push({ c, names, have, miss, subs, own: i < ownN, pct: have.length / names.length, pct2: (have.length + subs.length) / names.length });
-  }
-  if(!document.getElementById('buildOverlay')) return;
-  results.sort((a, b)=>(b.pct2 - a.pct2) || (b.pct - a.pct));
-  if(!results.length){ main.innerHTML = `<div class="empty-note">${T('EDHREC gaf geen decks terug. Probeer het met internet nog eens.', 'EDHREC returned no decks. Try again with a connection.')}</div>`; return; }
-  const pctS = (x)=>Math.round(x * 100) + '%';
-  // bottom-up: the best match at the foot (wrap-reverse grid)
-  main.innerHTML = `<p class="hint" style="text-align:center;margin:8px 0;">${T('Hoeveel van het gemiddelde EDHREC-deck je al hebt. Tussen haakjes: met vervangers uit je collectie.', 'How much of the EDHREC average deck you own. In brackets: with stand-ins from your collection.')}</p>
-    <div class="sr-grid bld-grid">${results.map((x, i)=>`<button type="button" class="sr-tile bld-tile" data-bld="${i}">
-      <img src="${bulkToCardish(x.c).image_uris.normal}" alt="" loading="lazy">
-      <div class="st-body"><div class="bld-pct"><b>${pctS(x.pct)}</b><span>(${pctS(x.pct2)})</span></div><div class="bld-sub">${x.have.length}/${x.names.length}${x.own ? ' · ' + T('in je collectie', 'you own it') : ''}</div></div>
-    </button>`).join('')}</div>`;
-  requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
-  main.querySelectorAll('[data-bld]').forEach(b=>b.addEventListener('click', ()=>openBuildableDetail(results[+b.dataset.bld], ix)));
+      results.push({ c, names, have, miss, subs, own: i < ownN, pct: have.length / names.length, pct2: (have.length + subs.length) / names.length });
+    }
+    if(!alive()) return;
+    results.sort((a, b)=>(b.pct2 - a.pct2) || (b.pct - a.pct));
+    if(!results.length){ out.innerHTML = `<div class="empty-note">${T('EDHREC gaf geen decks terug. Probeer het met internet nog eens.', 'EDHREC returned no decks. Try again with a connection.')}</div>`; return; }
+    const pctS = (x)=>Math.round(x * 100) + '%';
+    // bottom-up: the best match at the foot (wrap-reverse grid)
+    out.innerHTML = `<p class="hint" style="text-align:center;margin:8px 0;">${T('Hoeveel van het gemiddelde EDHREC-deck je al hebt. Tussen haakjes: met vervangers uit je collectie.', 'How much of the EDHREC average deck you own. In brackets: with stand-ins from your collection.')}</p>
+      <div class="sr-grid bld-grid">${results.map((x, i)=>`<button type="button" class="sr-tile bld-tile" data-bld="${i}">
+        <img src="${bulkToCardish(x.c).image_uris.normal}" alt="" loading="lazy">
+        <div class="st-body"><div class="bld-pct"><b>${pctS(x.pct)}</b><span>(${pctS(x.pct2)})</span></div><div class="bld-sub">${x.have.length}/${x.names.length}${x.own ? ' · ' + T('in je collectie', 'you own it') : ''}</div></div>
+      </button>`).join('')}</div>`;
+    out.style.display = 'flex'; out.style.flexDirection = 'column-reverse';
+    requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+    out.querySelectorAll('[data-bld]').forEach(b=>b.addEventListener('click', ()=>openBuildableDetail(results[+b.dataset.bld], ix)));
+  };
+  paintPick();
 }
 function openBuildableDetail(x, ix){
   const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
@@ -6994,16 +7154,17 @@ async function openDeckCompare(d){
   if(!document.getElementById('cmpOverlay')) return;
   names = names.filter(n=>!_BASIC_RE.test(n));
   if(!names.length){ main.innerHTML = `<div class="empty-note">${T('EDHREC heeft geen gemiddeld deck voor deze commander.', 'EDHREC has no average deck for this commander.')}</div>`; return; }
-  const mine = new Set((d.cards || []).map(c=>c.name).filter(n=>!_BASIC_RE.test(n)));
-  const avg = new Set(names);
-  const both = names.filter(n=>mine.has(n)), miss = names.filter(n=>!mine.has(n));
-  const only = Array.from(mine).filter(n=>!avg.has(n));
+  // 1.65: EDHREC spells a double-faced card by its front face only
+  const fk = (n)=>String(n || '').split(' // ')[0].trim().toLowerCase();
+  const mineK = new Set((d.cards || []).map(c=>fk(c.name)));
+  const avgK = new Set(names.map(fk));
+  const both = names.filter(n=>mineK.has(fk(n))), miss = names.filter(n=>!mineK.has(fk(n)));
   let got = [];
   try{ got = await resolveEdhrecNames(miss, (c)=>!isBanned(c) && colorIdentityOkDeck(c, d)); }catch(e){}
   if(!document.getElementById('cmpOverlay')) return;
   const byN = new Map(got.map(c=>[c.name, c]));
   const missCards = miss.map(n=>byN.get(n)).filter(Boolean);
-  const onlyCards = (d.cards || []).filter((c, k, a)=>only.indexOf(c.name) >= 0 && a.findIndex(x=>x.name === c.name) === k);
+  const onlyCards = (d.cards || []).filter((c, k, a)=>!_BASIC_RE.test(c.name) && !avgK.has(fk(c.name)) && a.findIndex(x=>x.name === c.name) === k);
   const paint = ()=>{
     main.innerHTML = `
       <div class="edh-sec"><div class="section-label">${T('Het EDHREC-deck heeft, jij niet', 'EDHREC runs, you don\u2019t')} \u00b7 ${missCards.length}</div><div class="sr-grid">${missCards.map(c=>searchRowHtml(c, d)).join('')}</div></div>
@@ -7036,25 +7197,34 @@ async function openDeckUpgrades(d){
   const cand = got.map(c=>{ const s2 = st[String(c.name).toLowerCase()] || [0, 0]; return { c, e: shownEurOf(c), v: (s2[0] || 0) + Math.max(0, s2[1] || 0) * 0.8 }; })
     .filter(x=>x.e != null && isFinite(x.e) && x.e > 0).sort((a, b)=>b.v - a.v);
   let budget = 25;
+  // 1.65: one slider, \u20ac5 to \u20ac200; the cards refill while you slide
+  main.innerHTML = `
+    <div class="upg-foot"><input id="upgEur" class="upg-range" type="range" min="5" max="200" step="5" value="${budget}">
+      <div class="upg-row"><span>${T('Budget', 'Budget')}</span><b class="upg-val" id="upgVal"></b><span class="sell-tot" id="upgTot"></span></div></div>
+    <div id="upgGrid"></div>
+    <p class="hint" style="text-align:center;margin:8px 0;">${T('De kaarten die EDHREC het vaakst met deze commander speelt en die jouw deck nog niet heeft, de beste eerst, tot het budget op is.', 'The cards EDHREC plays most with this commander that your deck lacks, best first, until the budget is spent.')}</p>`;
+  main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
   const paint = ()=>{
     let left = budget; const picks = [];
     for(const x of cand){ if(picks.length >= 10) break; if(x.e <= left){ picks.push(x); left -= x.e; } }
     const pool = picks.map(x=>x.c);
-    main.innerHTML = `
-      <div class="upg-foot"><label class="upg-row"><span>${T('Budget', 'Budget')}</span><span class="pw-eur">\u20ac</span><input id="upgEur" type="number" inputmode="decimal" min="1" step="1" value="${budget}"></label>
-        <div class="br-chips">${[10, 25, 50, 100].map(v=>`<button type="button" class="chip br-chip${v === budget ? ' active' : ''}" data-upg="${v}">\u20ac${v}</button>`).join('')}</div>
-        <div class="sell-tot">${picks.length} ${T('kaarten', 'cards')} \u00b7 <b>\u20ac${(budget - left).toFixed(2)}</b> ${T('van', 'of')} \u20ac${budget}</div></div>
-      ${pool.length ? `<div class="sr-grid">${pool.map(c=>searchRowHtml(c, d)).join('')}</div>` : `<div class="empty-note">${T('Niets past in dit budget.', 'Nothing fits this budget.')}</div>`}
-      <p class="hint" style="text-align:center;margin:8px 0;">${T('De kaarten die EDHREC het vaakst met deze commander speelt en die jouw deck nog niet heeft, de beste eerst, tot het budget op is.', 'The cards EDHREC plays most with this commander that your deck lacks, best first, until the budget is spent.')}</p>`;
-    main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
+    const val = main.querySelector('#upgVal'), tot = main.querySelector('#upgTot'), g = main.querySelector('#upgGrid');
+    if(!g) return;
+    val.textContent = '\u20ac' + budget;
+    tot.innerHTML = `${picks.length} ${T('kaarten', 'cards')} \u00b7 <b>\u20ac${(budget - left).toFixed(2)}</b>`;
+    g.innerHTML = pool.length ? `<div class="sr-grid">${pool.map(c=>searchRowHtml(c, d)).join('')}</div>` : `<div class="empty-note">${T('Niets past in dit budget.', 'Nothing fits this budget.')}</div>`;
     wireResultButtons(pool, d, paint);
     loadTilePrices(pool);
-    main.querySelectorAll('[data-upg]').forEach(b=>b.addEventListener('click', ()=>{ budget = +b.dataset.upg; paint(); }));
-    const inp = main.querySelector('#upgEur');
-    inp.addEventListener('change', ()=>{ const v = parseFloat(String(inp.value).replace(',', '.')); if(v > 0){ budget = Math.round(v); paint(); } });
-    requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
   };
+  const rng = main.querySelector('#upgEur');
+  let _upgT = 0;
+  rng.addEventListener('input', ()=>{
+    budget = +rng.value || 25;
+    main.querySelector('#upgVal').textContent = '\u20ac' + budget;
+    clearTimeout(_upgT); _upgT = setTimeout(paint, 140);
+  });
   paint();
+  requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
 }
 /* 1.63 Odds: hypergeometric chances for the opening hand and the first
    turns -- lands in the opening seven, a land drop each turn, and at least
@@ -7540,17 +7710,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.64';
+const APP_VERSION = '1.66';
 const CHANGELOG_NOTES = {
   en: [
-    'Round counter removed again',
-    'Mana: quick taps fill the pool',
-    'QR fits big decks (no maybeboard)'
+    'Turn button for sideways cards',
+    'Split, fuse, aftermath, flip, planes'
   ],
   nl: [
-    'Rondeteller weer verwijderd',
-    'Mana: snelle tikken vullen de pool',
-    'QR past ook bij grote decks'
+    'Draaiknop voor zijwaartse kaarten',
+    'Split, fuse, aftermath, flip, planes'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7560,6 +7728,12 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-02';
 const CHANGELOG_HISTORY = [
+  { v: '1.65', d: '2026-11-02',
+    en: ['History: card, action, time, button', 'Upgrades budget is a slider', 'What can I build: pick colours first', 'Mana counter per colour', 'Counter pills no longer overlap', 'Text size keeps everything in view'],
+    nl: ['Geschiedenis: kaart, actie, tijd, knop', 'Upgrades-budget is een schuif', 'Wat kan ik bouwen: eerst kleuren', 'Manateller per kleur', 'Tellers overlappen niet meer', 'Tekstgrootte houdt alles in beeld'] },
+  { v: '1.64', d: '2026-11-02',
+    en: ['Round counter removed again', 'Mana: quick taps fill the pool', 'QR fits big decks (no maybeboard)'],
+    nl: ['Rondeteller weer verwijderd', 'Mana: snelle tikken vullen de pool', 'QR past ook bij grote decks'] },
   { v: '1.63', d: '2026-11-02',
     en: ['What can I build: decks vs collection', 'Sell list: cards outside your decks', 'Compare a deck with EDHREC', 'Upgrades for a budget you pick', 'Opening-hand odds in Stats', 'Set progress in Search and binders', 'Life: tax, storm, energy and more', 'Share a deck by QR code', 'Extras: Appearance with text size'],
     nl: ['Wat kan ik bouwen met je collectie', 'Verkooplijst: kaarten buiten decks', 'Deck vergelijken met EDHREC', 'Upgrades binnen jouw budget', 'Kansen openingshand bij Stats', 'Set-voortgang in Zoeken en mappen', 'Life: tax, storm, energy en meer', 'Deck delen met een QR-code', 'Extra\u2019s: Weergave met tekstgrootte'] },
@@ -16218,7 +16392,7 @@ function statsTabHtml(d){
   return `
     <div class="panel-card"><div class="panel-h">Recent Changes</div>
       ${ensureChangelog(d).length
-        ? ensureChangelog(d).slice(0,5).map(histRowHtml).join('') + `<button class="hist-more" id="histMoreBtn">View full history →</button>`
+        ? ensureChangelog(d).slice(0,4).map(histRowHtml).join('') + `<button class="hist-more" id="histMoreBtn">View full history →</button>`
         : `<div class="empty-note" style="padding:8px 0;">No changes logged yet — new edits will appear here.</div>`}
     </div>
     <div class="panel-card">
@@ -23526,7 +23700,7 @@ function inspirationPageHtml(){
       ${sel.theme && !both ? '' : `<div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>`}
       ${sel.kindred && !both ? '' : `<div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.theme||'', trS('Theme — none'), {search:true, tiles:true})}</div>`}
       <div class="bs-row insp-land-row">${deckKind(d) !== 'admiral' ? `<button type="button" class="ghost-btn" id="inspLandBase">\u26f0 ${appLang() === 'nl' ? 'Landbase' : 'Land base'}</button>` : ''}<button type="button" class="ghost-btn" id="inspPackages"><span class="ib">${ICONS.collection}</span>${appLang() === 'nl' ? 'Pakketten' : 'Packages'}</button></div>
-      ${deckKind(d) !== 'admiral' && !deckIsConstructed(d) ? `<div class="bs-row insp-land-row"><button type="button" class="ghost-btn" id="inspCompare">${appLang() === 'nl' ? 'Vergelijk met EDHREC' : 'Compare with EDHREC'}</button><button type="button" class="ghost-btn" id="inspUpgrades">${appLang() === 'nl' ? 'Upgrades voor \u20acX' : 'Upgrades for \u20acX'}</button></div>` : ''}
+      ${deckKind(d) !== 'admiral' && !deckIsConstructed(d) ? `<div class="bs-row insp-land-row"><button type="button" class="ghost-btn" id="inspCompare">\u21c4 ${appLang() === 'nl' ? 'Vergelijk' : 'Compare'}</button><button type="button" class="ghost-btn" id="inspUpgrades">\u20ac ${appLang() === 'nl' ? 'Upgrades' : 'Upgrades'}</button></div>` : ''}
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -31827,10 +32001,56 @@ const LCTR = [
   { k:'energy', tap: 1,  hold: -1, ico:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L5 14h6l-1 8 8-12h-6z"/></svg>', en:'Energy', nl:'Energy' },
   { k:'exp',    tap: 1,  hold: -1, ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>', en:'Experience', nl:'Experience' }
 ];
+/* 1.65: mana per colour, with the app's own mana symbols */
+const LCTR_MANA = ['W', 'U', 'B', 'R', 'G', 'C'].map(c=>({ k: 'm' + c, tap: -1, hold: 1, mana: c,
+  en: { W: 'White mana', U: 'Blue mana', B: 'Black mana', R: 'Red mana', G: 'Green mana', C: 'Colorless mana' }[c],
+  nl: { W: 'Witte mana', U: 'Blauwe mana', B: 'Zwarte mana', R: 'Rode mana', G: 'Groene mana', C: 'Kleurloze mana' }[c] }));
+function lctrAll(){ return LCTR.filter(C=>C.k !== 'mana').concat(LCTR_MANA); }
+function lctrIco(C){ return C.mana ? manaIconSvg(C.mana, 18) : C.ico; }
+function lctrName(C){ return appLang() === 'nl' ? C.nl : C.en; }
+function lctrPopHtml(p, idx){
+  const on = p.ctrOn || {}, nl = appLang() === 'nl';
+  if(state.life._manaMenu === idx){
+    return `<button type="button" class="lctr-back" data-lctrmana="back" data-idx="${idx}" title="${nl ? 'Terug' : 'Back'}" aria-label="${nl ? 'Terug' : 'Back'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>`
+      + LCTR_MANA.map(C=>`<button type="button" class="m${on[C.k] ? ' on' : ''}" data-lctrtog="${C.k}" data-idx="${idx}" title="${lctrName(C)}" aria-label="${lctrName(C)}">${manaIconSvg(C.mana, 28)}</button>`).join('');
+  }
+  return LCTR.map(C=>C.k === 'mana'
+    ? `<button type="button" class="${LCTR_MANA.some(M=>on[M.k]) ? 'on' : ''}" data-lctrmana="open" data-idx="${idx}" title="Mana" aria-label="Mana">${C.ico}</button>`
+    : `<button type="button" class="${on[C.k] ? 'on' : ''}" data-lctrtog="${C.k}" data-idx="${idx}" title="${lctrName(C)}" aria-label="${lctrName(C)}">${C.ico}</button>`).join('');
+}
+/* A short tip inside the card -- it turns with the card, so it reads the
+   right way up for that player. */
+function lifeCtrTip(idx, text){
+  const face = document.querySelector(`#lifeOverlay .life-card-v2[data-idx="${idx}"] .life-face`);
+  if(!face) return;
+  face.querySelectorAll('.lctr-tip').forEach(x=>x.remove());
+  const t = document.createElement('div');
+  t.className = 'lctr-tip'; t.textContent = text;
+  face.appendChild(t);
+  setTimeout(()=>t.remove(), 1500);
+}
+/* Keep the open counter list inside its card (offsets ignore the card's
+   turn, so this works in the card's own frame). */
+function fitLctrPops(){
+  document.querySelectorAll('#lifeOverlay .lctr-pop:not([hidden])').forEach(pop=>{
+    const wrap = pop.parentElement, face = pop.closest('.life-face');
+    if(!wrap || !face) return;
+    let x = 0, el = wrap;
+    while(el && el !== face){ x += el.offsetLeft; el = el.offsetParent; }
+    const fw = face.clientWidth;
+    if(fw < 120) return;   // the card is still opening
+    pop.style.transform = 'none';
+    const pw = pop.offsetWidth;
+    let left = x + wrap.offsetWidth / 2 - pw / 2;
+    left = Math.max(6, Math.min(fw - 6 - pw, left));
+    pop.style.left = Math.round(left - x) + 'px';
+  });
+}
 function lifeNameRowHtml(p, idx){
   const on = p.ctrOn || {}, v = p.ctr || {};
-  const chip = (C)=>`<button type="button" class="lctr" data-lctr="${C.k}" data-idx="${idx}" title="${appLang() === 'nl' ? C.nl : C.en}"><i>${C.ico}</i><b>${v[C.k] || 0}</b></button>`;
-  const others = LCTR.filter(C=>C.k !== 'tax' && on[C.k]);
+  if(on.mana){ on.mC = true; v.mC = (v.mC || 0) + (v.mana || 0); delete on.mana; delete v.mana; p.ctrOn = on; p.ctr = v; }   // 1.65: the one pool becomes colourless
+  const chip = (C)=>`<button type="button" class="lctr${C.mana ? ' lctr-m' : ''}" data-lctr="${C.k}" data-idx="${idx}" title="${lctrName(C)}"><i>${lctrIco(C)}</i><b>${v[C.k] || 0}</b></button>`;
+  const others = lctrAll().filter(C=>C.k !== 'tax' && on[C.k]);
   return `<div class="lname-row">${on.tax ? chip(LCTR[0]) : ''}${others.length ? others.map(chip).join('') : `<input class="pname-input" data-idx="${idx}" value="${escapeHtml(p.name)}" size="${Math.max(4, Math.min(14, p.name.length || 8))}">`}</div>`;
 }
 const INIT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="rgba(0,0,0,0.55)" stroke-width="0.8" stroke-linejoin="round" d="M12 1.8c2.2 3.1 4.4 4.7 4.4 7.6a4.4 4.4 0 0 1-8.8 0c0-1.8.9-2.9 1.8-4 .2 1.5 1.1 2.4 2 2.4-.6-2.1-.3-3.9.6-6z"/><path fill="currentColor" stroke="rgba(0,0,0,0.55)" stroke-width="0.8" stroke-linejoin="round" d="M9.2 14.2h5.6l-1.4 8h-2.8z"/></svg>';
@@ -32828,7 +33048,7 @@ function lifeCardHtml(p, idx, count){
         ${pz ? `<div class="pz-label">${phyrexianSvg(15)}<span>Poison</span></div>
         <div class="lval-row">${ldeltaHtml(p._pzDelta, p._pzFresh)}<div class="lval2 pz-val ${p.poison >= 10 ? 'danger' : ''}">${p.poison}</div>${ldeltaHtml(p._pzDelta, p._pzFresh, true)}</div>`
           : `<div class="pz-label" style="max-width:80%;white-space:normal;text-transform:none;">${trS('Tap another player to count the damage you took from them.')}</div>`}
-        <div class="lf-extras"><button type="button" class="lf-x${p.monarch ? ' on' : ''}" data-lmonarch="${idx}" title="Monarch" aria-label="Monarch">${CROWN_SVG}<span>Monarch</span></button><button type="button" class="lf-x${p.dg ? ' on' : ''}" data-ldungeon="${idx}" title="Dungeon" aria-label="Dungeon">${DUNGEON_SVG}<span>${p.dg ? escapeHtml(p.dg.room) : 'Dungeon'}</span></button><span class="lctr-wrap"><button type="button" class="lf-x${Object.keys(p.ctrOn || {}).some(k=>(p.ctrOn || {})[k]) ? ' on' : ''}" data-lctrmenu="${idx}" title="${appLang() === 'nl' ? 'Tellers' : 'Counters'}" aria-label="${appLang() === 'nl' ? 'Tellers' : 'Counters'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></svg><span>${appLang() === 'nl' ? 'Tellers' : 'Counters'}</span></button><span class="lctr-pop" ${state.life._ctrMenu === idx ? '' : 'hidden'}>${LCTR.map(C=>`<button type="button" class="${(p.ctrOn || {})[C.k] ? 'on' : ''}" data-lctrtog="${C.k}" data-idx="${idx}" title="${appLang() === 'nl' ? C.nl : C.en}" aria-label="${appLang() === 'nl' ? C.nl : C.en}">${C.ico}</button>`).join('')}</span></span></div>
+        <div class="lf-extras"><span class="lf-grp"><button type="button" class="lf-x${p.monarch ? ' on' : ''}" data-lmonarch="${idx}" title="Monarch" aria-label="Monarch">${CROWN_SVG}<span>Monarch</span></button><button type="button" class="lf-x${p.dg ? ' on' : ''}" data-ldungeon="${idx}" title="Dungeon" aria-label="Dungeon">${DUNGEON_SVG}<span>${p.dg ? escapeHtml(p.dg.room) : 'Dungeon'}</span></button></span><span class="lf-grp"><span class="lctr-wrap"><button type="button" class="lf-x${Object.keys(p.ctrOn || {}).some(k=>(p.ctrOn || {})[k]) ? ' on' : ''}" data-lctrmenu="${idx}" title="${appLang() === 'nl' ? 'Tellers' : 'Counters'}" aria-label="${appLang() === 'nl' ? 'Tellers' : 'Counters'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></svg><span>${appLang() === 'nl' ? 'Tellers' : 'Counters'}</span></button><span class="lctr-pop" ${state.life._ctrMenu === idx ? '' : 'hidden'}>${lctrPopHtml(p, idx)}</span></span></span></div>
         <button class="submenu-toggle done" data-idx="${idx}">${trS('\u2713 Done')}</button>
       </div>
     </div></div>`;
@@ -33064,16 +33284,17 @@ function wireLifeGrid(){
   });
   // 1.63 counters: tap / hold per counter, the hold repeats
   document.querySelectorAll('.lctr[data-lctr]').forEach(b=>{
-    const C = LCTR.find(x=>x.k === b.dataset.lctr), p = ensureLifePlayers()[+b.dataset.idx];
+    const C = lctrAll().find(x=>x.k === b.dataset.lctr), p = ensureLifePlayers()[+b.dataset.idx];
     if(!C || !p) return;
     const step = (dv)=>{ p.ctr = p.ctr || {}; p.ctr[C.k] = Math.max(0, (p.ctr[C.k] || 0) + dv); const v = b.querySelector('b'); if(v) v.textContent = p.ctr[C.k]; lifeAutosave(); };
     ['pointerdown', 'touchstart', 'mousedown', 'click'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
     // Mana: from an empty pool every tap adds one, as long as the taps keep
     // coming (within 1.5 s of each other); after that a tap spends one again.
     const tapStep = ()=>{
-      if(C.k === 'mana'){
+      if(C.mana){
         const now = Date.now();
-        if(!(p.ctr && p.ctr.mana) || now < (p._manaFill || 0)){ p._manaFill = now + 1500; step(1); return; }
+        p._mf = p._mf || {};
+        if(!(p.ctr && p.ctr[C.k]) || now < (p._mf[C.k] || 0)){ p._mf[C.k] = now + 1500; step(1); return; }
       }
       step(C.tap);
     };
@@ -33082,12 +33303,31 @@ function wireLifeGrid(){
   });
   document.querySelectorAll('[data-lctrmenu]').forEach(b=>{
     ['pointerdown', 'touchstart'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
-    b.addEventListener('click', (e)=>{ e.stopPropagation(); const i = +b.dataset.lctrmenu; state.life._ctrMenu = state.life._ctrMenu === i ? null : i; renderLifeGrid(); });
+    b.addEventListener('click', (e)=>{ e.stopPropagation(); const i = +b.dataset.lctrmenu; state.life._ctrMenu = state.life._ctrMenu === i ? null : i; state.life._manaMenu = null; renderLifeGrid(); });
   });
   document.querySelectorAll('[data-lctrtog]').forEach(b=>{
     ['pointerdown', 'touchstart'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
-    b.addEventListener('click', (e)=>{ e.stopPropagation(); const p = ensureLifePlayers()[+b.dataset.idx]; p.ctrOn = p.ctrOn || {}; p.ctrOn[b.dataset.lctrtog] = !p.ctrOn[b.dataset.lctrtog]; renderLifeGrid(); });
+    b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const i = +b.dataset.idx, p = ensureLifePlayers()[i], k = b.dataset.lctrtog;
+      p.ctrOn = p.ctrOn || {}; p.ctrOn[k] = !p.ctrOn[k];
+      renderLifeGrid();
+      const C = lctrAll().find(x=>x.k === k), nl = appLang() === 'nl';
+      if(C) lifeCtrTip(i, lctrName(C) + (p.ctrOn[k] ? (nl ? ' aan' : ' on') : (nl ? ' uit' : ' off')));
+    });
   });
+  document.querySelectorAll('[data-lctrmana]').forEach(b=>{   // 1.65: the drop opens the colours
+    ['pointerdown', 'touchstart'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
+    b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const i = +b.dataset.idx, open = b.dataset.lctrmana === 'open';
+      state.life._manaMenu = open ? i : null;
+      renderLifeGrid();
+      if(open) lifeCtrTip(i, appLang() === 'nl' ? 'Mana \u00b7 kies een kleur' : 'Mana \u00b7 pick a colour');
+    });
+  });
+  requestAnimationFrame(()=>{ try{ fitLctrPops(); }catch(e){} });
+  setTimeout(()=>{ try{ fitLctrPops(); }catch(e){} }, 420);
   // 1.46: Monarch and Dungeons in the poison menu
   document.querySelectorAll('[data-lmonarch]').forEach(b=>{
     ['pointerdown','touchstart'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), {passive:true}));
@@ -33483,6 +33723,8 @@ function renderPreview(){
   if(fl){
     // data-front carries the card id too, so the remembered face applies here.
     el.innerHTML = `<div class="card-preview-backdrop" id="pbd" style="touch-action:none;"><span class="pv-card" style="transform-origin:center center;will-change:transform;"><img class="${state.preview.wb?'wb-card':''}" src="${fl.front}"><span class="dfc-flip-box"><button class="dfc-flip" title="Flip to the other face" data-front="${escapeHtml(fl.front)}" data-back="${escapeHtml(fl.back)}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6l5 4V7c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 13c0-4.42-3.58-8-8-8zm-5.3 2.74L5.24 6.28A7.93 7.93 0 0 0 4 13c0 4.42 3.58 8 8 8v3l5-4-5-4v3c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8z"/></svg></button></span></span></div>`;
+  } else if(state.preview.rot){
+    el.innerHTML = `<div class="card-preview-backdrop" id="pbd" style="touch-action:none;"><span class="pv-card" style="transform-origin:center center;will-change:transform;"><img class="${state.preview.wb?'wb-card':''}" src="${state.preview.src}"><span class="dfc-flip-box"><button class="dfc-flip card-rot" title="${appLang() === 'nl' ? 'Draai de kaart' : 'Turn the card'}" data-rot="${state.preview.rot}">${CARD_ROT_SVG}</button></span></span></div>`;
   } else
   el.innerHTML = `<div class="card-preview-backdrop" id="pbd" style="touch-action:none;"><img class="${state.preview.wb?'wb-card':''}" src="${state.preview.src}" style="transform-origin:center center;will-change:transform;"></div>`;
   _wirePreviewZoom(document.getElementById('pbd'));
