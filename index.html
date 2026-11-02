@@ -544,7 +544,7 @@ main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 12
 .banner-tabs{display:flex;gap:6px;flex:0 0 auto;}
 /* 1.52: the phone bar scales with the screen -- seven buttons (Home, Back,
    five pages) and their gaps always fit, from 320px up; 44px stays the cap */
-:root{--nb:min(44px, calc((100vw - 66px) / 7));--nbg:clamp(3px, 1.4vw, 6px);}
+:root{--nb:min(44px, calc((100vw / var(--z, 1) - 66px) / 7));--nbg:clamp(3px, calc(1.4vw / var(--z, 1)), 6px);}
 html:not(.desk) .brand-banner{gap:var(--nbg);padding-left:clamp(4px, 2vw, 8px);padding-right:clamp(4px, 2vw, 8px);}
 html:not(.desk) .brand-banner .banner-tabs{gap:var(--nbg);}
 html:not(.desk) .brand-banner .banner-tab{width:var(--nb);height:var(--nb);}
@@ -1074,6 +1074,50 @@ html .tag-drop .tag-drop-list > .tag-drop-h b{opacity:0.75;}
 .ph-box{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px 8px 4px;box-shadow:inset 0 0 24px rgba(0,0,0,0.25);}
 .bc-head b{display:block;font-size:15px;}
 .bc-head span{font-size:13px;color:var(--sub-text);}
+/* 1.63 odds */
+.qr-box{background:#fff;border-radius:12px;padding:12px;margin:0 auto;width:min(78vw, 320px);box-sizing:border-box;}
+.qr-box svg{width:100%;height:auto;display:block;}
+.set-prog{margin:10px 0 6px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);}
+.set-prog-t{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--sub-text);}
+.set-prog-t b{color:var(--ink-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.set-prog-bar{height:7px;border-radius:4px;background:rgba(0,0,0,0.35);margin-top:7px;overflow:hidden;}
+.set-prog-bar i{display:block;height:100%;background:var(--gold);border-radius:4px;}
+.binder-tile .set-prog-bar{margin:6px 8px 0;}
+.odds{margin:4px 0 12px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);}
+.odds-h{display:flex;justify-content:space-between;font-weight:700;font-size:13.5px;color:var(--ink-text);margin-bottom:8px;}
+.odds-h span{font-weight:400;color:var(--sub-text);font-size:12px;}
+.odds-bars{display:flex;align-items:flex-end;gap:6px;height:96px;margin-bottom:6px;}
+.odds-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;font-size:11px;color:var(--sub-text);}
+.odds-col b{color:var(--ink-text);font-size:11.5px;}
+.odds-bar{width:100%;background:var(--gold);border-radius:4px 4px 0 0;}
+.odds-line{font-size:12.5px;color:var(--sub-text);margin-top:4px;line-height:1.5;}
+.odds-line b{color:var(--ink-text);}
+.odds-line .mana-ic{vertical-align:-2px;}
+/* 1.63 buildable, compare, upgrades, sell list */
+.po-main{padding-bottom:0;}
+.bld-tile{padding:0;text-align:left;cursor:pointer;}
+.bld-pct{display:flex;align-items:baseline;gap:6px;}
+.bld-pct b{font-size:20px;color:var(--gold);font-family:'JetBrains Mono',monospace;}
+.bld-pct span{font-size:13px;color:var(--sub-text);}
+.bld-sub{font-size:11.5px;color:var(--sub-text);margin-top:2px;}
+.bld-mini{padding:0;}
+.bld-head{display:flex;gap:12px;align-items:center;margin:10px 0;font-size:13px;color:var(--ink-text);}
+.bld-head img{width:78px;border-radius:5px;flex:none;}
+.bld-head b{font-size:22px;color:var(--gold);}
+.bld-acts, .px-quick{display:flex;gap:8px;}
+.bld-acts{margin:10px 0 12px;flex:none;}
+.bld-acts > button{flex:1;margin:0;}
+.bld-subs{display:flex;flex-direction:column-reverse;gap:8px;}
+.bld-pair{display:flex;align-items:center;gap:8px;}
+.bld-pair > div{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-text);}
+.bld-pair img{width:44px;border-radius:3px;flex:none;}
+.bld-pair > b{color:var(--gold);}
+.cmp-head, .sell-tot{text-align:center;font-size:14px;color:var(--ink-text);margin:10px 0;}
+.cmp-head b, .sell-tot b{color:var(--gold);}
+.sell-foot, .upg-foot{flex:none;display:flex;flex-direction:column-reverse;gap:8px;padding:10px 0 12px;}
+.sell-q{font-family:'JetBrains Mono',monospace;color:var(--ink-text);}
+.upg-row{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-text);}
+.upg-row input{flex:1;min-width:0;}
 /* 1.58 the clear-× inside search fields */
 .in-clear, .searchbar > button.in-clear{position:absolute !important;z-index:3;width:30px !important;height:30px !important;min-height:0 !important;margin:0 !important;padding:6px !important;border:none !important;border-radius:50% !important;background:transparent !important;background-image:none !important;box-shadow:none !important;cursor:pointer;opacity:.75;display:flex;align-items:center;justify-content:center;}
 .in-clear[hidden], .searchbar > button.in-clear[hidden]{display:none !important;}
@@ -2088,6 +2132,7 @@ html.desk .bs-row.insp-land-row{padding-right:0;}
 .start-pg-h{font-size:12.5px;font-weight:700;color:var(--sub-text);margin:0 0 6px;}
 .start-seg{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:6px;}
 .start-seg .guild-opt{justify-content:center;padding:8px 4px;font-size:13px;}
+.ui-seg{grid-template-columns:repeat(4, minmax(0, 1fr));}
 .guild-opt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .guild-opt.sel{border-color:var(--brass);background:var(--brass-glow);color:var(--ink-text);}
 .guild-opt.sel, .guild-opt.sel svg{-webkit-text-fill-color:var(--ink-text);}
@@ -2699,7 +2744,7 @@ body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !impo
 .dg-init.on{border-color:var(--gold);}
 .ldungeon span{overflow:hidden;text-overflow:ellipsis;}
 .lf-extras{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);z-index:4;display:flex;gap:12px;justify-content:center;pointer-events:none;}
-@container (min-width: 300px){ .lf-extras{bottom:16px;width:calc(150px + 2 * 54px);gap:0;justify-content:space-between;} }
+@container (min-width: 300px){ .lf-extras{bottom:84px;width:auto;gap:12px;justify-content:center;} }   /* 1.63: three buttons in a row above Done */
 .lf-x{pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-radius:50%;border:1.5px solid rgba(255,255,255,0.45);background:rgba(0,0,0,0.3);color:#fff;cursor:pointer;}
 .lf-x svg{width:22px;height:22px;flex:none;}
 .lf-x span{display:none;}
@@ -3291,6 +3336,18 @@ html.desk :is(.sr-tile, .sc-tile, .vg-card, .col-tile) img{cursor:zoom-in;}
 .life-face.front > .submenu-toggle.lbadge .lb-grp{font-size:24px;}
 .life-face.front > .submenu-toggle.lbadge .lb-grp svg{width:21px !important;height:21px !important;}
 .life-face.front > .pname-input{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);margin:0;z-index:3;font-size:clamp(14px, 7cqmin, 19px);}
+/* 1.63: the name row -- tax on its left, other counters in its place */
+.lname-row{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:3;display:flex;align-items:center;justify-content:center;gap:8px;max-width:96%;}
+.lname-row > .pname-input{position:static;transform:none;margin:0;font-size:clamp(14px, 7cqmin, 19px);min-width:0;}
+.lctr{display:flex;align-items:center;gap:5px;flex:none;height:34px;padding:0 10px;border-radius:999px;border:1.5px solid rgba(255,255,255,0.35);background:rgba(0,0,0,0.3);color:#fff;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;cursor:pointer;}
+.lctr i{display:block;width:16px;height:16px;color:var(--gold);}
+.lctr i svg{width:100%;height:100%;display:block;}
+.lctr-wrap{position:relative;pointer-events:auto;}
+.lctr-pop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border-radius:999px;background:rgba(0,0,0,0.55);border:1.5px solid rgba(255,255,255,0.3);z-index:6;}
+.lctr-pop[hidden]{display:none;}
+.lctr-pop button{width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);color:#fff;padding:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.lctr-pop button.on{border-color:var(--gold);color:var(--gold);background:rgba(232,190,88,0.18);}
+.lctr-pop button svg{width:100%;height:100%;display:block;}
 .submenu-toggle.done{height:62px;min-width:150px;font-size:21px;border-radius:999px;}   /* 1.51 thicker */
 /* New game: the table shapes read clearly, the picked one in gold */
 .llay{background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.22);border-radius:12px;padding:7px;transition:transform .12s;}
@@ -4169,6 +4226,13 @@ document.addEventListener('click', (e)=>{
     if(b) keepAnchored(dsRow, ()=>toggleAccordionBody(b, 'dataSrc'), ()=>dsRow.isConnected ? dsRow : null);
     return;
   }
+  const usOpt = e.target.closest && e.target.closest('[data-uiscale]');   // 1.63
+  if(usOpt){
+    try{ localStorage.setItem(LS_PREFIX + 'uiScale', usOpt.dataset.uiscale); }catch(err){}
+    applyUiScale();
+    document.querySelectorAll('[data-uiscale]').forEach(x=>x.classList.toggle('sel', x === usOpt));
+    return;
+  }
   const spOpt = e.target.closest && e.target.closest('[data-startpg]');   // 1.53
   if(spOpt){
     try{ localStorage.setItem(LS_PREFIX + 'startPage', spOpt.dataset.startpg); }catch(err){}
@@ -4183,7 +4247,7 @@ document.addEventListener('click', (e)=>{
       applyTheme(); persistSettings();
       document.querySelectorAll('[data-guild]').forEach(x=>x.classList.toggle('sel', x.dataset.guild===g.k));
       const cur = document.getElementById('guildCur');
-      if(cur) cur.innerHTML = manaIconSvg(g.main,22) + manaIconSvg(g.side,22);
+      void cur;   // 1.63: the tile wears a palette icon now
       const b = document.getElementById('guildBody');
       if(b && !b.hidden) toggleAccordionBody(b, 'guild');
     }
@@ -6598,6 +6662,10 @@ function wbClass(c){ return (c && c.border_color === 'white') ? 'wb-card' : ''; 
 /* Owned marker: a small check on deck tiles for cards that are in the
    collection under ANY printing. */
 /* 1.53: the page the app opens on (Extras → Color scheme) */
+/* 1.63 text size: the whole page zoomed a step (Appearance in Extras) */
+function uiScale(){ try{ const v = parseFloat(localStorage.getItem(LS_PREFIX + 'uiScale')); return v > 0.5 && v < 2 ? v : 1; }catch(e){ return 1; } }
+function applyUiScale(){ try{ const v = uiScale(); document.documentElement.style.zoom = v === 1 ? '' : String(v); document.documentElement.style.setProperty('--z', String(v)); setTimeout(()=>{ try{ csFitSheetFoot(); }catch(e){} }, 60); }catch(e){} }
+try{ applyUiScale(); }catch(e){}
 function startPage(){ try{ return localStorage.getItem(LS_PREFIX + 'startPage') || 'home'; }catch(e){ return 'home'; } }
 /* 1.53: one page-level listener per job. A render that wires a document
    listener calls this with a key; the copy from the previous render is
@@ -6716,6 +6784,323 @@ try{
   new MutationObserver(()=>{ if(_wtsT) return; _wtsT = requestAnimationFrame(()=>{ _wtsT = 0; try{ wireTypeSuggests(); }catch(e){} }); })
     .observe(document.documentElement, { childList: true, subtree: true });
 }catch(e){}
+/* qrcode-generator 1.4.4 -- MIT licence, Kazuhiko Arase (inlined, offline) */
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+/* ---- 1.63 shared helpers ---- */
+const _BASIC_RE = /^(Snow-Covered )?(Plains|Island|Swamp|Mountain|Forest|Wastes)$/;
+/* EDHREC's average deck for a leader: the 99 most typical cards. */
+async function edhAvgDeckNames(card){
+  const slug = edhrecSlug(card.name);
+  let data = null;
+  try{ data = await edhrecFetchJson('/pages/average-decks/' + slug + '.json'); }catch(e){}
+  let names = [];
+  const deckArr = data && (Array.isArray(data.deck) ? data.deck : (data.container && data.container.json_dict && Array.isArray(data.container.json_dict.deck) ? data.container.json_dict.deck : null));
+  if(deckArr) names = deckArr.map(l=>String(l).replace(/^\s*\d+x?\s+/, '').trim()).filter(Boolean);
+  if(!names.length && data) names = edhrecNamesFrom(data);
+  if(!names.length){
+    try{ const pg = await edhrecCommanderPage(card); names = (pg.names || []).slice(0, 99); }catch(e){}
+  }
+  const seen = new Set();
+  return names.filter(n=>{ if(n === card.name || seen.has(n)) return false; seen.add(n); return true; });
+}
+function _bulkRec(ix, name){
+  if(!ix || !ix.byName) return null;
+  const k = String(name || '').toLowerCase();
+  return ix.byName.get(k) || (k.indexOf(' // ') > 0 ? ix.byName.get(k.slice(0, k.indexOf(' // '))) : null);
+}
+function _tagsLocal(ix, name){ try{ const t = _localTagsDecide(ix, { name }); return Array.isArray(t) ? t : []; }catch(e){ return []; } }
+/* Copies of each card name that the decks use (main, maybe, command). */
+function deckUseCounts(){
+  const m = new Map();
+  (state.decksIndex || []).forEach(d=>{
+    const dd = getDeck(d.id) || d;
+    deckLeaders(dd).concat(dd.cards || [], dd.maybeboard || []).forEach(c=>{ if(c && c.name) m.set(c.name, (m.get(c.name) || 0) + 1); });
+  });
+  return m;
+}
+function downloadTextFile(name, text, type){
+  try{
+    const blob = new Blob([text], { type: type || 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }catch(e){ toast('Could not save the file.'); }
+}
+/* A simple full-page overlay in the app's dress: cap, scrolling main, nav. */
+function openPlainOverlay(id, title, onClose){
+  const ex = document.getElementById(id); if(ex) ex.remove();
+  const el = document.createElement('div');
+  el.className = 'overlay'; el.id = id;
+  el.innerHTML = `<div class="overlay-inner">${overlayCapHtml(title)}<main class="po-main"><div class="status"><div class="spinner"></div></div></main>${overlayNavHtml()}</div>`;
+  document.body.appendChild(el);
+  wireOverlayNav(el);
+  pushOverlay(id, ()=>{ document.getElementById(id)?.remove(); if(onClose) onClose(); });
+  return el.querySelector('main');
+}
+/* 1.63 WHAT CAN I BUILD. For the commanders you own plus EDHREC's most
+   played of the year: how much of each one's EDHREC average deck is in your
+   collection, and which of your own cards could stand in for the missing
+   ones (same colour identity, shared function tags, same kind -- land or
+   spell). One result per commander, best first. */
+async function openBuildable(){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  const main = openPlainOverlay('buildOverlay', T('Wat kan ik bouwen', 'What can I build'));
+  const ix = await bulkIndexReady().catch(()=>null);
+  if(!ix || !ix.byName){ main.innerHTML = `<div class="empty-note">${T('De kaartendatabase is nog niet klaar. Probeer het zo nog eens.', 'The card database is not ready yet. Try again in a moment.')}</div>`; return; }
+  const items = state.collection.items || [];
+  const owned = new Set(items.map(it=>it.name));
+  // candidates: commanders you own, then the year's top commanders
+  const cands = [], seenC = new Set();
+  const addC = (nm)=>{
+    const r = _bulkRec(ix, nm); if(!r || seenC.has(r.n)) return;
+    const tl = String(r.tl || ''), ot = String(r.ot || '');
+    if(!(/Legendary/.test(tl) && /Creature/.test(tl)) && !/can be your commander/i.test(ot)) return;
+    seenC.add(r.n); cands.push(r);
+  };
+  items.forEach(it=>addC(it.name));
+  const ownN = cands.length;
+  try{ ((await _inspFeedWinNames('year')) || []).slice(0, 40).forEach(addC); }catch(e){}
+  if(!cands.length){ main.innerHTML = `<div class="empty-note">${T('Geen commanders gevonden.', 'No commanders found.')}</div>`; return; }
+  // your cards, with their tags, once
+  const pool = [];
+  owned.forEach(nm=>{ const r = _bulkRec(ix, nm); if(r && !_BASIC_RE.test(r.n)) pool.push({ n: r.n, r, ci: String(r.ci || ''), land: /\bLand\b/.test(String(r.tl || '').split('//')[0]), tags: _tagsLocal(ix, r.n) }); });
+  const results = [];
+  const paintProgress = (i)=>{ main.innerHTML = `<div class="status"><div class="spinner"></div><p class="hint" style="text-align:center;">${T('Decks vergelijken', 'Comparing decks')} ${i}/${cands.length}</p></div>`; };
+  for(let i = 0; i < cands.length; i++){
+    if(!document.getElementById('buildOverlay')) return;
+    paintProgress(i + 1);
+    const c = cands[i];
+    let names = [];
+    try{ names = await edhAvgDeckNames({ name: c.n }); }catch(e){}
+    names = names.filter(n=>!_BASIC_RE.test(n));
+    if(names.length < 30) continue;
+    const ciSet = new Set(String(c.ci || '').split(''));
+    const have = names.filter(n=>owned.has(n));
+    const miss = names.filter(n=>!owned.has(n));
+    const inDeck = new Set(names);
+    const free = pool.filter(p=>!inDeck.has(p.n) && p.n !== c.n && p.ci.split('').every(x=>ciSet.has(x)) && p.tags.length);
+    const used = new Set(), subs = [];
+    miss.forEach(nm=>{
+      const mr = _bulkRec(ix, nm); if(!mr) return;
+      const mt = _tagsLocal(ix, nm); if(!mt.length) return;
+      const ml = /\bLand\b/.test(String(mr.tl || '').split('//')[0]);
+      let best = null, bs = 0;
+      free.forEach(p=>{
+        if(used.has(p.n) || p.land !== ml) return;
+        const sc = p.tags.filter(t=>mt.indexOf(t) >= 0).length;
+        if(sc > bs){ bs = sc; best = p; }
+      });
+      if(best && bs >= Math.min(2, mt.length)){ used.add(best.n); subs.push({ miss: nm, sub: best.n, score: bs }); }
+    });
+    results.push({ c, names, have, miss, subs, own: i < ownN, pct: have.length / names.length, pct2: (have.length + subs.length) / names.length });
+  }
+  if(!document.getElementById('buildOverlay')) return;
+  results.sort((a, b)=>(b.pct2 - a.pct2) || (b.pct - a.pct));
+  if(!results.length){ main.innerHTML = `<div class="empty-note">${T('EDHREC gaf geen decks terug. Probeer het met internet nog eens.', 'EDHREC returned no decks. Try again with a connection.')}</div>`; return; }
+  const pctS = (x)=>Math.round(x * 100) + '%';
+  // bottom-up: the best match at the foot (wrap-reverse grid)
+  main.innerHTML = `<p class="hint" style="text-align:center;margin:8px 0;">${T('Hoeveel van het gemiddelde EDHREC-deck je al hebt. Tussen haakjes: met vervangers uit je collectie.', 'How much of the EDHREC average deck you own. In brackets: with stand-ins from your collection.')}</p>
+    <div class="sr-grid bld-grid">${results.map((x, i)=>`<button type="button" class="sr-tile bld-tile" data-bld="${i}">
+      <img src="${bulkToCardish(x.c).image_uris.normal}" alt="" loading="lazy">
+      <div class="st-body"><div class="bld-pct"><b>${pctS(x.pct)}</b><span>(${pctS(x.pct2)})</span></div><div class="bld-sub">${x.have.length}/${x.names.length}${x.own ? ' · ' + T('in je collectie', 'you own it') : ''}</div></div>
+    </button>`).join('')}</div>`;
+  requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+  main.querySelectorAll('[data-bld]').forEach(b=>b.addEventListener('click', ()=>openBuildableDetail(results[+b.dataset.bld], ix)));
+}
+function openBuildableDetail(x, ix){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  const main = openPlainOverlay('buildDetail', x.c.n);
+  const img = (nm)=>{ const r = _bulkRec(ix, nm); return r ? bulkToCardish(r).image_uris.normal : ''; };
+  const subOf = new Map(x.subs.map(s=>[s.miss, s.sub]));
+  const bare = x.miss.filter(n=>!subOf.has(n));
+  main.innerHTML = `
+    <div class="bld-acts"><button type="button" class="primary-btn" id="bldMake">${T('Maak dit deck', 'Build this deck')}</button><button type="button" class="ghost-btn" id="bldWant">${T('Ontbrekende naar Gezocht', 'Missing to Wants')} (${bare.length})</button></div>
+    <div class="edh-sec"><div class="section-label">${T('Ontbreekt', 'Missing')} · ${bare.length}</div><div class="sr-grid">${bare.map(n=>`<div class="sr-tile bld-mini"><img src="${img(n)}" alt="${escapeHtml(n)}" loading="lazy"></div>`).join('')}</div></div>
+    <div class="edh-sec"><div class="section-label">${T('Vervangers uit je collectie', 'Stand-ins from your collection')} · ${x.subs.length}</div><div class="bld-subs">${x.subs.map(s=>`<div class="bld-pair"><div><img src="${img(s.miss)}" alt="" loading="lazy"><span>${escapeHtml(s.miss)}</span></div><b>\u2192</b><div><img src="${img(s.sub)}" alt="" loading="lazy"><span>${escapeHtml(s.sub)}</span></div></div>`).join('')}</div></div>
+    <div class="edh-sec"><div class="section-label">${T('Heb je al', 'You own')} · ${x.have.length}</div><div class="sr-grid">${x.have.map(n=>`<div class="sr-tile bld-mini"><img src="${img(n)}" alt="${escapeHtml(n)}" loading="lazy"></div>`).join('')}</div></div>
+    <div class="bld-head"><img src="${bulkToCardish(x.c).image_uris.normal}" alt=""><div><b>${Math.round(x.pct * 100)}%</b> ${T('van het EDHREC-deck in je collectie', 'of the EDHREC deck in your collection')}<br>${Math.round(x.pct2 * 100)}% ${T('met vervangers', 'with stand-ins')}</div></div>`;
+  main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
+  requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+  main.querySelector('#bldWant').addEventListener('click', ()=>{
+    let n = 0;
+    bare.forEach(nm=>{ const r = _bulkRec(ix, nm); if(!r) return; const slim = slimForCollection(bulkToCardish(r)); if(!state.collection.wantsManual.some(w=>w.name === slim.name)){ state.collection.wantsManual.push(slim); n++; } });
+    saveCollection();
+    toast(T(`${n} kaarten naar Gezocht.`, `${n} cards added to Wants.`));
+  });
+  main.querySelector('#bldMake').addEventListener('click', ()=>{
+    openInAppPrompt(T('Naam van het nieuwe deck', 'Name your new deck'), T('Decknaam', 'Deck name'), x.c.n, (name)=>{
+      if(name === null) return;
+      const lead = bulkToCardish(x.c);
+      const cards = x.have.concat(x.subs.map(s=>s.sub)).map(nm=>{ const r = _bulkRec(ix, nm); return r ? bulkToCardish(r) : null; }).filter(Boolean);
+      const d = { id: uid(), name: (name.trim() || x.c.n), admiral: lead, partner: null, cards: [], maybeboard: [], tags: {}, primer: '', format: 'commander' };
+      state.decksIndex.unshift(d);
+      logDeckChange(d, { type:'admiral', name: lead.name, card: lead, prev: null });
+      cards.forEach(c=>{ d.cards.push(c); logDeckChange(d, { type:'add', name: c.name, card: c }); });
+      persistDeck(d);
+      toast(T(`${d.name} gemaakt met ${cards.length + 1} kaarten.`, `${d.name} built with ${cards.length + 1} cards.`));
+      dismissAllOverlays();
+      openDeck(d.id);
+    });
+  });
+}
+/* 1.63 SELL LIST: copies the decks do not use, at or above a price. */
+function openSellList(binderId){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  const scopeName = binderId && binderId !== '__all__' ? ((state.collection.binders || []).find(b=>b.id === binderId) || {}).name : null;
+  const main = openPlainOverlay('sellOverlay', T('Verkooplijst', 'Sell list') + (scopeName ? ' \u00b7 ' + scopeName : ''));
+  const use = deckUseCounts();
+  let lo = 1, hi = null;
+  const build = ()=>{
+    const left = new Map(use);
+    const all = (state.collection.items || []).slice().sort((a, b)=>(brItemEur(b) || 0) - (brItemEur(a) || 0));
+    // the decks keep their copies first: the cheapest copies stay for them
+    all.slice().reverse().forEach(it=>{ const u = left.get(it.name) || 0; if(u > 0){ const k = Math.min(u, it.qty || 1); left.set(it.name, u - k); it._keep = k; } else it._keep = 0; });
+    return all.filter(it=>(!binderId || binderId === '__all__' || it.binder === binderId))
+      .map(it=>({ it, q: Math.max(0, (it.qty || 1) - (it._keep || 0)), e: brItemEur(it) }))
+      .filter(x=>x.q > 0 && x.e != null && x.e >= lo && (hi == null || x.e <= hi));
+  };
+  const paint = ()=>{
+    const rows = build();
+    const tot = rows.reduce((n, x)=>n + x.q * x.e, 0);
+    main.innerHTML = `
+      <div class="sell-foot">
+        <div class="sell-tot"><b>${rows.reduce((n, x)=>n + x.q, 0)}</b> ${T('kaarten', 'cards')} \u00b7 <b>\u20ac${tot.toFixed(2)}</b></div>
+        ${priceSliderHtml('sellPr', lo, hi)}
+        <div class="px-quick"><button type="button" class="ghost-btn" id="sellCopy">${T('Kopieer lijst', 'Copy list')}</button><button type="button" class="ghost-btn" id="sellCsv">CSV</button></div>
+      </div>
+      ${rows.length ? `<div class="sr-grid">${rows.map(x=>`<div class="sr-tile"><img src="${x.it.img || ''}" alt="${escapeHtml(x.it.name)}" loading="lazy"><div class="st-body"><div class="st-meta-row"><div class="st-price st-price-lg">\u20ac${x.e.toFixed(2)}</div><span class="sell-q">\u00d7${x.q}</span></div></div></div>`).join('')}</div>` : `<div class="empty-note">${T('Niets dat buiten je decks valt in deze prijsklasse.', 'Nothing outside your decks in this price range.')}</div>`}
+      <p class="hint" style="text-align:center;margin:8px 0;">${T('Kaarten die in geen enkel deck zitten (main, maybe of commander). Gebruikt een deck een exemplaar, dan blijft er één voor dat deck.', 'Cards no deck uses (main, maybe or commander). When a deck uses a copy, one stays for that deck.')}</p>`;
+    main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
+    wirePriceSlider('sellPr', (mn, mx)=>{ lo = mn || 0; hi = mx; paint(); });
+    const text = ()=>rows.map(x=>`${x.q} ${x.it.name} (${String(x.it.set || '').toUpperCase()}${x.it.cn ? ' ' + x.it.cn : ''})${x.it.foil ? ' *F*' : ''} \u20ac${x.e.toFixed(2)}`).join('\n');
+    main.querySelector('#sellCopy').addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(text()); toast(T('Lijst gekopieerd.', 'List copied.')); }catch(e){ toast(T('Kopi\u00ebren lukte niet.', 'Could not copy.')); } });
+    main.querySelector('#sellCsv').addEventListener('click', ()=>{
+      const q = (v)=>'"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      const csv = ['Count,Name,Set,Collector Number,Foil,Condition,Price'].concat(rows.map(x=>[x.q, q(x.it.name), q(String(x.it.set || '').toUpperCase()), q(x.it.cn || ''), x.it.foil ? 'foil' : '', q(x.it.cond || 'NM'), x.e.toFixed(2)].join(','))).join('\n');
+      downloadTextFile('deckhand-sell-list.csv', csv, 'text/csv');
+    });
+    requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+  };
+  paint();
+}
+/* 1.63 COMPARE: this deck against the EDHREC average deck of its leader. */
+async function openDeckCompare(d){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  const main = openPlainOverlay('cmpOverlay', T('Vergelijk', 'Compare') + ' \u00b7 ' + d.name);
+  const lead = deckLeaders(d)[0];
+  let names = [];
+  try{ names = lead ? await edhAvgDeckNames(lead) : []; }catch(e){}
+  if(!document.getElementById('cmpOverlay')) return;
+  names = names.filter(n=>!_BASIC_RE.test(n));
+  if(!names.length){ main.innerHTML = `<div class="empty-note">${T('EDHREC heeft geen gemiddeld deck voor deze commander.', 'EDHREC has no average deck for this commander.')}</div>`; return; }
+  const mine = new Set((d.cards || []).map(c=>c.name).filter(n=>!_BASIC_RE.test(n)));
+  const avg = new Set(names);
+  const both = names.filter(n=>mine.has(n)), miss = names.filter(n=>!mine.has(n));
+  const only = Array.from(mine).filter(n=>!avg.has(n));
+  let got = [];
+  try{ got = await resolveEdhrecNames(miss, (c)=>!isBanned(c) && colorIdentityOkDeck(c, d)); }catch(e){}
+  if(!document.getElementById('cmpOverlay')) return;
+  const byN = new Map(got.map(c=>[c.name, c]));
+  const missCards = miss.map(n=>byN.get(n)).filter(Boolean);
+  const onlyCards = (d.cards || []).filter((c, k, a)=>only.indexOf(c.name) >= 0 && a.findIndex(x=>x.name === c.name) === k);
+  const paint = ()=>{
+    main.innerHTML = `
+      <div class="edh-sec"><div class="section-label">${T('Het EDHREC-deck heeft, jij niet', 'EDHREC runs, you don\u2019t')} \u00b7 ${missCards.length}</div><div class="sr-grid">${missCards.map(c=>searchRowHtml(c, d)).join('')}</div></div>
+      <div class="edh-sec"><div class="section-label">${T('Alleen in jouw deck', 'Only in your deck')} \u00b7 ${onlyCards.length}</div><div class="sr-grid">${onlyCards.map(c=>`<div class="sr-tile"><img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}" loading="lazy"></div>`).join('')}</div></div>
+      <div class="cmp-head"><b>${Math.round(both.length / names.length * 100)}%</b> ${T('van het gemiddelde EDHREC-deck zit in jouw deck', 'of the EDHREC average deck is in yours')} (${both.length}/${names.length})</div>`;
+    main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
+    wireResultButtons(missCards, d, paint);
+    loadTilePrices(missCards);
+    requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+  };
+  paint();
+}
+/* 1.63 UPGRADES FOR €X: the cards EDHREC plays most with this leader that the
+   deck lacks, best value first (how often played, plus synergy), filled
+   into the budget until it is spent. */
+async function openDeckUpgrades(d){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  const main = openPlainOverlay('upgOverlay', T('Upgrades', 'Upgrades') + ' \u00b7 ' + d.name);
+  const lead = deckLeaders(d)[0];
+  let page = null;
+  try{ page = lead ? await edhrecCommanderPage(lead) : null; }catch(e){}
+  if(!document.getElementById('upgOverlay')) return;
+  if(!page || !(page.names || []).length){ main.innerHTML = `<div class="empty-note">${T('Geen EDHREC-gegevens voor deze commander.', 'No EDHREC data for this commander.')}</div>`; return; }
+  const inDeck = new Set((d.cards || []).concat(deckLeaders(d)).map(c=>c.name));
+  const names = page.names.filter(n=>!inDeck.has(n) && !_BASIC_RE.test(n)).slice(0, 200);
+  let got = [];
+  try{ got = await resolveEdhrecNames(names, (c)=>!isBanned(c) && colorIdentityOkDeck(c, d)); }catch(e){}
+  if(!document.getElementById('upgOverlay')) return;
+  const st = page.stats || {};
+  const cand = got.map(c=>{ const s2 = st[String(c.name).toLowerCase()] || [0, 0]; return { c, e: shownEurOf(c), v: (s2[0] || 0) + Math.max(0, s2[1] || 0) * 0.8 }; })
+    .filter(x=>x.e != null && isFinite(x.e) && x.e > 0).sort((a, b)=>b.v - a.v);
+  let budget = 25;
+  const paint = ()=>{
+    let left = budget; const picks = [];
+    for(const x of cand){ if(picks.length >= 10) break; if(x.e <= left){ picks.push(x); left -= x.e; } }
+    const pool = picks.map(x=>x.c);
+    main.innerHTML = `
+      <div class="upg-foot"><label class="upg-row"><span>${T('Budget', 'Budget')}</span><span class="pw-eur">\u20ac</span><input id="upgEur" type="number" inputmode="decimal" min="1" step="1" value="${budget}"></label>
+        <div class="br-chips">${[10, 25, 50, 100].map(v=>`<button type="button" class="chip br-chip${v === budget ? ' active' : ''}" data-upg="${v}">\u20ac${v}</button>`).join('')}</div>
+        <div class="sell-tot">${picks.length} ${T('kaarten', 'cards')} \u00b7 <b>\u20ac${(budget - left).toFixed(2)}</b> ${T('van', 'of')} \u20ac${budget}</div></div>
+      ${pool.length ? `<div class="sr-grid">${pool.map(c=>searchRowHtml(c, d)).join('')}</div>` : `<div class="empty-note">${T('Niets past in dit budget.', 'Nothing fits this budget.')}</div>`}
+      <p class="hint" style="text-align:center;margin:8px 0;">${T('De kaarten die EDHREC het vaakst met deze commander speelt en die jouw deck nog niet heeft, de beste eerst, tot het budget op is.', 'The cards EDHREC plays most with this commander that your deck lacks, best first, until the budget is spent.')}</p>`;
+    main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
+    wireResultButtons(pool, d, paint);
+    loadTilePrices(pool);
+    main.querySelectorAll('[data-upg]').forEach(b=>b.addEventListener('click', ()=>{ budget = +b.dataset.upg; paint(); }));
+    const inp = main.querySelector('#upgEur');
+    inp.addEventListener('change', ()=>{ const v = parseFloat(String(inp.value).replace(',', '.')); if(v > 0){ budget = Math.round(v); paint(); } });
+    requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+  };
+  paint();
+}
+/* 1.63 Odds: hypergeometric chances for the opening hand and the first
+   turns -- lands in the opening seven, a land drop each turn, and at least
+   one source of every colour the deck needs (on the draw: 7 + turn - 1). */
+function _hyperAtLeast(N, K, n, k){
+  const lc = (a, b)=>{ if(b < 0 || b > a) return -Infinity; let r = 0; for(let i = 1; i <= b; i++) r += Math.log(a - b + i) - Math.log(i); return r; };
+  let p = 0;
+  for(let x = k; x <= Math.min(n, K); x++) p += Math.exp(lc(K, x) + lc(N - K, n - x) - lc(N, n));
+  return Math.max(0, Math.min(1, p));
+}
+function _hyperExactly(N, K, n, k){ return _hyperAtLeast(N, K, n, k) - _hyperAtLeast(N, K, n, k + 1); }
+function deckOddsHtml(d){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  const lib = (d.cards || []).slice();
+  const N = lib.length; if(N < 20) return '';
+  const isLand = (c)=>/\bLand\b/.test(String((c.card_faces && c.card_faces[0] && c.card_faces[0].type_line) || c.type_line || '').split('//')[0]);
+  const L = lib.filter(isLand).length;
+  const pct = (p)=>Math.round(p * 100) + '%';
+  const dist = [0, 1, 2, 3, 4, 5].map(k=>k < 5 ? _hyperExactly(N, L, 7, k) : _hyperAtLeast(N, L, 7, 5));
+  const mx = Math.max(...dist);
+  const ok24 = _hyperAtLeast(N, L, 7, 2) - _hyperAtLeast(N, L, 7, 5);
+  const drops = [1, 2, 3, 4, 5].map(t=>_hyperAtLeast(N, L, 7 + t - 1, t));
+  const ci = Array.from(new Set(deckLeaders(d).flatMap(x=>x.color_identity || []))).filter(c=>'WUBRG'.indexOf(c) >= 0);
+  const src = {}; ci.forEach(c=>{ src[c] = lib.filter(x=>{ const pm = producedManaOf(x) || []; return pm.indexOf(c) >= 0 || pm.indexOf('ANY') >= 0; }).length; });
+  return `<div class="odds">
+    <div class="odds-h">${T('Kansen \u00b7 openingshand', 'Odds \u00b7 opening hand')} <span>${L} lands / ${N}</span></div>
+    <div class="odds-bars">${dist.map((p, k)=>`<div class="odds-col"><div class="odds-bar" style="height:${Math.max(2, Math.round(p / mx * 54))}px"></div><b>${pct(p)}</b><span>${k}${k === 5 ? '+' : ''}</span></div>`).join('')}</div>
+    <div class="odds-line">${T('2\u20134 lands in je openingshand', '2\u20134 lands in your opening hand')}: <b>${pct(ok24)}</b></div>
+    <div class="odds-line">${T('Elke beurt een land (op de draw)', 'A land drop every turn (on the draw)')}: ${drops.map((p, i)=>`${T('B', 'T')}${i + 1} <b>${pct(p)}</b>`).join(' \u00b7 ')}</div>
+    ${ci.length ? `<div class="odds-line">${T('Minstens \u00e9\u00e9n bron op beurt 3', 'At least one source by turn 3')}: ${ci.map(c=>`${manaIconSvg(c, 14)} <b>${pct(_hyperAtLeast(N, src[c], 9, 1))}</b>`).join(' ')}</div>` : ''}
+  </div>`;
+}
+/* 1.63 How much of a set you own: distinct collector numbers in the
+   collection against the set's card count. */
+function setProgress(code){
+  code = String(code || '').toLowerCase(); if(!code) return null;
+  const raw = (state.allSetsRaw || []).find(x=>x.code === code);
+  const total = raw && raw.cards || 0;
+  const have = new Set((state.collection.items || []).filter(it=>String(it.set || '').toLowerCase() === code).map(it=>String(it.cn || it.name)));
+  return { have: have.size, total, name: raw ? raw.name : code.toUpperCase(), pct: total ? Math.min(1, have.size / total) : null };
+}
+function setProgressHtml(code){
+  const p = setProgress(code); if(!p) return '';
+  const nl = appLang() === 'nl';
+  return `<div class="set-prog"><div class="set-prog-t"><b>${escapeHtml(p.name)}</b><span>${p.have}${p.total ? '/' + p.total : ''} ${nl ? 'in je collectie' : 'in your collection'}${p.pct != null ? ' \u00b7 ' + Math.round(p.pct * 100) + '%' : ''}</span></div>${p.pct != null ? `<div class="set-prog-bar"><i style="width:${(p.pct * 100).toFixed(1)}%"></i></div>` : ''}</div>`;
+}
 function ownedNames(){
   if(!state._ownedSet) state._ownedSet = new Set((state.collection.items||[]).map(it=>it.name));
   return state._ownedSet;
@@ -7155,13 +7540,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.62';
+const APP_VERSION = '1.64';
 const CHANGELOG_NOTES = {
   en: [
-    'Filter reaches the page name again'
+    'Round counter removed again',
+    'Mana: quick taps fill the pool',
+    'QR fits big decks (no maybeboard)'
   ],
   nl: [
-    'Filter loopt weer tot de paginanaam'
+    'Rondeteller weer verwijderd',
+    'Mana: snelle tikken vullen de pool',
+    'QR past ook bij grote decks'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7171,6 +7560,12 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-02';
 const CHANGELOG_HISTORY = [
+  { v: '1.63', d: '2026-11-02',
+    en: ['What can I build: decks vs collection', 'Sell list: cards outside your decks', 'Compare a deck with EDHREC', 'Upgrades for a budget you pick', 'Opening-hand odds in Stats', 'Set progress in Search and binders', 'Life: tax, storm, energy and more', 'Share a deck by QR code', 'Extras: Appearance with text size'],
+    nl: ['Wat kan ik bouwen met je collectie', 'Verkooplijst: kaarten buiten decks', 'Deck vergelijken met EDHREC', 'Upgrades binnen jouw budget', 'Kansen openingshand bij Stats', 'Set-voortgang in Zoeken en mappen', 'Life: tax, storm, energy en meer', 'Deck delen met een QR-code', 'Extra\u2019s: Weergave met tekstgrootte'] },
+  { v: '1.62', d: '2026-11-02',
+    en: ['Filter reaches the page name again'],
+    nl: ['Filter loopt weer tot de paginanaam'] },
   { v: '1.61', d: '2026-11-02',
     en: ['Filters use the screen up to the top', 'Filter labels larger'],
     nl: ['Filters benutten scherm tot boven', 'Filterlabels groter'] },
@@ -11268,7 +11663,7 @@ const BR_TYPES = ['Legendary', 'Creature', 'Land', 'Artifact', 'Enchantment', 'I
 const BR_FINISH = ['foil', 'nonfoil'];   // a copy is foil when it.foil is true
 function binderHasRules(b){
   const r = b && b.rules;
-  return !!(r && ((r.rarity || []).length || (r.color || []).length || (r.type || []).length || (r.finish || []).length || r.price));
+  return !!(r && ((r.rarity || []).length || (r.color || []).length || (r.type || []).length || (r.finish || []).length || r.price || r.set));
 }
 /* The card's own colours -- not its colour identity: a land that taps for
    red is still a colourless card. Stored as `cc` on new copies; older copies
@@ -11313,6 +11708,7 @@ function binderRuleMatch(b, it){
     if(!r.type.some(t=>new RegExp('\\b' + t + '\\b').test(tl))) return false;
   }
   if((r.finish || []).length && r.finish.indexOf(it.foil ? 'foil' : 'nonfoil') < 0) return false;
+  if(r.set && String(it.set || '').toLowerCase() !== r.set) return false;   // 1.63
   if(r.price && !brPriceFits(r.price, brItemEur(it))) return false;
   return true;
 }
@@ -11641,6 +12037,7 @@ function openBinderRules(b, isNew){
     <div class="br-h br-h2">${nl ? 'Indeling in de map' : 'Layout inside the binder'}</div>
     <div class="br-sec"><div class="br-h"><label class="br-pt"><input type="checkbox" id="brPriceOn"${r.price ? ' checked' : ''}> ${nl ? 'Prijs per kaart' : 'Price per card'}</label><span id="brPriceLab">${brPriceLabel(pr)}</span></div>
       <div id="brPriceBox"${r.price ? '' : ' hidden'}>${priceSliderHtml('brPr', pr.min || 0, pr.max)}</div></div>
+    <div class="br-sec"><div class="br-h">Set</div><select id="brSet" class="col-select"><option value="">${nl ? 'Elke set' : 'Any set'}</option>${(()=>{ const inCol = new Set((state.collection.items || []).map(it=>String(it.set || '').toLowerCase())); const raw = (state.allSetsRaw || []).filter(x=>!x.digital); const first = raw.filter(x=>inCol.has(x.code)), rest = raw.filter(x=>!inCol.has(x.code)); return first.concat(rest).map(x=>`<option value="${x.code}"${r.set === x.code ? ' selected' : ''}>${escapeHtml(x.name)} (${x.code.toUpperCase()})</option>`).join(''); })()}</select></div>
     <div class="br-sec"><div class="br-h">Foil</div><div class="br-chips">${chip('finish', 'foil', '✨ Foil')}${chip('finish', 'nonfoil', nl ? 'Geen foil' : 'Non-foil')}</div></div>
     <div class="br-sec"><div class="br-h">${nl ? 'Kaarttype' : 'Card type'}</div><div class="br-chips">${BR_TYPES.map(t=>chip('type', t, t)).join('')}</div></div>
     <div class="br-sec"><div class="br-h">${nl ? 'Kleur' : 'Color'}</div><div class="br-chips">${BR_COLORS.map(c=>chip('color', c, 'WUBRG'.indexOf(c) >= 0 ? manaIconSvg(c, 20) : (c === 'C' ? manaIconSvg('C', 20) + ' ' + CL.C : CL[c]))).join('')}</div></div>
@@ -11699,6 +12096,7 @@ function openBinderRules(b, isNew){
     if(!check()) return;
     keepGlyphs();
     const rules = { rarity:r.rarity.slice(), color:r.color.slice(), type:r.type.slice(), finish:r.finish.slice() };
+    { const sv = el.querySelector('#brSet')?.value; if(sv) rules.set = sv; }   // 1.63
     if(el.querySelector('#brPriceOn').checked) rules.price = { min: pr.min || 0, max: pr.max == null ? null : pr.max };
     if(binderHasRules({ rules })) b.rules = rules; else delete b.rules;
     saveCollection();
@@ -11740,7 +12138,8 @@ function binderTileHtml(b){
       ${binderHasRules(b) ? `<button type="button" class="br-info" data-brinfo="${b.id}" aria-label="Auto-fill">i</button>` : ''}
       <div class="folder-face">${face ? `<img loading="lazy" src="${face}" alt="">` : `<span class="big-ico">${ICONS.binder}</span>`}</div>
       <div class="folder-name">${escapeHtml(b.name)}</div>
-      <div class="folder-sub">${qty} card${qty===1?'':'s'}${eur?` · €${eur.toFixed(2)}`:''}</div>
+      <div class="folder-sub">${qty} card${qty===1?'':'s'}${eur?` · €${eur.toFixed(2)}`:''}${b.rules && b.rules.set ? (()=>{ const p = setProgress(b.rules.set); return p && p.pct != null ? ` · ${Math.round(p.pct * 100)}%` : ''; })() : ''}</div>
+      ${b.rules && b.rules.set ? (()=>{ const p = setProgress(b.rules.set); return p && p.pct != null ? `<div class="set-prog-bar"><i style="width:${(p.pct * 100).toFixed(1)}%"></i></div>` : ''; })() : ''}
     </div>`;
 }
 async function openBinderArtPicker(binder){
@@ -11921,7 +12320,8 @@ function wireCollectionPage(){
     const bid = state.colFilter.binder;
     openFabMenu([
       ['bfAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
-      ['bfImport', mIco('file') + trS('Import'), ()=>openCollectionImport(bid)]
+      ['bfImport', mIco('file') + trS('Import'), ()=>openCollectionImport(bid)],
+      ['bfSell', '\u20ac ' + (appLang() === 'nl' ? 'Verkooplijst' : 'Sell list'), ()=>openSellList(bid)]
     ].concat((state.collection.binders || []).some(b=>b.id === bid)
       ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Map-instellingen…' : 'Binder settings…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
       : []));
@@ -11930,6 +12330,8 @@ function wireCollectionPage(){
     e.stopPropagation();
     openFabMenu([
       ['fabAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
+      ['fabBuild', `<span class="ib">${ICONS.spark || ''}</span>${appLang() === 'nl' ? 'Wat kan ik bouwen' : 'What can I build'}`, ()=>openBuildable()],
+      ['fabSell', '\u20ac ' + (appLang() === 'nl' ? 'Verkooplijst' : 'Sell list'), ()=>openSellList(null)],
       ['fabAddBinder', `<span class="ib">${ICONS.collection}</span>${trS('New binder')}`, ()=>{
         openInAppPrompt('New binder name', 'Binder name', '', (name)=>{
           if(name && name.trim()){
@@ -13941,7 +14343,8 @@ function b64urlDecode(str){
   for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
   return arr;
 }
-async function buildShareUrl(d){
+async function buildShareUrl(d, opts){
+  opts = opts || {};
   // Kept deliberately lean: every byte here becomes ~1.4 characters of URL,
   // and messaging apps stop linkifying very long URLs — which cuts the deck
   // code and breaks the link. Tags are personal metadata, not the deck, so
@@ -13951,9 +14354,9 @@ async function buildShareUrl(d){
     a: d.admiral ? d.admiral.name : null,
     a2: d.partner ? d.partner.name : null,
     c: d.cards.map(c=>c.name),
-    m: (d.maybeboard||[]).map(c=>c.name),
-    p: d.primer || '',
-    ds: d.description || '',
+    m: opts.noMaybe ? [] : (d.maybeboard||[]).map(c=>c.name),
+    p: opts.lean ? '' : (d.primer || ''),
+    ds: opts.lean ? '' : (d.description || ''),
     wr: (()=>{ const st = logStatsFor(d); return st ? { w: st.wins, l: st.losses } : null; })(),
     by: d.author || '',
     f: deckFormat(d)          // the deck travels with its format
@@ -14004,6 +14407,35 @@ async function decodeShareToken(token){
   }
   return JSON.parse(json);
 }
+function qrSvg(text){
+  try{
+    const q = qrcode(0, 'L'); q.addData(text); q.make();
+    return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  }catch(e){ return ''; }
+}
+async function openShareQr(d, url, text){
+  const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
+  document.getElementById('shareQrSheet')?.remove();
+  // 1.64: the full deck if it fits; else without the maybeboard; else also
+  // without primer and description. The shared link stays complete.
+  let svg = qrSvg(url), note = '';
+  if(!svg && (d.maybeboard || []).length){ try{ svg = qrSvg(await buildShareUrl(d, { noMaybe: true })); if(svg) note = T('De QR-code is zonder maybeboard \u2014 de link heeft alles.', 'The QR code leaves out the maybeboard \u2014 the link has everything.'); }catch(e){} }
+  if(!svg){ try{ svg = qrSvg(await buildShareUrl(d, { noMaybe: true, lean: true })); if(svg) note = T('De QR-code is zonder maybeboard en primer \u2014 de link heeft alles.', 'The QR code leaves out the maybeboard and primer \u2014 the link has everything.'); }catch(e){} }
+  const m = document.createElement('div');
+  m.className = 'deckpick-scrim'; m.id = 'shareQrSheet'; m.style.zIndex = 210; m.style.alignItems = 'flex-end';
+  m.innerHTML = `<div class="deckpick bc-sheet">
+    <div class="px-quick"><button type="button" class="primary-btn" id="sqShare" style="flex:1;margin:0;">${T('Deel link', 'Share link')}</button><button type="button" class="ghost-btn" id="sqCopy" style="flex:1;margin:0;">${T('Kopieer', 'Copy')}</button></div>
+    ${svg ? `<div class="qr-box">${svg}</div>` : `<div class="empty-note">${T('Dit deck is te groot voor een QR-code \u2014 deel de link.', 'This deck is too big for a QR code \u2014 share the link.')}</div>`}
+    <div class="bc-head"><div><b>${escapeHtml(d.name)}</b><span>${T('Laat iemand deze code scannen met de camera.', 'Let someone scan this code with their camera.')}${note ? '<br>' + note : ''}</span></div></div>
+  </div>`;
+  m.addEventListener('click', (e)=>{ if(e.target === m) brSheetClose('shareQrSheet'); });
+  brSheetOpen(m, 'shareQrSheet', ()=>{});
+  m.querySelector('#sqShare').addEventListener('click', async ()=>{
+    if(navigator.share){ try{ await navigator.share({ title: d.name, text, url }); return; }catch(e){ if(e && e.name === 'AbortError') return; } }
+    try{ await navigator.clipboard.writeText(url); toast(T('Link gekopieerd.', 'Link copied.')); }catch(e){}
+  });
+  m.querySelector('#sqCopy').addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(url); toast(T('Link gekopieerd.', 'Link copied.')); }catch(e){ toast(T('Kopi\u00ebren lukte niet.', 'Could not copy.')); } });
+}
 async function shareDeck(d){
   // A share *link* only exists if this app itself lives at a real web address.
   // Opened as a local file (file:// or content://) there is nothing for the
@@ -14041,6 +14473,8 @@ async function shareDeck(d){
   catch(e){ console.error('share encode failed', e); toast('Could not build a share link for this deck.'); return; }
   const isLocalFile = location.protocol === 'file:' || location.protocol === 'content:';
   const text = `${d.name} — ${fmtLabelOf(deckFormat(d))} format decklist`;
+  // 1.63: a sheet with the QR code first; Share link / Copy from there
+  if(!isLocalFile){ openShareQr(d, url, text); return; }
   if(navigator.share){
     try{ await navigator.share({ title: d.name, text, url }); return; }
     catch(e){ if(e && e.name==='AbortError') return; /* fall through to clipboard */ }
@@ -15794,6 +16228,7 @@ function statsTabHtml(d){
     </div>
     ${deckKind(d) !== 'admiral' && d.cards.length ? `<div class="panel-card"><div class="panel-h">Cast-ability</div>
       ${castabilitySummaryHtml(d)}
+      ${deckOddsHtml(d)}
       <div id="castResult" class="hint" style="margin:0 0 8px;">Pick a card from this deck to see its odds.</div>
       <div class="otag-wrap"><input id="castPick" class="col-filter-input" placeholder="Card in this deck…" autocomplete="off"><div id="castPop" class="otag-pop" hidden></div></div>
     </div>` : ''}
@@ -19236,6 +19671,7 @@ function renderSearchResultsBox(){
     // went nowhere. Every other grid already passes its live pool.
     (chunk, shown)=>{ wireResultButtons(srPool, d, searchGridRefresh); wireSearchSelect(box, srPool); loadTilePrices(chunk); },
     { initial: prevShown });
+  if(state.searchSetCode){ box.insertAdjacentHTML('beforeend', setProgressHtml(state.searchSetCode)); }   // 1.63: the foot of the results
   if(prevShown) window.scrollTo(0, y);
   else {
     // A fresh result set lands at the foot — but images and prices inflate
@@ -23090,6 +23526,7 @@ function inspirationPageHtml(){
       ${sel.theme && !both ? '' : `<div class="bs-row">${cselectHtml('inspKindred', [{v:'',l:trS('Kindred — none'), gen:'🐾'}].concat(kinList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.kindred||'', trS('Kindred — none'), {search:true, tiles:true})}</div>`}
       ${sel.kindred && !both ? '' : `<div class="bs-row">${cselectHtml('inspTheme', [{v:'',l:trS('Theme — none'), gen:'📜'}].concat(thList.map(t=>({v:t.slug, l:escapeHtml(t.label), art: inspSlugArt(t.slug, d)}))), sel.theme||'', trS('Theme — none'), {search:true, tiles:true})}</div>`}
       <div class="bs-row insp-land-row">${deckKind(d) !== 'admiral' ? `<button type="button" class="ghost-btn" id="inspLandBase">\u26f0 ${appLang() === 'nl' ? 'Landbase' : 'Land base'}</button>` : ''}<button type="button" class="ghost-btn" id="inspPackages"><span class="ib">${ICONS.collection}</span>${appLang() === 'nl' ? 'Pakketten' : 'Packages'}</button></div>
+      ${deckKind(d) !== 'admiral' && !deckIsConstructed(d) ? `<div class="bs-row insp-land-row"><button type="button" class="ghost-btn" id="inspCompare">${appLang() === 'nl' ? 'Vergelijk met EDHREC' : 'Compare with EDHREC'}</button><button type="button" class="ghost-btn" id="inspUpgrades">${appLang() === 'nl' ? 'Upgrades voor \u20acX' : 'Upgrades for \u20acX'}</button></div>` : ''}
     </div>
     <div id="inspireResults"></div>
   </main>`;
@@ -23105,6 +23542,8 @@ function wireInspirationPage(){
   // 1.37: lands for THIS deck (its commander's EDHREC landbase, its own pips)
   document.getElementById('inspLandBase')?.addEventListener('click', ()=>openLandSuggest(d));
   document.getElementById('inspPackages')?.addEventListener('click', ()=>openDeckPackages(d));   // 1.40
+  document.getElementById('inspCompare')?.addEventListener('click', ()=>openDeckCompare(d));      // 1.63
+  document.getElementById('inspUpgrades')?.addEventListener('click', ()=>openDeckUpgrades(d));    // 1.63
   if(deckIsConstructed(d)){ loadDeckMeta(d); return; }
   if(!d.admiral) return;
   // Drop-up tiles: pull every stored art into the sync ready-map before a
@@ -29285,8 +29724,8 @@ function settingsPageHtml(){
       ${tile('notifRow', ICONS.bell, T('Meldingen', 'Notifications'))}
     </div>
     <div class="settings-section">
-      <div id="guildBody" class="guild-list xt-body" hidden>${GUILDS.map(x=>`<button type="button" class="guild-opt ${x.k===state.guild?'sel':''}" data-guild="${x.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[x.main][0]};--gs:${GUILD_SWATCH[x.side][1]};"></span>${manaIconSvg(x.main,16)}${manaIconSvg(x.side,16)}<span>${x.n}</span></button>`).join('')}<div class="start-pg"><div class="start-pg-h">${T('Startpagina', 'Start page')}</div><div class="start-seg">${[['home', 'Home'], ['decks', 'Decks'], ['collection', T('Collectie', 'Collection')], ['search', T('Zoeken', 'Search')], ['browse', 'Inspiration'], ['settings', T('Extra\u2019s', 'Extras')]].map(([k, l])=>`<button type="button" class="guild-opt ${k === startPage() ? 'sel' : ''}" data-startpg="${k}">${l}</button>`).join('')}</div></div></div>
-      <div class="settings-row xt-tile" id="guildRow"><span class="xt-ico" id="guildCur">${manaIconSvg(g.main,22)}${manaIconSvg(g.side,22)}</span><div class="l1">${T('Kleuren&shy;schema', 'Color scheme')}</div></div>
+      <div id="guildBody" class="guild-list xt-body" hidden>${GUILDS.map(x=>`<button type="button" class="guild-opt ${x.k===state.guild?'sel':''}" data-guild="${x.k}"><span class="guild-swatch" style="--gm:${GUILD_SWATCH[x.main][0]};--gs:${GUILD_SWATCH[x.side][1]};"></span>${manaIconSvg(x.main,16)}${manaIconSvg(x.side,16)}<span>${x.n}</span></button>`).join('')}<div class="start-pg"><div class="start-pg-h">${T('Tekstgrootte', 'Text size')}</div><div class="start-seg ui-seg">${[[0.9, 'A\u2212'], [1, 'A'], [1.1, 'A+'], [1.2, 'A++']].map(([v, l])=>`<button type="button" class="guild-opt ${Math.abs(uiScale() - v) < 0.01 ? 'sel' : ''}" data-uiscale="${v}">${l}</button>`).join('')}</div></div><div class="start-pg"><div class="start-pg-h">${T('Startpagina', 'Start page')}</div><div class="start-seg">${[['home', 'Home'], ['decks', 'Decks'], ['collection', T('Collectie', 'Collection')], ['search', T('Zoeken', 'Search')], ['browse', 'Inspiration'], ['settings', T('Extra\u2019s', 'Extras')]].map(([k, l])=>`<button type="button" class="guild-opt ${k === startPage() ? 'sel' : ''}" data-startpg="${k}">${l}</button>`).join('')}</div></div></div>
+      <div class="settings-row xt-tile" id="guildRow"><span class="xt-ico" id="guildCur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-7.9-9-7.9z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg></span><div class="l1">${T('Weergave', 'Appearance')}</div></div>
     </div>
     <div class="settings-section">${tile('syncRow', SYNC_ICON, 'Sync', `<div class="l2">${syncState() ? T('Gekoppeld', 'Linked') : T('Meerdere apparaten', 'Several devices')}</div>`)}</div>
     <div class="settings-section">${tile('shareAppRow', ICONS.share, T('Deel de app', 'Share the app'))}</div>
@@ -31336,7 +31775,7 @@ async function scanCardFor(name){
 function ensureLifePlayers(){
   const L = state.life;
   if(!L.players) L.players = [];
-  while(L.players.length < L.count) L.players.push({ name:(L._keepNames && L._keepNames[L.players.length]) || 'Player '+(L.players.length+1), life:lifeStart(L.count), poison:0, dmg:[], defeated:false, defeatMsg:'', medal:false });
+  while(L.players.length < L.count) L.players.push({ ctrOn: lifeStart(L.count) >= 30 ? { tax: true } : {}, ctr: {}, name:(L._keepNames && L._keepNames[L.players.length]) || 'Player '+(L.players.length+1), life:lifeStart(L.count), poison:0, dmg:[], defeated:false, defeatMsg:'', medal:false });
   L.players.length = L.count;
   const _pw = appLang() === 'nl' ? 'Speler ' : 'Player ';
   L.players.forEach((p,i)=>{
@@ -31380,6 +31819,20 @@ function dungeonImg(id){
   return c ? `https://api.scryfall.com/cards/${c.set}/${c.cn}?format=image&version=normal${c.back ? '&face=back' : ''}` : '';
 }
 const CROWN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="rgba(0,0,0,0.55)" stroke-width="0.9" stroke-linejoin="round" d="M3 8.5l4.6 3.6L12 5l4.4 7.1L21 8.5l-1.8 9.5H4.8z"/><rect x="4.8" y="18.6" width="14.4" height="2.2" rx="0.8" fill="currentColor"/></svg>';
+/* 1.63 counters: tap and hold as the player asked, per counter */
+const LCTR = [
+  { k:'tax',    tap: 2,  hold: -2, ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l4-10 4 6 4-6 4 10z"/><path d="M4 21h16"/></svg>', en:'Commander tax', nl:'Commander tax' },
+  { k:'mana',   tap: -1, hold: 1,  ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3c3 4.5 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 3-6.5 6-11z"/></svg>', en:'Mana', nl:'Mana' },
+  { k:'storm',  tap: 1,  hold: -1, ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15a4 4 0 1 1 1-7.9A5 5 0 0 1 18 9a3.5 3.5 0 0 1-1 6.8"/><path d="M12 13l-2 4h3l-2 4"/></svg>', en:'Storm', nl:'Storm' },
+  { k:'energy', tap: 1,  hold: -1, ico:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L5 14h6l-1 8 8-12h-6z"/></svg>', en:'Energy', nl:'Energy' },
+  { k:'exp',    tap: 1,  hold: -1, ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>', en:'Experience', nl:'Experience' }
+];
+function lifeNameRowHtml(p, idx){
+  const on = p.ctrOn || {}, v = p.ctr || {};
+  const chip = (C)=>`<button type="button" class="lctr" data-lctr="${C.k}" data-idx="${idx}" title="${appLang() === 'nl' ? C.nl : C.en}"><i>${C.ico}</i><b>${v[C.k] || 0}</b></button>`;
+  const others = LCTR.filter(C=>C.k !== 'tax' && on[C.k]);
+  return `<div class="lname-row">${on.tax ? chip(LCTR[0]) : ''}${others.length ? others.map(chip).join('') : `<input class="pname-input" data-idx="${idx}" value="${escapeHtml(p.name)}" size="${Math.max(4, Math.min(14, p.name.length || 8))}">`}</div>`;
+}
 const INIT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="rgba(0,0,0,0.55)" stroke-width="0.8" stroke-linejoin="round" d="M12 1.8c2.2 3.1 4.4 4.7 4.4 7.6a4.4 4.4 0 0 1-8.8 0c0-1.8.9-2.9 1.8-4 .2 1.5 1.1 2.4 2 2.4-.6-2.1-.3-3.9.6-6z"/><path fill="currentColor" stroke="rgba(0,0,0,0.55)" stroke-width="0.8" stroke-linejoin="round" d="M9.2 14.2h5.6l-1.4 8h-2.8z"/></svg>';
 const DUNGEON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9a8 8 0 0 1 16 0v12"/><path d="M2 21h20"/><path d="M9 21v-6a3 3 0 0 1 6 0v6"/></svg>';
 function lifeSetMonarch(idx){
@@ -32375,7 +32828,7 @@ function lifeCardHtml(p, idx, count){
         ${pz ? `<div class="pz-label">${phyrexianSvg(15)}<span>Poison</span></div>
         <div class="lval-row">${ldeltaHtml(p._pzDelta, p._pzFresh)}<div class="lval2 pz-val ${p.poison >= 10 ? 'danger' : ''}">${p.poison}</div>${ldeltaHtml(p._pzDelta, p._pzFresh, true)}</div>`
           : `<div class="pz-label" style="max-width:80%;white-space:normal;text-transform:none;">${trS('Tap another player to count the damage you took from them.')}</div>`}
-        <div class="lf-extras"><button type="button" class="lf-x${p.monarch ? ' on' : ''}" data-lmonarch="${idx}" title="Monarch" aria-label="Monarch">${CROWN_SVG}<span>Monarch</span></button><button type="button" class="lf-x${p.dg ? ' on' : ''}" data-ldungeon="${idx}" title="Dungeon" aria-label="Dungeon">${DUNGEON_SVG}<span>${p.dg ? escapeHtml(p.dg.room) : 'Dungeon'}</span></button></div>
+        <div class="lf-extras"><button type="button" class="lf-x${p.monarch ? ' on' : ''}" data-lmonarch="${idx}" title="Monarch" aria-label="Monarch">${CROWN_SVG}<span>Monarch</span></button><button type="button" class="lf-x${p.dg ? ' on' : ''}" data-ldungeon="${idx}" title="Dungeon" aria-label="Dungeon">${DUNGEON_SVG}<span>${p.dg ? escapeHtml(p.dg.room) : 'Dungeon'}</span></button><span class="lctr-wrap"><button type="button" class="lf-x${Object.keys(p.ctrOn || {}).some(k=>(p.ctrOn || {})[k]) ? ' on' : ''}" data-lctrmenu="${idx}" title="${appLang() === 'nl' ? 'Tellers' : 'Counters'}" aria-label="${appLang() === 'nl' ? 'Tellers' : 'Counters'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></svg><span>${appLang() === 'nl' ? 'Tellers' : 'Counters'}</span></button><span class="lctr-pop" ${state.life._ctrMenu === idx ? '' : 'hidden'}>${LCTR.map(C=>`<button type="button" class="${(p.ctrOn || {})[C.k] ? 'on' : ''}" data-lctrtog="${C.k}" data-idx="${idx}" title="${appLang() === 'nl' ? C.nl : C.en}" aria-label="${appLang() === 'nl' ? C.nl : C.en}">${C.ico}</button>`).join('')}</span></span></div>
         <button class="submenu-toggle done" data-idx="${idx}">${trS('\u2713 Done')}</button>
       </div>
     </div></div>`;
@@ -32391,7 +32844,7 @@ function lifeCardHtml(p, idx, count){
       ${(p.medal || p.monarch || p.initiative) ? `<div class="lcorner c-tr" aria-hidden="true">${p.medal ? `<i class="lc-medal" title="High roll winner">${modeGlyph()}</i>` : ''}${p.monarch ? `<i title="Monarch">${CROWN_SVG}</i>` : ''}${p.initiative ? `<i title="Initiative">${INIT_SVG}</i>` : ''}</div>` : ''}
       <div class="tap-zone left" data-idx="${idx}" data-side="minus"><span class="tap-glyph">−</span></div>
       <div class="tap-zone right" data-idx="${idx}" data-side="plus"><span class="tap-glyph">+</span></div>
-      <input class="pname-input" data-idx="${idx}" value="${escapeHtml(p.name)}" size="${Math.max(4, Math.min(14, p.name.length || 8))}">
+      ${lifeNameRowHtml(p, idx)}
       ${p.dg ? `<div class="ldungeon">${DUNGEON_SVG}<span>${escapeHtml(p.dg.room)}</span></div>` : ''}
       <div class="lval-row">
 
@@ -32608,6 +33061,32 @@ function wireLifeGrid(){
       e.stopPropagation();
       openSetLifePopup(+v.dataset.setlife);
     });
+  });
+  // 1.63 counters: tap / hold per counter, the hold repeats
+  document.querySelectorAll('.lctr[data-lctr]').forEach(b=>{
+    const C = LCTR.find(x=>x.k === b.dataset.lctr), p = ensureLifePlayers()[+b.dataset.idx];
+    if(!C || !p) return;
+    const step = (dv)=>{ p.ctr = p.ctr || {}; p.ctr[C.k] = Math.max(0, (p.ctr[C.k] || 0) + dv); const v = b.querySelector('b'); if(v) v.textContent = p.ctr[C.k]; lifeAutosave(); };
+    ['pointerdown', 'touchstart', 'mousedown', 'click'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
+    // Mana: from an empty pool every tap adds one, as long as the taps keep
+    // coming (within 1.5 s of each other); after that a tap spends one again.
+    const tapStep = ()=>{
+      if(C.k === 'mana'){
+        const now = Date.now();
+        if(!(p.ctr && p.ctr.mana) || now < (p._manaFill || 0)){ p._manaFill = now + 1500; step(1); return; }
+      }
+      step(C.tap);
+    };
+    wireTapHold(b, tapStep, ()=>step(C.hold), 450, 280);
+    b.addEventListener('click', (e)=>{ if(!('ontouchstart' in window)) tapStep(); });
+  });
+  document.querySelectorAll('[data-lctrmenu]').forEach(b=>{
+    ['pointerdown', 'touchstart'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
+    b.addEventListener('click', (e)=>{ e.stopPropagation(); const i = +b.dataset.lctrmenu; state.life._ctrMenu = state.life._ctrMenu === i ? null : i; renderLifeGrid(); });
+  });
+  document.querySelectorAll('[data-lctrtog]').forEach(b=>{
+    ['pointerdown', 'touchstart'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
+    b.addEventListener('click', (e)=>{ e.stopPropagation(); const p = ensureLifePlayers()[+b.dataset.idx]; p.ctrOn = p.ctrOn || {}; p.ctrOn[b.dataset.lctrtog] = !p.ctrOn[b.dataset.lctrtog]; renderLifeGrid(); });
   });
   // 1.46: Monarch and Dungeons in the poison menu
   document.querySelectorAll('[data-lmonarch]').forEach(b=>{
