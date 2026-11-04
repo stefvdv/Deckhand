@@ -1112,7 +1112,13 @@ html .tag-drop .tag-drop-list > .tag-drop-h b{opacity:0.75;}
 .bld-acts > button{flex:1;margin:0;}
 .bld-subs{display:flex;flex-direction:column-reverse;gap:8px;}
 .bld-pair{display:flex;align-items:center;gap:8px;}
-.bld-pair > div{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-text);}
+.bld-pair > div, .bld-pair > button{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-text);background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;}
+button.bld-mini{border:none;background:none;cursor:pointer;display:block;}
+.bld-sel{margin:10px 0 8px;}
+.bld-pair-w{display:flex;flex-direction:column;gap:3px;}
+.bld-tag{font-size:11.5px;color:var(--sub-text-2);padding-left:52px;}
+.bld-why{text-align:center;margin:6px 0 8px;}
+.bld-head-card{flex:none;border:none;background:none;padding:0;cursor:pointer;}
 .bld-pair img{width:44px;border-radius:3px;flex:none;}
 .bld-pair > b{color:var(--gold);}
 .cmp-head, .sell-tot{text-align:center;font-size:14px;color:var(--ink-text);margin:10px 0;}
@@ -6804,8 +6810,10 @@ function wireSearchClears(){
     b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
     bar.appendChild(b);
     const basePad = parseFloat(getComputedStyle(inp).paddingRight) || 10;
+    const ext = _clrExtra[inp.id] || null;   // 1.68: bars with an advanced filter
     const place = ()=>{
-      const on = !!inp.value;
+      let on = !!inp.value;
+      if(!on && ext){ try{ on = !!ext.active(); }catch(err){} }
       b.hidden = !on;
       inp.style.paddingRight = on ? (basePad + 30) + 'px' : '';
       if(!on) return;
@@ -6819,17 +6827,37 @@ function wireSearchClears(){
     b.addEventListener('pointerdown', (e)=>e.preventDefault());   // keep the keyboard up
     b.addEventListener('click', (e)=>{
       e.preventDefault(); e.stopPropagation();
+      let adv = false;
+      if(ext){ try{ adv = !!ext.active(); }catch(err){} }
       inp.value = '';
       inp.dispatchEvent(new Event('input', { bubbles: true }));
-      try{ inp.focus(); }catch(err){}
+      if(adv){ try{ ext.clear(); }catch(err){} }
+      else { try{ inp.focus(); }catch(err){} }
       place();
     });
+    inp._clrPlace = place;
     requestAnimationFrame(place);
   });
 }
+/* 1.68: a bar whose page has an advanced filter shows its x while any
+   filter is set; the x then clears the filters as well. */
+const _clrExtra = {
+  searchName: {
+    active: ()=>searchFiltersActive(),
+    clear: ()=>{ _searchSeq++; resetSearchFilters(); state.searchName = ''; state.searchResults = []; state.searchRan = false; state.searchError = false; state.searching = false; render(); }
+  },
+  colSearchQ: {
+    active: ()=>colFilterActive(),
+    clear: ()=>{ clearCollectionFilters(); }
+  }
+};
+function replaceSearchClears(){
+  Object.keys(_clrExtra).forEach(id=>{ const inp = document.getElementById(id); if(inp && inp._clrPlace) try{ inp._clrPlace(); }catch(e){} });
+}
+['click', 'change', 'input'].forEach(ev=>document.addEventListener(ev, ()=>requestAnimationFrame(()=>{ try{ replaceSearchClears(); }catch(e){} }), true));
 try{
   let _wscT = 0;
-  new MutationObserver(()=>{ if(_wscT) return; _wscT = requestAnimationFrame(()=>{ _wscT = 0; try{ wireSearchClears(); }catch(e){} }); })
+  new MutationObserver(()=>{ if(_wscT) return; _wscT = requestAnimationFrame(()=>{ _wscT = 0; try{ wireSearchClears(); replaceSearchClears(); }catch(e){} }); })
     .observe(document.documentElement, { childList: true, subtree: true });
 }catch(e){}
 /* 1.60: Magic's types for every Card type field -- the drop-up the Tags
@@ -6956,22 +6984,109 @@ function openPlainOverlay(id, title, onClose){
    collection, and which of your own cards could stand in for the missing
    ones (same colour identity, shared function tags, same kind -- land or
    spell). One result per commander, best first. */
+/* 1.68 STAND-INS, the Similar way. For every missing card, your own cards
+   (in the commander's colours, not already in the deck) are scored with
+   the Similar-cards engine: shared rules words, shared function tags, the
+   same card type, colours. EDHREC's played-with adds points: cards played
+   with the missing card (its card page, the detail page fetches it) and
+   cards played with the commander (its recommendations). The best pairs
+   win, each card used once. */
+const BLD_MIN = 18;
+async function bldStandIns(lead, miss, free, ix, opts){
+  opts = opts || {};
+  if(!miss.length || !free.length) return [];
+  const weights = await magicWordWeights();
+  let cmd = new Set();
+  try{ const pg = await edhrecCommanderPage({ name: lead.n }); cmd = new Set((pg && pg.names) || []); }catch(e){}
+  const ptOf = (r, x)=>/\bLand\b/.test(String(r.tl || '').split('//')[0]) ? 'land' : primaryTypeOf(x);
+  free.forEach(p=>{
+    if(!p.x){ p.x = bulkToCardish(p.r); p.pt = p.x ? ptOf(p.r, p.x) : ''; }
+    if(p.x && !p.ws){ p.ws = magicWordSet(p.x); p.ts = localTagSetSync(p.x) || new Set(); }
+  });
+  const tagHas = (cc, t)=>{ const l = localTagSetSync(cc); return l ? l.has(t) : false; };
+  const pairs = [];
+  let done = 0;
+  await runLimited(miss, async (nm)=>{
+    const mr = _bulkRec(ix, nm), mx = mr ? bulkToCardish(mr) : null;
+    if(mx){
+      const pt = ptOf(mr, mx);
+      let eMap = new Map();
+      if(opts.played){ try{ eMap = await Promise.race([edhrecPageNames(mx), new Promise(r=>setTimeout(()=>r(new Map()), 6000))]); }catch(e){} }
+      else await new Promise(r=>setTimeout(r, 0));   // keep the page responsive
+      const srcTags = _tagsLocal(ix, nm), srcWords = magicWordSet(mx);
+      const mine = [];
+      free.forEach(p=>{
+        if(!p.x || p.pt !== pt) return;   // like for like: same card type
+        let near = eMap.has(p.n) || srcTags.some(t=>p.ts.has(t));
+        if(!near){ for(const k of srcWords){ if(p.ws.has(k)){ near = true; break; } } }
+        if(!near) return;
+        const sc = similarityScore(mx, p.x, { srcWords, weights, srcTags, eMap, tagHas, fallbackPop: 0 });
+        if(pt === 'land') sc.pts += landKinScore(mx, p.x);
+        const withCmd = cmd.has(p.n);
+        if(withCmd) sc.pts += SIM_POINTS.pageSynergy;
+        if(sc.pts < BLD_MIN || !(sc.tShared >= 1 || sc.shared >= 2 || sc.pg > 0)) return;
+        mine.push({ miss: nm, sub: p.n, score: sc.pts, pw: sc.pg > 0, cmd: withCmd });
+      });
+      mine.sort((x, y)=>y.score - x.score);
+      pairs.push(...mine.slice(0, 6));
+    }
+    done++;
+    if(opts.onProgress) try{ opts.onProgress(done, miss.length); }catch(e){}
+  }, opts.played ? 3 : 1);
+  pairs.sort((x, y)=>y.score - x.score);
+  const usedM = new Set(), usedS = new Set(), out = [];
+  pairs.forEach(q=>{ if(usedM.has(q.miss) || usedS.has(q.sub)) return; usedM.add(q.miss); usedS.add(q.sub); out.push(q); });
+  const order = new Map(miss.map((n, i)=>[n, i]));
+  return out.sort((x, y)=>order.get(x.miss) - order.get(y.miss));
+}
+/* 1.67: the kind of card, for stand-ins -- like for like */
+function bldKind(r){
+  const t = String(r && r.tl || '').split('//')[0];
+  if(/\bLand\b/.test(t)) return 'land';
+  if(/\bCreature\b/.test(t)) return 'creature';
+  if(/\bPlaneswalker\b/.test(t)) return 'walker';
+  if(/\b(Instant|Sorcery)\b/.test(t)) return 'spell';
+  if(/\bArtifact\b/.test(t)) return 'artifact';
+  if(/\bEnchantment\b/.test(t)) return 'enchantment';
+  return 'other';
+}
+/* Your own printing when you own the card, otherwise Scryfall's default
+   (its most recognisable) printing. */
+function bldOwnIdx(){
+  const m = new Map();
+  (state.collection.items || []).forEach((it, i)=>{ if(it && it.name && !m.has(it.name)) m.set(it.name, i); });
+  return m;
+}
+function bldImg(nm, own){
+  const i = own.get(nm), it = i != null ? state.collection.items[i] : null;
+  if(it && it.img) return it.img;
+  return SF_BASE + '/cards/named?format=image&version=normal&exact=' + encodeURIComponent(nm);
+}
+async function bldOpenCard(nm, own, ix){
+  const i = own.get(nm);
+  if(i != null){ openCollectionCard(i); return; }
+  const r = _bulkRec(ix, nm);
+  if(r) openCardInfo(bulkToCardish(r));
+  try{
+    const res = await sfFetch(SF_BASE + '/cards/named?exact=' + encodeURIComponent(nm));
+    if(res && res.ok){ const full = await res.json(); if(!r || document.getElementById('cardSheetOverlay')) openCardInfo(full, r ? { _replace: true } : {}); }
+  }catch(e){}
+}
 async function openBuildable(){
   const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
-  const main = openPlainOverlay('buildOverlay', T('Wat kan ik bouwen', 'What can I build'));
+  const main = openPlainOverlay('buildOverlay', T('Bouwen uit collectie', 'Build from collection'));
   // 1.65: colours first, like Recommendations -- then only commanders of
   // exactly that identity are compared (yours and EDHREC's top), so it is quick.
   main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
   main.innerHTML = `<div id="bldPick" class="bld-pick"></div><div id="bldOut"><p class="hint" style="text-align:center;margin:10px 0;">${T('Kies eerst de kleuren. Dan vergelijken we alleen commanders in die kleuren: die van jou en de populairste van EDHREC.', 'Pick the colours first. Then only commanders in those colours are compared: yours and EDHREC\u2019s most popular.')}</p></div>`;
-  const countOpts = [['1', 'Monocolored'], ['2', '2 colors'], ['3', '3 colors'], ['45', '4 & 5 colors']];
   let pickCount = '2', combo = '', run = 0;
   const paintPick = ()=>{
     const bp = main.querySelector('#bldPick'); if(!bp) return;
     bp._paint = paintPick;   // outside taps and hardware back repaint via csRerender
     const combos = COLOR_COMBOS[pickCount] || [];
     bp.innerHTML = `
-      <div style="margin:10px 0 0;">${cselectHtml('bldCount', countOpts.map(([v, l])=>({v, l: trS(l)})), pickCount, trS('2 colors'), {inline: true})}</div>
-      <div style="margin:8px 0 0;">${cselectHtml('bldCombo', combos.map(cb=>({v: cb.key, l: escapeHtml(cb.label), icons: cb.key === 'c' ? manaIconSvg('C', 16) : manaRowSvg(cb.key.toUpperCase(), 16)})), combo, trS('Choose a combination…'), {inline: true})}</div>`;
+      <div class="browse-selects bld-sel"><div class="bs-row">${cselectHtml('bldCount', COLOR_COUNTS.filter(c=>c.key).map(c=>({v: c.key, l: trS(c.label), art: bsArtSf(c.clause)})), pickCount, trS('2 colors'), {tiles: true})}</div>
+      <div class="bs-row">${cselectHtml('bldCombo', sortCombosByPlay(combos).map(cb=>({v: cb.key, l: escapeHtml(cb.label), icons: manaRowSvg(cb.key, 18), art: bsArtSf(cb.key === 'c' ? 'id=c' : 'id=' + cb.key)})), combo, trS('Choose a combination…'), {tiles: true})}</div></div>`;
     _csHandlers['bldCount'] = v=>{ pickCount = v; combo = ''; state.openCSelect = null; paintPick(); };
     _csHandlers['bldCombo'] = v=>{ combo = v; state.openCSelect = null; paintPick(); runBuild(v, ++run); };
     bp.querySelectorAll('[data-cs]').forEach(b=>b.addEventListener('click', e=>{
@@ -7022,7 +7137,7 @@ async function openBuildable(){
     }
     if(!cands.length){ out.innerHTML = `<div class="empty-note">${T('Geen commanders gevonden in deze kleuren.', 'No commanders found in these colours.')}</div>`; return; }
     const pool = [];
-    owned.forEach(nm=>{ const r = _bulkRec(ix, nm); if(r && !_BASIC_RE.test(r.n)) pool.push({ n: r.n, r, ci: String(r.ci || ''), land: /\bLand\b/.test(String(r.tl || '').split('//')[0]), tags: _tagsLocal(ix, r.n) }); });
+    owned.forEach(nm=>{ const r = _bulkRec(ix, nm); if(r && !_BASIC_RE.test(r.n)) pool.push({ n: r.n, r, ci: String(r.ci || '') }); });
     const results = [];
     for(let i = 0; i < cands.length; i++){
       if(!alive()) return;
@@ -7036,30 +7151,23 @@ async function openBuildable(){
       const have = names.filter(n=>owned.has(n));
       const miss = names.filter(n=>!owned.has(n));
       const inDeck = new Set(names);
-      const free = pool.filter(p=>!inDeck.has(p.n) && p.n !== c.n && p.ci.split('').every(x=>ciSet.has(x)) && p.tags.length);
-      const used = new Set(), subs = [];
-      miss.forEach(nm=>{
-        const mr = _bulkRec(ix, nm); if(!mr) return;
-        const mt = _tagsLocal(ix, nm); if(!mt.length) return;
-        const ml = /\bLand\b/.test(String(mr.tl || '').split('//')[0]);
-        let best = null, bs = 0;
-        free.forEach(p=>{
-          if(used.has(p.n) || p.land !== ml) return;
-          const sc = p.tags.filter(t=>mt.indexOf(t) >= 0).length;
-          if(sc > bs){ bs = sc; best = p; }
-        });
-        if(best && bs >= Math.min(2, mt.length)){ used.add(best.n); subs.push({ miss: nm, sub: best.n, score: bs }); }
-      });
-      results.push({ c, names, have, miss, subs, own: i < ownN, pct: have.length / names.length, pct2: (have.length + subs.length) / names.length });
+      const free = pool.filter(p=>!inDeck.has(p.n) && p.n !== c.n && p.ci.split('').every(x=>ciSet.has(x)));
+      // 1.68: the overview scores with the Similar engine and the
+      // commander's recommendations; the detail page adds played-with
+      let subs = [];
+      try{ subs = await bldStandIns(c, miss, free, ix, { played: false }); }catch(e){}
+      if(!alive()) return;
+      results.push({ c, names, have, miss, subs, free, own: i < ownN, pct: have.length / names.length, pct2: (have.length + subs.length) / names.length });
     }
     if(!alive()) return;
     results.sort((a, b)=>(b.pct2 - a.pct2) || (b.pct - a.pct));
     if(!results.length){ out.innerHTML = `<div class="empty-note">${T('EDHREC gaf geen decks terug. Probeer het met internet nog eens.', 'EDHREC returned no decks. Try again with a connection.')}</div>`; return; }
     const pctS = (x)=>Math.round(x * 100) + '%';
+    const ownIx = bldOwnIdx();
     // bottom-up: the best match at the foot (wrap-reverse grid)
     out.innerHTML = `<p class="hint" style="text-align:center;margin:8px 0;">${T('Hoeveel van het gemiddelde EDHREC-deck je al hebt. Tussen haakjes: met vervangers uit je collectie.', 'How much of the EDHREC average deck you own. In brackets: with stand-ins from your collection.')}</p>
       <div class="sr-grid bld-grid">${results.map((x, i)=>`<button type="button" class="sr-tile bld-tile" data-bld="${i}">
-        <img src="${bulkToCardish(x.c).image_uris.normal}" alt="" loading="lazy">
+        <img src="${bldImg(x.c.n, ownIx)}" alt="" loading="lazy">
         <div class="st-body"><div class="bld-pct"><b>${pctS(x.pct)}</b><span>(${pctS(x.pct2)})</span></div><div class="bld-sub">${x.have.length}/${x.names.length}${x.own ? ' · ' + T('in je collectie', 'you own it') : ''}</div></div>
       </button>`).join('')}</div>`;
     out.style.display = 'flex'; out.style.flexDirection = 'column-reverse';
@@ -7071,38 +7179,59 @@ async function openBuildable(){
 function openBuildableDetail(x, ix){
   const nl = appLang() === 'nl', T = (a, b)=>nl ? a : b;
   const main = openPlainOverlay('buildDetail', x.c.n);
-  const img = (nm)=>{ const r = _bulkRec(ix, nm); return r ? bulkToCardish(r).image_uris.normal : ''; };
-  const subOf = new Map(x.subs.map(s=>[s.miss, s.sub]));
-  const bare = x.miss.filter(n=>!subOf.has(n));
-  main.innerHTML = `
-    <div class="bld-acts"><button type="button" class="primary-btn" id="bldMake">${T('Maak dit deck', 'Build this deck')}</button><button type="button" class="ghost-btn" id="bldWant">${T('Ontbrekende naar Gezocht', 'Missing to Wants')} (${bare.length})</button></div>
-    <div class="edh-sec"><div class="section-label">${T('Ontbreekt', 'Missing')} · ${bare.length}</div><div class="sr-grid">${bare.map(n=>`<div class="sr-tile bld-mini"><img src="${img(n)}" alt="${escapeHtml(n)}" loading="lazy"></div>`).join('')}</div></div>
-    <div class="edh-sec"><div class="section-label">${T('Vervangers uit je collectie', 'Stand-ins from your collection')} · ${x.subs.length}</div><div class="bld-subs">${x.subs.map(s=>`<div class="bld-pair"><div><img src="${img(s.miss)}" alt="" loading="lazy"><span>${escapeHtml(s.miss)}</span></div><b>\u2192</b><div><img src="${img(s.sub)}" alt="" loading="lazy"><span>${escapeHtml(s.sub)}</span></div></div>`).join('')}</div></div>
-    <div class="edh-sec"><div class="section-label">${T('Heb je al', 'You own')} · ${x.have.length}</div><div class="sr-grid">${x.have.map(n=>`<div class="sr-tile bld-mini"><img src="${img(n)}" alt="${escapeHtml(n)}" loading="lazy"></div>`).join('')}</div></div>
-    <div class="bld-head"><img src="${bulkToCardish(x.c).image_uris.normal}" alt=""><div><b>${Math.round(x.pct * 100)}%</b> ${T('van het EDHREC-deck in je collectie', 'of the EDHREC deck in your collection')}<br>${Math.round(x.pct2 * 100)}% ${T('met vervangers', 'with stand-ins')}</div></div>`;
-  main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
-  requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
-  main.querySelector('#bldWant').addEventListener('click', ()=>{
-    let n = 0;
-    bare.forEach(nm=>{ const r = _bulkRec(ix, nm); if(!r) return; const slim = slimForCollection(bulkToCardish(r)); if(!state.collection.wantsManual.some(w=>w.name === slim.name)){ state.collection.wantsManual.push(slim); n++; } });
-    saveCollection();
-    toast(T(`${n} kaarten naar Gezocht.`, `${n} cards added to Wants.`));
-  });
-  main.querySelector('#bldMake').addEventListener('click', ()=>{
-    openInAppPrompt(T('Naam van het nieuwe deck', 'Name your new deck'), T('Decknaam', 'Deck name'), x.c.n, (name)=>{
-      if(name === null) return;
-      const lead = bulkToCardish(x.c);
-      const cards = x.have.concat(x.subs.map(s=>s.sub)).map(nm=>{ const r = _bulkRec(ix, nm); return r ? bulkToCardish(r) : null; }).filter(Boolean);
-      const d = { id: uid(), name: (name.trim() || x.c.n), admiral: lead, partner: null, cards: [], maybeboard: [], tags: {}, primer: '', format: 'commander' };
-      state.decksIndex.unshift(d);
-      logDeckChange(d, { type:'admiral', name: lead.name, card: lead, prev: null });
-      cards.forEach(c=>{ d.cards.push(c); logDeckChange(d, { type:'add', name: c.name, card: c }); });
-      persistDeck(d);
-      toast(T(`${d.name} gemaakt met ${cards.length + 1} kaarten.`, `${d.name} built with ${cards.length + 1} cards.`));
-      dismissAllOverlays();
-      openDeck(d.id);
+  const own = bldOwnIdx();
+  const img = (nm)=>bldImg(nm, own);
+  const tile = (n)=>`<button type="button" class="sr-tile bld-mini" data-bc="${escapeHtml(n)}"><img src="${img(n)}" alt="${escapeHtml(n)}" loading="lazy"></button>`;
+  let refining = !!(x.free && x.miss.length && !x._refined), prog = '';
+  const why = (q)=>[q.pw ? T('vaak samen gespeeld', 'often played together') : '', q.cmd ? T('speelt mee met deze commander', 'played with this commander') : ''].filter(Boolean).join(' · ');
+  const paint = ()=>{
+    if(!document.getElementById('buildDetail')) return;
+    const subOf = new Map(x.subs.map(q=>[q.miss, q.sub]));
+    const bare = x.miss.filter(n=>!subOf.has(n));
+    x.pct2 = (x.have.length + x.subs.length) / x.names.length;
+    const fromFoot = main.scrollHeight - main.scrollTop - main.clientHeight;
+    // bottom-up (column-reverse): DOM-first is the foot -- the buttons, then
+    // the commander with its score, then the card lists above
+    main.innerHTML = `
+      <div class="bld-acts"><button type="button" class="primary-btn" id="bldMake">${T('Maak dit deck', 'Build this deck')}</button><button type="button" class="ghost-btn" id="bldWant">${T('Ontbrekende naar Gezocht', 'Missing to Wants')} (${bare.length})</button></div>
+      <div class="bld-head"><button type="button" class="bld-head-card" data-bc="${escapeHtml(x.c.n)}"><img src="${img(x.c.n)}" alt="${escapeHtml(x.c.n)}"></button><div><b>${Math.round(x.pct * 100)}%</b> ${T('van het EDHREC-deck in je collectie', 'of the EDHREC deck in your collection')}<br>${Math.round(x.pct2 * 100)}% ${T('met vervangers', 'with stand-ins')}</div></div>
+      <div class="edh-sec"><div class="section-label">${T('Ontbreekt', 'Missing')} · ${bare.length}</div><div class="sr-grid">${bare.map(tile).join('')}</div></div>
+      <div class="edh-sec"><div class="section-label">${T('Vervangers uit je collectie', 'Stand-ins from your collection')} · ${x.subs.length}</div>
+        <p class="hint bld-why" id="bldProg">${refining ? T('Vervangers verfijnen met “played with” van EDHREC…', 'Refining stand-ins with EDHREC’s played-with…') + (prog ? ' ' + prog : '') : T('Gekozen zoals Vergelijkbare kaarten, plus wat EDHREC samen speelt.', 'Chosen like Similar cards, plus what EDHREC plays together.')}</p>
+        <div class="bld-subs">${x.subs.map(q=>`<div class="bld-pair-w"><div class="bld-pair"><button type="button" data-bc="${escapeHtml(q.miss)}"><img src="${img(q.miss)}" alt="" loading="lazy"><span>${escapeHtml(q.miss)}</span></button><b>→</b><button type="button" data-bc="${escapeHtml(q.sub)}"><img src="${img(q.sub)}" alt="" loading="lazy"><span>${escapeHtml(q.sub)}</span></button></div>${why(q) ? `<div class="bld-tag">${why(q)}</div>` : ''}</div>`).join('')}</div></div>
+      <div class="edh-sec"><div class="section-label">${T('Heb je al', 'You own')} · ${x.have.length}</div><div class="sr-grid">${x.have.map(tile).join('')}</div></div>`;
+    main.style.display = 'flex'; main.style.flexDirection = 'column-reverse';
+    main.querySelectorAll('[data-bc]').forEach(b=>b.addEventListener('click', ()=>bldOpenCard(b.dataset.bc, own, ix)));
+    main.querySelector('#bldWant').addEventListener('click', ()=>{
+      let n = 0;
+      bare.forEach(nm=>{ const r = _bulkRec(ix, nm); if(!r) return; const slim = slimForCollection(bulkToCardish(r)); if(!state.collection.wantsManual.some(w=>w.name === slim.name)){ state.collection.wantsManual.push(slim); n++; } });
+      saveCollection();
+      toast(T(`${n} kaarten naar Gezocht.`, `${n} cards added to Wants.`));
     });
-  });
+    main.querySelector('#bldMake').addEventListener('click', ()=>{
+      openInAppPrompt(T('Naam van het nieuwe deck', 'Name your new deck'), T('Decknaam', 'Deck name'), x.c.n, (name)=>{
+        if(name === null) return;
+        const lead = bulkToCardish(x.c);
+        const cards = x.have.concat(x.subs.map(q=>q.sub)).map(nm=>{ const r = _bulkRec(ix, nm); return r ? bulkToCardish(r) : null; }).filter(Boolean);
+        const d = { id: uid(), name: (name.trim() || x.c.n), admiral: lead, partner: null, cards: [], maybeboard: [], tags: {}, primer: '', format: 'commander' };
+        state.decksIndex.unshift(d);
+        logDeckChange(d, { type:'admiral', name: lead.name, card: lead, prev: null });
+        cards.forEach(c=>{ d.cards.push(c); logDeckChange(d, { type:'add', name: c.name, card: c }); });
+        persistDeck(d);
+        toast(T(`${d.name} gemaakt met ${cards.length + 1} kaarten.`, `${d.name} built with ${cards.length + 1} cards.`));
+        dismissAllOverlays();
+        openDeck(d.id);
+      });
+    });
+    main.scrollTop = Math.max(0, main.scrollHeight - main.clientHeight - fromFoot);
+  };
+  paint();
+  requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+  if(refining){
+    bldStandIns(x.c, x.miss, x.free, ix, { played: true, onProgress: (d, n)=>{ prog = d + '/' + n; const h = document.querySelector('#buildDetail #bldProg'); if(h && refining) h.textContent = T('Vervangers verfijnen met “played with” van EDHREC…', 'Refining stand-ins with EDHREC’s played-with…') + ' ' + prog; } })
+      .then(subs=>{ x.subs = subs; x._refined = true; refining = false; paint(); })
+      .catch(()=>{ refining = false; paint(); });
+  }
 }
 /* 1.63 SELL LIST: copies the decks do not use, at or above a price. */
 function openSellList(binderId){
@@ -7710,15 +7839,19 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.66';
+const APP_VERSION = '1.68';
 const CHANGELOG_NOTES = {
   en: [
-    'Turn button for sideways cards',
-    'Split, fuse, aftermath, flip, planes'
+    'Now called Build from collection',
+    'Stand-ins via Similar + played-with',
+    'Sell list menu icon fixed',
+    'Clear-x also clears advanced filters'
   ],
   nl: [
-    'Draaiknop voor zijwaartse kaarten',
-    'Split, fuse, aftermath, flip, planes'
+    'Heet nu Bouwen uit collectie',
+    'Vervangers: Vergelijkbaar + samen',
+    'Icoon Verkooplijst in menu hersteld',
+    'Wis-kruisje wist ook filters'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7726,8 +7859,14 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-02';
+const APP_DATE = '2026-11-04';
 const CHANGELOG_HISTORY = [
+  { v: '1.67', d: '2026-11-04',
+    en: ['What can I build: colour tiles', 'Stand-ins match type, cost and role', 'Tap any card for its card page', 'Your own printings shown', 'Commander at the foot of the page'],
+    nl: ['Wat kan ik bouwen: kleurtegels', 'Vervangers: zelfde type, kost en rol', 'Tik een kaart voor de kaartpagina', 'Je eigen printings getoond', 'Commander onderaan de pagina'] },
+  { v: '1.66', d: '2026-11-02',
+    en: ['Turn button for sideways cards', 'Split, fuse, aftermath, flip, planes'],
+    nl: ['Draaiknop voor zijwaartse kaarten', 'Split, fuse, aftermath, flip, planes'] },
   { v: '1.65', d: '2026-11-02',
     en: ['History: card, action, time, button', 'Upgrades budget is a slider', 'What can I build: pick colours first', 'Mana counter per colour', 'Counter pills no longer overlap', 'Text size keeps everything in view'],
     nl: ['Geschiedenis: kaart, actie, tijd, knop', 'Upgrades-budget is een schuif', 'Wat kan ik bouwen: eerst kleuren', 'Manateller per kleur', 'Tellers overlappen niet meer', 'Tekstgrootte houdt alles in beeld'] },
@@ -12495,7 +12634,7 @@ function wireCollectionPage(){
     openFabMenu([
       ['bfAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
       ['bfImport', mIco('file') + trS('Import'), ()=>openCollectionImport(bid)],
-      ['bfSell', '\u20ac ' + (appLang() === 'nl' ? 'Verkooplijst' : 'Sell list'), ()=>openSellList(bid)]
+      ['bfSell', '<span class="ib"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6.5A7 7 0 1 0 18 17.5"/><path d="M4 10h9M4 14h9"/></svg></span>' + (appLang() === 'nl' ? 'Verkooplijst' : 'Sell list'), ()=>openSellList(bid)]
     ].concat((state.collection.binders || []).some(b=>b.id === bid)
       ? [['bfRules', '⚙ ' + (appLang() === 'nl' ? 'Map-instellingen…' : 'Binder settings…'), ()=>{ const b = state.collection.binders.find(x=>x.id === bid); if(b) openBinderRules(b, false); }]]
       : []));
@@ -12504,8 +12643,8 @@ function wireCollectionPage(){
     e.stopPropagation();
     openFabMenu([
       ['fabAddCard', `<span class="ib">${ICONS.search}</span>${trS('Add card')}`, ()=>openColAddCardSheet()],
-      ['fabBuild', `<span class="ib">${ICONS.spark || ''}</span>${appLang() === 'nl' ? 'Wat kan ik bouwen' : 'What can I build'}`, ()=>openBuildable()],
-      ['fabSell', '\u20ac ' + (appLang() === 'nl' ? 'Verkooplijst' : 'Sell list'), ()=>openSellList(null)],
+      ['fabBuild', `<span class="ib">${ICONS.spark || ''}</span>${appLang() === 'nl' ? 'Bouwen uit collectie' : 'Build from collection'}`, ()=>openBuildable()],
+      ['fabSell', '<span class="ib"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6.5A7 7 0 1 0 18 17.5"/><path d="M4 10h9M4 14h9"/></svg></span>' + (appLang() === 'nl' ? 'Verkooplijst' : 'Sell list'), ()=>openSellList(null)],
       ['fabAddBinder', `<span class="ib">${ICONS.collection}</span>${trS('New binder')}`, ()=>{
         openInAppPrompt('New binder name', 'Binder name', '', (name)=>{
           if(name && name.trim()){
@@ -12517,7 +12656,7 @@ function wireCollectionPage(){
         });
       }],
       ['fabImport', mIco('file') + trS('Import'), ()=>openCollectionImport()],
-    ].concat(ruledBinders().length ? [['fabResort', '↻ ' + (appLang() === 'nl' ? 'Mappen opnieuw sorteren' : 'Re-sort binders'), ()=>binderResort()]] : []).concat([
+    ].concat(ruledBinders().length ? [['fabResort', '<span class="ib"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></span>' + (appLang() === 'nl' ? 'Mappen opnieuw sorteren' : 'Re-sort binders'), ()=>binderResort()]] : []).concat([
       ['fabView', folderViewToggleLabel('col'), ()=>{ setFolderView('col', folderView('col') === 'list' ? 'tiles' : 'list'); render(); scrollToPageFoot(); }]
     ]));
   });
