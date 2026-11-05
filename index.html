@@ -184,6 +184,8 @@ button,input,select,textarea,.sr-tile,.vg-card,.tap-zone,.dmg-overlay,.chip{touc
 /* overscroll-behavior-y on BOTH: Chrome grants pull-to-refresh based on the
    root scroller (html) — the old body-only guard never applied, so a swipe
    down from the top reloaded the whole app. `none` also kills the glow. */
+/* 1.71: scrolling past an end shows nothing -- no Android stretch or glow */
+*{overscroll-behavior:none !important;}
 html,body{margin:0;padding:0;height:100%;background:var(--ink);overflow-x:clip;max-width:100%;overscroll-behavior-y:none;overflow-anchor:none;}   /* clip, not hidden: hidden silently kills position:sticky. overflow-anchor off: the app runs its OWN scroll anchoring for streamed grids -- the browser's native one corrected the same inserts a second time, which was the scroll jolt. */
 body{
   font-family:'Inter',sans-serif; color:var(--ink-text);
@@ -224,6 +226,7 @@ html:not(.desk), html:not(.desk) *{scrollbar-width:none !important;}
   backdrop-filter:blur(8px); border-bottom:2px solid var(--line);
   padding:12px 16px; display:flex; align-items:center; gap:10px; min-height:56px;
 }
+html:not(.desk) .topbar{padding-top:6px;padding-bottom:6px;min-height:46px;}   /* 1.72 */
 .tb-titles{display:flex;flex-direction:column;line-height:1.15;min-width:0;flex:1;}
 #printOverlay main > *{flex:0 0 auto;}
 #crOverlay .ov-cap{order:1;}
@@ -292,7 +295,7 @@ html[data-main="W"] .page-cap .brand-txt, html[data-main="W"] .ov-cap .brand-txt
 .ov-cap:has(.cap-note) .brand-txt,
 .overlay .topbar:has(.cap-note) .brand-txt,
 .overlay .topbar:has(#csPrice) .brand-txt{max-width:calc(100% - 170px);}
-.app > main{padding-top:calc(56px + env(safe-area-inset-top)) !important;}
+.app > main{padding-top:calc(46px + env(safe-area-inset-top)) !important;}
 .brand-txt.two-line{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2;align-self:center;max-height:44px;word-break:keep-all;overflow-wrap:normal;}
 .brand-txt.editable{pointer-events:auto;cursor:pointer;text-decoration:underline dotted color-mix(in srgb, var(--brass) 40%, transparent);text-underline-offset:4px;}
 .page-cap .brand-txt.swap{animation:brandSwap 0.3s ease;}
@@ -512,7 +515,7 @@ main.card-detail > div:nth-child(2){order:10;}
    matched heights so the two bars touch and nothing peeks through. */
 .app > main > .builder-tabs{
   position:fixed;left:0;right:0;top:auto;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
-  z-index:41;margin:0;padding:5px 14px;height:44px;box-sizing:border-box;
+  z-index:41;margin:0;padding:2px 14px;height:36px;box-sizing:border-box;
   background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);
 }
 /* Bottom-up: content packs at the FOOT even when a deck search leaves the
@@ -529,12 +532,12 @@ main.card-detail > div:nth-child(2){order:10;}
 .dl-empty-t{font-family:'Cinzel',serif;font-size:19px;font-weight:700;color:var(--ink-text);letter-spacing:0.04em;margin-top:4px;}
 .dl-empty-s{font-size:13.5px;color:var(--sub-text);}
 #decklistBox{display:flex;flex-direction:column-reverse;}
-main.has-dock{padding-bottom:calc(var(--nav-h) + 112px + env(safe-area-inset-bottom)) !important;}
-main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 84px + env(safe-area-inset-bottom)) !important;}
-main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom)) !important;}
+main.has-dock{padding-bottom:calc(var(--nav-h) + 98px + env(safe-area-inset-bottom)) !important;}
+main.has-dock:has(#builderBody){padding-bottom:calc(var(--nav-h) + 76px + env(safe-area-inset-bottom)) !important;}
+main.has-dock:has(#dlPanelBox .panel-card){padding-bottom:calc(var(--nav-h) + 108px + env(safe-area-inset-bottom)) !important;}
 
 /* ---------- persistent brand banner (symbol + wordmark + tabs), same on every page ---------- */
-:root{ --nav-h: 66px; }
+:root{ --nav-h: 58px; }   /* 1.72: 66 -> 58, the bar is more compact */
 .brand-banner{
   /* Navigation lives on the BOTTOM edge now — thumb country. Fixed, so DOM
      order stays untouched and the swipe-preview clone keeps working. */
@@ -1256,7 +1259,7 @@ body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 /* Bottom-up charter: the category stripe sits BELOW the name, closing
    off this category from the next one's cards beneath it. */
 .cat-group > .cat-head{border-top:none;}
-.cat-head{display:flex;align-items:center;gap:8px;padding:8px 2px;cursor:pointer;border-bottom:2px solid var(--line);
+.cat-head{display:flex;align-items:center;gap:8px;padding:6px 2px;cursor:pointer;border-bottom:2px solid var(--line);
   /* The burger jump scrolls a head into view with block:'end' — this margin
      lifts its landing spot clear of the dock + tab + nav stack (same
      clearance the deck panel box uses), so the chosen category settles
@@ -1425,7 +1428,7 @@ html{--accent-ink:var(--head-ink);}   /* the page's own light accent, computed a
 .ib svg{width:20px;height:20px;color:currentColor;opacity:0.92;}
 .dl-adm-empty{aspect-ratio:63/88;border:2px dashed var(--line);border-radius:4.75% / 3.5%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--sub-text-2);font-size:13px;cursor:pointer;}
 /* Bottom dock: fixed status bar with cycling info sets */
-.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
+.deck-dock{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 36px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 10px;background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,0.35);}
 .dk-arr{background:none;border:2px solid var(--line);border-radius:8px;color:var(--plate-ink, var(--main-lt));width:30px;height:34px;cursor:pointer;flex:none;font-size:14px;}
 /* display:contents lifts the set's items to be the dock's own flex
    children, so the bar's space-between spreads EVERYTHING evenly —
@@ -1659,6 +1662,11 @@ img.art-missing::after{
 .sr-grid{display:flex;flex-wrap:wrap-reverse;gap:12px;margin-top:12px;}
 .sr-grid > *{flex:0 0 calc(50% - 6px);min-width:0;}
 .sr-grid > .status{flex:1 1 100%;}
+/* 1.71: on a phone, card lists use the screen: 6px at the sides and between */
+html:not(.desk) main:has(.sr-grid, .visual-grid, .deck-grid, .sc-grid){padding-left:6px !important;padding-right:6px !important;}
+html:not(.desk) .sr-grid, html:not(.desk) .deck-grid, html:not(.desk) .visual-grid:not(.vg-stack):not(.vg-text){gap:6px;}
+html:not(.desk) .sr-grid > *, html:not(.desk) .deck-grid > *, html:not(.desk) .visual-grid:not(.vg-stack):not(.vg-text) > *{flex-basis:calc(50% - 3px);}
+html:not(.desk) .deck-grid[style*="grid-template-columns:1fr"] > *{flex-basis:100%;}
 @media (min-width:560px){ .sr-grid > *{flex:1 0 170px;max-width:230px;} }
 
 
@@ -2246,6 +2254,7 @@ input, textarea, [contenteditable]{caret-color:var(--caret, currentColor);}
 .acc-up .ban-sub{font-size:12px;color:var(--sub-text);margin:8px 0 2px;text-transform:uppercase;letter-spacing:0.5px;}
 .dl-fmt-seat b{font-family:'Cinzel',serif;font-size:15px;color:var(--head-ink);}
 .overlay .topbar{position:relative;justify-content:center;padding-left:54px;padding-right:54px;box-sizing:border-box;min-height:50px;}
+html:not(.desk) .overlay .topbar{min-height:44px;}
 .overlay .topbar > .icon-btn:first-child{position:absolute;left:10px;top:50%;transform:translateY(-50%);}
 .overlay .topbar > button:not(:first-child){position:absolute;right:10px;top:50%;transform:translateY(-50%);}
 .overlay .topbar .brand-txt{flex:0 1 auto;max-width:100%;text-align:center;}
@@ -2512,7 +2521,7 @@ html:has(#crOverlay){overflow:hidden;}
    section's label pushes it out — classic sticky headers, scoped per
    section. Solid backing so it stays readable over the tiles. */
 .edh-sec{display:flex;flex-direction:column;}
-.edh-sec > .section-label{order:10;position:static;background:var(--ink);padding:8px 6px;border-bottom:2px solid var(--line);border-top:1px solid var(--line);font-size:14px;-webkit-text-fill-color:var(--head-ink);}
+.edh-sec > .section-label{order:10;position:static;background:var(--ink);padding:7px 52px 7px 6px;border-bottom:2px solid var(--line);border-top:1px solid var(--line);font-size:14px;-webkit-text-fill-color:var(--head-ink);}
 /* Overlays scroll inside <main>, whose top edge already sits under the
    overlay topbar — the 66px offset above is browse-page tuning (under the
    app nav) and pins the label mid-screen there. Hug the scrollport instead. */
@@ -2522,8 +2531,16 @@ html:has(#crOverlay){overflow:hidden;}
 /* 1.57: any overlay with foot-sticky section labels: no bottom padding, or
    cards show through the strip under the label */
 html:not(.desk) .overlay main:has(.edh-sec > .section-label){padding-bottom:0;}
-/* 1.59: on the phone a section's label scrolls along with its cards */
-html:not(.desk) .overlay main .edh-sec > .section-label, html:not(.desk) #recoOverlay .edh-sec > .section-label{position:static !important;}
+/* 1.72: the label of the group in view sticks at the foot of the list,
+   right above the bars (overlays: their own scroll port; pages: the
+   measured height of the bar stack, --stick-b) */
+:root{--stick-b:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+html:not(.desk) .app > main .edh-sec > .section-label{position:sticky;top:auto;bottom:var(--stick-b);z-index:30;margin-bottom:0;}
+html:not(.desk) .app > main .cat-group > .cat-head{position:sticky;bottom:var(--stick-b);z-index:30;background:var(--ink);}
+html:not(.desk) .app > main .sp-group > .sp-shelf{position:sticky;bottom:var(--stick-b);z-index:30;background:var(--ink);margin:0 0 6px !important;padding:7px 6px;border-top:1px solid var(--line);border-bottom:2px solid var(--line);}
+html:not(.desk) .overlay main .edh-sec > .section-label, html:not(.desk) #recoOverlay .edh-sec > .section-label{position:sticky;top:auto;bottom:0;margin-bottom:0;}
+/* the jump burger fits between the label's two lines */
+html:not(.desk) .edh-jump{width:30px;height:30px;font-size:14px;border-width:2px;}
 #recoOverlay .ra-hint{position:sticky;bottom:0;z-index:5;background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);margin:0;padding:8px 0;}
 #recoOverlay .edh-jump-row{position:fixed !important;top:auto !important;bottom:calc(52px + var(--nav-h) + env(safe-area-inset-bottom));right:14px;left:auto;justify-content:flex-end;z-index:140;height:auto;transition:bottom 0.2s;}
 /* While the selection + fab is visible, the burger steps up to make room —
@@ -7796,9 +7813,9 @@ function idClauseFor(admiral){
 function deckColorNoteHtml(d){
   if(!d || !deckLeaders(d).length) return '';
   const ci = deckColorIdentity(d);
-  const pips = ci.length ? manaRowSvg(ci.join('').toLowerCase(), 14) : manaIconSvg('C', 14);
   const NL = appLang() === 'nl';
-  return `<div class="ra-sub deck-ci-note" style="font-size:12.5px;display:flex;align-items:center;justify-content:center;gap:6px;">${pips}<span>${NL ? 'binnen de kleuren van' : 'within the colours of'} ${escapeHtml(d.name || '')}</span></div>`;
+  // 1.71: only the colours, as mana symbols
+  return `<div class="ra-sub deck-ci-note" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;" title="${NL ? 'binnen de kleuren van' : 'within the colours of'} ${escapeHtml(d.name || '')}">${manaRowSvg(ci.length ? ci.join('').toLowerCase() : 'c', 20)}</div>`;
 }
 function idClauseForDeck(d){
   return idClauseFor({ color_identity: deckColorIdentity(d) });
@@ -7839,13 +7856,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.70';
+const APP_VERSION = '1.72';
 const CHANGELOG_NOTES = {
   en: [
-    'Swiping cards leaves no stuck copy'
+    'Group name stays in view at the foot',
+    'Jump menu sits in the group bar',
+    'More compact bars'
   ],
   nl: [
-    'Swipen tussen kaarten laat niets hangen'
+    'Groepsnaam blijft onderaan in beeld',
+    'Springmenu zit in de groepsbalk',
+    'Compactere balken'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7855,6 +7876,12 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-05';
 const CHANGELOG_HISTORY = [
+  { v: '1.71', d: '2026-11-05',
+    en: ['Bigger cards in every card list', 'No bounce at the end of a page', 'Similar & Recs: less text'],
+    nl: ['Grotere kaarten in elke kaartlijst', 'Geen stuiter aan het eind van een pagina', 'Vergelijkbaar & Aanbevolen: minder tekst'] },
+  { v: '1.70', d: '2026-11-05',
+    en: ['Swiping cards leaves no stuck copy'],
+    nl: ['Swipen tussen kaarten laat niets hangen'] },
   { v: '1.69', d: '2026-11-05',
     en: ['Find in deck also searches card text'],
     nl: ['Zoek in deck zoekt ook in kaarttekst'] },
@@ -23518,7 +23545,6 @@ async function openSimilarCards(card, colorScope){
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="simCardImg" alt="${escapeHtml(card.name)}">
       </div>
-      <p class="hint" style="text-align:center;margin:0 0 8px;">${trS('Similar cards')} — ${trS('cards that do the same job')}, ${trS('most played first.')}</p>
       ${deckColorNoteHtml(scopeDeck)}
       <div id="simBody"><div class="status"><div class="spinner"></div></div></div>
     </main>
@@ -24070,6 +24096,52 @@ async function loadInspiration(d){
    (in the gap under the explanation) and, once those scroll out of view,
    sinks to a spot just above the bottom navigation. */
 let _inspJumpBound = false, _safeBottomPx = null;
+/* 1.72: the height of the fixed/sticky bars at a page's foot, so a
+   group's label sticks right above them -- measured, never guessed */
+const STICK_BARS = ['.brand-banner', '.app > main > .builder-tabs', '.deck-dock', '.app > main > .searchbar', '.app > main > div:has(> #deckFilter)', '.app > main > .adv-toggle', '.app > main > div:has(> #colAdvToggle)', '#tradeBarHost', '.app > main > #spAdvToggle'];
+let _stickB = -1;
+function updStickB(){
+  let mx = 0;
+  STICK_BARS.forEach(sel=>{
+    let els = [];
+    try{ els = document.querySelectorAll(sel); }catch(e){ return; }
+    els.forEach(el=>{
+      if(!el.offsetHeight) return;
+      const cs = getComputedStyle(el);
+      if((cs.position !== 'fixed' && cs.position !== 'sticky') || cs.bottom === 'auto' || cs.display === 'none') return;
+      mx = Math.max(mx, (parseFloat(cs.bottom) || 0) + el.offsetHeight);
+    });
+  });
+  if(mx && Math.abs(mx - _stickB) > 0.5){ _stickB = mx; document.documentElement.style.setProperty('--stick-b', Math.round(mx) + 'px'); }
+}
+/* ...and the jump burger rides inside the label bar nearest the foot */
+function placeJumpOnLabels(){
+  document.querySelectorAll('.edh-jump-row').forEach(row=>{
+    if(!row.offsetHeight || getComputedStyle(row).position !== 'fixed') return;
+    const ov = row.closest('.overlay');
+    const scope = ov || document.querySelector('.app > main');
+    if(!scope) return;
+    const sc = ov ? ov.querySelector('main') : null;
+    const lineY = sc ? sc.getBoundingClientRect().bottom : window.innerHeight - (_stickB > 0 ? _stickB : 0);
+    let best = null;
+    scope.querySelectorAll('.edh-sec > .section-label').forEach(L=>{
+      const r = L.getBoundingClientRect();
+      if(!r.height || r.bottom > lineY + 1.5 || r.top < 0) return;
+      if(!best || r.bottom > best.bottom) best = r;
+    });
+    if(!best) return;
+    const jh = row.offsetHeight || 30;
+    row.style.transition = 'none';
+    row.style.bottom = Math.round(window.innerHeight - best.bottom + (best.height - jh) / 2) + 'px';
+  });
+}
+{
+  let _sbRaf = 0;
+  const tick = ()=>{ if(_sbRaf) return; _sbRaf = requestAnimationFrame(()=>{ _sbRaf = 0; try{ updStickB(); placeJumpOnLabels(); }catch(e){} }); };
+  window.addEventListener('resize', tick);
+  document.addEventListener('scroll', tick, { capture: true, passive: true });
+  try{ new MutationObserver(tick).observe(document.documentElement, { childList: true, subtree: true }); }catch(e){}
+}
 function placeInspJump(){
   const row = document.querySelector('.app > main .edh-jump-row.insp-jump');
   if(!row) return;
@@ -24105,6 +24177,7 @@ function placeInspJump(){
   }
   row.style.bottom = Math.round(b) + 'px';
   row.style.visibility = hide ? 'hidden' : '';
+  if(!hide) try{ updStickB(); placeJumpOnLabels(); }catch(e){}   // 1.72
 }
 function bindInspJump(){
   placeInspJump();
@@ -27795,8 +27868,6 @@ function openCardReco(card, forDeck, comboKey){
       <div class="tag-focus-row" id="crTagRow" hidden></div>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="crImg" alt="${escapeHtml(card.name)}">
-        <div class="ra-nm">${escapeHtml(card.name)}</div>
-        <div class="ra-sub">${escapeHtml(frontFace(card).type_line||'')}</div>
         ${deckColorNoteHtml(forDeck)}
       </div>
       <div id="crBody"><div class="status"><div class="spinner"></div></div></div>
@@ -27870,7 +27941,7 @@ async function loadCardReco(card, themes, forDeck, comboKey){
   if(document.getElementById('crTagSel')?.value) return;   // 1.25: a tag focus took over meanwhile
   if(!pool.length){ box.innerHTML = `<div class="empty-note">No recommendations found for this card.</div>`; return; }
   const roleTxt = cardTags.length ? ` — sharing its role${cardTags.length>1?'s':''} (${cardTags.slice(0,3).map(escapeHtml).join(', ')})` : '';
-  box.innerHTML = `<p class="hint" style="margin:0 0 4px;text-align:center;">Cards that play well with ${escapeHtml(card.name)}${edhSecs.length ? '' : roleTxt}, most-played first.</p>`;
+  box.innerHTML = '';   // 1.71: no explanation line
   const groups = edhGroupPool(pool, edhSecs).map(g=>({ title: trS(g.title), cards: g.cards }));
   const rewire = ()=>{ const t = document.getElementById('crTagSel')?.value; if(t) cardRecoFocus(card, forDeck, comboKey, t); else loadCardReco(card, themes, forDeck, comboKey); };
   const crEl = box.closest('.overlay');
@@ -29330,6 +29401,7 @@ function placeRecoJump(){
   if(menus && menus.offsetHeight){ const top = menus.getBoundingClientRect().top; if(top > 0) b = Math.max(base, window.innerHeight - top + 8); }
   row.style.transition = 'none';
   row.style.bottom = Math.round(b) + 'px';
+  try{ placeJumpOnLabels(); }catch(e){}   // 1.72
 }
 function bindRecoJump(){
   const ov = document.getElementById('recoOverlay');
