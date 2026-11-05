@@ -3297,6 +3297,64 @@ html.desk .app > main:has(> #twResults){padding-top:calc(var(--top-h) + 80px) !i
 /* ---- tiles: as many as fit, centred ---- */
 html.desk :is(.sr-grid, .sc-grid, .visual-grid:not(.vg-stack):not(.vg-text), .col-grid, .deck-grid:not(.as-list)) > *{flex:0 0 200px;max-width:200px;}
 html.desk :is(.sr-grid, .sc-grid, .visual-grid, .col-grid, .deck-grid){justify-content:center;}
+/* ===== 1.77 PC ===== */
+/* folder and binder tiles start at the left, under their heading */
+html.desk .deck-grid{justify-content:flex-start;}
+/* (1) everything you can click answers the mouse: a brass ring -- the
+   border/outline changes, never the fill (colour law) */
+@media (hover:hover) and (pointer:fine){
+  html.desk :is(.sr-tile, .folder-tile, .col-tile, .sc-tile, .bld-tile):hover{outline:2px solid var(--brass);outline-offset:1px;}
+  html.desk .vg-card:not(.vg-row):hover{outline:2px solid var(--brass);outline-offset:-2px;}
+  html.desk :is(.dk-tool, #menuBtn, .ghost-btn, .primary-btn, .add-btn, .cselect-btn, .nsel-btn, .in-chev, .in-clear, .chip, .xt-mini, .cap-note, .dk-arr, .submenu-toggle, .info-i, .guild-opt, .llay, .lctr, .adv-go, .deck-fab, .reco-fab, .searchbar > button, .seg button, .modal-actions button, .builder-tabs button, .tag-chip, .tile-fav, .dfc-flip, .cs-pop-x, .undo-btn):not(:disabled):hover{outline:2px solid var(--brass);outline-offset:1px;}
+  html.desk :is(.xt-tile, .settings-row.xt-tile):hover{outline:2px solid var(--brass);outline-offset:-2px;}
+  html.desk :is(.cast-row, .hist-row, .ban-item, .cselect-opt, .otag-pop button, .menu-pop button, .tile-menu button):hover{color:var(--brass);}
+}
+/* (7) a big monitor gets more room for cards; reading pages stay at 1240 */
+html.desk{--dw: min(1560px, calc(100vw - 48px));}
+html.desk .app > main:is(.settings-main, .home-page),
+html.desk .app > main:has(> #twResults),
+html.desk .app > main:has(> .dr-wrap, > #draftMain),
+html.desk #builderBody:not(:has(#decklistBox)){max-width:1240px;width:100%;margin-left:auto;margin-right:auto;box-sizing:border-box;}
+/* (5) Stats and Deck Log: two columns of panels side by side */
+html.desk #builderBody:not(:has(#decklistBox)):has(> .panel-card + .panel-card){display:block !important;columns:2;column-gap:16px;}
+html.desk #builderBody:not(:has(#decklistBox)) > .panel-card{break-inside:avoid;display:block;width:100%;margin:0 0 16px !important;box-sizing:border-box;}
+/* (6) beside the commander: the deck at a glance */
+.dl-sum{display:none;}
+html.desk .dl-sum{display:block;margin:12px 0 0;max-width:460px;}
+html.desk .dl-sum-line{font-size:14px;color:var(--sub-text);display:flex;flex-wrap:wrap;gap:6px 14px;}
+html.desk .dl-sum-line b{color:var(--ink-text);font-weight:700;}
+html.desk .dl-sum-curve{display:flex;align-items:flex-end;gap:6px;height:64px;margin-top:10px;padding:0;background:none;border:none;cursor:pointer;width:100%;}
+html.desk .dl-sum-curve > span{flex:1 1 0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;height:100%;font-size:11.5px;color:var(--sub-text);}
+html.desk .dl-sum-curve i{display:block;width:100%;border-radius:3px 3px 0 0;background:var(--brass);min-height:2px;}
+@media (hover:hover){ html.desk .dl-sum-curve:hover span{color:var(--brass);} }
+/* (8) the Search filters: two columns, the gold search button on its own
+   foot strip -- it no longer sits on top of a field */
+html.desk .app > main > .adv-panel, html.desk .app > main > #advSlot > .adv-panel{width:min(980px, calc(100vw - 32px)) !important;}
+html.desk .adv-panel > .adv-frame{display:grid !important;grid-template-columns:repeat(2, minmax(0, 1fr));gap:4px 22px;align-items:start;}
+html.desk .adv-panel > .adv-frame > *{grid-column:auto;}
+html.desk .adv-panel > .adv-frame > .adv-go-row, html.desk .adv-go-row{grid-column:1 / -1;position:sticky;bottom:0;height:auto;margin:6px 0 0 !important;padding:10px 0 2px;justify-content:flex-end;background:inherit;border-top:1.5px solid var(--line);pointer-events:auto;}
+/* (9) Inspiration reads top-down on a PC: name search and pickers first,
+   then what they found, then this week's top commanders */
+html.desk .app > main:has(> .browse-selects) > .searchbar{order:1 !important;}
+html.desk .app > main:has(> .browse-selects) > .browse-selects{order:2 !important;margin-top:0;}
+html.desk .app > main:has(> .browse-selects) > #bsNameResults{order:3 !important;}
+html.desk .app > main:has(> .browse-selects) > #browseResults{order:4 !important;}
+html.desk .app > main:has(> .browse-selects) > #inspFeed{order:5 !important;margin-top:14px;}
+html.desk #inspFeed .edh-sec > .if-winrow{order:0 !important;margin:0 0 10px;}
+html.desk #inspFeed .edh-sec > .sr-grid{order:1 !important;}
+/* (10) an Extras fold opens as one centred window with a close button */
+html.desk .xt-x{position:fixed;z-index:1202;width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:var(--panel);color:var(--panel-text, var(--ink-text));font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+/* the credits run under the tiles; the language switch is a real button */
+html.desk .app > main.xt-tiles > #appFootCell{order:99 !important;flex-basis:100% !important;min-height:0;aspect-ratio:auto;align-items:center;padding:10px 0 0;}
+html.desk .app > main.xt-tiles > #appFootCell #appFootNote{font-size:12px;max-width:640px;}
+html.desk .app > main.xt-tiles > .xt-spacer{display:none;}
+html.desk .xt-tile .seg-inline button{padding:7px 14px;font-size:13.5px;}
+/* the search field runs to the bar's end (the phone's room for the + is not needed here) */
+html.desk .app > main > .searchbar{padding-right:16px !important;}
+/* (12) the keyboard overview */
+.kb-list{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:center;margin:4px 0 14px;font-size:14px;}
+.kb-list kbd{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;padding:3px 8px;border:1.5px solid var(--sub-text);border-radius:6px;white-space:nowrap;justify-self:start;color:var(--ink-text);}
+html:not(.desk) #kbHelpBtn{display:none;}
 html.desk #spMainPage .sc-grid > *{flex-basis:200px;}
 
 
@@ -7877,21 +7935,23 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.76';
+const APP_VERSION = '1.77';
 const CHANGELOG_NOTES = {
   en: [
-    'Search bar centred on every phone',
-    'Long titles stay readable',
-    'PC: Esc closes card and windows',
-    'PC: mouse over a card shows it whole',
-    'PC: tidier Collection and + button'
+    'PC: buttons and cards light up',
+    'PC: Ctrl+Z undoes, ? shows all keys',
+    'PC: deck at a glance by the commander',
+    'PC: Stats and Deck Log side by side',
+    'PC: filters in two columns',
+    'PC: Inspiration and Extras tidied'
   ],
   nl: [
-    'Zoekbalk netjes in het midden',
-    'Lange titels blijven leesbaar',
-    'PC: Esc sluit kaart en vensters',
-    'PC: muis op kaart toont hem groot',
-    'PC: nettere Collectie en +-knop'
+    'PC: knoppen en kaarten lichten op',
+    'PC: Ctrl+Z, en ? toont alle toetsen',
+    'PC: deck in één oogopslag',
+    'PC: Stats en Deck Log naast elkaar',
+    'PC: filters in twee kolommen',
+    'PC: Inspiration en Extras netter'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7901,6 +7961,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-05';
 const CHANGELOG_HISTORY = [
+  { v: '1.76', d: '2026-11-05',
+    en: ['Search bar centred on every phone', 'Long titles stay readable', 'PC: Esc closes card and windows', 'PC: mouse over a card shows it whole', 'PC: tidier Collection and + button'],
+    nl: ['Zoekbalk netjes in het midden', 'Lange titels blijven leesbaar', 'PC: Esc sluit kaart en vensters', 'PC: muis op kaart toont hem groot', 'PC: nettere Collectie en +-knop'] },
   { v: '1.75', d: '2026-11-05',
     en: ['Compacter search bars', 'Less text in recommendations'],
     nl: ['Compactere zoekbalken', 'Minder tekst bij aanbevelingen'] },
@@ -16003,12 +16066,34 @@ function bridge60Html(d){
     </div>
     <div id="decklistBox">${categorizedListHtml(d)}</div>`;
 }
+/* 1.77 PC: beside the commander, the deck at a glance -- count, lands,
+   average mana value and a small curve that opens Stats */
+function deskDeckSumHtml(d){
+  try{
+    const all = deckLeaders(d).concat(d.cards || []);
+    const q = (c)=>c.qty || 1;
+    const isLandF = (c)=>/\bLand\b/.test(frontFace(c).type_line || '');
+    const total = all.reduce((a,c)=>a + q(c), 0);
+    const lands = all.filter(isLandF).reduce((a,c)=>a + q(c), 0);
+    const pool = all.filter(c=>!isLandF(c));
+    const avg = pool.length ? pool.reduce((a,c)=>a + (c.cmc || 0), 0) / pool.length : 0;
+    const bins = [0,0,0,0,0,0,0];
+    (d.cards || []).forEach(c=>{ if(countsForCurve(c)) bins[Math.min(Math.round(c.cmc || 0), 6)] += q(c); });
+    const mx = Math.max(1, ...bins);
+    const NL = appLang() === 'nl';
+    return `<div class="dl-sum">
+      <div class="dl-sum-line"><span><b>${total}</b> ${NL ? 'kaarten' : 'cards'}</span><span><b>${lands}</b> lands</span><span>${NL ? 'Gem. MV' : 'Avg MV'} <b>${avg.toFixed(2)}</b></span></div>
+      <button type="button" class="dl-sum-curve" id="dlSumCurve" title="${NL ? 'Open Stats' : 'Open Stats'}">${bins.map((n,i)=>`<span><i style="height:${Math.round(n / mx * 44)}px"></i>${i === 6 ? '6+' : i}</span>`).join('')}</button>
+    </div>`;
+  }catch(e){ return ''; }
+}
 function listTabHtml(d){
   if(deckIsConstructed(d)) return bridge60Html(d);
   return `<div class="dl-bridge">
       <div class="dl-bridge-adm">${leaderZoneHtml(d)}<div class="dl-leader-cat">${leaderNoun(deckFormat(d), deckLeaders(d).length > 1)}</div></div>
       <div class="dl-bridge-desc">
         ${deckKind(d) === 'cmdr' ? `<div class="dl-bracket" id="dlBracket" title="Estimate from Game Changers and 2-card combos">⚔ Bracket ~${bracketEstimate(d, null).b} · ${bracketEstimate(d, null).gc} GC</div>` : ''}
+        ${deskDeckSumHtml(d)}
         <div class="dl-desc-text">${d.description
           ? escapeHtml(d.description).replace(/\n/g, '<br>')
           : `<span class="hint" style="margin:0;">${trS('No description yet — write one on the Deck Log page.')}</span><button class="icon-btn dl-mini-add" id="descAddBtn" title="${escapeHtml(trS('A few lines about this deck — shown on the Decklist page.'))}">${ICONS.plus}</button>`}</div>
@@ -20501,6 +20586,7 @@ function closeDeckPickPopup(){ document.getElementById('deckPickScrim')?.remove(
 function pinSheetToFoot(root){
   const m = root.querySelector('.overlay-inner > main') || root.querySelector('main');
   if(!m) return;
+  if(isDesk()){ requestAnimationFrame(()=>{ try{ m.scrollTop = 0; }catch(e){} }); return; }   // 1.77: a PC reads from the top
   let userMoved = false, done = false;
   const release = ()=>{ userMoved = true; };
   m.addEventListener('touchstart', release, {passive:true, once:true});
@@ -27448,7 +27534,7 @@ function renderColorBrowse(box, key, cmd, keepScroll){
   if(!keepScroll){
     // 1.2: straight to the foot in this very frame -- waiting for the next
     // frames flashed the top of the list first
-    try{ const se = document.scrollingElement || document.documentElement; se.scrollTop = se.scrollHeight; }catch(e){}
+    if(!isDesk()) try{ const se = document.scrollingElement || document.documentElement; se.scrollTop = se.scrollHeight; }catch(e){}   // 1.77: a PC stays at the top
     scrollToPageFoot();
   }
 }
@@ -30013,7 +30099,7 @@ function aboutHtml(){
     ['Geen account, niemand die meekijkt', 'je hoeft niets aan te maken, en Deckhand houdt niet bij wat je doet.'],
     ['Jouw data is van jou', 'je decks en collectie staan op je eigen telefoon. Eén back-upbestand naar je eigen cloud, en je decks exporteer je naar elke andere app.'],
     ['Werkt offline', 'de kaartendatabase staat op je telefoon: aan de keukentafel, in de winkel, in de trein.'],
-    ['Gemaakt voor één hand', 'elke knop zit onderin, binnen bereik van je duim. De rest van het scherm is voor je kaarten.'],
+    isDesk() ? ['Gemaakt voor telefoon én pc', 'op de telefoon zit elke knop onderin, binnen bereik van je duim; op de pc leest hij als een webpagina, met muis en sneltoetsen (druk op ?).'] : ['Gemaakt voor één hand', 'elke knop zit onderin, binnen bereik van je duim. De rest van het scherm is voor je kaarten.'],
     ['Zuinig op de community', 'kaartdata van Scryfall, thema’s van EDHREC: altijd met naam genoemd, en nooit vaker gevraagd dan nodig.'],
     ['Door Magic-spelers, voor Magic-spelers', 'gebouwd uit wat we aan onze eigen tafels misten. Ideeën zijn welkom.']
   ] : [
@@ -30024,7 +30110,7 @@ function aboutHtml(){
     ['No account, nobody watching', 'there is nothing to sign up for, and Deckhand does not track what you do.'],
     ['Your data is yours', 'your decks and collection live on your own phone. One backup file to your own cloud, and your decks export to any other app.'],
     ['Works offline', 'the card database lives on your phone: at the kitchen table, in the store, on the train.'],
-    ['Made for one hand', 'every button sits at the bottom, within reach of your thumb. The rest of the screen is for your cards.'],
+    isDesk() ? ['Made for phone and PC', 'on the phone every button sits at the bottom, within reach of your thumb; on a PC it reads like a web page, with mouse and shortcuts (press ?).'] : ['Made for one hand', 'every button sits at the bottom, within reach of your thumb. The rest of the screen is for your cards.'],
     ['Kind to the community', 'card data from Scryfall, themes from EDHREC: always credited, and never asked more often than needed.'],
     ['By Magic players, for Magic players', 'built from what we missed at our own tables. Ideas are welcome.']
   ];
@@ -30091,10 +30177,28 @@ function xtPlace(body){
   body.style.left = Math.round(left) + 'px';
   body.style.width = Math.round(right - left) + 'px';
   if(isDesk()){
-    body.style.top = Math.round(topLim + gap) + 'px';
+    // 1.77: one centred window, as wide as reads well, with a close button
+    const w = Math.min(720, Math.round(right - left));
+    body.style.width = w + 'px';
+    body.style.left = Math.round((window.innerWidth - w) / 2) + 'px';
     body.style.bottom = 'auto';
-    body.style.maxHeight = Math.max(160, Math.round(window.innerHeight - topLim - 2 * gap)) + 'px';
+    const maxH = Math.max(160, Math.round(window.innerHeight - topLim - 4 * gap));
+    body.style.maxHeight = maxH + 'px';
+    body.style.top = Math.round(topLim + gap) + 'px';
+    const h = Math.min(body.offsetHeight || maxH, maxH);
+    body.style.top = Math.round(Math.max(topLim + gap, (window.innerHeight - h) / 2)) + 'px';
     body.dataset.side = 'down';
+    let x = main.querySelector(':scope > .xt-x');
+    if(!x){
+      x = document.createElement('button');
+      x.type = 'button'; x.className = 'xt-x'; x.textContent = '\u2715';
+      x.title = appLang() === 'nl' ? 'Sluiten' : 'Close';
+      x.addEventListener('click', (e)=>{ e.stopPropagation(); xtCloseAll(); });
+      main.appendChild(x);
+    }
+    const br = body.getBoundingClientRect();
+    x.style.top = Math.round(br.top + 7) + 'px';
+    x.style.left = Math.round(br.right - 34 - 9) + 'px';
     return;
   }
   body.style.top = 'auto';
@@ -30117,7 +30221,7 @@ function xtSync(){
     return;
   }
   let scrim = main.querySelector(':scope > .xt-scrim');
-  if(!open.length){ if(scrim) scrim.remove(); return; }
+  if(!open.length){ if(scrim) scrim.remove(); main.querySelector(':scope > .xt-x')?.remove(); return; }
   if(!scrim){
     scrim = document.createElement('div');
     scrim.className = 'xt-scrim';
@@ -30217,6 +30321,7 @@ function settingsPageHtml(){
     ${browser && /Android/i.test(navigator.userAgent) ? `<div class="settings-section" id="apkRow">${tile('apkBtn', ICONS.phone, T('Android-app', 'Android app'), '<div class="l2" id="apkNote"></div>')}</div>` : ''}
     ${((browser ? 1 : 0) + (browser && /Android/i.test(navigator.userAgent) ? 1 : 0)) % 2 === 1 ? '<div class="xt-spacer" aria-hidden="true"></div>' : ''}
     <div class="settings-section xt-note" id="appFootCell">
+    <button type="button" class="xt-mini" id="kbHelpBtn">⌨ ${T('Sneltoetsen', 'Shortcuts')}</button>
     <p class="hint" id="appFootNote" style="text-align:center;line-height:1.45;font-size:11px;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
       ${CHANGELOG_HISTORY.length ? `<button type="button" class="xt-mini" id="changelogBtn">${inlIco('spark', 14)}${T('Wat is nieuw', 'What\u2019s new')}</button>
       <div id="changelogBody" class="acc-down xt-body cl-month" data-xt-title="${T('Wat is nieuw', 'What\u2019s new')}" hidden></div>` : ''}
@@ -33699,6 +33804,26 @@ function renderModal(){
   if(!state.modal){ if(el) el.remove(); return; }
   if(!el){ el=document.createElement('div'); el.id='modalRoot'; document.body.appendChild(el); }
   const m = state.modal;
+  if(m.type==='keys'){   // 1.77
+    const NL = appLang() === 'nl';
+    const rows = NL ? [
+      ['/', 'Naar het zoekveld van de pagina'], ['Esc', 'Sluit de kaart, het venster of de dialoog'], ['\u2190 \u2192', 'Vorige / volgende kaart op een kaartpagina'],
+      ['Ctrl+Z', 'Laatste wijziging in het deck ongedaan maken'], ['Ctrl+V', 'Plak een decklijst om hem te importeren'], ['Shift+klik', 'Een reeks kaarten selecteren'],
+      ['Rechtsklik', 'Snel kaartmenu op een kaart'], ['Muis op kaart', 'In de decklijst: de kaart groot zien'], ['?', 'Dit overzicht']
+    ] : [
+      ['/', 'Jump to the page\u2019s search field'], ['Esc', 'Close the card, window or dialog'], ['\u2190 \u2192', 'Previous / next card on a card page'],
+      ['Ctrl+Z', 'Undo the last change to the deck'], ['Ctrl+V', 'Paste a deck list to import it'], ['Shift+click', 'Select a range of cards'],
+      ['Right-click', 'Quick card menu on a card'], ['Mouse on card', 'In the decklist: see the card big'], ['?', 'This overview']
+    ];
+    el.innerHTML = `<div class="modal-backdrop" id="mbd"><div class="modal-sheet" style="max-width:520px;">
+      <h3>${NL ? 'Sneltoetsen' : 'Keyboard shortcuts'}</h3>
+      <div class="kb-list">${rows.map(r=>`<kbd>${r[0]}</kbd><span>${r[1]}</span>`).join('')}</div>
+      <div class="modal-actions"><button class="confirm" id="kbClose">${NL ? 'Sluiten' : 'Close'}</button></div>
+    </div></div>`;
+    el.querySelector('#kbClose').addEventListener('click', closeModal);
+    el.querySelector('#mbd').addEventListener('click', (ev)=>{ if(ev.target.id === 'mbd') closeModal(); });
+    return;
+  }
   if(m.type==='lifeSetup'){
     // The old "how many players?" grew into a table-layout picker: every
     // arrangement is drawn as a mini table with a rotated 40 in each seat,
@@ -34692,14 +34817,55 @@ function deskAddCross(n){
   }, true);
 })();
 
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest || !e.target.closest('#dlSumCurve')) return;
+  state.builderTab = 'stats'; state.dlPanel = null; render();
+  try{ window.scrollTo(0, 0); }catch(err){}
+});
+/* 1.77 Keyboard: Ctrl+Z (Cmd+Z) takes back the newest deck change on the
+   deck page -- the same undo the History list offers. In a text field the
+   field's own undo runs. */
+let _zSkip = new Set();
+document.addEventListener('keydown', (e)=>{
+  if(!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || String(e.key).toLowerCase() !== 'z') return;
+  const t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+  if(state.screen !== 'decklist' || state.modal || (state.overlayStack && state.overlayStack.length)) return;
+  const d = getDeck(state.activeDeckId);
+  if(!d) return;
+  const log = ensureChangelog(d);
+  const e0 = log.find(x=>!x.undone && !_zSkip.has(x.id) && histActionFor(x));
+  e.preventDefault();
+  if(!e0){ toast(appLang() === 'nl' ? 'Niets meer om ongedaan te maken.' : 'Nothing left to undo.'); return; }
+  const top0 = log[0] && log[0].id;
+  const ok = applyHistAction(d, e0.id);
+  _zSkip.add(e0.id);
+  if(ok){ e0.undone = true; if(log[0] && log[0].id !== top0){ _zSkip.add(log[0].id); log[0].viaUndo = true; } scheduleSave(d); }
+  render();
+});
+/* 1.77 Keyboard: '?' shows every shortcut */
+function openKeysHelp(){ state.modal = { type: 'keys' }; renderModal(); }
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+  e.preventDefault();
+  if(state.modal && state.modal.type === 'keys') closeModal(); else openKeysHelp();
+});
+document.addEventListener('click', (e)=>{ if(e.target.closest && e.target.closest('#kbHelpBtn')){ e.stopPropagation(); openKeysHelp(); } });
 /* 1.76 Keyboard: Esc closes what lies on top -- a dialog first, then the
    card page or another overlay. In a field it only lets go of the field. */
 document.addEventListener('keydown', (e)=>{
-  if(e.key !== 'Escape' || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.key !== 'Escape' || e.ctrlKey || e.metaKey || e.altKey) return;
+  // 1.77: on a PC Esc never walks back a page or asks to leave the app --
+  // that is the Android back button's job (Chrome hands Esc to it)
+  if(isDesk()) e.preventDefault();
+  if(e.defaultPrevented && !isDesk()) return;
   const t = e.target;
   if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)){ try{ t.blur(); }catch(_){} return; }
   if(document.getElementById('nselPop')) return;   // its own Esc
   if(state.modal){ e.preventDefault(); closeModal(); return; }
+  if(document.querySelector('main.xt-tiles .xt-body:not([hidden])')){ e.preventDefault(); xtCloseAll(); return; }   // 1.77: an Extras window
   if(state.overlayStack && state.overlayStack.length){ e.preventDefault(); closeTopOverlay(); }
 });
 /* Keyboard: '/' jumps to the search field of the page (Search when the page
