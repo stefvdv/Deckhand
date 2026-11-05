@@ -1667,6 +1667,11 @@ img.art-missing::after{
 .sr-grid > .status{flex:1 1 100%;}
 /* 1.71: on a phone, card lists use the screen: 6px at the sides and between */
 html:not(.desk) main:has(.sr-grid, .visual-grid, .deck-grid, .sc-grid){padding-left:6px !important;padding-right:6px !important;}
+/* 1.76: ...and the bar at the foot then reaches out only those 6px -- it
+   reached out 16, so the field sat 6px from the left edge and the gold +
+   16px from the right */
+html:not(.desk) .app > main:has(.sr-grid, .visual-grid, .deck-grid, .sc-grid) > .searchbar,
+html:not(.desk) .app > main:has(.sr-grid, .visual-grid, .deck-grid, .sc-grid) > div:has(> #deckFilter){margin-left:-6px !important;margin-right:-6px !important;}
 html:not(.desk) .sr-grid, html:not(.desk) .deck-grid, html:not(.desk) .visual-grid:not(.vg-stack):not(.vg-text){gap:6px;}
 html:not(.desk) .sr-grid > *, html:not(.desk) .deck-grid > *, html:not(.desk) .visual-grid:not(.vg-stack):not(.vg-text) > *{flex-basis:calc(50% - 3px);}
 html:not(.desk) .deck-grid[style*="grid-template-columns:1fr"] > *{flex-basis:100%;}
@@ -3267,6 +3272,12 @@ html.desk .app > main:has(> #advSlot > .adv-panel), html.desk .app > main:has(> 
 /* the gold + sits top-left, at the start of the search bar */
 html.desk .deck-fab:not(.col-sel-fab):not(.dl-empty-plus){position:fixed;top:calc(var(--top-h) + 6px);left:calc(var(--dl) + 10px);right:auto;bottom:auto;width:46px;height:46px;font-size:22px;z-index:42;}
 html.desk .app > main:has(> .deck-fab:not(.col-sel-fab):not(.dl-empty-plus)) > .searchbar{padding-left:70px !important;}
+/* 1.76 desk: on Collection every heading stands ABOVE its tiles (the phone
+   writes tiles-then-heading for its bottom-up column) */
+html.desk .app > main:has(> #colAdvBox) > .section-label:has(+ .deck-grid){order:1 !important;}
+html.desk .app > main:has(> #colAdvBox) > .deck-grid:has(+ .section-label + .deck-grid){order:2 !important;}
+html.desk .app > main:has(> #colAdvBox) > .section-label:not(:has(+ .deck-grid)){order:3 !important;}
+html.desk .app > main:has(> #colAdvBox) > .deck-grid:not(:has(+ .section-label + .deck-grid)){order:4 !important;}
 html.desk .deck-dock .dk-mid:has(.dk-type){justify-content:flex-end;gap:14px;}
 html.desk #builderBody{min-height:0;justify-content:flex-start;}
 html.desk .dl-bridge-desc{justify-content:flex-start;}
@@ -4489,8 +4500,15 @@ function fitTitleText(el){
     };
     let size = base;
     if(!fitsAt(size, 1)){
-      const lines = two ? 2 : 1;
+      let lines = two ? 2 : 1;
       while(size > 7 && !fitsAt(size, lines)) size -= 0.5;
+      // 1.76: a two-line title that would shrink below 12px takes a third
+      // line instead (three lines of 12px still fit the 44px bar)
+      if(two && size < 12){
+        let s3 = Math.min(base, 12);
+        while(s3 > 7 && !fitsAt(s3, 3)) s3 -= 0.5;
+        if(s3 > size){ size = s3; lines = 3; }
+      }
       fitsAt(size, lines);
     }
     if(_fitCache.size > 400) _fitCache.clear();            // deck names come and go; never grow without bound
@@ -4530,7 +4548,7 @@ function fitCapRoom(cap){
       else if(r.left >= mid) Rr = Math.min(Rr, r.left - 12);
     });
     const room = Math.max(80, Math.floor(2 * Math.min(mid - L, Rr - mid)));
-    if(t.style.maxWidth !== room + 'px'){ t.style.maxWidth = room + 'px'; delete t.dataset.fitKey; }
+    if(t.style.maxWidth !== room + 'px'){ t.style.maxWidth = room + 'px'; delete t.dataset.fitKey; if(t.id === 'brandTitle') requestAnimationFrame(()=>{ try{ fitBrandTitle(); }catch(e){} }); }   // 1.76: the page title re-measures too
   }catch(e){}
 }
 /* Typing fields never autocorrect: a card name, a deck name, a filter --
@@ -7859,15 +7877,21 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.75';
+const APP_VERSION = '1.76';
 const CHANGELOG_NOTES = {
   en: [
-    'Compacter search bars',
-    'Less text in recommendations'
+    'Search bar centred on every phone',
+    'Long titles stay readable',
+    'PC: Esc closes card and windows',
+    'PC: mouse over a card shows it whole',
+    'PC: tidier Collection and + button'
   ],
   nl: [
-    'Compactere zoekbalken',
-    'Minder tekst bij aanbevelingen'
+    'Zoekbalk netjes in het midden',
+    'Lange titels blijven leesbaar',
+    'PC: Esc sluit kaart en vensters',
+    'PC: muis op kaart toont hem groot',
+    'PC: nettere Collectie en +-knop'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7877,6 +7901,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-05';
 const CHANGELOG_HISTORY = [
+  { v: '1.75', d: '2026-11-05',
+    en: ['Compacter search bars', 'Less text in recommendations'],
+    nl: ['Compactere zoekbalken', 'Minder tekst bij aanbevelingen'] },
   { v: '1.74', d: '2026-11-05',
     en: ['No error in sandboxed preview windows'],
     nl: ['Geen foutmelding in voorbeeldvensters'] },
@@ -9964,13 +9991,16 @@ function fitBrandTitle(){
       if(measure(t, size) <= avail) cur = t;
       else { lines++; cur = w0; }
     }
-    if(lines <= maxLines) break;
+    // 1.76: below 12px a two-line title may take a third line instead of
+    // shrinking further (three lines of 12px fit the 44px bar)
+    if(lines <= ((maxLines === 2 && size <= 12) ? 3 : maxLines)) break;
   }
   // A one- or two-word title on a phone can never truly need single digits
   // — if the measurer says so, it was measuring the wrong font or a
   // half-laid-out box. Floor it.
   if(words.length <= 2 && text.length <= 16) size = Math.max(size, 15);
   box.style.fontSize = size + 'px';
+  if(maxLines === 2){ box.style.webkitLineClamp = size <= 12 ? '3' : ''; box.style.maxHeight = size <= 12 ? 'none' : ''; }   // 1.76
   state._brandSize = size + 'px';
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>fitBrandTitle());
@@ -24125,6 +24155,18 @@ function updStickB(){
   if(mx && Math.abs(mx - _stickB) > 0.5){ _stickB = mx; document.documentElement.style.setProperty('--stick-b', Math.round(mx) + 'px'); }
 }
 /* ...and the jump burger rides inside the label bar nearest the foot */
+/* 1.76 desk: the gold + sits in the middle of the search bar's height --
+   the bar rests lower than where it sticks, so the spot is measured */
+function deskFabAlign(){
+  if(!isDesk()) return;
+  const fab = Array.from(document.querySelectorAll('.app > main > .deck-fab:not(.col-sel-fab):not(.dl-empty-plus)')).find(f=>f.offsetHeight);
+  const bar = document.querySelector('.app > main > .searchbar');
+  if(!fab || !bar || !bar.offsetHeight) return;
+  const r = bar.getBoundingClientRect();
+  const bb = parseFloat(getComputedStyle(bar).borderBottomWidth) || 0;
+  const top = Math.round(r.top + (r.height - bb - fab.offsetHeight) / 2);
+  if(fab.style.top !== top + 'px') fab.style.top = top + 'px';
+}
 function placeJumpOnLabels(){
   document.querySelectorAll('.edh-jump-row').forEach(row=>{
     if(!row.offsetHeight || getComputedStyle(row).position !== 'fixed') return;
@@ -24143,11 +24185,12 @@ function placeJumpOnLabels(){
     const jh = row.offsetHeight || 30;
     row.style.transition = 'none';
     row.style.bottom = Math.round(window.innerHeight - best.bottom + (best.height - jh) / 2) + 'px';
+    if(isDesk()) row.style.right = Math.max(8, Math.round(window.innerWidth - best.right + 6)) + 'px';   // 1.76: inside the page, at the heading's end
   });
 }
 {
   let _sbRaf = 0;
-  const tick = ()=>{ if(_sbRaf) return; _sbRaf = requestAnimationFrame(()=>{ _sbRaf = 0; try{ updStickB(); placeJumpOnLabels(); }catch(e){} }); };
+  const tick = ()=>{ if(_sbRaf) return; _sbRaf = requestAnimationFrame(()=>{ _sbRaf = 0; try{ updStickB(); placeJumpOnLabels(); }catch(e){} try{ deskFabAlign(); }catch(e){} }); };
   window.addEventListener('resize', tick);
   document.addEventListener('scroll', tick, { capture: true, passive: true });
   try{ new MutationObserver(tick).observe(document.documentElement, { childList: true, subtree: true }); }catch(e){}
@@ -34423,6 +34466,39 @@ document.addEventListener('keydown', (e)=>{
   e.preventDefault();
   b.click();
 });
+/* 1.76 PC: in the stacked and text decklist the cards hide behind each
+   other -- resting the mouse on one shows it whole beside the pointer. */
+(function(){
+  let box = null, timer = 0, cur = null;
+  const SEL = '.vg-stack > .vg-card, .vg-text .vg-card, .hr-thumb[data-himg]';
+  const srcOf = (el)=>{ const h = el.matches('[data-himg]') ? el : el.querySelector('[data-himg]'); return h ? h.dataset.himg : ((el.querySelector('img') || {}).src || ''); };
+  const place = (x, y)=>{
+    const w = Math.round(Math.min(300, Math.max(200, innerWidth * 0.2))), h = Math.round(w * 88 / 63);
+    let L = x + 26; if(L + w > innerWidth - 8) L = x - 26 - w;
+    const T = Math.round(Math.min(Math.max(8, y - h / 2), innerHeight - h - 8));
+    box.style.cssText = `display:block;width:${w}px;height:${h}px;left:${Math.max(8, L)}px;top:${T}px;`;
+  };
+  const hide = ()=>{ clearTimeout(timer); cur = null; if(box) box.style.display = 'none'; };
+  document.addEventListener('pointermove', (e)=>{
+    if(e.pointerType !== 'mouse' || !isDesk()) return;
+    const el = e.target.closest && e.target.closest(SEL);
+    if(!el || el.closest('.overlay.cs-pop')){ if(cur) hide(); return; }
+    if(el !== cur){
+      hide(); cur = el;
+      const x = e.clientX, y = e.clientY;
+      timer = setTimeout(()=>{
+        if(cur !== el || !el.isConnected) return;
+        const src = srcOf(el); if(!src) return;
+        if(!box){ box = document.createElement('div'); box.id = 'hoverPrevBox'; box.innerHTML = '<img alt="">'; document.body.appendChild(box); }
+        if(box.firstChild.getAttribute('src') !== src) box.firstChild.setAttribute('src', src);
+        place(x, y);
+      }, 220);
+    } else if(box && box.style.display === 'block') place(e.clientX, e.clientY);
+  }, { passive: true });
+  ['pointerdown', 'wheel', 'keydown'].forEach(ev=>document.addEventListener(ev, hide, { passive: true, capture: true }));
+  document.addEventListener('scroll', hide, { passive: true, capture: true });
+  document.addEventListener('mouseleave', hide);
+})();
 /* ===== 1.26 PC: right-click card popup, shift-click, '/' and Ctrl+V ===== */
 function pcFinePointer(){ try{ return window.matchMedia('(hover: hover) and (pointer: fine)').matches; }catch(e){ return false; } }
 function cardImgShape(el){
@@ -34616,6 +34692,16 @@ function deskAddCross(n){
   }, true);
 })();
 
+/* 1.76 Keyboard: Esc closes what lies on top -- a dialog first, then the
+   card page or another overlay. In a field it only lets go of the field. */
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape' || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)){ try{ t.blur(); }catch(_){} return; }
+  if(document.getElementById('nselPop')) return;   // its own Esc
+  if(state.modal){ e.preventDefault(); closeModal(); return; }
+  if(state.overlayStack && state.overlayStack.length){ e.preventDefault(); closeTopOverlay(); }
+});
 /* Keyboard: '/' jumps to the search field of the page (Search when the page
    has none). Typing in a field is left alone. */
 document.addEventListener('keydown', (e)=>{
