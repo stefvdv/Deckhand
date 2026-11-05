@@ -184,8 +184,11 @@ button,input,select,textarea,.sr-tile,.vg-card,.tap-zone,.dmg-overlay,.chip{touc
 /* overscroll-behavior-y on BOTH: Chrome grants pull-to-refresh based on the
    root scroller (html) — the old body-only guard never applied, so a swipe
    down from the top reloaded the whole app. `none` also kills the glow. */
-/* 1.71: scrolling past an end shows nothing -- no Android stretch or glow */
-*{overscroll-behavior:none !important;}
+/* 1.71/1.73: scrolling past an end shows nothing -- no Android stretch or
+   glow. ONLY on the real scrollers: on every element it also hit the cards
+   (overflow:hidden makes a box a scroll container to Chrome), and a swipe
+   that started on a card was then never handed on to the page. */
+html, body, main, .overlay main, #crBody{overscroll-behavior:none !important;}
 html,body{margin:0;padding:0;height:100%;background:var(--ink);overflow-x:clip;max-width:100%;overscroll-behavior-y:none;overflow-anchor:none;}   /* clip, not hidden: hidden silently kills position:sticky. overflow-anchor off: the app runs its OWN scroll anchoring for streamed grids -- the browser's native one corrected the same inserts a second time, which was the scroll jolt. */
 body{
   font-family:'Inter',sans-serif; color:var(--ink-text);
@@ -7856,17 +7859,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.72';
+const APP_VERSION = '1.73';
 const CHANGELOG_NOTES = {
   en: [
-    'Group name stays in view at the foot',
-    'Jump menu sits in the group bar',
-    'More compact bars'
+    'Scrolling from the cards works again'
   ],
   nl: [
-    'Groepsnaam blijft onderaan in beeld',
-    'Springmenu zit in de groepsbalk',
-    'Compactere balken'
+    'Scrollen vanaf de kaarten werkt weer'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7876,6 +7875,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-05';
 const CHANGELOG_HISTORY = [
+  { v: '1.72', d: '2026-11-05',
+    en: ['Group name stays in view at the foot', 'Jump menu sits in the group bar', 'More compact bars'],
+    nl: ['Groepsnaam blijft onderaan in beeld', 'Springmenu zit in de groepsbalk', 'Compactere balken'] },
   { v: '1.71', d: '2026-11-05',
     en: ['Bigger cards in every card list', 'No bounce at the end of a page', 'Similar & Recs: less text'],
     nl: ['Grotere kaarten in elke kaartlijst', 'Geen stuiter aan het eind van een pagina', 'Vergelijkbaar & Aanbevolen: minder tekst'] },
