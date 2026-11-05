@@ -329,11 +329,11 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > div:has(> #deckFilter){
   order:100;position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:36;
   background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);
-  margin:8px -16px 0 !important;padding:10px 16px;
+  margin:8px -16px 0 !important;padding:7px 16px;   /* 1.75: 10 -> 7, as compact as the nav */
 }
 .app > main > .adv-toggle,
 .app > main > div:has(> #colAdvToggle){
-  order:99;position:sticky;bottom:calc(var(--nav-h) + 64px + env(safe-area-inset-bottom));z-index:36;
+  order:99;position:sticky;bottom:calc(var(--nav-h) + 58px + env(safe-area-inset-bottom));z-index:36;
   background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 97%, transparent), color-mix(in srgb, var(--ink) 92%, transparent));backdrop-filter:blur(8px);border-top:2px solid var(--line);
   margin:0 -16px !important;padding:8px 16px;
 }
@@ -347,7 +347,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main > #advSlot > .adv-panel,
 .app > main > #colAdvBox{
   order:98;position:fixed;left:0;right:0;
-  bottom:calc(var(--nav-h) + 120px + env(safe-area-inset-bottom));
+  bottom:calc(var(--nav-h) + 114px + env(safe-area-inset-bottom));
   max-height:56vh;overflow-y:auto;z-index:37;
   display:flex;flex-direction:column-reverse;   /* flipped fields AND starts scrolled at the bottom */
   background:var(--panel);border-top:2px solid var(--line);
@@ -364,7 +364,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .adv-go{pointer-events:auto;flex:none;width:46px;height:46px;min-height:0;margin:0;padding:0;border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(var(--gold),var(--gold));color:#241A04;box-shadow:0 4px 14px rgba(0,0,0,0.5);cursor:pointer;}
 .adv-go svg{width:24px;height:24px;stroke-width:2.6;}
 /* The deck filter scrolls with the PAGE, whose foot is under the dock stack. */
-.df-compact > .adv-go-row{bottom:calc(var(--nav-h) + 122px + env(safe-area-inset-bottom));}
+.df-compact > .adv-go-row{bottom:calc(var(--nav-h) + 116px + env(safe-area-inset-bottom));}
 /* 1.35: while typing in a field the gold button stays in its own spot at
    the foot instead of floating over the labels above the keyboard */
 /* 1.37 (phone): the gold button floats at the foot again (Stef: floating
@@ -431,7 +431,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main:has(> #twResults){padding-bottom:calc(var(--nav-h) + 76px + env(safe-area-inset-bottom));}
 /* Bottom-up: the whole trade stack rides the foot cluster, hugging the bar. */
 .app > main:has(> #twResults) > .hint, .app > main:has(> #twResults) > .panel-card{order:98;}
-#tradeBarHost{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:90;background:var(--ink);border-top:2px solid var(--line);padding:8px 12px;}
+#tradeBarHost{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:90;background:var(--ink);border-top:2px solid var(--line);padding:7px 12px;}
 #tradeBarHost .searchbar{margin:0;display:flex;gap:8px;position:relative;}
 
 
@@ -441,7 +441,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    (spinner included), the hero steps aside and the cards get the room. */
 .app > main:has(> #browseResults:not(:empty)) > .browse-hero,
 .app > main:has(> #bsNameResults:not(:empty)) > .browse-hero{display:none;}
-.app > main:has(> .browse-selects){padding-bottom:calc(var(--nav-h) + 6px + env(safe-area-inset-bottom));}
+.app > main:has(> .browse-selects){padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
 /* Inspiration: the free room goes ABOVE the results, not between them and
    the pickers -- one found leader rests right on the selects (bottom-up).
    The page's pusher spacer moves to the very top for this page. */
@@ -462,12 +462,12 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main.home-page{justify-content:flex-end;padding-bottom:calc(var(--nav-h) - 14px + env(safe-area-inset-bottom));}
 /* (3/5) My Stuff: tight foot, FAB low, filter shortened clear of it,
    uniform section rhythm in the reversed column. */
-.app > main:has(> div > #deckFilter){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));gap:12px;}
+.app > main:has(> div > #deckFilter){padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));gap:12px;}
 .app > main:has(> div > #deckFilter) > div:has(> #deckFilter){order:0;padding-right:88px;}
 .app > main:has(> div > #deckFilter) > *:not(.searchbar){margin-top:0;margin-bottom:0;}
 /* (4) Collection reversed: automatic folders up top, binders by the thumb;
    controls stay at the very bottom; row shortened for the low FAB. */
-.app > main:has(> #colAdvBox){flex-direction:column-reverse;padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));}
+.app > main:has(> #colAdvBox){flex-direction:column-reverse;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
 .app > main:has(> #colAdvBox) > .searchbar{order:0;padding-right:88px;}
 .app > main:has(> #colAdvBox) > div:has(> #colAdvToggle){order:0;}
 /* (6) Search page: explainer just above the random card, RANDOM below it. */
@@ -483,7 +483,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    Direct children only -- on the reversed mains these live inside a wrapper
    and pack at the foot by themselves. */
 .app > main > .need-deck, .app > main > .empty-home{order:98;}
-.app > main:has(> #searchResultsBox){padding-bottom:calc(var(--nav-h) + 8px + env(safe-area-inset-bottom));}
+.app > main:has(> #searchResultsBox){padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
 #cotdBox{display:flex;flex-direction:column-reverse;align-items:center;gap:8px;}
 .searchbar > button{min-height:44px;box-sizing:border-box;}
 
@@ -1367,7 +1367,7 @@ body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 
 
 
-.deck-fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + 10px + env(safe-area-inset-bottom));z-index:41;width:54px;height:54px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:26px;font-weight:700;border:none;box-shadow:0 8px 22px rgba(0,0,0,0.45);cursor:pointer;}
+.deck-fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + 3px + env(safe-area-inset-bottom));z-index:41;width:54px;height:54px;border-radius:50%;background:var(--brass);color:#0A1A28;font-size:26px;font-weight:700;border:none;box-shadow:0 8px 22px rgba(0,0,0,0.45);cursor:pointer;}
 #fabMenu{position:fixed;right:16px;bottom:calc(var(--nav-h) + 74px + env(safe-area-inset-bottom));z-index:42;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;}
 #fabMenu button{background:none;border:none;color:var(--ink-text);padding:12px 18px;font-size:15px;text-align:left;cursor:pointer;border-bottom:2px solid var(--line);}
 #fabMenu button:last-child{border-bottom:none;}
@@ -7859,13 +7859,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.74';
+const APP_VERSION = '1.75';
 const CHANGELOG_NOTES = {
   en: [
-    'No error in sandboxed preview windows'
+    'Compacter search bars',
+    'Less text in recommendations'
   ],
   nl: [
-    'Geen foutmelding in voorbeeldvensters'
+    'Compactere zoekbalken',
+    'Minder tekst bij aanbevelingen'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7875,6 +7877,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-05';
 const CHANGELOG_HISTORY = [
+  { v: '1.74', d: '2026-11-05',
+    en: ['No error in sandboxed preview windows'],
+    nl: ['Geen foutmelding in voorbeeldvensters'] },
   { v: '1.73', d: '2026-11-05',
     en: ['Scrolling from the cards works again'],
     nl: ['Scrollen vanaf de kaarten werkt weer'] },
@@ -29479,7 +29484,7 @@ function renderRecoBody(){
     ? `<div class="reco-theme-banner">${escapeHtml(activeTheme.label)} — ${trS('theme recommendations')}</div>`
     : '';
   const hint = (R.edhrecSourced && !activeTheme)
-    ? `<p class="hint" style="text-align:center;margin:0 0 8px;">Most played with this ${fmtName()}, sorted on popularity.</p>`
+    ? ''   // 1.75: the explanation line is gone (Stef)
     : '';
   // The silent fallback was a mystery: EDHREC failing quietly meant no
   // dropdowns and no clue why. Say it plainly, and offer the road back.
