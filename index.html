@@ -7839,19 +7839,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.68';
+const APP_VERSION = '1.70';
 const CHANGELOG_NOTES = {
   en: [
-    'Now called Build from collection',
-    'Stand-ins via Similar + played-with',
-    'Sell list menu icon fixed',
-    'Clear-x also clears advanced filters'
+    'Swiping cards leaves no stuck copy'
   ],
   nl: [
-    'Heet nu Bouwen uit collectie',
-    'Vervangers: Vergelijkbaar + samen',
-    'Icoon Verkooplijst in menu hersteld',
-    'Wis-kruisje wist ook filters'
+    'Swipen tussen kaarten laat niets hangen'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7859,8 +7853,14 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-04';
+const APP_DATE = '2026-11-05';
 const CHANGELOG_HISTORY = [
+  { v: '1.69', d: '2026-11-05',
+    en: ['Find in deck also searches card text'],
+    nl: ['Zoek in deck zoekt ook in kaarttekst'] },
+  { v: '1.68', d: '2026-11-04',
+    en: ['Now called Build from collection', 'Stand-ins via Similar + played-with', 'Sell list menu icon fixed', 'Clear-x also clears advanced filters'],
+    nl: ['Heet nu Bouwen uit collectie', 'Vervangers: Vergelijkbaar + samen', 'Icoon Verkooplijst in menu hersteld', 'Wis-kruisje wist ook filters'] },
   { v: '1.67', d: '2026-11-04',
     en: ['What can I build: colour tiles', 'Stand-ins match type, cost and role', 'Tap any card for its card page', 'Your own printings shown', 'Commander at the foot of the page'],
     nl: ['Wat kan ik bouwen: kleurtegels', 'Vervangers: zelfde type, kost en rol', 'Tik een kaart voor de kaartpagina', 'Je eigen printings getoond', 'Commander onderaan de pagina'] },
@@ -16167,19 +16167,30 @@ function openAddCardsFor(d){
   state.searchFormat = deckFormat(d);   // search pre-filters on this deck's format
   switchPage('search');
 }
+/* 1.69: Find in deck matches the name OR the rules text (every face).
+   Curly apostrophes count as straight ones, so "opponent's" finds both. */
+function dlFindText(c){
+  if(!c) return '';
+  if(c._dlft) return c._dlft;
+  const faces = (c.card_faces && c.card_faces.length) ? c.card_faces : [];
+  const t = [c.name || '', c.oracle_text || ''].concat(faces.map(f=>(f.name || '') + ' ' + (f.oracle_text || ''))).join('\n').toLowerCase().replace(/[\u2018\u2019]/g, "'");
+  try{ Object.defineProperty(c, '_dlft', { value: t, enumerable: false, configurable: true, writable: true }); }catch(e){}
+  return t;
+}
+function dlFindMatch(c, q){ return !q || dlFindText(c).includes(q); }
 function categorizedListHtml(d){
   ensureMaybeboard(d);
   // Instant deck search from the dock: an active query narrows every group
   // to matching names — main and maybeboard alike — with REAL indexes kept
   // (tile actions keep pointing at the true deck slots), groups forced open
   // and empty ones hidden while the search is live.
-  const _dlq = (state.dlSearchQ || '').trim().toLowerCase();
+  const _dlq = (state.dlSearchQ || '').trim().toLowerCase().replace(/[\u2018\u2019]/g, "'");
   const _fPred = ((state.dlPanel === 'dsearch' || state.dlSearchOpen) && state.dlFilterOn) ? _deckFilterPredicate(d, state.dlFilter) : null;
   const _dlLive = !!(_dlq || _fPred);
   const _dlMain = (idxs)=> !_dlLive ? idxs : idxs.filter(i=>{
     const c = d.cards[i];
     if(!c) return false;
-    if(_dlq && !c.name.toLowerCase().includes(_dlq)) return false;
+    if(_dlq && !dlFindMatch(c, _dlq)) return false;
     if(_fPred && !_fPred(c)) return false;
     return true;
   });
@@ -16250,7 +16261,7 @@ function categorizedListHtml(d){
 
   if(d.maybeboard.length){
     let mIdxs = d.maybeboard.map((_,i)=>i).sort((a,b)=>d.maybeboard[a].name.localeCompare(d.maybeboard[b].name));
-    if(_dlq) mIdxs = mIdxs.filter(i=>d.maybeboard[i].name.toLowerCase().includes(_dlq));
+    if(_dlq) mIdxs = mIdxs.filter(i=>dlFindMatch(d.maybeboard[i], _dlq));
     if(mIdxs.length){
       if(!('Maybeboard' in state.collapsed)) state.collapsed['Maybeboard'] = true;   // closed until opened
       // A sideboard is part of the deck, not a pile of maybes: it starts open.
@@ -20695,6 +20706,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     const er = el.getBoundingClientRect();
     const clip = document.createElement('div');
     clip.className = 'swipe-clip';
+    clip._born = Date.now(); clip._g = G;   // 1.70: for the stuck-copy watchdog
     clip.style.cssText = `position:fixed;left:${er.left}px;top:${er.top}px;width:${er.width}px;height:${er.height}px;overflow:hidden;pointer-events:none;z-index:${z};`;
     wrap.style.cssText = `position:absolute;inset:auto;left:${r.left - er.left}px;top:${r.top - er.top}px;width:${r.width}px;height:${r.height}px;display:flex;flex-direction:column;background:none;pointer-events:none;will-change:transform;`;
     wrap.appendChild(inner);
@@ -20762,6 +20774,9 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     }, dur + 30);
   };
   const ts = (e)=>{
+    // 1.70: a copy built early by the last touch and never settled goes home
+    // first -- re-arming used to forget it, leaving it stuck on screen
+    if(!G.engaged && G.prep && G.prep.wrap){ const P0 = G.prep; G.prep = null; G.dx = 0; unFwd(); finishLive(P0, false); }
     if(e.touches.length !== 1){ G.armed = false; return; }
     if(G.engaged) return;                                  // a gesture already under way
     G.armed = true; G.engaged = false; G.dx = 0; G.prep = null; G.vs = []; G.t0 = performance.now();
@@ -20862,6 +20877,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     const P = G.prep;
     unFwd();
     if(G.engaged){ if(P && P.wrap) finishLive(P, false); else { curDx = G.dx; slideCommit(null); } }
+    else if(P && P.wrap) finishLive(P, false);   // 1.70: built early, then the system took the touch
     G.armed = false; G.engaged = false; G.prep = null;
   };
   el.addEventListener('touchstart', ts, {passive:true});
@@ -20880,6 +20896,18 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     });
   }, 250);
 }
+/* 1.70: a frozen swipe copy that no gesture holds any more, or that sits
+   over a sheet that is gone, never stays on screen. */
+function sweepSwipeClips(){
+  const now = Date.now();
+  document.querySelectorAll('body > .swipe-clip').forEach(c=>{
+    const held = c._g && c._g.prep && c._g.prep.clip === c;
+    const age = now - (c._born || 0);
+    const sheetGone = !document.querySelector('body > .overlay:not(.swipe-leaving)');
+    if(sheetGone || (!held && age > 1500) || age > 15000) c.remove();
+  });
+}
+setInterval(()=>{ try{ if(document.querySelector('body > .swipe-clip')) sweepSwipeClips(); }catch(e){} }, 1000);
 function openCardInfo(card, opts){
   if(!(opts && opts._replace) && zoomTake(card)) return;   // 1.28 desk: a click shows the card big
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
