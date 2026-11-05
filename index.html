@@ -7859,13 +7859,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.73';
+const APP_VERSION = '1.74';
 const CHANGELOG_NOTES = {
   en: [
-    'Scrolling from the cards works again'
+    'No error in sandboxed preview windows'
   ],
   nl: [
-    'Scrollen vanaf de kaarten werkt weer'
+    'Geen foutmelding in voorbeeldvensters'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7875,6 +7875,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-05';
 const CHANGELOG_HISTORY = [
+  { v: '1.73', d: '2026-11-05',
+    en: ['Scrolling from the cards works again'],
+    nl: ['Scrollen vanaf de kaarten werkt weer'] },
   { v: '1.72', d: '2026-11-05',
     en: ['Group name stays in view at the foot', 'Jump menu sits in the group bar', 'More compact bars'],
     nl: ['Groepsnaam blijft onderaan in beeld', 'Springmenu zit in de groepsbalk', 'Compactere balken'] },
@@ -30964,7 +30967,7 @@ function wireSettingsPage(){
     if(!await check('icon-192.png')) probs.push('icon-192.png MISSING from the site');
     if(!await check('icon-512.png')) probs.push('icon-512.png MISSING from the site');
     if(!await check('sw.js')) probs.push('sw.js MISSING from the site');
-    else if(navigator.serviceWorker && !(await navigator.serviceWorker.getRegistration())) probs.push('service worker not registered yet (reload once)');
+    else if(await (async()=>{ try{ return !!navigator.serviceWorker && !(await navigator.serviceWorker.getRegistration()); }catch(e){ return false; } })()) probs.push('service worker not registered yet (reload once)');
     const qDepth = _sfQ.hi.length + _sfQ.lo.length;
     if(qDepth) probs.push(`Scryfall queue: ${qDepth} request${qDepth===1?'':'s'} waiting${_sfWorking && Date.now()-_sfBeat>10000 ? ', pump quiet '+Math.round((Date.now()-_sfBeat)/1000)+'s (watchdog will clear it)' : ''}`);
     if(l2){
@@ -35527,7 +35530,11 @@ if('serviceWorker' in navigator && /^https:/.test(location.protocol)){
   // the old reload only produced the double startup (splash, home, splash
   // again). The new worker still activates silently and owns the next launch.
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').then(reg=>{
+    // 1.74: a sandboxed preview window (no same-origin) throws on merely
+    // READING navigator.serviceWorker -- skip quietly, the app runs without.
+    let swc = null; try{ swc = navigator.serviceWorker; }catch(e){}
+    if(!swc) return;
+    swc.register('sw.js').then(reg=>{
       const promote = w => { if(w) w.postMessage({type:'SKIP_WAITING'}); };
       try{ reg.update(); }catch(e){}
       if(reg.waiting && navigator.serviceWorker.controller) promote(reg.waiting);
