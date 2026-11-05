@@ -3303,18 +3303,21 @@ html.desk .deck-grid{justify-content:flex-start;}
 /* (1) everything you can click answers the mouse: a brass ring -- the
    border/outline changes, never the fill (colour law) */
 @media (hover:hover) and (pointer:fine){
-  html.desk :is(.sr-tile, .folder-tile, .col-tile, .sc-tile, .bld-tile):hover{outline:2px solid var(--brass);outline-offset:1px;}
-  html.desk .vg-card:not(.vg-row):hover{outline:2px solid var(--brass);outline-offset:-2px;}
-  html.desk :is(.dk-tool, #menuBtn, .ghost-btn, .primary-btn, .add-btn, .cselect-btn, .nsel-btn, .in-chev, .in-clear, .chip, .xt-mini, .cap-note, .dk-arr, .submenu-toggle, .info-i, .guild-opt, .llay, .lctr, .adv-go, .deck-fab, .reco-fab, .searchbar > button, .seg button, .modal-actions button, .builder-tabs button, .tag-chip, .tile-fav, .dfc-flip, .cs-pop-x, .undo-btn):not(:disabled):hover{outline:2px solid var(--brass);outline-offset:1px;}
-  html.desk :is(.xt-tile, .settings-row.xt-tile):hover{outline:2px solid var(--brass);outline-offset:-2px;}
-  html.desk :is(.cast-row, .hist-row, .ban-item, .cselect-opt, .otag-pop button, .menu-pop button, .tile-menu button):hover{color:var(--brass);}
+  html.desk :is(.sr-tile, .folder-tile, .col-tile, .sc-tile, .bld-tile):hover{outline:2px solid var(--ink-text);outline-offset:1px;}
+  html.desk .vg-card:not(.vg-row):hover{outline:2px solid var(--ink-text);outline-offset:-2px;}
+  html.desk :is(.dk-tool, .dk-type, #menuBtn, .ghost-btn, .primary-btn, .add-btn, .cselect-btn, .nsel-btn, .in-chev, .in-clear, .chip, .xt-mini, .cap-note, .dk-arr, .submenu-toggle, .info-i, .guild-opt, .llay, .lctr, .adv-go, .deck-fab, .reco-fab, .searchbar > button, .seg button, .modal-actions button, .builder-tabs button, .tag-chip, .tile-fav, .dfc-flip, .cs-pop-x, .undo-btn, .hist-more, .icon-btn):not(:disabled):hover{outline:2px solid var(--ink-text);outline-offset:1px;}
+  html.desk :is(.xt-tile, .settings-row.xt-tile, .art-tile):hover{outline:2px solid var(--ink-text);outline-offset:-2px;}
+  html.desk :is(.cast-row, .hist-row, .ban-item, .cselect-opt:not(.art-tile), .otag-pop button, .menu-pop button, .tile-menu button, .dk-add-opt):hover{outline:2px solid var(--ink-text);outline-offset:-2px;}
+  /* (1.78) the page buttons and Back: a ring, and the words stay readable */
+  html.desk .brand-banner :is(.banner-tab, #capBack, .ov-back):not(.active):hover{text-shadow:none;border-color:transparent;outline:2px solid var(--ink-text);outline-offset:1px;}
+  html.desk .brand-banner .banner-tab:not(.active):not(#capBack):not(.ov-back):hover{color:var(--sub-text);}
+  html.desk .brand-banner :is(#capBack, .ov-back):hover{color:var(--ink-text);}
 }
 /* (7) a big monitor gets more room for cards; reading pages stay at 1240 */
 html.desk{--dw: min(1560px, calc(100vw - 48px));}
 html.desk .app > main:is(.settings-main, .home-page),
 html.desk .app > main:has(> #twResults),
-html.desk .app > main:has(> .dr-wrap, > #draftMain),
-html.desk #builderBody:not(:has(#decklistBox)){max-width:1240px;width:100%;margin-left:auto;margin-right:auto;box-sizing:border-box;}
+html.desk .app > main:has(> .dr-wrap, > #draftMain){max-width:1240px;width:100%;margin-left:auto;margin-right:auto;box-sizing:border-box;}
 /* (5) Stats and Deck Log: two columns of panels side by side */
 html.desk #builderBody:not(:has(#decklistBox)):has(> .panel-card + .panel-card){display:block !important;columns:2;column-gap:16px;}
 html.desk #builderBody:not(:has(#decklistBox)) > .panel-card{break-inside:avoid;display:block;width:100%;margin:0 0 16px !important;box-sizing:border-box;}
@@ -3351,6 +3354,48 @@ html.desk .app > main.xt-tiles > .xt-spacer{display:none;}
 html.desk .xt-tile .seg-inline button{padding:7px 14px;font-size:13.5px;}
 /* the search field runs to the bar's end (the phone's room for the + is not needed here) */
 html.desk .app > main > .searchbar{padding-right:16px !important;}
+/* ===== 1.78 PC ===== */
+/* (C) the deck toolbar: type counts, the add field, the tools, Menu last */
+html.desk .deck-dock.dk-desk{justify-content:flex-start;gap:8px;}
+html.desk .deck-dock.dk-desk .dk-mid{flex:1 1 auto;display:flex;align-items:center;gap:8px;min-width:0;justify-content:flex-start;}
+html.desk .dk-desk .dk-types{display:flex;align-items:center;gap:4px;flex:0 0 auto;}
+html.desk .dk-desk .dk-type{display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 7px;font-size:16px;font-weight:700;background:none;border:none;color:var(--ink-text);cursor:pointer;border-radius:8px;}
+html.desk .dk-desk .dk-type svg{width:22px;height:22px;}
+html.desk .dk-desk .dk-add{position:relative;flex:1 1 220px;min-width:150px;max-width:340px;display:flex;align-items:center;}
+html.desk .dk-desk .dk-add input{flex:1 1 auto;min-width:0;height:36px;box-sizing:border-box;padding:0 44px 0 12px;font-size:14.5px;border-radius:8px;background:var(--field);border:1.5px solid var(--field-line);color:var(--ink-text);}
+html.desk .dk-desk .dk-add input:focus{outline:none;border-color:var(--ink-text);}
+html.desk .dk-desk .dk-add #dockAddCards{position:absolute;right:3px;top:3px;width:30px !important;height:30px !important;padding:0 !important;}
+html.desk .dk-desk .dk-add #dockAddCards::after{content:none !important;}
+html.desk .dk-desk .dk-add-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:90;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,0.55);display:flex;flex-direction:column;max-height:60vh;overflow-y:auto;min-width:280px;}
+html.desk .dk-desk .dk-add-opt{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--pop-line);color:var(--ink-text);padding:8px 12px;font-size:14px;cursor:pointer;}
+html.desk .dk-desk .dk-add-opt.on{outline:2px solid var(--ink-text);outline-offset:-2px;}
+html.desk .dk-desk .dk-add-opt:last-child{border-bottom:none;}
+html.desk .dk-desk .dock-search-wrap{flex:1 1 220px;max-width:340px;}
+html.desk .dk-desk #menuBtn{margin-left:auto;}
+@media (max-width: 1699px){
+  html.desk .dk-desk .dk-tool::after, html.desk .dk-desk #menuBtn::after{content:none;}
+  html.desk .dk-desk .dk-tool, html.desk .dk-desk #menuBtn{padding:0;width:36px;justify-content:center;}
+}
+/* (D) Stats and Deck Log use the full width of the bar above them; the
+   history runs in full (two columns of entries), the curve under it */
+html.desk #builderBody:not(:has(#decklistBox)):has(> .panel-card){max-width:none;}
+html.desk .hist-grid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:0 18px;}
+html.desk #builderBody:has(#curveDetail) > .panel-card:nth-child(2){break-after:column;}
+/* (F) picker tiles (Theme, Kindred, colours): squares, as many columns as fit */
+html.desk .cselect-panel.cs-artgrid{max-height:min(640px, 72vh);}
+html.desk .cs-artscroll{grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));grid-auto-rows:auto;}
+html.desk .cs-artgrid .cselect-opt.art-tile{height:auto;aspect-ratio:1 / 1;}
+/* (G) Log a game: a centred window as tall as its form */
+html.desk #logGameOverlay{align-items:center;}
+html.desk .glog-sheet{min-height:0;max-height:90vh;max-width:620px;border-radius:16px;justify-content:flex-start;padding:14px 18px 18px;}
+html.desk #logGameOverlay .cselect-panel{top:calc(100% + 4px) !important;bottom:auto !important;}
+/* (H) the budget line: a compact slider, not a screen-wide strip */
+html.desk #bgFloorRow{width:min(560px, calc(100% - 32px));align-self:center;margin:0 auto 14px;box-sizing:border-box;border:2px solid var(--line) !important;border-radius:12px;}
+/* (I) search bars: the field as wide as it needs, the buttons right after it */
+html.desk .app > main > .searchbar, html.desk #tradeBarHost .searchbar{justify-content:flex-start;}
+html.desk .app > main > .searchbar > input, html.desk .app > main > div:has(> #deckFilter) > input, html.desk #tradeBarHost .searchbar > input{flex:0 1 560px;}
+/* (A) the big card on a click: smaller, with its turn / flip button */
+#cardZoomBox .dfc-flip-box{z-index:5;}
 /* (12) the keyboard overview */
 .kb-list{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:center;margin:4px 0 14px;font-size:14px;}
 .kb-list kbd{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;padding:3px 8px;border:1.5px solid var(--sub-text);border-radius:6px;white-space:nowrap;justify-self:start;color:var(--ink-text);}
@@ -7935,23 +7980,23 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.77';
+const APP_VERSION = '1.78';
 const CHANGELOG_NOTES = {
   en: [
-    'PC: buttons and cards light up',
-    'PC: Ctrl+Z undoes, ? shows all keys',
-    'PC: deck at a glance by the commander',
-    'PC: Stats and Deck Log side by side',
-    'PC: filters in two columns',
-    'PC: Inspiration and Extras tidied'
+    'PC: add cards right from the deck bar',
+    'PC: zoomed card can turn and flip',
+    'PC: full history in Stats',
+    'PC: wider Stats and Deck Log',
+    'PC: square picker tiles',
+    'PC: tidier bars, slider, game log'
   ],
   nl: [
-    'PC: knoppen en kaarten lichten op',
-    'PC: Ctrl+Z, en ? toont alle toetsen',
-    'PC: deck in één oogopslag',
-    'PC: Stats en Deck Log naast elkaar',
-    'PC: filters in twee kolommen',
-    'PC: Inspiration en Extras netter'
+    'PC: kaarten toevoegen vanuit de balk',
+    'PC: zoomkaart kan draaien en flippen',
+    'PC: volledige geschiedenis in Stats',
+    'PC: bredere Stats en Deck Log',
+    'PC: vierkante keuzetegels',
+    'PC: nettere balken, schuif en log'
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -7961,6 +8006,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-05';
 const CHANGELOG_HISTORY = [
+  { v: '1.77', d: '2026-11-05',
+    en: ['PC: buttons and cards light up', 'PC: Ctrl+Z undoes, ? shows all keys', 'PC: deck at a glance by the commander', 'PC: Stats and Deck Log side by side', 'PC: filters in two columns', 'PC: Inspiration and Extras tidied'],
+    nl: ['PC: knoppen en kaarten lichten op', 'PC: Ctrl+Z, en ? toont alle toetsen', 'PC: deck in één oogopslag', 'PC: Stats en Deck Log naast elkaar', 'PC: filters in twee kolommen', 'PC: Inspiration en Extras netter'] },
   { v: '1.76', d: '2026-11-05',
     en: ['Search bar centred on every phone', 'Long titles stay readable', 'PC: Esc closes card and windows', 'PC: mouse over a card shows it whole', 'PC: tidier Collection and + button'],
     nl: ['Zoekbalk netjes in het midden', 'Lange titels blijven leesbaar', 'PC: Esc sluit kaart en vensters', 'PC: muis op kaart toont hem groot', 'PC: nettere Collectie en +-knop'] },
@@ -13807,6 +13855,22 @@ function deckMeterHtml(d){
   } else {
     mid = dockTypeCounts(d) || '<span>Empty deck</span>';
   }
+  // 1.78 PC: type counts (they jump), the add field, the tools, Menu last
+  if(isDesk() && !(state._dlSel && state._dlSel.size)){
+    const NL = appLang() === 'nl';
+    const tools = `${state.dlSearchOpen
+        ? `<div class="dock-search-wrap searchbar"><input id="dockSearchInput" class="dock-search" enterkeyhint="search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div><button class="dk-tool active" id="dockSearchBtn" title="${trS('Search deck')}">${ICONS.search}</button>`
+        : `<button class="dk-tool" id="dockSearchBtn" title="${trS('Search deck')}">${ICONS.search}</button>`}
+      <button class="dk-tool" id="dockInspire" title="Inspiration">${ICONS.spark}</button>
+      <button class="dk-tool ${state.dlPanel==='bulk'?'active':''}" data-panel="bulk" title="Bulk Edit">${ICONS.bulk}</button>`;
+    return `<div class="deck-dock dk-desk" id="deckMeterRow">
+    <div class="dk-mid"><div class="dk-types">${dockTypeCounts(d)}</div>
+      <div class="dk-add"><input id="dkAddQ" type="text" placeholder="${NL ? 'Kaart toevoegen…' : 'Add a card…'}" autocomplete="off" autocapitalize="off" spellcheck="false" value="${escapeHtml(state._dkAddQ || '')}"><button class="dk-tool" id="dockAddCards" title="${NL ? 'Kaarten zoeken en toevoegen' : 'Find and add cards'}">${ICONS.plus}</button><div class="dk-add-list" id="dkAddList" hidden></div></div>
+      ${tools}</div>
+    <button class="icon-btn" id="menuBtn" title="${trS('Menu')}">${ICONS.dots}</button>
+    ${state.menuOpen ? menuPopHtml() : ''}
+  </div>`;
+  }
   // \u22EF at the far left, the tools after it, the \u203A chevron at the far right.
   return `<div class="deck-dock" id="deckMeterRow">
     <button class="icon-btn" id="menuBtn" title="${trS('Menu')}">${ICONS.dots}</button>
@@ -16694,7 +16758,8 @@ function statsTabHtml(d){
   return `
     <div class="panel-card"><div class="panel-h">Recent Changes</div>
       ${ensureChangelog(d).length
-        ? ensureChangelog(d).slice(0,4).map(histRowHtml).join('') + `<button class="hist-more" id="histMoreBtn">View full history →</button>`
+        ? (isDesk() ? `<div class="hist-grid">${ensureChangelog(d).map(histRowHtml).join('')}</div>`   // 1.78 PC: the whole history, in place
+                    : ensureChangelog(d).slice(0,4).map(histRowHtml).join('') + `<button class="hist-more" id="histMoreBtn">View full history →</button>`)
         : `<div class="empty-note" style="padding:8px 0;">No changes logged yet — new edits will appear here.</div>`}
     </div>
     <div class="panel-card">
@@ -17822,11 +17887,66 @@ function fitDockTypes(){
     items.forEach(b=>{ b.style.fontSize = fs + 'px'; });
   }
 }
+/* 1.78 PC: type a name in the deck bar, pick it with the arrow keys and
+   Enter (or the mouse) -- the card goes straight into the deck. */
+function wireDeskAddField(d){
+  const inp = document.getElementById('dkAddQ'), list = document.getElementById('dkAddList');
+  if(!inp || !list) return;
+  let names = [], on = 0, t = null, seq = 0;
+  const close = ()=>{ list.hidden = true; list.innerHTML = ''; names = []; };
+  const paint = ()=>{
+    if(!names.length){ close(); return; }
+    list.innerHTML = names.map((n, i)=>`<button type="button" class="dk-add-opt${i === on ? ' on' : ''}" data-i="${i}">${escapeHtml(n)}</button>`).join('');
+    list.hidden = false;
+    const a = list.querySelector('.dk-add-opt.on'); if(a) a.scrollIntoView({ block: 'nearest' });
+  };
+  const run = async ()=>{
+    const my = ++seq, q = inp.value;
+    state._dkAddQ = q;
+    if(suggestNorm(q).replace(/\s+/g, '').length < 2){ close(); return; }
+    let all = [];
+    try{ all = (await allCardNamesFor(q)) || []; }catch(e){ all = []; }
+    if(my !== seq || !inp.isConnected) return;
+    names = suggestMatch(all, q, 12); on = 0; paint();
+  };
+  const pick = async (name)=>{
+    if(!name) return;
+    close();
+    let c = null;
+    try{ c = (await pkgCards([name]))[0]; }catch(e){}
+    if(!c || c._missing){ toast(appLang() === 'nl' ? `${name} niet gevonden.` : `${name} not found.`); return; }
+    const dd = getDeck(state.activeDeckId) || d;
+    if(addCardToDeckValidated(dd, c)){
+      state._dkAddQ = ''; state._dkAddFocus = true; state._dkAddKeep = Date.now() + 3000;   // a later redraw keeps the cursor too
+      try{ refreshDecklistBox(dd); }catch(e){}
+      try{ updateDeckMeter(dd); }catch(e){}
+      // keep typing: the cursor returns once the page has settled
+      [60, 200].forEach(ms=>setTimeout(()=>{ const f = document.getElementById('dkAddQ'); if(f && document.activeElement !== f) try{ f.focus(); }catch(e){} }, ms));
+    }
+  };
+  inp.addEventListener('input', ()=>{ clearTimeout(t); t = setTimeout(run, 110); });
+  inp.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      if(!names.length) return;
+      e.preventDefault();
+      on = (on + (e.key === 'ArrowDown' ? 1 : names.length - 1)) % names.length; paint();
+    } else if(e.key === 'Enter'){
+      e.preventDefault(); e.stopPropagation();
+      if(names.length) pick(names[on]);
+    } else if(e.key === 'Escape'){
+      if(!list.hidden){ e.preventDefault(); e.stopPropagation(); close(); }
+    }
+  });
+  inp.addEventListener('blur', ()=>setTimeout(()=>{ if(document.activeElement !== inp) close(); }, 160));
+  list.addEventListener('mousedown', (e)=>e.preventDefault());
+  list.addEventListener('click', (e)=>{ const b = e.target.closest('.dk-add-opt'); if(b) pick(names[+b.dataset.i]); });
+  if(state._dkAddFocus || (state._dkAddKeep && Date.now() < state._dkAddKeep)){ state._dkAddFocus = false; requestAnimationFrame(()=>{ try{ inp.focus(); }catch(e){} }); }
+}
 function wireMeterRow(d){
   // 1.45 desk: the Menu drops down right under its own button
   if(isDesk()) requestAnimationFrame(()=>{
     const mp = document.querySelector('#deckMeterRow .menu-pop'), mb = document.getElementById('menuBtn');
-    if(mp && mb){ mp.style.left = mb.offsetLeft + 'px'; mp.style.right = 'auto'; mp.style.top = (mb.offsetTop + mb.offsetHeight + 6) + 'px'; }
+    if(mp && mb){ const row = mb.offsetParent || mb.parentElement; let L = mb.offsetLeft; if(row && L + mp.offsetWidth > row.clientWidth - 4) L = mb.offsetLeft + mb.offsetWidth - mp.offsetWidth; mp.style.left = Math.max(0, L) + 'px'; mp.style.right = 'auto'; mp.style.top = (mb.offsetTop + mb.offsetHeight + 6) + 'px'; }   // 1.78: Menu sits at the right end
   });
   try{ document.body.classList.toggle('dl-searching', !!state.dlSearchOpen && state.screen === 'decklist'); }catch(e){}
   try{ fitDockTypes(); requestAnimationFrame(fitDockTypes); }catch(e){}
@@ -17930,6 +18050,7 @@ function wireMeterRow(d){
     }
   }
   document.getElementById('dockNext')?.addEventListener('click', ()=>{ state.dockSet = ((state.dockSet||0) + 1) % 2; updateDeckMeter(d); });
+  wireDeskAddField(d);
   document.getElementById('dlSelX')?.addEventListener('click', ()=>dlSelClear());
   const selN = ()=>state._dlSel ? state._dlSel.size : 0;
   // 1.40: no hidden menu -- the binder adds to the collection, the
@@ -34923,11 +35044,11 @@ const cardZoom = (function(){
     box.addEventListener('click', (e)=>{ e.stopPropagation(); hide(); });
     return box;
   };
-  const show = (src, x, y)=>{
+  const show = (src, x, y, card)=>{
     if(!src) return;
     ensure();
     const vw = window.innerWidth, vh = window.innerHeight, pad = 12, gap = 22;
-    let h = Math.min(760, vh - 2 * pad), w = Math.round(h * 488 / 680);
+    let h = Math.min(520, Math.round(vh * 0.72), vh - 2 * pad), w = Math.round(h * 488 / 680);   // 1.78: smaller
     if(w > vw - 2 * pad){ w = vw - 2 * pad; h = Math.round(w * 680 / 488); }
     let left = x + gap;
     if(left + w > vw - pad) left = x - gap - w;
@@ -34936,6 +35057,11 @@ const cardZoom = (function(){
     const im = box.querySelector('img');
     if(im.getAttribute('src') !== src) im.setAttribute('src', src);
     box.style.cssText = `display:block;left:${left}px;top:${top}px;width:${w}px;height:${h}px;`;
+    // 1.78: the same turn (split, aftermath, flip, planes) or flip (two
+    // faces) button the card wears everywhere else
+    box.querySelectorAll(':scope > .dfc-flip-box').forEach(x=>x.remove());
+    im.style.transform = ''; im.style.transition = '';
+    if(card){ try{ const fh = dfcFlipHtml(card); if(fh) box.insertAdjacentHTML('beforeend', fh); }catch(e){} }
     open = true;
   };
   document.addEventListener('mousedown', (e)=>{
@@ -34974,7 +35100,7 @@ function zoomTake(card){
     src = (printPrefFor(card) && cardImageLarge(card)) || (iu && (iu.large || iu.normal)) || cardImageLarge(card) || '';
   }catch(e){}
   if(!src) src = String(z.src || '').replace('/small/', '/large/').replace('/normal/', '/large/');
-  cardZoom.show(src, z.x, z.y);
+  cardZoom.show(src, z.x, z.y, card);
   return true;
 }
 /* Any text input the user focuses gets the keyboard's 🔍 Enter key unless it
