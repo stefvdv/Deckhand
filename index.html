@@ -3625,7 +3625,7 @@ body{background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 92%, #FFFF
   --sub-text:color-mix(in srgb, var(--sub-ink) 82%, var(--sub-fill)); --panel-brass:var(--sub-acc); --icon-pl:var(--sub-acc); --head-ink:var(--sub-acc);
   background:var(--sub-fill) !important;background-image:none !important;border:1px solid var(--sub-line) !important;border-radius:14px !important;box-shadow:0 8px 22px rgba(0,0,0,0.25);color:var(--sub-ink);
 }
-:is(.folder-tile, .deck-tile) :is(.folder-face, .folder-face svg, .folder-name){color:var(--sub-ink) !important;-webkit-text-fill-color:var(--sub-ink) !important;background:none !important;}
+:is(.folder-tile, .deck-tile) .folder-name{color:var(--sub-ink) !important;-webkit-text-fill-color:var(--sub-ink) !important;background:none !important;}
 :is(.folder-tile, .deck-tile) .folder-face svg{color:var(--sub-acc) !important;}
 .tag{background:var(--sub-fill) !important;color:var(--sub-ink) !important;border:none !important;}
 /* headings: quiet small caps; the page word in calm gold */
@@ -3735,6 +3735,37 @@ html.desk .searchbar > :is(#srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn)::
 /* the field carries room for the icons that sit over its right end */
 .searchbar[style*="--nb"] > input:first-of-type{padding-right:calc(var(--nb) * 36px + 10px) !important;}
 .searchbar[style*="--nb"] > input:first-of-type{margin-right:calc(var(--nb) * -36px) !important;}
+
+/* ===== 1.81 ===== */
+html:not(.desk) .brand-banner .nav-it svg{width:32px !important;height:32px !important;}
+html:not(.desk) .brand-banner .nav-home img{width:35px;height:35px;border-radius:9px;}
+/* drop-down arrows sit in the field, like the search bar's icons */
+.cselect-btn .cs-car, .browse-selects .cselect-btn .cs-car, .reco-themes .cselect-btn .cs-car{background:none !important;border:none !important;box-shadow:none !important;color:var(--sub-text) !important;font-size:13px !important;}
+/* the commander glyph wears the tile's gold like the others */
+:is(.folder-tile, .deck-tile) .folder-face{color:var(--sub-acc) !important;-webkit-text-fill-color:var(--sub-acc) !important;}
+/* spoilers: the filter bar reads like the search bar -- a field with the funnel */
+html:not(.desk) .app > main > #spAdvToggle{height:44px;box-sizing:border-box;display:flex !important;align-items:center;justify-content:space-between;padding:0 12px 0 14px !important;background:var(--field) !important;border:1px solid var(--hair-2) !important;border-radius:10px !important;color:var(--sub-text) !important;font-size:15px;font-weight:400;text-align:left;}
+#spAdvToggle :is(.fold-ico, .car){display:none !important;}
+#spAdvToggle::after{content:'';flex:0 0 20px;width:20px;height:20px;background:var(--sub-text);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5h18l-7 8.2V19l-4 1.8v-8.1z'/%3E%3C/svg%3E") center / contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5h18l-7 8.2V19l-4 1.8v-8.1z'/%3E%3C/svg%3E") center / contain no-repeat;}
+/* short motion when things open ... */
+@keyframes dhPop{from{opacity:0;transform:translateY(6px) scale(0.98);}to{opacity:1;transform:none;}}
+@keyframes dhPopDown{from{opacity:0;transform:translateY(-6px) scale(0.98);}to{opacity:1;transform:none;}}
+@keyframes dhFade{from{opacity:0;}to{opacity:1;}}
+@keyframes dhRise{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:none;}}
+@keyframes dhSideOut{from{transform:none;opacity:1;}to{transform:translateX(100%);opacity:0.4;}}
+@keyframes dhFadeOut{from{opacity:1;}to{opacity:0;}}
+@keyframes dhSink{from{opacity:1;transform:none;}to{opacity:0;transform:translateY(24px);}}
+:where(.menu-pop, #fabMenu, .tile-menu, .otag-pop:not([hidden]), .cselect-panel, .name-suggest, #bindersPop){animation:dhPop .16s ease-out;}
+html.desk :where(.menu-pop, .tile-menu, .otag-pop:not([hidden]), .cselect-panel){animation-name:dhPopDown;}
+.xt-tiles .xt-body:not([hidden]){animation:dhPop .18s ease-out;}
+.modal-backdrop{animation:dhFade .18s ease-out;}
+.modal-backdrop .modal-sheet{animation:dhRise .22s cubic-bezier(.2,.8,.2,1);}
+/* ... and when they close */
+html:not(.desk) .app > main > :is(.adv-panel, #colAdvBox, #spAdvBox).dh-out, html:not(.desk) .app > main > #advSlot > .adv-panel.dh-out{animation:dhSideOut .2s ease-in forwards !important;pointer-events:none;}
+html.desk .app > main > :is(.adv-panel, #colAdvBox, #spAdvBox).dh-out, html.desk .app > main > #advSlot > .adv-panel.dh-out{animation:dhFadeOut .2s ease-in forwards !important;pointer-events:none;}
+#modalRootGhost.dh-out .modal-backdrop{animation:dhFadeOut .2s ease-in forwards;}
+#modalRootGhost.dh-out .modal-sheet{animation:dhSink .2s ease-in forwards;}
+@media (prefers-reduced-motion:reduce){ :where(.menu-pop, #fabMenu, .tile-menu, .otag-pop, .cselect-panel, .name-suggest, #bindersPop, .xt-body, .modal-backdrop, .modal-sheet){animation:none !important;} }
 </style>
 </head>
 <body>
@@ -3921,7 +3952,9 @@ function fmtAncestorOf(folderId){
   }
   return null;
 }
-function fmtFolderGlyph(fmt, sz){ return fmt === 'admiral' ? anchorSvg(sz||40) : isConstructedFmt(fmt) ? cardsSvg(sz||40) : '⚔'; }
+function fmtFolderGlyph(fmt, sz){ return fmt === 'admiral' ? anchorSvg(sz||40) : isConstructedFmt(fmt) ? cardsSvg(sz||40) : swordsSvg(sz||40); }
+/* 1.81: the crossed swords drawn, so no phone shows them as a grey emoji */
+function swordsSvg(sz){ return `<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><path d="M4 3.5l11.5 11.5M20 3.5L8.5 15"/><path d="M13.5 17l4-4M10.5 17l-4-4"/><path d="M16.5 16l3.5 3.5M7.5 16L4 19.5"/><path d="M4 3.5h2.5v2.5M20 3.5h-2.5v2.5"/></svg>`; }
 /* Two cards fanned: the house line-art glyph for the 60-card formats. */
 function cardsSvg(sz){
   return `<svg viewBox="0 0 24 24" style="width:${sz||16}px;height:${sz||16}px;vertical-align:-2px;" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="10" height="14" rx="1.6" transform="rotate(-10 9 12)"/><rect x="10" y="5" width="10" height="14" rx="1.6" transform="rotate(8 15 12)"/></svg>`;
@@ -7127,6 +7160,54 @@ function docListen(key, type, fn, capture){
 /* 1.58: every search field gets a clear-× inside its right edge (left of a
    chevron that sits in the field), drawn in the field's own text colour so it
    reads on every scheme. Wired on any DOM change, once per field. */
+/* 1.81: what opens with a little motion also LEAVES with it. A filter
+   panel or dialog that the app hides or removes is held on screen for a
+   moment, plays its exit, and only then goes -- no code path has to know. */
+(function(){
+  if(!window.MutationObserver) return;
+  const reduce = ()=>{ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } };
+  const PANEL = '#colAdvBox, #spAdvBox, .adv-panel';
+  const MS = 200;
+  const shown = (el)=>!el.hidden && el.style.display !== 'none';
+  new MutationObserver((muts)=>{
+    if(reduce()) return;
+    muts.forEach(m=>{
+      if(m.type === 'attributes'){
+        const el = m.target;
+        if(el._dhGhost || !el.matches || !el.matches(PANEL) || !el.isConnected) return;
+        const now = shown(el);
+        const was = !!el._dhWas; el._dhWas = now;
+        if(now || !was) return;
+        // just hidden: a copy plays the exit where it stood; the panel itself is already gone
+        const g = el.cloneNode(true);
+        g._dhGhost = true; g.hidden = false; g.style.display = ''; g.classList.add('dh-out');
+        g.setAttribute('aria-hidden', 'true');
+        el.after(g);
+        setTimeout(()=>{ if(g.isConnected) g.remove(); }, MS);
+        return;
+      }
+      m.addedNodes.forEach(n=>{ if(n.nodeType === 1 && !n._dhGhost){ if(n.matches && n.matches(PANEL)) n._dhWas = shown(n); n.querySelectorAll && n.querySelectorAll('#colAdvBox, #spAdvBox').forEach(x=>{ x._dhWas = shown(x); }); } });
+      m.removedNodes.forEach(n=>{
+        if(n.nodeType !== 1 || n._dhGhost) return;
+        // the search filter, emptied out of its slot
+        if(m.target && m.target.id === 'advSlot' && m.target.isConnected && n.matches && n.matches('.adv-panel')){
+          if(m.target.querySelector('.adv-panel')) return;
+          n._dhGhost = true; n.classList.add('dh-out');
+          m.target.appendChild(n);
+          setTimeout(()=>{ if(n.isConnected) n.remove(); }, MS);
+          return;
+        }
+        // a dialog
+        if(n.id === 'modalRoot' && m.target === document.body && n.querySelector('.modal-backdrop')){
+          n._dhGhost = true; n.id = 'modalRootGhost'; n.classList.add('dh-out');
+          n.style.pointerEvents = 'none';
+          document.body.appendChild(n);
+          setTimeout(()=>{ if(n.isConnected) n.remove(); }, MS);
+        }
+      });
+    });
+  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'hidden'] });
+})();
 /* 1.80: how many icons ride over a search field's right end */
 const _SB_ICONS = '.in-chev, #srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn';
 function fitSearchIcons(){
@@ -8179,19 +8260,19 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.80';
+const APP_VERSION = '1.81';
 const CHANGELOG_NOTES = {
   en: [
-    'Search icons inside the field',
-    'Bigger navigation icons',
-    'Logo opens Extras, News lives there',
-    'New Collection icon'
+    'Filters slide away when closed',
+    'Smooth open and close for menus',
+    'Spoilers filter like Search',
+    'Bigger nav icons, cleaner dropdowns'
   ],
   nl: [
-    "Zoekiconen in het veld",
-    "Grotere navigatie-iconen",
-    "Logo opent Extra's, met Nieuws",
-    "Nieuw icoon voor Collectie"
+    "Filters schuiven weg bij sluiten",
+    "Soepel openen en sluiten",
+    "Spoilerfilter zoals Zoeken",
+    "Grotere nav-iconen, rustige menus"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8201,6 +8282,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-07';
 const CHANGELOG_HISTORY = [
+  { v: '1.80', d: '2026-11-07',
+    en: ['Search icons inside the field', 'Bigger navigation icons', 'Logo opens Extras, News lives there', 'New Collection icon'],
+    nl: ["Zoekiconen in het veld", "Grotere navigatie-iconen", "Logo opent Extra's, met Nieuws", "Nieuw icoon voor Collectie"] },
   { v: '1.79', d: '2026-11-07',
     en: ['A calmer, cleaner look', 'New navigation bar, logo is Home', 'Extras as a list, Settings apart', 'Filters slide in from the side'],
     nl: ["Een rustiger, strakker uiterlijk", "Nieuwe navigatiebalk, logo is Home", "Extra's als lijst, aparte Instellingen", "Filters schuiven van opzij in beeld"] },
@@ -23830,7 +23914,7 @@ function openPackagesEditor(){
     const all = pkgAll();
     // column-reverse: DOM-first = the foot
     shell(T('Kaartpakketten', 'Card packages'), `
-      <div class="pkg-foot"><p class="pkg-hint">${T('Groepen kaarten voor één taak. Ze verschijnen bij Inspiratie van een deck en bij Zoeken.', 'Groups of cards for one job. They show up on a deck’s Inspiration page and in Search.')}</p><button type="button" class="adv-go pkg-fab" id="pkgNew" title="${T('Nieuw pakket', 'New package')}" aria-label="${T('Nieuw pakket', 'New package')}">${ICONS.plus}</button></div>
+      <div class="pkg-foot"><button type="button" class="adv-go pkg-fab" id="pkgNew" title="${T('Nieuw pakket', 'New package')}" aria-label="${T('Nieuw pakket', 'New package')}">${ICONS.plus}</button></div>
       ${all.map(p=>`<div class="panel-card pkg-row" data-pk="${p.id}">
         <div class="pkg-grid visual-grid" data-pkg="${p.id}"><div class="status" style="flex:1 1 100%;"><div class="spinner"></div></div></div>
         <div class="pkg-row-h"><div class="pkg-row-t"><b>${escapeHtml(p.name)}</b><span>${p.fn ? escapeHtml(p.fn) + ' · ' : ''}${p.cards.length} ${T('kaarten', 'cards')}</span></div><button type="button" class="ghost-btn pkg-edit" data-pkedit="${p.id}"><span class="ib">${ICONS.edit || ''}</span>${T('Bewerken', 'Edit')}</button></div>
