@@ -3676,12 +3676,13 @@ html:not(.desk) .app > main.xt-tiles > #kbHelpCell{display:none !important;}
 .xt-head #appFootNote{color:var(--sub-text-2);}
 .xt-head #appFootNote a{color:var(--sub-text) !important;}
 /* bottom-up: the most used row sits by the thumb, the heading on top */
+.app > main.xt-tiles > .settings-section:has(#newsRow){order:0 !important;}
 .app > main.xt-tiles > .settings-section:has(#lifeRow){order:1 !important;}
-.app > main.xt-tiles > .settings-section:has(#draftRow){order:2 !important;}
-.app > main.xt-tiles > .settings-section:has(#crRow){order:3 !important;}
-.app > main.xt-tiles > .settings-section:has(#fmtRulesRow){order:4 !important;}
-.app > main.xt-tiles > .settings-section:has(#banListsRow){order:5 !important;}
-.app > main.xt-tiles > .settings-section:has(#pkgRow){order:6 !important;}
+.app > main.xt-tiles > .settings-section:has(#pkgRow){order:2 !important;}
+.app > main.xt-tiles > .settings-section:has(#draftRow){order:3 !important;}
+.app > main.xt-tiles > .settings-section:has(#crRow){order:4 !important;}
+.app > main.xt-tiles > .settings-section:has(#fmtRulesRow){order:5 !important;}
+.app > main.xt-tiles > .settings-section:has(#banListsRow){order:6 !important;}
 .app > main.xt-tiles > .settings-section:has(#shareAppRow){order:7 !important;}
 .app > main.xt-tiles > .settings-section:has(#installAppRow){order:8 !important;}
 .app > main.xt-tiles > .settings-section:has(#apkBtn){order:9 !important;}
@@ -3708,6 +3709,32 @@ html.desk .app > main > :is(.adv-panel, #colAdvBox, #spAdvBox), html.desk .app >
 .xt-tiles .xt-body:not([hidden]){border:1px solid var(--hair-2) !important;border-radius:16px !important;background:var(--pop-bg) !important;}
 .xt-tiles .xt-body:not([hidden])::before{background:var(--pop-bg) !important;border-bottom:1px solid var(--hair) !important;color:var(--sub-text) !important;-webkit-text-fill-color:var(--sub-text);font-family:'Inter',sans-serif;font-size:12px;letter-spacing:0.16em;}
 @media (prefers-reduced-motion:reduce){ .app > main > :is(.adv-panel, #colAdvBox, #spAdvBox), .app > main > #advSlot > .adv-panel{animation:none !important;} }
+
+/* ===== 1.80 ===== */
+/* the bottom bar: bigger icons, no words (the PC top bar keeps its words) */
+html:not(.desk) .brand-banner .nav-it > span{display:none;}
+html:not(.desk) .brand-banner .nav-it svg{width:28px !important;height:28px !important;}
+html:not(.desk) .brand-banner .nav-home img{width:31px;height:31px;border-radius:8px;}
+html:not(.desk) .brand-banner .nav-it.active::before{left:32%;right:32%;}
+/* search bars: one field with its icons inside -- a loupe on the left, the
+   filter funnel, sort and trade as plain icons on the right */
+.searchbar{--sb-ic:var(--sub-text);}
+:is(.app > main > .searchbar, #tradeBarHost .searchbar) > input:first-of-type{padding-left:40px !important;}
+:is(.app > main > .searchbar, #tradeBarHost .searchbar)::before{content:'';position:absolute;left:calc(var(--sb-pl, 16px) + 12px);top:50%;width:19px;height:19px;transform:translateY(-50%);background:var(--sb-ic);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M20 20l-4.3-4.3'/%3E%3C/svg%3E") center / contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M20 20l-4.3-4.3'/%3E%3C/svg%3E") center / contain no-repeat;pointer-events:none;z-index:2;}
+#tradeBarHost .searchbar{--sb-pl:0px;}
+html.desk .app > main:has(> .deck-fab:not(.col-sel-fab):not(.dl-empty-plus)) > .searchbar{--sb-pl:70px;}
+.searchbar > :is(.in-chev, #srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn):not([hidden]){position:relative;z-index:3;flex:0 0 36px !important;width:36px !important;min-width:0 !important;height:44px !important;min-height:0 !important;margin:0 0 0 -8px !important;padding:0 !important;display:flex !important;align-items:center;justify-content:center;background:transparent !important;background-image:none !important;border:none !important;box-shadow:none !important;color:var(--sb-ic) !important;-webkit-text-fill-color:var(--sb-ic);font-size:0 !important;}
+.searchbar > :is(.in-chev, #srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn):not([hidden]) svg{width:20px !important;height:20px !important;color:var(--sb-ic) !important;stroke-width:1.8;}
+.searchbar > :is(.in-chev, #tradeBtn)::before{content:'';width:20px;height:20px;background:var(--sb-ic);-webkit-mask:var(--sb-mask) center / contain no-repeat;mask:var(--sb-mask) center / contain no-repeat;}
+.searchbar > .in-chev{--sb-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5h18l-7 8.2V19l-4 1.8v-8.1z'/%3E%3C/svg%3E");}
+.searchbar > #tradeBtn{--sb-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5v17M7.5 20.5h9M4 7h16M12 4.6l-1.2 2.4h2.4z'/%3E%3Cpath d='M6 7l-3 6.5a3 3 0 0 0 6 0z'/%3E%3Cpath d='M18 7l-3 6.5a3 3 0 0 0 6 0z'/%3E%3C/svg%3E");}
+.searchbar > #spoilersBtn:not([hidden]){font-size:17px !important;}
+.searchbar > :is(#srSortBtn.active, .in-chev[aria-expanded="true"]){color:var(--mark) !important;}
+html.desk .searchbar > :is(#srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn)::after{content:none !important;}
+@media (hover:hover) and (pointer:fine){ .searchbar > :is(.in-chev, #srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn):hover{--sb-ic:var(--mark);outline:none !important;} }
+/* the field carries room for the icons that sit over its right end */
+.searchbar[style*="--nb"] > input:first-of-type{padding-right:calc(var(--nb) * 36px + 10px) !important;}
+.searchbar[style*="--nb"] > input:first-of-type{margin-right:calc(var(--nb) * -36px) !important;}
 </style>
 </head>
 <body>
@@ -7100,7 +7127,19 @@ function docListen(key, type, fn, capture){
 /* 1.58: every search field gets a clear-× inside its right edge (left of a
    chevron that sits in the field), drawn in the field's own text colour so it
    reads on every scheme. Wired on any DOM change, once per field. */
+/* 1.80: how many icons ride over a search field's right end */
+const _SB_ICONS = '.in-chev, #srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn';
+function fitSearchIcons(){
+  document.querySelectorAll('.searchbar').forEach(bar=>{
+    const inp = bar.querySelector(':scope > input'); if(!inp) return;
+    const n = Array.from(bar.querySelectorAll(':scope > :is(' + _SB_ICONS + ')')).filter(b=>!b.hidden && getComputedStyle(b).display !== 'none').length;
+    const cur = bar.style.getPropertyValue('--nb');
+    if(n){ if(cur !== String(n)) bar.style.setProperty('--nb', String(n)); }
+    else if(cur) bar.style.removeProperty('--nb');
+  });
+}
 function wireSearchClears(){
+  try{ fitSearchIcons(); }catch(e){}
   document.querySelectorAll('.searchbar input, input.dock-search').forEach(inp=>{
     if(inp._clr || inp.type === 'checkbox' || inp.type === 'range') return;
     const bar = inp.parentElement; if(!bar) return;
@@ -7116,11 +7155,11 @@ function wireSearchClears(){
       let on = !!inp.value;
       if(!on && ext){ try{ on = !!ext.active(); }catch(err){} }
       b.hidden = !on;
-      inp.style.paddingRight = on ? (basePad + 30) + 'px' : '';
+      { const nb0 = +(bar.style.getPropertyValue('--nb') || 0); inp.style.paddingRight = on ? (nb0 * 36 + 40) + 'px' : ''; }
       if(!on) return;
       b.style.color = getComputedStyle(inp).color;
-      const chev = inp.nextElementSibling && inp.nextElementSibling.classList.contains('in-chev') ? inp.nextElementSibling : null;
-      const right = inp.offsetLeft + inp.offsetWidth - (chev ? basePad : 4);
+      const nb = +(bar.style.getPropertyValue('--nb') || 0);   // 1.80: icons over the field's end
+      const right = inp.offsetLeft + inp.offsetWidth - nb * 36 - 4;
       b.style.left = Math.round(right - 30) + 'px';
       b.style.top = Math.round(inp.offsetTop + (inp.offsetHeight - 30) / 2) + 'px';
     };
@@ -8140,19 +8179,19 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.79';
+const APP_VERSION = '1.80';
 const CHANGELOG_NOTES = {
   en: [
-    'A calmer, cleaner look',
-    'New navigation bar, logo is Home',
-    'Extras as a list, Settings apart',
-    'Filters slide in from the side'
+    'Search icons inside the field',
+    'Bigger navigation icons',
+    'Logo opens Extras, News lives there',
+    'New Collection icon'
   ],
   nl: [
-    "Een rustiger, strakker uiterlijk",
-    "Nieuwe navigatiebalk, logo is Home",
-    "Extra's als lijst, aparte Instellingen",
-    "Filters schuiven van opzij in beeld"
+    "Zoekiconen in het veld",
+    "Grotere navigatie-iconen",
+    "Logo opent Extra's, met Nieuws",
+    "Nieuw icoon voor Collectie"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8162,6 +8201,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-07';
 const CHANGELOG_HISTORY = [
+  { v: '1.79', d: '2026-11-07',
+    en: ['A calmer, cleaner look', 'New navigation bar, logo is Home', 'Extras as a list, Settings apart', 'Filters slide in from the side'],
+    nl: ["Een rustiger, strakker uiterlijk", "Nieuwe navigatiebalk, logo is Home", "Extra's als lijst, aparte Instellingen", "Filters schuiven van opzij in beeld"] },
   { v: '1.78', d: '2026-11-05',
     en: ['PC: add cards right from the deck bar', 'PC: zoomed card can turn and flip', 'PC: full history in Stats', 'PC: wider Stats and Deck Log', 'PC: square picker tiles', 'PC: tidier bars, slider, game log'],
     nl: ['PC: kaarten toevoegen vanuit de balk', 'PC: zoomkaart kan draaien en flippen', 'PC: volledige geschiedenis in Stats', 'PC: bredere Stats en Deck Log', 'PC: vierkante keuzetegels', 'PC: nettere balken, schuif en log'] },
@@ -9365,6 +9407,8 @@ function identityStripCss(colors){
 }
 const SYNC_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 9.6 4.5 4.5 0 0 0 7 18.5z"/><path d="M10 12.5l2-2 2 2M12 10.5v5"/></svg>`;
 const ICONS = {
+  collBook: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5.2C4.8 4.4 8.6 4.3 12 6c3.4-1.7 7.2-1.6 9.5-.8V19c-2.3-.8-6.1-.7-9.5 1-3.4-1.7-7.2-1.8-9.5-1z"/><path d="M12 6v14"/><rect x="4.7" y="8" width="2.6" height="3.2" rx="0.4"/><rect x="8" y="8.3" width="2.3" height="3" rx="0.4"/><rect x="4.7" y="12.8" width="2.6" height="3.2" rx="0.4"/><rect x="8" y="13" width="2.3" height="3" rx="0.4"/><rect x="13.7" y="8.3" width="2.3" height="3" rx="0.4"/><rect x="16.7" y="8" width="2.6" height="3.2" rx="0.4"/><rect x="13.7" y="13" width="2.3" height="3" rx="0.4"/><rect x="16.7" y="12.8" width="2.6" height="3.2" rx="0.4"/></svg>`,
+  news: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13v13a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v9a2 2 0 0 1-4 0"/><path d="M7.5 8.5h6M7.5 12h6M7.5 15.5h4"/></svg>`,
   gavel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 12.5l-8 8a2.1 2.1 0 0 1-3-3l8-8"/><path d="M16 16l6-6"/><path d="M8 8l6-6"/><path d="M9 7l8 8"/><path d="M21 11l-8-8"/></svg>`,
   heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7.5 2.7C19.5 15.4 12 20 12 20z"/></svg>`,
   draft: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="6.5" width="9" height="13" rx="1.5" transform="rotate(-10 8.5 13)"/><rect x="11" y="4.5" width="9" height="13" rx="1.5" transform="rotate(10 15.5 11)"/></svg>`,
@@ -10091,14 +10135,13 @@ function overlayCapHtml(title, extra){
 function overlayNavHtml(){
   const items = [
     {k:'decks', l:'Decks', i:ICONS.decks},
-    {k:'collection', l:'Collection', i:ICONS.binder},
+    {k:'collection', l:'Collection', i:ICONS.collBook},
     {k:'search', l:'Search', i:ICONS.search},
-    {k:'browse', l:'Inspiration', i:ICONS.inspire},
-    {k:'settings', l:'Extras', i:ICONS.settings}
+    {k:'browse', l:'Inspiration', i:ICONS.inspire}
   ];
   const activeKey = state.screen === 'decklist' ? 'decks' : (state.screen === 'trade') ? 'collection' : (state.screen === 'draft') ? 'settings' : state.screen;
   return `<div class="brand-banner ov-nav">
-    <button type="button" class="nav-it nav-home" data-ovnav="home" title="Home" aria-label="Home"><img src="icon-192.png" alt=""><span>Home</span></button>
+    <button type="button" class="nav-it nav-home ${activeKey==='settings'?'active':''}" data-ovnav="page:settings" title="Extras" aria-label="Extras"><img src="icon-192.png" alt=""><span>Extras</span></button>
     <div class="spacer"></div>
     <div class="banner-tabs">${items.map(it=>`<button class="banner-tab nav-it ${activeKey===it.k?'active':''}" data-ovnav="page:${it.k}" title="${it.l}" aria-label="${it.l}">${it.i}<span>${it.l}</span></button>`).join('')}</div>
   </div>`;
@@ -10158,11 +10201,10 @@ function inspirationCapTitle(){
 function navHtml(){
   const items = [
     {k:'decks', l:'Decks', i:ICONS.decks},
-    {k:'collection', l:'Collection', i:ICONS.binder},
+    {k:'collection', l:'Collection', i:ICONS.collBook},
     {k:'search', l:'Search', i:ICONS.search},
-    {k:'browse', l:'Inspiration', i:ICONS.inspire},
-    {k:'settings', l:'Extras', i:ICONS.settings}
-  ];
+    {k:'browse', l:'Inspiration', i:ICONS.inspire}
+  ];   // 1.80: the logo is Extras
   const titles = { home: 'NEWS', decks:'MY DECKS', search:'SEARCH', browse:'INSPIRATION', inspiration:'INSPIRATION', settings:'EXTRAS', spoilers:'SPOILERS', trade:'TRADE', draft:'DRAFT', collection:'MY COLLECTION' };
   let title = titles[state.screen] || 'ADMIRAL';
   if(state.screen === 'settings' && state.xtSub === 'prefs') title = 'SETTINGS';   // 1.79
@@ -10197,7 +10239,7 @@ function navHtml(){
     <div class="brand-txt ${editable?'editable':''} two-line" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner">${capInner}</span></div>
     ${state._capNote ? `<span class="cap-note${(state.screen === 'collection' || state.screen === 'decklist') ? ' cap-tap' : ''}" id="capNoteBtn"${state.screen === 'decklist' ? ' role="button"' : ''}>${state._capNote}</span>` : ''}
   </div><div class="brand-banner">
-    <button type="button" class="nav-it nav-home ${state.screen==='home'?'active':''}" id="homeBtn" title="Home" aria-label="Home"><img src="icon-192.png" alt=""><span>Home</span></button>
+    <button type="button" class="nav-it nav-home ${activeKey==='settings'?'active':''}" id="homeBtn" title="Extras" aria-label="Extras"><img src="icon-192.png" alt=""><span>Extras</span></button>
     <div class="spacer"></div>
     <div class="banner-tabs">${items.map(it=>`<button class="banner-tab nav-it ${activeKey===it.k?'active':''}" data-page="${it.k}" title="${it.l}" aria-label="${it.l}">${it.i}<span>${it.l}</span></button>`).join('')}</div>
   </div>`;
@@ -10334,7 +10376,7 @@ function wireNav(){
   const hb = document.getElementById('homeBtn');
   if(hb){
     hb.addEventListener('contextmenu', e=>e.preventDefault());
-    hb.addEventListener('click', ()=>switchPage('home'));
+    hb.addEventListener('click', ()=>switchPage('settings'));   // 1.80: the logo opens Extras
   }
   // Inside a binder, the chevroned page word steps back to the binder overview.
   if(state.screen === 'collection' && state.colFilter && state.colFilter.binder){
@@ -30554,6 +30596,7 @@ function settingsPageHtml(){
   return `
   <main class="settings-main xt-tiles${prefs ? ' xt-prefs' : ''}">
     <div class="settings-section" data-grp="tools">${tile('pkgRow', ICONS.collection, T('Pakketten', 'Packages'), '', T('Kaartbundels om in een deck te zetten', 'Card bundles to drop into a deck'))}</div>
+    <div class="settings-section" data-grp="tools">${tile('newsRow', ICONS.news, T('Nieuws', 'News'), '', T('Het laatste Magic-nieuws', 'The latest Magic news'))}</div>
     <div class="settings-section" data-grp="tools">${tile('lifeRow', ICONS.heart, 'Life Counter', '', T('Start of hervat een potje', 'Start or resume a game'))}</div>
     <div class="settings-section" data-grp="tools">${tile('draftRow', ICONS.draft, 'Draft tools', '', T('Stoelen, timers, paringen en stand', 'Seats, timers, pairings and standings'))}</div>
     <div class="settings-section" data-grp="tools">${tile('crRow', ICONS.gavel, T('Vraag de AI-judge', 'Ask AI judge'), '', T('Zoek regels op en stel een vraag', 'Look up rules and ask a question'))}</div>
@@ -30606,8 +30649,6 @@ function settingsPageHtml(){
     <div class="settings-section" data-grp="tools" id="kbHelpCell">${tile('kbHelpBtn', ICONS.cardview, T('Sneltoetsen', 'Shortcuts'), '', T('Alle toetsen op de pc', 'Every key on a PC'))}</div>
     <div class="settings-section" data-grp="tools">${tile('settingsSubRow', ICONS.settings, T('Instellingen', 'Settings'), '', T('Taal, kleuren, meldingen, sync en back-ups', 'Language, colors, notifications, sync and backups'))}</div>
     <div class="xt-head" id="appFootCell">
-      <div class="xt-kicker">${prefs ? T('Jouw voorkeuren', 'Your preferences') : T('Je maat aan tafel', 'Your companion at the table')}</div>
-      <h2 class="xt-title">${T('Maak het van jou.', 'Make it yours.')}</h2>
       <p class="xt-intro">${prefs ? T('Kies je voorkeuren, beheer je data en houd alles bewaard en gelijk.', 'Choose your preferences, manage your data, and keep everything backed up and in sync.') : T('Een plek voor je voorkeuren, tools en alles achter de kaarten.', 'A place for your preferences, tools, and everything behind the cards.')}</p>
       <p class="hint" id="appFootNote" style="line-height:1.45;font-size:11px;margin:8px 0 0;">Deckhand v${APP_VERSION} · ${T('kaarten', 'cards')} <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:var(--head-ink);">Scryfall</a> · ${T('thema’s', 'themes')} <a href="https://edhrec.com" target="_blank" rel="noopener" style="color:var(--head-ink);">EDHREC</a> · ${T('prijzen', 'prices')} Cardmarket<br>Unofficial Fan Content under the Fan Content Policy. Not approved/endorsed by Wizards. © Wizards of the Coast LLC.</p>
     </div>
@@ -31300,6 +31341,7 @@ function wireSettingsPage(){
       });
     } }
   document.getElementById('lifeRow').addEventListener('click', openLifeOverlay);
+  document.getElementById('newsRow')?.addEventListener('click', ()=>switchPage('home'));
   document.getElementById('settingsSubRow')?.addEventListener('click', ()=>{
     state.xtSub = 'prefs';
     pushOverlay('xtPrefs', ()=>{ state.xtSub = null; if(state.screen === 'settings') render(); });
@@ -33470,7 +33512,7 @@ function renderLifeOverlay(){
   // centred over the table.
   const navItems = [
     {k:'decks', l:'Decks', i:ICONS.decks},
-    {k:'collection', l:'Collection', i:ICONS.binder},
+    {k:'collection', l:'Collection', i:ICONS.collBook},
     {k:'search', l:'Search', i:ICONS.search},
     {k:'browse', l:'Inspiration', i:ICONS.inspire},
     {k:'settings', l:'Extras', i:ICONS.settings}
