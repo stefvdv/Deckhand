@@ -3723,7 +3723,7 @@ html:not(.desk) .brand-banner .nav-it.active::before{left:32%;right:32%;}
 :is(.app > main > .searchbar, #tradeBarHost .searchbar)::before{content:'';position:absolute;left:calc(var(--sb-pl, 16px) + 12px);top:50%;width:19px;height:19px;transform:translateY(-50%);background:var(--sb-ic);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M20 20l-4.3-4.3'/%3E%3C/svg%3E") center / contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M20 20l-4.3-4.3'/%3E%3C/svg%3E") center / contain no-repeat;pointer-events:none;z-index:2;}
 #tradeBarHost .searchbar{--sb-pl:0px;}
 html.desk .app > main:has(> .deck-fab:not(.col-sel-fab):not(.dl-empty-plus)) > .searchbar{--sb-pl:70px;}
-.searchbar > :is(.in-chev, #srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn):not([hidden]){position:relative;z-index:3;flex:0 0 36px !important;width:36px !important;min-width:0 !important;height:44px !important;min-height:0 !important;margin:0 0 0 -8px !important;padding:0 !important;display:flex !important;align-items:center;justify-content:center;background:transparent !important;background-image:none !important;border:none !important;box-shadow:none !important;color:var(--sb-ic) !important;-webkit-text-fill-color:var(--sb-ic);font-size:0 !important;}
+.searchbar > :is(.in-chev, #srSortBtn, #tradeBtn, #tradeHistBtn):not([hidden]){position:relative;z-index:3;flex:0 0 36px !important;width:36px !important;min-width:0 !important;height:44px !important;min-height:0 !important;margin:0 0 0 -8px !important;padding:0 !important;display:flex !important;align-items:center;justify-content:center;background:transparent !important;background-image:none !important;border:none !important;box-shadow:none !important;color:var(--sb-ic) !important;-webkit-text-fill-color:var(--sb-ic);font-size:0 !important;}
 .searchbar > :is(.in-chev, #srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn):not([hidden]) svg{width:20px !important;height:20px !important;color:var(--sb-ic) !important;stroke-width:1.8;}
 .searchbar > :is(.in-chev, #tradeBtn)::before{content:'';width:20px;height:20px;background:var(--sb-ic);-webkit-mask:var(--sb-mask) center / contain no-repeat;mask:var(--sb-mask) center / contain no-repeat;}
 .searchbar > .in-chev{--sb-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5h18l-7 8.2V19l-4 1.8v-8.1z'/%3E%3C/svg%3E");}
@@ -3765,6 +3765,51 @@ html:not(.desk) .app > main > :is(.adv-panel, #colAdvBox, #spAdvBox).dh-out, htm
 html.desk .app > main > :is(.adv-panel, #colAdvBox, #spAdvBox).dh-out, html.desk .app > main > #advSlot > .adv-panel.dh-out{animation:dhFadeOut .2s ease-in forwards !important;pointer-events:none;}
 #modalRootGhost.dh-out .modal-backdrop{animation:dhFadeOut .2s ease-in forwards;}
 #modalRootGhost.dh-out .modal-sheet{animation:dhSink .2s ease-in forwards;}
+
+
+
+/* ===== 1.83 ===== */
+/* the counter menu rises out of its # button */
+@keyframes dhCtrIn{from{opacity:0;translate:0 14px;scale:0.92;}to{opacity:1;translate:0 0;scale:1;}}
+.lctr-pop.lctr-in{animation:dhCtrIn .24s cubic-bezier(.2,.8,.2,1);transform-origin:50% 100%;}
+@media (prefers-reduced-motion:reduce){ .lctr-pop.lctr-in{animation:none;} }
+/* the logo fills the bar's height */
+html:not(.desk) .brand-banner .nav-home img{width:calc(var(--nav-h) - 10px) !important;height:calc(var(--nav-h) - 10px) !important;border-radius:11px;}
+/* packages: one bar sits on the navigation and names the package in view */
+.pkg-row-h{position:static !important;margin:10px 0 0 !important;padding:0 !important;background:none !important;border:none !important;}
+.pkg-bar{margin:0 -14px;padding:10px 14px !important;background:var(--panel) !important;border-top:1px solid var(--hair);gap:10px !important;}
+.pkg-bar .pkg-cur{flex:1 1 auto;min-width:0;}
+.pkg-bar .pkg-cur b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pkg-bar .pkg-edit{flex:none;width:auto;margin:0;padding:8px 14px;}
+.pkg-bar .pkg-fab{width:44px;height:44px;}
+.pkg-main{padding-bottom:0 !important;}
+/* Inspiration: the period is a drop-up in the heading */
+.if-head{display:flex !important;align-items:center;gap:10px;}
+.if-winbtn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;margin-left:auto;border:1px solid var(--hair-2);border-radius:999px;background:transparent;color:var(--ink-text);-webkit-text-fill-color:var(--ink-text);font:600 12.5px 'Inter',sans-serif;letter-spacing:0.02em;text-transform:none;cursor:pointer;}
+.if-winbtn .cs-car{font-size:10px;color:var(--sub-text);-webkit-text-fill-color:var(--sub-text);}
+html.desk .if-winbtn .cs-car{display:none;}
+/* spoilers: a button of its own, beside the search field */
+.searchbar > #spoilersBtn:not([hidden]){flex:0 0 44px !important;width:44px !important;height:44px !important;margin:0 0 0 8px !important;padding:0 !important;display:flex !important;align-items:center;justify-content:center;font-size:20px !important;background:transparent !important;border:1px solid var(--hair-2) !important;border-radius:10px !important;box-shadow:none !important;}
+
+
+/* contrast (1.83): warning red that reads on every scheme; deeper gold on the cream pages */
+html{--danger-ink:#FFB4A9;}
+html[data-main="W"]{--danger-ink:#9E1D22;}
+html[data-main="W"][data-side]{--brass:#6E5214;--head-ink:#6E5214;--panel-brass:#6E5214;--mark:#6E5214;--icon-pl:#6E5214;}
+:is(.menu-pop, .tile-menu, #tileMenuPop) button.danger, .menu-pop button.danger *{color:var(--danger-ink) !important;-webkit-text-fill-color:var(--danger-ink) !important;}
+.mu-btns .danger-ghost{color:var(--danger-ink);border-color:var(--danger-ink);}
+
+
+/* 1.83: card tiles show the card itself -- no gold rim, the full width of
+   the column, like the decklist; the price and buttons stay underneath */
+.sr-tile, .sr-tile.col-tile{background:none !important;background-image:none !important;border:none !important;box-shadow:none !important;border-radius:0 !important;overflow:visible !important;}
+.sr-tile .st-body{padding:6px 2px 2px !important;}
+.sr-tile:is(.selected, .csel){outline:2.5px solid var(--mark) !important;outline-offset:2px;border-radius:5% / 3.6% !important;}
+/* the copies badge sits under the title bar, clear of the mana cost */
+.vg-qty{top:15% !important;}
+/* tags: the drop-down arrow lives inside the field; Add stays beside it */
+.tag-add-row > #tagInput{padding-right:40px !important;}
+.tag-add-row > #tagCatChev{position:relative;z-index:2;flex:0 0 36px !important;width:36px !important;margin:0 0 0 -42px !important;padding:0 !important;background:transparent !important;background-image:none !important;border:none !important;box-shadow:none !important;color:var(--sub-text) !important;-webkit-text-fill-color:var(--sub-text);font-size:12px;}
 
 /* ===== 1.82 ===== */
 /* packages: the name bar rides along at the foot while its cards scroll */
@@ -7220,7 +7265,7 @@ function docListen(key, type, fn, capture){
   }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'hidden'] });
 })();
 /* 1.80: how many icons ride over a search field's right end */
-const _SB_ICONS = '.in-chev, #srSortBtn, #spoilersBtn, #tradeBtn, #tradeHistBtn';
+const _SB_ICONS = '.in-chev, #srSortBtn, #tradeBtn, #tradeHistBtn';
 function fitSearchIcons(){
   document.querySelectorAll('.searchbar').forEach(bar=>{
     const inp = bar.querySelector(':scope > input'); if(!inp) return;
@@ -8276,21 +8321,23 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.82';
+const APP_VERSION = '1.83';
 const CHANGELOG_NOTES = {
   en: [
-    'Card type: pick several, all types',
-    'Life counter no longer jumps',
-    'Packages: your printings, name bar',
-    'Format folders: name, icon, rules',
-    'Bottom sheets stay above the bar'
+    'Clearer text and warnings everywhere',
+    'Life counter: no more flicker',
+    'Packages: one bar names the package',
+    'Inspiration: period in the heading',
+    'Spoilers button beside the search',
+    'Cards shown without gold rims'
   ],
   nl: [
-    "Kaarttype: meerdere, alle types",
-    "Life counter verspringt niet meer",
-    "Pakketten: jouw prints, naambalk",
-    "Formatmappen: naam, icoon, regels",
-    "Vensters blijven boven de balk"
+    "Overal beter leesbaar, ook waarschuwing",
+    "Life counter flitst niet meer",
+    "Pakketten: één balk met de naam",
+    "Inspiration: periode in de kop",
+    "Spoilerknop naast het zoekveld",
+    "Kaarten zonder gouden rand"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8300,6 +8347,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-08';
 const CHANGELOG_HISTORY = [
+  { v: '1.82', d: '2026-11-08',
+    en: ['Card type: pick several, all types', 'Life counter no longer jumps', 'Packages: your printings, name bar', 'Format folders: name, icon, rules', 'Bottom sheets stay above the bar'],
+    nl: ["Kaarttype: meerdere, alle types", "Life counter verspringt niet meer", "Pakketten: jouw prints, naambalk", "Formatmappen: naam, icoon, regels", "Vensters blijven boven de balk"] },
   { v: '1.81', d: '2026-11-07',
     en: ['Filters slide away when closed', 'Smooth open and close for menus', 'Spoilers filter like Search', 'Bigger nav icons, cleaner dropdowns'],
     nl: ["Filters schuiven weg bij sluiten", "Soepel openen en sluiten", "Spoilerfilter zoals Zoeken", "Grotere nav-iconen, rustige menus"] },
@@ -9440,7 +9490,7 @@ function applyTheme(){
   // The count's red: the LIGHT red tint where it sits on a dark surface,
   // the deep red on a light one (a white main colour = a light page; a
   // white second colour = light tiles).
-  document.documentElement.style.setProperty('--count-bad', g.main === 'W' ? '#B5484D' : '#F4B6A2');
+  document.documentElement.style.setProperty('--count-bad', g.main === 'W' ? '#9E1D22' : '#F4B6A2');   // 1.83: 4.5:1 on cream
   document.documentElement.style.setProperty('--count-bad-tile', g.side === 'W' ? '#B5484D' : '#F4B6A2');
   // The Android app draws the cursor's grab handle itself: tell it too.
   try{ if(window.DeckhandNotify && typeof DeckhandNotify.setAccent === 'function') DeckhandNotify.setAccent(caret); }catch(e){}
@@ -17052,7 +17102,7 @@ function castabilitySummaryHtml(d){
   if(!r || r.avg == null) return '';
   const nl = appLang() === 'nl';
   const pct = (v)=>Math.round(v * 100) + '%';
-  const col = (v)=>v >= 0.9 ? 'var(--brass)' : v >= 0.75 ? 'var(--ink-text)' : 'color-mix(in srgb, var(--danger) 55%, #fff)';
+  const col = (v)=>v >= 0.9 ? 'var(--brass)' : v >= 0.75 ? 'var(--ink-text)' : 'var(--danger-ink)';
   const CN = nl ? { W:'witte', U:'blauwe', B:'zwarte', R:'rode', G:'groene' } : { W:'white', U:'blue', B:'black', R:'red', G:'green' };
   let tip = '';
   if(r.tip.kind === 'color') tip = nl
@@ -23974,12 +24024,28 @@ function openPackagesEditor(){
     const all = pkgAll();
     // column-reverse: DOM-first = the foot
     shell(T('Kaartpakketten', 'Card packages'), `
-      <div class="pkg-foot"><button type="button" class="adv-go pkg-fab" id="pkgNew" title="${T('Nieuw pakket', 'New package')}" aria-label="${T('Nieuw pakket', 'New package')}">${ICONS.plus}</button></div>
+      <div class="pkg-foot pkg-bar"><div class="pkg-row-t pkg-cur"><b id="pkgCurName">${all[0] ? escapeHtml(all[0].name) : ''}</b><span id="pkgCurSub"></span></div><button type="button" class="ghost-btn pkg-edit" id="pkgCurEdit"${all.length ? '' : ' hidden'}><span class="ib">${ICONS.edit || ''}</span>${T('Bewerk', 'Edit')}</button><button type="button" class="adv-go pkg-fab" id="pkgNew" title="${T('Nieuw pakket', 'New package')}" aria-label="${T('Nieuw pakket', 'New package')}">${ICONS.plus}</button></div>
       ${all.map(p=>`<div class="panel-card pkg-row" data-pk="${p.id}">
         <div class="pkg-grid visual-grid" data-pkg="${p.id}"><div class="status" style="flex:1 1 100%;"><div class="spinner"></div></div></div>
         <div class="pkg-row-h"><div class="pkg-row-t"><b>${escapeHtml(p.name)}</b><span>${p.fn ? escapeHtml(p.fn) + ' · ' : ''}${p.cards.length} ${T('kaarten', 'cards')}</span></div><button type="button" class="ghost-btn pkg-edit" data-pkedit="${p.id}"><span class="ib">${ICONS.edit || ''}</span>${T('Bewerken', 'Edit')}</button></div>
       </div>`).join('')}`);
     el.querySelector('#pkgNew').addEventListener('click', ()=>form(null));
+    // the bar names the package whose cards are in view (lowest one that shows)
+    { const mn = el.querySelector('main'), bar = el.querySelector('.pkg-bar');
+      const cur = ()=>{
+        if(!mn || !bar) return;
+        const lim = bar.getBoundingClientRect().top;
+        let best = null;
+        el.querySelectorAll('.pkg-row').forEach(r=>{ const b = r.getBoundingClientRect(); if(b.top < lim - 40 && (!best || b.top > best.top)) best = { top: b.top, id: r.dataset.pk }; });
+        const pk = best && all.find(x=>x.id === best.id); if(!pk) return;
+        if(bar.dataset.cur === pk.id) return;
+        bar.dataset.cur = pk.id;
+        el.querySelector('#pkgCurName').textContent = pk.name;
+        el.querySelector('#pkgCurSub').textContent = (pk.fn ? pk.fn + ' \u00b7 ' : '') + pk.cards.length + ' ' + T('kaarten', 'cards');
+      };
+      mn && mn.addEventListener('scroll', ()=>requestAnimationFrame(cur), { passive: true });
+      el.querySelector('#pkgCurEdit')?.addEventListener('click', ()=>{ const id = bar.dataset.cur || (all[0] && all[0].id); if(id) form(id); });
+      requestAnimationFrame(cur); setTimeout(cur, 400); el._pkgCur = cur; }
     el.querySelectorAll('[data-pkedit]').forEach(b=>b.addEventListener('click', ()=>form(b.dataset.pkedit)));
     toFoot();
     for(const p of all){
@@ -23988,6 +24054,7 @@ function openPackagesEditor(){
       g.innerHTML = cards.length ? cards.map(c=>pkgTileHtml(c, false)).join('') : `<div class="empty-note" style="flex:1 1 100%;padding:6px 0;">${T('Nog leeg.', 'Empty so far.')}</div>`;
       g.querySelectorAll('.pkg-card').forEach(t=>t.addEventListener('click', ()=>{ const c = cards.find(x=>x.name === decodeURIComponent(t.dataset.name)); if(c) preview(c); }));
       toFoot();
+      try{ el._pkgCur && el._pkgCur(); }catch(e){}
     }
   };
   const form = (id)=>{
@@ -27397,7 +27464,7 @@ async function loadInspFeed(){
   const win = _inspFeedWin;
   // One section: the chosen format. Bottom-up inside it — grid up top,
   // period buttons beneath it, the label at the very foot (order:10).
-  box.innerHTML = `<div class="edh-sec if-sec"><div class="section-label"><span data-iflab>${INSP_FEED_LABELS[bf] || bf}</span></div><div class="if-winrow">${['week','month','year'].map(wn=>`<button type="button" class="ghost-btn if-win ${wn === win ? 'active' : ''}" data-ifwin="${wn}">${wn === 'week' ? 'Week' : wn === 'month' ? 'Month' : 'Year'}</button>`).join('')}</div><div class="sr-grid" data-ifgrid="${bf}"><div class="status"><div class="spinner"></div></div></div></div>`;
+  box.innerHTML = `<div class="edh-sec if-sec"><div class="section-label if-head"><span data-iflab>${INSP_FEED_LABELS[bf] || bf}</span><button type="button" class="if-winbtn" id="ifWinBtn">${trS(INSP_WIN_LABELS[win] || 'This week')} <span class="cs-car">\u25B4</span></button></div><div class="sr-grid" data-ifgrid="${bf}"><div class="status"><div class="spinner"></div></div></div></div>`;
   if(!box.dataset.wired){
     box.dataset.wired = '1';
     box.addEventListener('click', (e)=>{
@@ -27405,6 +27472,18 @@ async function loadInspFeed(){
         _inspCancelRetry(); _inspRetryN = 0;
         delete document.getElementById('inspFeed').dataset.busy;
         loadInspFeed();
+        return;
+      }
+      if(e.target.closest('#ifWinBtn')){
+        const pick = (wn)=>{
+          if(wn === _inspFeedWin) return;
+          _inspCancelRetry(); _inspRetryN = 0;
+          sfDropQueuedFor('browse');
+          _inspFeedWin = wn;
+          delete document.getElementById('inspFeed').dataset.busy;
+          loadInspFeed();
+        };
+        openTileMenu(e.target.closest('#ifWinBtn'), ['year','month','week'].map(wn=>({ label: (wn === _inspFeedWin ? '\u2713 ' : '') + trS(INSP_WIN_LABELS[wn]), fn: ()=>pick(wn) })));
         return;
       }
       const wbtn = e.target.closest('.if-win');
@@ -27475,7 +27554,8 @@ async function loadInspFeed(){
         : (_NL ? 'Het lukt niet om deze op te halen. Tik om opnieuw te proberen.'
                : 'Could not load these. Tap to retry.')}</div>`;
   const lab = box.querySelector('[data-iflab]');
-  if(lab && out) lab.textContent = `${INSP_FEED_LABELS[bf] || bf} · ${trS(INSP_WIN_LABELS[out.win] || '')}`;
+  if(lab && out) lab.textContent = INSP_FEED_LABELS[bf] || bf;
+  { const wb = box.querySelector('#ifWinBtn'); if(wb && out){ wb.innerHTML = `${trS(INSP_WIN_LABELS[out.win] || INSP_WIN_LABELS[win] || '')} <span class="cs-car">\u25B4</span>`; } }
   // When EDHREC could not be reached we are showing Scryfall's own popularity
   // instead of a period list. Leaving Week lit would claim something untrue,
   // so the period buttons stand down until the real list arrives.
@@ -33922,7 +34002,7 @@ function lifeCardHtml(p, idx, count){
         ${pz ? `<div class="pz-label">${phyrexianSvg(15)}<span>Poison</span></div>
         <div class="lval-row">${ldeltaHtml(p._pzDelta, p._pzFresh)}<div class="lval2 pz-val ${p.poison >= 10 ? 'danger' : ''}">${p.poison}</div>${ldeltaHtml(p._pzDelta, p._pzFresh, true)}</div>`
           : `<div class="pz-label" style="max-width:80%;white-space:normal;text-transform:none;">${trS('Tap another player to count the damage you took from them.')}</div>`}
-        <div class="lf-extras"><span class="lf-grp"><button type="button" class="lf-x${p.monarch ? ' on' : ''}" data-lmonarch="${idx}" title="Monarch" aria-label="Monarch">${CROWN_SVG}<span>Monarch</span></button><button type="button" class="lf-x${p.dg ? ' on' : ''}" data-ldungeon="${idx}" title="Dungeon" aria-label="Dungeon">${DUNGEON_SVG}<span>${p.dg ? escapeHtml(p.dg.room) : 'Dungeon'}</span></button></span><span class="lf-grp"><span class="lctr-wrap"><button type="button" class="lf-x${Object.keys(p.ctrOn || {}).some(k=>(p.ctrOn || {})[k]) ? ' on' : ''}" data-lctrmenu="${idx}" title="${appLang() === 'nl' ? 'Tellers' : 'Counters'}" aria-label="${appLang() === 'nl' ? 'Tellers' : 'Counters'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></svg><span>${appLang() === 'nl' ? 'Tellers' : 'Counters'}</span></button><span class="lctr-pop" ${state.life._ctrMenu === idx ? '' : 'hidden'}>${lctrPopHtml(p, idx)}</span></span></span></div>
+        <div class="lf-extras"><span class="lf-grp"><button type="button" class="lf-x${p.monarch ? ' on' : ''}" data-lmonarch="${idx}" title="Monarch" aria-label="Monarch">${CROWN_SVG}<span>Monarch</span></button><button type="button" class="lf-x${p.dg ? ' on' : ''}" data-ldungeon="${idx}" title="Dungeon" aria-label="Dungeon">${DUNGEON_SVG}<span>${p.dg ? escapeHtml(p.dg.room) : 'Dungeon'}</span></button></span><span class="lf-grp"><span class="lctr-wrap"><button type="button" class="lf-x${Object.keys(p.ctrOn || {}).some(k=>(p.ctrOn || {})[k]) ? ' on' : ''}" data-lctrmenu="${idx}" title="${appLang() === 'nl' ? 'Tellers' : 'Counters'}" aria-label="${appLang() === 'nl' ? 'Tellers' : 'Counters'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></svg><span>${appLang() === 'nl' ? 'Tellers' : 'Counters'}</span></button><span class="lctr-pop${state.life._ctrAnim === idx ? ' lctr-in' : ''}" ${state.life._ctrMenu === idx ? '' : 'hidden'}>${lctrPopHtml(p, idx)}</span></span></span></div>
         <button class="submenu-toggle done" data-idx="${idx}">${trS('\u2713 Done')}</button>
       </div>
     </div></div>`;
@@ -33976,6 +34056,8 @@ function renderLifeGrid(){
     state.life.menuOpen = !state.life.menuOpen;
     renderLifeOverlay();
   });
+  try{ layoutLifeCards(); }catch(e){}   // 1.83: the cards take their size BEFORE the first paint -- no flash
+  try{ placeLifeCorners(); }catch(e){}
   wireLifeGrid();
   requestAnimationFrame(layoutLifeCards);
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ try{ placeLifeCorners(); }catch(e){} try{ placePlaneChip(); }catch(e){} }));   // 1.55 / 1.59
@@ -34177,7 +34259,7 @@ function wireLifeGrid(){
   });
   document.querySelectorAll('[data-lctrmenu]').forEach(b=>{
     ['pointerdown', 'touchstart'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
-    b.addEventListener('click', (e)=>{ e.stopPropagation(); const i = +b.dataset.lctrmenu; state.life._ctrMenu = state.life._ctrMenu === i ? null : i; state.life._manaMenu = null; renderLifeGrid(); });
+    b.addEventListener('click', (e)=>{ e.stopPropagation(); const i = +b.dataset.lctrmenu; state.life._ctrMenu = state.life._ctrMenu === i ? null : i; state.life._manaMenu = null; state.life._ctrAnim = state.life._ctrMenu; renderLifeGrid(); });
   });
   document.querySelectorAll('[data-lctrtog]').forEach(b=>{
     ['pointerdown', 'touchstart'].forEach(ev=>b.addEventListener(ev, (e)=>e.stopPropagation(), { passive: true }));
@@ -34196,10 +34278,13 @@ function wireLifeGrid(){
       e.stopPropagation();
       const i = +b.dataset.idx, open = b.dataset.lctrmana === 'open';
       state.life._manaMenu = open ? i : null;
+      state.life._ctrAnim = i;
       renderLifeGrid();
       if(open) lifeCtrTip(i, appLang() === 'nl' ? 'Mana \u00b7 kies een kleur' : 'Mana \u00b7 pick a colour');
     });
   });
+  try{ fitLctrPops(); }catch(e){}   // 1.83: placed BEFORE the first paint -- no jump
+  state.life._ctrAnim = null;
   requestAnimationFrame(()=>{ try{ fitLctrPops(); }catch(e){} });
   setTimeout(()=>{ try{ fitLctrPops(); }catch(e){} }, 420);
   // 1.46: Monarch and Dungeons in the poison menu
