@@ -8012,6 +8012,16 @@ function _qcSet(k, v){
   qdbSet(k, v);
 }
 let _searchBusy = 0;   // live searches in flight — background work yields to these
+/* 1.84: every load the person asked for counts as "busy", not only searches:
+   Inspiration themes and kindred, recommendations, the card's own play data.
+   Background work (tile pictures, the image warmer, EDHREC refreshes) waits
+   until the count is back at zero. */
+async function asUserWork(fn){ _searchBusy++; try{ return await fn(); } finally { _searchBusy--; } }
+function waitUserIdle(maxMs){
+  if(_searchBusy <= 0 && !(_sfQ && _sfQ.hi && _sfQ.hi.length)) return Promise.resolve();
+  const until = Date.now() + (maxMs || 20000);
+  return new Promise(res=>{ const t = ()=>{ if((_searchBusy <= 0 && !_sfQ.hi.length) || Date.now() > until) res(); else setTimeout(t, 300); }; t(); });
+}
 async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
   limit = limit || 40;
   opts = opts || {};
@@ -8321,23 +8331,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.83';
+const APP_VERSION = '1.84';
 const CHANGELOG_NOTES = {
   en: [
-    'Clearer text and warnings everywhere',
-    'Life counter: no more flicker',
-    'Packages: one bar names the package',
-    'Inspiration: period in the heading',
-    'Spoilers button beside the search',
-    'Cards shown without gold rims'
+    "Themes always find their commanders",
+    "No lost card lists after start-up",
+    "Faster EDHREC pages"
   ],
   nl: [
-    "Overal beter leesbaar, ook waarschuwing",
-    "Life counter flitst niet meer",
-    "Pakketten: één balk met de naam",
-    "Inspiration: periode in de kop",
-    "Spoilerknop naast het zoekveld",
-    "Kaarten zonder gouden rand"
+    "Thema’s vinden altijd hun commanders",
+    "Geen kwijte kaartlijsten na opstarten",
+    "Snellere EDHREC-pagina’s"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8345,8 +8349,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-08';
+const APP_DATE = '2026-11-09';
 const CHANGELOG_HISTORY = [
+  { v: '1.83', d: '2026-11-08',
+    en: ['Clearer text and warnings everywhere', 'Life counter: no more flicker', 'Packages: one bar names the package', 'Inspiration: period in the heading', 'Spoilers button beside the search', 'Cards shown without gold rims'],
+    nl: ["Overal beter leesbaar, ook waarschuwing", "Life counter flitst niet meer", "Pakketten: één balk met de naam", "Inspiration: periode in de kop", "Spoilerknop naast het zoekveld", "Kaarten zonder gouden rand"] },
   { v: '1.82', d: '2026-11-08',
     en: ['Card type: pick several, all types', 'Life counter no longer jumps', 'Packages: your printings, name bar', 'Format folders: name, icon, rules', 'Bottom sheets stay above the bar'],
     nl: ["Kaarttype: meerdere, alle types", "Life counter verspringt niet meer", "Pakketten: jouw prints, naambalk", "Formatmappen: naam, icoon, regels", "Vensters blijven boven de balk"] },
@@ -26641,7 +26648,12 @@ function renderEdhrecSections(box, key, S, keepScroll){
   }));
   if(!keepScroll) scrollToPageFoot();
 }
+/* 1.84: while a picked theme or kindred loads, the dropdown tiles wait with
+   their pictures -- what the person asked for goes first */
 async function loadEdhrecSectionedBrowse(box, key, slug, what){
+  return asUserWork(()=>_loadEdhrecSectionedBrowse(box, key, slug, what));
+}
+async function _loadEdhrecSectionedBrowse(box, key, slug, what){
   // Paint the house spinner immediately — the quip ticker hooks any
   // .status > .spinner automatically, so the wait is never a blank page.
   box.innerHTML = '<div class="status" style="margin:16px 0;"><div class="spinner"></div></div>';
@@ -26651,8 +26663,13 @@ async function loadEdhrecSectionedBrowse(box, key, slug, what){
     box.innerHTML = `<div class="empty-note">No play data for this ${what} right now — check your connection, or try another.</div>`;
     return;
   }
-  const union = [...new Set([...sec.newCmd, ...sec.topCmd, ...(sec.cardSections||[]).flatMap(x=>x.names)])];
-  const cards = await namesToLegalCards(union);
+  // 1.84: the commanders resolve FIRST and on their own -- a short list that
+  // never waits behind the card sections' hundreds of names
+  const leaderNames = [...new Set([...sec.newCmd, ...sec.topCmd])];
+  const leaderCards = await namesToLegalCards(leaderNames);
+  if(key !== browseKey()) return;
+  const cardNames = [...new Set((sec.cardSections||[]).flatMap(x=>x.names))].filter(n=>!leaderNames.includes(n));
+  const cards = leaderCards.concat(cardNames.length ? await namesToLegalCards(cardNames) : []);
   if(key !== browseKey()) return;
   const byName = new Map();
   cards.forEach(c=>{
@@ -26678,9 +26695,21 @@ async function loadEdhrecSectionedBrowse(box, key, slug, what){
     if(list.length) cardSecs.push({ header: cs.header, list });
   }
   if(!leaders.length){
+    // 1.84: only say "none in these colours" when the commanders DID arrive
+    // and simply do not fit; if they never arrived, say so and try again.
+    const lost = (leaderCards.unresolved || []).length;
+    if(lost && lost >= leaderNames.length / 2){
+      const nl = appLang() === 'nl';
+      box.innerHTML = `<div class="empty-note" data-edhretry="1" style="cursor:pointer;">${nl ? 'De commanders konden even niet geladen worden \u2014 ik probeer het zo opnieuw. Tik om het nu te proberen.' : 'The commanders could not be loaded just now \u2014 trying again shortly. Tap to retry now.'}</div>`;
+      const again = ()=>{ if(key === browseKey() && box.isConnected && box.querySelector('[data-edhretry]')) loadEdhrecSectionedBrowse(box, key, slug, what); };
+      box.querySelector('[data-edhretry]').addEventListener('click', again);
+      if(!box._edhRetried){ box._edhRetried = true; setTimeout(again, 6000); }
+      return;
+    }
     box.innerHTML = `<div class="empty-note">No ${leaderNoun(browseFmt(), true)} with play data for this ${what} in these colors — try another combination.</div>`;
     return;
   }
+  box._edhRetried = false;
   const S = { newCmd, topCmd, cardSecs, meta: sec.meta || {}, rel: sec.rel || [] };
   const pool = Array.from(new Set(leaders.concat(...cardSecs.map(x=>x.list))));
   pool._complete = true;
@@ -26845,6 +26874,7 @@ async function _tileArtEdPick(slug, combo){
 }
 function _tagSrc(o, src){ return o ? Object.assign({}, o, { src }) : null; }
 async function _tileArtFetchFresh(key, live, front){
+  if(!front) await waitUserIdle(20000);   // 1.84: background tiles wait for what the person asked; tiles on screen do not
   const parts = key.split('|');
   if(parts[0] === 'sf') return _tagSrc(await _tileArtSfPick(parts[1] || 'any', parts.slice(2).join('|').trim()), 'live');
   if(parts[0] === 'nm') return _tagSrc(await _tileArtNamePick(parts.slice(1).join('|'), front), 'fixed');
@@ -27454,7 +27484,8 @@ function _inspRetryLater(bf, win){
   }, wait);
   return true;
 }
-async function loadInspFeed(){
+async function loadInspFeed(){ return asUserWork(()=>_loadInspFeed()); }
+async function _loadInspFeed(){
   const box = document.getElementById('inspFeed');
   if(!box) return;
   if(box.offsetParent === null) return;   // hidden: results own the page
@@ -27738,7 +27769,8 @@ async function loadTypal(box, key, keepScroll){
   if(!keepScroll) scrollToPageFoot();
 }
 
-async function loadBrowse(){
+async function loadBrowse(){ return asUserWork(()=>_loadBrowse()); }
+async function _loadBrowse(){
   const box = document.getElementById('browseResults');
   if(!box) return;
   if(!browseReady()){
@@ -28452,6 +28484,11 @@ async function namesToLegalCards(names){
   // The batch endpoint takes up to 75 identifiers per POST — big chunks in
   // Commander mode; the search path keeps its small ones in Admiral mode.
   const wanted = names.slice(0, 600);
+  // 1.84: right after start-up the phone's card database may still be loading.
+  // Without it every name went to Scryfall at once -- hundreds of them -- and
+  // a refusal there silently dropped whole lists (Land Animation showed no
+  // commanders at all). Wait for it, a few seconds at most.
+  if(!_bulkIdx){ try{ await Promise.race([bulkIndexReady(), new Promise(r=>setTimeout(r, 8000))]); }catch(e){} }
   // The phone first: every name the local database knows costs no request,
   // works offline, and keeps the list short enough that Scryfall never has
   // reason to refuse it.
@@ -28460,6 +28497,13 @@ async function namesToLegalCards(names){
   try{ if(local.size) sfJournal('names: ' + local.size + ' from the local database, ' + askFor.length + ' asked'); }catch(e){}
   const chunks = chunkArr(askFor, 70);
   const settled = chunks.length ? await Promise.all(chunks.map(resolveNameChunk)) : [];
+  // 1.84: a chunk Scryfall refused gets one calm second try, a moment later
+  { const got = new Set(); settled.flat().forEach(c=>{ got.add(c.name); const cut = c.name.indexOf(' // '); if(cut > 0) got.add(c.name.slice(0, cut)); });
+    const again = askFor.filter(n=>!got.has(n) && !got.has(String(n).split(' // ')[0]));
+    if(again.length && again.length >= Math.max(3, askFor.length * 0.2)){
+      await new Promise(r=>setTimeout(r, 1500));
+      for(const ch of chunkArr(again, 70)){ try{ settled.push(await resolveNameChunk(ch)); }catch(e){} }
+    } }
   const byName = new Map();
   local.forEach((c, n)=>{ byName.set(n, c); if(c.name && !byName.has(c.name)) byName.set(c.name, c); });
   settled.flat().forEach(c=>{
@@ -28501,7 +28545,9 @@ async function namesToLegalCards(names){
     console.warn('inspiration: unresolved names', JSON.stringify(diag.unresolved));
     console.warn('inspiration: resolved sample', JSON.stringify(diag.resolvedSample));
   }
-  return names.map(lookup).filter(Boolean);
+  const _out = names.map(lookup).filter(Boolean);
+  _out.unresolved = unresolved;   // 1.84: callers can tell "none fit" from "none arrived"
+  return _out;
 }
 function colorIdentityExact(card, combo){
   if(combo==='c') return (card.color_identity||[]).length===0;
@@ -28562,7 +28608,8 @@ function openCardReco(card, forDeck, comboKey){
   document.getElementById('crImg').addEventListener('click', ()=>showCardPreview(card, cardImageLarge(card)));
   loadCardReco(card, themes, forDeck || null, comboKey || null);
 }
-async function loadCardReco(card, themes, forDeck, comboKey){
+async function loadCardReco(card, themes, forDeck, comboKey){ return asUserWork(()=>_loadCardReco(card, themes, forDeck, comboKey)); }
+async function _loadCardReco(card, themes, forDeck, comboKey){
   // Synergy from Scryfall: we read the card's OWN function tags (what it does)
   // and find other cards that share those roles/themes, ranked by EDHREC
   // popularity via order:edhrec. The chosen colors set the ceiling — the
@@ -29523,9 +29570,10 @@ const SWR_SERVE = 14*24*3600*1000;   // serve anything younger than two weeks in
 const SWR_FRESH = 2*24*3600*1000;    // …but past two days, quietly refresh it for next time
 const _edhRevalidating = new Set();
 async function edhrecFetchNetwork(path){
-  // Same-origin first: on the deployed site, Netlify's _redirects proxy
-  // fetches EDHREC server-side, so the browser's CORS wall never applies.
-  const urls = ['/edhrec' + path, 'https://json.edhrec.com' + path];
+  // 1.84: straight to EDHREC -- it answers every site (CORS *). The old
+  // same-origin '/edhrec' route was never in _redirects any more, so it only
+  // cost each page a wasted round trip first.
+  const urls = ['https://json.edhrec.com' + path];
   for(const u of urls){
     const ctrl = new AbortController();
     // The most popular commanders carry the biggest pages — multi-megabyte
@@ -29556,7 +29604,7 @@ async function edhrecFetchJson(path){
   if(disk && disk.v && (Date.now() - (disk.t||0)) < SWR_SERVE){
     if((Date.now() - (disk.t||0)) > SWR_FRESH && !_edhRevalidating.has(key)){
       _edhRevalidating.add(key);
-      edhrecFetchNetwork(path).then(fresh=>{ if(fresh) qdbSet(key, fresh); }).finally(()=>_edhRevalidating.delete(key));
+      waitUserIdle(30000).then(()=>edhrecFetchNetwork(path)).then(fresh=>{ if(fresh) qdbSet(key, fresh); }).finally(()=>_edhRevalidating.delete(key));   // 1.84: after the person's own loads
     }
     return disk.v;
   }
@@ -29861,7 +29909,8 @@ async function localRecoPool(R){
 }
 /* The page must ALWAYS settle. Whatever goes wrong below -- a dead line, a
    malformed answer -- the spinner comes down and something usable is shown. */
-async function loadRecoPool(){
+async function loadRecoPool(){ return asUserWork(()=>_loadRecoPool()); }
+async function _loadRecoPool(){
   const R = state.reco;
   if(!R) return;
   /* Relief valve: after eight seconds of nothing the phone's own database
@@ -36307,7 +36356,7 @@ function buildWarmQueue(){
 }
 function _warmGateClosed(){
   const conn = navigator.connection;
-  const apiBusy = !!(typeof _sfQ === 'object' && _sfQ && _sfQ.hi && _sfQ.hi.length);
+  const apiBusy = !!(typeof _sfQ === 'object' && _sfQ && _sfQ.hi && _sfQ.hi.length) || _searchBusy > 0;   // 1.84
   return _bulkSyncing || document.hidden || navigator.onLine === false || !!(conn && conn.saveData) ||
          apiBusy || (Date.now() - _warmLastInput) < 2500;
 }
