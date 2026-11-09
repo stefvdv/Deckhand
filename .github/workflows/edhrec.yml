@@ -1,0 +1,45 @@
+# Deckhand — weekly EDHREC summary for Inspiration and recommendations.
+#
+# Fetches the EDHREC pages the app opens most (theme and kindred lists, the
+# most played themes, kindred and commanders), one at a time with a pause,
+# keeps only what the app reads, and writes edhrec-slim.json.gz plus
+# edhrec-meta.json to the "data" branch (no history, see
+# scripts/data-branch.sh). The app reads them from its own site once a week.
+#
+# Start by hand: Actions -> Weekly EDHREC summary -> Run workflow.
+name: Weekly EDHREC summary
+
+on:
+  schedule:
+    - cron: '20 3 * * 3'      # Wednesdays 03:20 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Every data robot shares this group: never two of them on the data branch.
+concurrency:
+  group: bulk-data
+  cancel-in-progress: false
+
+jobs:
+  edhrec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Get the current data files
+        run: bash scripts/data-branch.sh pull
+
+      - name: Build the EDHREC summary
+        run: |
+          node scripts/build-edhrec.mjs --out data/edhrec-slim.json.gz
+          ls -l data/edhrec-slim.json.gz data/edhrec-meta.json
+
+      - name: Publish
+        run: bash scripts/data-branch.sh push "Weekly EDHREC summary"

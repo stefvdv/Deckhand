@@ -323,8 +323,8 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
    selectors out-rank it. Reversed mains pack at the bottom natively, so
    the pusher spacer must NOT apply there (it would float content up). */
 .app > main.settings-main,
-.app > main:has(> div > #deckFilter){flex-direction:column-reverse;}
-.app > main:not(.settings-main):not(:has(> div > #deckFilter))::before{content:'';order:97;margin-top:auto;}
+.app > main.dk-home{flex-direction:column-reverse;}
+.app > main:not(.settings-main):not(.dk-home)::before{content:'';order:97;margin-top:auto;}
 .app > main > .searchbar,
 .app > main > div:has(> #deckFilter){
   order:100;position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:36;
@@ -462,14 +462,14 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .app > main.home-page{justify-content:flex-end;padding-bottom:calc(var(--nav-h) - 14px + env(safe-area-inset-bottom));}
 /* (3/5) My Stuff: tight foot, FAB low, filter shortened clear of it,
    uniform section rhythm in the reversed column. */
-.app > main:has(> div > #deckFilter){padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));gap:12px;}
-.app > main:has(> div > #deckFilter) > div:has(> #deckFilter){order:0;padding-right:88px;}
-.app > main:has(> div > #deckFilter) > *:not(.searchbar){margin-top:0;margin-bottom:0;}
+.app > main.dk-home{padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));gap:12px;}
+.app > main.dk-home > div:has(> #deckFilter){order:0;padding-right:88px;}
+.app > main.dk-home > *:not(.searchbar){margin-top:0;margin-bottom:0;}
 /* (4) Collection reversed: automatic folders up top, binders by the thumb;
    controls stay at the very bottom; row shortened for the low FAB. */
-.app > main:has(> #colAdvBox){flex-direction:column-reverse;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
-.app > main:has(> #colAdvBox) > .searchbar{order:0;padding-right:88px;}
-.app > main:has(> #colAdvBox) > div:has(> #colAdvToggle){order:0;}
+.app > main.col-main{flex-direction:column-reverse;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+.app > main.col-main > .searchbar{order:0;padding-right:88px;}
+.app > main.col-main > div:has(> #colAdvToggle){order:0;}
 /* (6) Search page: explainer just above the random card, RANDOM below it. */
 /* The results box hugs the search bar at the foot; the wrap-reverse grid
    inside already reads bottom-up, so the best match sits nearest the bar. */
@@ -1670,8 +1670,8 @@ html:not(.desk) main:has(.sr-grid, .visual-grid, .deck-grid, .sc-grid){padding-l
 /* 1.76: ...and the bar at the foot then reaches out only those 6px -- it
    reached out 16, so the field sat 6px from the left edge and the gold +
    16px from the right */
-html:not(.desk) .app > main:has(.sr-grid, .visual-grid, .deck-grid, .sc-grid) > .searchbar,
-html:not(.desk) .app > main:has(.sr-grid, .visual-grid, .deck-grid, .sc-grid) > div:has(> #deckFilter){margin-left:-6px !important;margin-right:-6px !important;}
+html:not(.desk) .app > main.has-grid > .searchbar,
+html:not(.desk) .app > main.has-grid > div:has(> #deckFilter){margin-left:-6px !important;margin-right:-6px !important;}
 html:not(.desk) .sr-grid, html:not(.desk) .deck-grid, html:not(.desk) .visual-grid:not(.vg-stack):not(.vg-text){gap:6px;}
 html:not(.desk) .sr-grid > *, html:not(.desk) .deck-grid > *, html:not(.desk) .visual-grid:not(.vg-stack):not(.vg-text) > *{flex-basis:calc(50% - 3px);}
 html:not(.desk) .deck-grid[style*="grid-template-columns:1fr"] > *{flex-basis:100%;}
@@ -2566,7 +2566,7 @@ html:not(.desk) .edh-jump{width:30px;height:30px;font-size:14px;border-width:2px
 .col-tile.csel{outline:2.5px solid var(--brass);outline-offset:-2px;}
 .csel-mark{position:absolute;top:6px;right:6px;z-index:3;width:20px;height:20px;border-radius:50%;background:var(--gold);color:#241A04;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.5);pointer-events:none;}
 /* The selection button TAKES the ＋'s place (it used to sit half over it). */
-body:has(#colSelFab) #binderFab, body:has(#colSelFab) #colFab{display:none !important;}
+body.col-selecting #binderFab, body.col-selecting #colFab{display:none !important;}
 
 .fp-actions{display:flex;gap:8px;margin-top:8px;align-items:stretch;}
 .fp-actions > button{margin:0;min-height:50px;white-space:normal;line-height:1.2;}
@@ -3182,8 +3182,8 @@ html.desk [id^="cardSheetOverlay"]:not(.sheet-over-overlay):not(.cs-pop){top:var
 html.desk #crOverlay #crBody{flex-direction:column;}
 
 /* ---- every bottom-up list and stack reads top-down ---- */
-html.desk :where(#crOverlay .cr-toc, .app > main.settings-main, .app > main:has(> div > #deckFilter), .adv-panel, #colAdvBox,
-  .adv-panel .cselect, #colAdvBox .cselect, .adv-panel .cselect-panel, #colAdvBox .cselect-panel, .app > main > #twResults, .app > main:has(> #colAdvBox),
+html.desk :where(#crOverlay .cr-toc, .app > main.settings-main, .app > main.dk-home, .adv-panel, #colAdvBox,
+  .adv-panel .cselect, #colAdvBox .cselect, .adv-panel .cselect-panel, #colAdvBox .cselect-panel, .app > main > #twResults, .app > main.col-main,
   #cotdBox, .sp-feed, .sp-group, #builderBody, #decklistBox, .otag-pop, .df-compact .cselect-panel, .st-detail, .tag-drop, .tag-drop-list,
   .deck-grid.as-list, .scan-list, .br-dd .br-dd-panel, .cat-group, .visual-grid.vg-text, #colAddSheet .col-addlist, .home-news, .name-suggest,
   .cselect.cs-foot .cselect-panel, .cselect.cs-up > .cselect-panel, .browse-selects .cselect > .cselect-panel, #recoOverlay .cselect > .cselect-panel,
@@ -3219,7 +3219,7 @@ html.desk .app > main > .adv-panel, html.desk .app > main > #advSlot > .adv-pane
   position:fixed;left:auto !important;right:0;top:var(--top-h);bottom:0;width:400px;max-height:none;border-radius:0;border-top:none;
   border-left:2px solid var(--line);box-shadow:-12px 0 30px rgba(0,0,0,0.4);box-sizing:border-box;
 }
-html.desk .app > main:has(> #advSlot > .adv-panel), html.desk .app > main:has(> #colAdvBox), html.desk .app > main:has(> #spAdvBox){padding-right:calc(400px + 16px);}
+html.desk .app > main:has(> #advSlot > .adv-panel), html.desk .app > main.col-main, html.desk .app > main:has(> #spAdvBox){padding-right:calc(400px + 16px);}
 html.desk .browse-selects .cselect-panel, html.desk #recoOverlay .cselect-panel, html.desk .overlay .reco-themes .cselect-panel,
 html.desk .cselect-panel{top:calc(100% + 4px) !important;bottom:auto !important;}
 html.desk .otag-pop{top:calc(100% + 4px);bottom:auto;}
@@ -3268,16 +3268,16 @@ html.desk .app > main > .adv-panel, html.desk .app > main > #advSlot > .adv-pane
   width:min(720px, calc(100vw - 32px)) !important;max-height:calc(100vh - var(--top-h) - 84px) !important;overflow-y:auto;
   border:2px solid var(--line) !important;border-radius:12px !important;box-shadow:0 18px 50px rgba(0,0,0,0.55) !important;
 }
-html.desk .app > main:has(> #advSlot > .adv-panel), html.desk .app > main:has(> #colAdvBox), html.desk .app > main:has(> #spAdvBox){padding-right:16px !important;}
+html.desk .app > main:has(> #advSlot > .adv-panel), html.desk .app > main.col-main, html.desk .app > main:has(> #spAdvBox){padding-right:16px !important;}
 /* the gold + sits top-left, at the start of the search bar */
 html.desk .deck-fab:not(.col-sel-fab):not(.dl-empty-plus){position:fixed;top:calc(var(--top-h) + 6px);left:calc(var(--dl) + 10px);right:auto;bottom:auto;width:46px;height:46px;font-size:22px;z-index:42;}
 html.desk .app > main:has(> .deck-fab:not(.col-sel-fab):not(.dl-empty-plus)) > .searchbar{padding-left:70px !important;}
 /* 1.76 desk: on Collection every heading stands ABOVE its tiles (the phone
    writes tiles-then-heading for its bottom-up column) */
-html.desk .app > main:has(> #colAdvBox) > .section-label:has(+ .deck-grid){order:1 !important;}
-html.desk .app > main:has(> #colAdvBox) > .deck-grid:has(+ .section-label + .deck-grid){order:2 !important;}
-html.desk .app > main:has(> #colAdvBox) > .section-label:not(:has(+ .deck-grid)){order:3 !important;}
-html.desk .app > main:has(> #colAdvBox) > .deck-grid:not(:has(+ .section-label + .deck-grid)){order:4 !important;}
+html.desk .app > main.col-main > .section-label:has(+ .deck-grid){order:1 !important;}
+html.desk .app > main.col-main > .deck-grid:has(+ .section-label + .deck-grid){order:2 !important;}
+html.desk .app > main.col-main > .section-label:not(:has(+ .deck-grid)){order:3 !important;}
+html.desk .app > main.col-main > .deck-grid:not(:has(+ .section-label + .deck-grid)){order:4 !important;}
 html.desk .deck-dock .dk-mid:has(.dk-type){justify-content:flex-end;gap:14px;}
 html.desk #builderBody{min-height:0;justify-content:flex-start;}
 html.desk .dl-bridge-desc{justify-content:flex-start;}
@@ -3836,6 +3836,21 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 document.documentElement.setAttribute('data-mode','commander');
 </script>
 <div id="root"></div>
+<script>
+/* 1.85: while the app itself still loads, show the home screen as it looked
+   last time (saved by bootSnapSave). The first real render replaces it. Only
+   when the styles and the screen width are the same as when it was saved. */
+try{(function(){
+  var s = localStorage.getItem('admiral_app:bootSnap'); if(!s) return;
+  var j = JSON.parse(s), st = document.querySelector('style');
+  if(!j || j.v !== 1 || !j.h || !st || j.css !== st.textContent.length || Math.abs((j.w || 0) - window.innerWidth) > 40) return;
+  var de = document.documentElement, a = j.a || {};
+  for(var k in a) de.setAttribute(k, a[k]);
+  if(j.c) de.classList.add(j.c);
+  document.getElementById('root').innerHTML = j.h;
+  window.scrollTo(0, 1e7);
+})();}catch(e){}
+</script>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -8331,17 +8346,21 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.84';
+const APP_VERSION = '1.85';
 const CHANGELOG_NOTES = {
   en: [
-    "Themes always find their commanders",
-    "No lost card lists after start-up",
-    "Faster EDHREC pages"
+    "Faster start: home shows at once",
+    "Big collections open instantly",
+    "Life counter reacts faster",
+    "Inspiration and tips load at once",
+    "Smaller app download"
   ],
   nl: [
-    "Thema’s vinden altijd hun commanders",
-    "Geen kwijte kaartlijsten na opstarten",
-    "Snellere EDHREC-pagina’s"
+    "Sneller opstarten: Home staat er meteen",
+    "Grote collecties openen meteen",
+    "Life counter reageert sneller",
+    "Inspiration en tips laden meteen",
+    "Kleinere app-download"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8351,6 +8370,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-09';
 const CHANGELOG_HISTORY = [
+  { v: '1.84', d: '2026-11-09',
+    en: ['Themes always find their commanders', 'No lost card lists after start-up', 'Faster EDHREC pages'],
+    nl: ["Thema’s vinden altijd hun commanders", "Geen kwijte kaartlijsten na opstarten", "Snellere EDHREC-pagina’s"] },
   { v: '1.83', d: '2026-11-08',
     en: ['Clearer text and warnings everywhere', 'Life counter: no more flicker', 'Packages: one bar names the package', 'Inspiration: period in the heading', 'Spoilers button beside the search', 'Cards shown without gold rims'],
     nl: ["Overal beter leesbaar, ook waarschuwing", "Life counter flitst niet meer", "Pakketten: één balk met de naam", "Inspiration: periode in de kop", "Spoilerknop naast het zoekveld", "Kaarten zonder gouden rand"] },
@@ -10260,14 +10282,50 @@ function render(){
     }catch(e){ appReady(); }
   }
 }
+/* 1.85: a copy of the home screen for the next start (see the small boot
+   script after #root). Saved a moment after home is drawn and when the app
+   goes to the background; never with something open on top of it. */
+let _bootSnapT = null;
+function bootSnapSoon(){ clearTimeout(_bootSnapT); _bootSnapT = setTimeout(bootSnapSave, 1500); }
+function bootSnapSave(){
+  try{
+    if(state.screen !== 'home' || state.menuOpen || document.querySelector('.overlay, #changelogScrim, #appointOverlay')) return;
+    const root = document.getElementById('root');
+    if(!root || !root.querySelector('.app')) return;
+    const clone = root.cloneNode(true);
+    clone.querySelectorAll('*').forEach(el=>{ Array.from(el.attributes).forEach(at=>{ if(/^on/i.test(at.name)) el.removeAttribute(at.name); }); });
+    clone.querySelectorAll('script, iframe, video, .net-chip, #installPill').forEach(el=>el.remove());
+    const h = clone.innerHTML;
+    if(h.length > 200000) return;
+    const de = document.documentElement, a = {};
+    ['data-theme', 'data-main', 'data-side', 'data-mode', 'style'].forEach(k=>{ const v = de.getAttribute(k); if(v != null) a[k] = v; });
+    const st = document.querySelector('style');
+    localStorage.setItem(LS_PREFIX + 'bootSnap', JSON.stringify({ v: 1, h, a, c: de.classList.contains('desk') ? 'desk' : '', w: window.innerWidth, css: st ? st.textContent.length : 0 }));
+  }catch(e){}
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') bootSnapSave(); });
+let _bootNewsHtml = null, _bootSnapSeen = false;
+/* 1.85: two page states as plain classes instead of :has() tests -- those
+   made the browser restyle every tile of a long list on each change.
+   has-grid: the page shows a card grid; col-selecting: cards are selected. */
+function syncPageFlags(){
+  try{
+    const m = document.querySelector('.app > main');
+    if(m){ const g = !!m.querySelector('.sr-grid, .visual-grid, .deck-grid, .sc-grid'); if(m.classList.contains('has-grid') !== g) m.classList.toggle('has-grid', g); }
+    const sel = !!document.getElementById('colSelFab');
+    if(document.body.classList.contains('col-selecting') !== sel) document.body.classList.toggle('col-selecting', sel);
+  }catch(e){}
+}
 function renderInner(){
   const root = document.getElementById('root');
+  if(!_bootSnapSeen){ _bootSnapSeen = true; try{ const nb = document.getElementById('homeNews'); if(nb && nb.querySelector('.news-item')) _bootNewsHtml = nb.innerHTML; }catch(e){} }
   state._capNote = '';                        // pages may set it while building
   state._capCount = null;
   let body = pageBodyHtml(state.screen);
   const nav = navHtml();
   root.innerHTML = `<div class="app">${nav}${body}</div>`;
 
+  try{ if(state.screen === 'home') bootSnapSoon(); }catch(e){}
   try{
     if(state.screen==='home') wireHomePage();
     else if(state.screen==='decks') wireHome();
@@ -10282,6 +10340,7 @@ function renderInner(){
     else if(state.screen==='draft') wireDraftPage();
   }catch(e){ console.error('page wiring failed', state.screen, e); }
   wireNav();   // the header (nav, home, mode long-press) must survive any page's failure
+  syncPageFlags();
   renderModal();
   renderPreview();
   renderLifeOverlay();
@@ -11570,7 +11629,7 @@ function homeHtml(){
   const deckTiles = shownDecks.map(deckTileHtml).join('');
   const hasAny = state.decksIndex.length || (state.folders||[]).length;
   const _html = `
-  <main>
+  <main class="dk-home">
     ${decksNoticeHtml()}
     <div class="searchbar" style="margin-bottom:12px;">
       <input id="deckFilter" placeholder="Filter by folder…" value="${escapeHtml(state.deckFilter||'')}">
@@ -12077,6 +12136,24 @@ function openDeck(id){
   switchPage('decklist');
   try{ const d = getDeck(id); if(d) setTimeout(()=>{ healDeckCardFlags(d); }, 1200); }catch(e){}
   try{ const d2 = getDeck(id); if(d2) setTimeout(()=>{ ensureDeckOtags(d2); }, 1500); }catch(e){}
+  try{ prefetchDeckEdhrec(getDeck(id)); }catch(e){}
+}
+/* 1.85: opening a deck fetches its leader's EDHREC page in the background
+   (after anything you asked for yourself), so the deck's Inspiration and
+   recommendations open at once. Once per leader per session; a page that is
+   already in the cache costs nothing. */
+const _edhPrefetched = new Set();
+function prefetchDeckEdhrec(d){
+  if(!d || !d.admiral || !d.admiral.name) return;
+  const key = inspLeaderKey(d);
+  if(_edhPrefetched.has(key)) return;
+  _edhPrefetched.add(key);
+  setTimeout(()=>{
+    waitUserIdle(20000).then(()=>{
+      if(navigator.onLine === false) return null;
+      return d.partner ? edhrecPairPage(d.admiral, d.partner) : edhrecCommanderPage(d.admiral);
+    }).catch(()=>{});
+  }, 2500);
 }
 /* Import a whole deck from a CSV (Moxfield/Archidekt deck export) or a plain
    text list, straight from the ＋ menu: creates the deck (named after the file),
@@ -12287,7 +12364,7 @@ function collectionPageHtml(){
   const _statItems = (!f.binder && !wantsMode) ? state.collection.items : items;
   const totalQty = wantsMode ? items.length : _statItems.reduce((a,it)=>a+it.qty,0);
   const totalEur = wantsMode ? items.reduce((a,it)=>a+(it.eur||0),0) : _statItems.reduce((a,it)=>a+(it.eur||0)*it.qty,0);
-  return `<main>
+  return `<main class="col-main">
     <div class="searchbar" style="margin-bottom:8px;"><input id="colSearchQ" enterkeyhint="search" placeholder="${(f.binder && f.binder!=='__all__' && f.binder!=='__wants__') ? trS('Search this binder…') : trS('Search collection…')}" value="${escapeHtml(f.q||'')}" autocomplete="off" style="padding-right:36px;"><button class="in-chev" id="colChev" title="${trS('Advanced filter')}">${state.colAdvOpen?'▴':'▾'}</button><button id="tradeBtn" title="Trade calculator" style="flex:none;padding:0 13px;font-size:15px;white-space:nowrap;">⚖ ${trS('Trade')}</button></div>
     ${(state._capNote = '€' + totalEur.toFixed(2), state._capCount = totalQty, notePrice('__col:' + (state.colFilter.binder || 'all'), totalEur), '')}
     <div id="colAdvBox" style="${state.colAdvOpen?'':'display:none;'}">${(()=>{
@@ -12730,13 +12807,38 @@ function binderGroupOf(it, group){
 /* The collection grid(s). Inside a binder its own view applies: sorted, and
    split into labelled groups. The page is column-reverse, so each label
    follows its grid in the DOM to sit above it. */
+/* A big collection (1500+ cards) took a second to draw in one go. Now the
+   first tiles -- the ones on screen where the page lands -- go in at once
+   and the rest follow in small batches right after, so the page is there
+   immediately. A re-render while you are scrolled away from the landing
+   edge draws everything at once, so your place in the list is kept. */
+const COL_FIRST = 60;
+let _colRest = null, _colWire = null;
 function colGridsHtml(items, tileFn){
   const f = state.colFilter;
+  let budget = COL_FIRST;
+  try{
+    const old = document.querySelector('.app > main .col-grid');
+    if(old){
+      const de = document.documentElement;
+      const away = isDesk() ? window.scrollY : (de.scrollHeight - window.scrollY - window.innerHeight);
+      if(away > window.innerHeight) budget = Infinity;
+    }
+  }catch(e){}
+  const R = { lists: [], tileFn };
+  _colRest = R;
+  const gridHtml = (cls, attrs, list)=>{
+    const n = Math.min(list.length, Math.max(0, budget));
+    budget -= n;
+    let tag = '';
+    if(n < list.length){ tag = ` data-colrest="${R.lists.length}"`; R.lists.push(list.slice(n)); }
+    return `<div class="${cls}"${attrs}${tag}>${list.slice(0, n).map(tileFn).join('')}</div>`;
+  };
   const b = (f.binder && f.binder !== '__all__' && f.binder !== '__wants__') ? (state.collection.binders || []).find(x=>x.id === f.binder) : null;
-  if(!b) return `<div class="col-grid">${items.map(tileFn).join('')}</div>`;
+  if(!b) return gridHtml('col-grid', '', items);
   const v = binderView(b);
   binderSortItems(items, v.sort);
-  if(v.group === 'none') return `<div class="col-grid">${items.map(tileFn).join('')}</div>`;
+  if(v.group === 'none') return gridHtml('col-grid', '', items);
   const groups = new Map();
   items.forEach(it=>{
     const g = binderGroupOf(it, v.group);
@@ -12745,9 +12847,50 @@ function colGridsHtml(items, tileFn){
   });
   return Array.from(groups.values()).sort((a, c)=>a.o - c.o).map(g=>{
     const n = g.list.reduce((a, it)=>a + (it.qty || 1), 0);
-    return `<div class="col-grid col-group" data-colgroup="${escapeHtml(g.k)}">${g.list.map(tileFn).join('')}</div>
+    return `${gridHtml('col-grid col-group', ` data-colgroup="${escapeHtml(g.k)}"`, g.list)}
     <div class="section-label col-group-label">${g.label} <span class="cg-n">· ${n}</span></div>`;
   }).join('');
+}
+/* Put up to `max` waiting tiles into their grid (all of them without max).
+   Tiles are wired before they go in, exactly like the first ones. */
+function colFlushRest(max){
+  const R = _colRest;
+  if(!R) return;
+  let left = max == null ? Infinity : max;
+  // The app runs its own scroll anchoring: tiles added ABOVE what you look at
+  // (this page grows upward) must not push your view away.
+  let anchor = null, t0 = null;
+  try{
+    const hit = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+    anchor = (hit && hit.closest && hit.closest('.col-tile')) || document.querySelector('.app > main .col-tile');
+    if(anchor) t0 = anchor.getBoundingClientRect().top;
+  }catch(e){}
+  for(let k = 0; k < R.lists.length && left > 0; k++){
+    const list = R.lists[k];
+    if(!list || !list.length) continue;
+    const grid = document.querySelector('.app > main [data-colrest="' + k + '"]');
+    if(!grid){ _colRest = null; return; }   // the page moved on
+    const take = list.splice(0, Math.min(left, list.length));
+    left -= take.length;
+    const tpl = document.createElement('template');
+    tpl.innerHTML = take.map(R.tileFn).join('');
+    try{ if(_colWire) _colWire(tpl.content); }catch(e){}
+    grid.appendChild(tpl.content);
+    if(!list.length) grid.removeAttribute('data-colrest');
+  }
+  try{ if(anchor && t0 != null && anchor.isConnected){ const dy = anchor.getBoundingClientRect().top - t0; if(Math.abs(dy) > 1) window.scrollBy(0, dy); } }catch(e){}
+  if(!R.lists.some(l=>l && l.length) && _colRest === R) _colRest = null;
+}
+function colAppendRestSoon(){
+  const R = _colRest;
+  if(!R) return;
+  const step = ()=>{
+    if(_colRest !== R) return;
+    colFlushRest(80);
+    if(_colRest === R) setTimeout(step, 30);
+  };
+  // after the first paint, so the page itself shows up first
+  requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(step, 0)));
 }
 const BR_GLYPHS = ['W', 'U', 'B', 'R', 'G', 'C', 'multi', 'rC', 'rU', 'rR', 'rM', 'Creature', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Planeswalker', 'Battle', 'Land', 'token', 'foil'];
 function brGlyphHtml(k, px){
@@ -13277,26 +13420,30 @@ function wireCollectionPage(){
     const el = document.getElementById('colTypeText');
     if(el){ el.focus(); const v=el.value; el.value=''; el.value=v; }
   }, 380); });
-  document.querySelectorAll('[data-wantbell]').forEach(btn=>{
+  const wireWantTiles = (root)=>{
+  root.querySelectorAll('[data-wantbell]').forEach(btn=>{
     btn.addEventListener('pointerdown', (e)=>e.stopPropagation());
     btn.addEventListener('click', (e)=>{ e.stopPropagation(); e.preventDefault(); openPriceWatchSheet(btn.dataset.wantbell); });
   });
-  document.querySelectorAll('[data-wanthave]').forEach(btn=>{
+  root.querySelectorAll('[data-wanthave]').forEach(btn=>{
     btn.addEventListener('pointerdown', (e)=>e.stopPropagation());
     btn.addEventListener('click', (e)=>{ e.stopPropagation(); e.preventDefault(); wantGotIt(btn.dataset.wanthave); });
   });
-  document.querySelectorAll('.want-tile').forEach(tile=>tile.addEventListener('click', async ()=>{
+  root.querySelectorAll('.want-tile').forEach(tile=>tile.addEventListener('click', async ()=>{
     // A Wants tile opens the normal card page (with Add to my collection and
     // Remove from Wants); the little manage sheet survives only as the
     // offline / not-found fallback.
     const name = tile.dataset.wn;
     // Hand over the whole rendered Wants list, so the card page's chevrons
     // and swipe gestures sail through it card by card.
+    colFlushRest();
     const wpool = Array.from(document.querySelectorAll('.want-tile')).map(t=>t.dataset.wn);
     const card = await wantCardFor(name);
     if(card){ openCardInfo(card, { wantName: name, wantPool: wpool, wantIdx: wpool.indexOf(name) }); return; }
     openWantSheet(name);
   }));
+  };
+  wireWantTiles(document);
   // The top box searches WHAT YOU OWN — the whole collection, or just the
   // open binder (the filter chain already scopes by binder). Instant while
   // typing; adding cards moved to the ＋ button.
@@ -13371,7 +13518,7 @@ function wireCollectionPage(){
     }
     updateColSelFab();
   };
-  document.querySelectorAll('.col-tile').forEach(tile=>{
+  const wireColTiles = (root)=>root.querySelectorAll('.col-tile').forEach(tile=>{
     if(tile.dataset.ci == null) return;
     const ci = +tile.dataset.ci;
     let lpT = null, lpFired = false;
@@ -13385,15 +13532,20 @@ function wireCollectionPage(){
       if(state.colSel && state.colSel.size){ colToggleSel(ci, tile); return; }
       // Hand over the grid's rendered order so the card page's chevrons and
       // swipe gestures sail through it copy by copy.
+      colFlushRest();
       openCollectionCard(ci, Array.from(document.querySelectorAll('.col-tile[data-ci]')).map(t=>+t.dataset.ci));
     });
   });
+  wireColTiles(document);
+  _colWire = (root)=>{ wireWantTiles(root); wireColTiles(root); };
+  colAppendRestSoon();
   const sf = document.getElementById('colSelFab');
   if(sf) wireColSelFab(sf);
   function openColSelMenu(anchor){
     const n = colSelQty();
     openTileMenu(anchor, [
       {label:'☑ '+trS('Select all'), fn:()=>{
+        colFlushRest();
         state.colSel = new Set(Array.from(document.querySelectorAll('.col-tile[data-ci]')).map(t=>+t.dataset.ci));
         const y = window.scrollY; render(); window.scrollTo(0, y);
       }},
@@ -23521,10 +23673,10 @@ async function loadMtgNews(box){
       const a = e.target.closest('.news-item');
       if(!a) return;
       e.preventDefault();
-      openNewsPreview(_newsItems[+a.dataset.ni]);
+      if(_newsItems[+a.dataset.ni]) openNewsPreview(_newsItems[+a.dataset.ni]);
     });
   }
-  box.innerHTML = '<span class="l2">Loading…</span>';
+  box.innerHTML = _bootNewsHtml || '<span class="l2">Loading…</span>';   // 1.85: the start-up picture's news stays until the list is read
   try{
     const ck = 'mtgnews5';   // v5: items carry a detected format
     let data = null;
@@ -23543,6 +23695,7 @@ async function loadMtgNews(box){
       data = Array.isArray(j.items) ? j.items : [];
       if(data.length) qdbSet(ck, data);
     }
+    _bootNewsHtml = null;
     if(!data || !data.length){ box.innerHTML = '<span class="l2">No articles right now.</span>'; return; }
     _newsItems = data.slice(0, 20);
     box.innerHTML = _newsItems.map((a, ni)=>{
@@ -23564,6 +23717,7 @@ async function loadMtgNews(box){
       }
     }catch(e){}
   }catch(e){
+    _bootNewsHtml = null;
     box.innerHTML = '<span class="l2">Couldn’t load articles right now — check your connection, or the news function isn’t deployed yet.</span>';
   }
 }
@@ -24815,7 +24969,7 @@ function placeJumpOnLabels(){
 }
 {
   let _sbRaf = 0;
-  const tick = ()=>{ if(_sbRaf) return; _sbRaf = requestAnimationFrame(()=>{ _sbRaf = 0; try{ updStickB(); placeJumpOnLabels(); }catch(e){} try{ deskFabAlign(); }catch(e){} }); };
+  const tick = ()=>{ if(_sbRaf) return; _sbRaf = requestAnimationFrame(()=>{ _sbRaf = 0; syncPageFlags(); try{ updStickB(); placeJumpOnLabels(); }catch(e){} try{ deskFabAlign(); }catch(e){} }); };
   window.addEventListener('resize', tick);
   document.addEventListener('scroll', tick, { capture: true, passive: true });
   try{ new MutationObserver(tick).observe(document.documentElement, { childList: true, subtree: true }); }catch(e){}
@@ -29612,6 +29766,60 @@ async function edhrecFetchJson(path){
   if(data) qdbSet(key, data);   // failures are never stored — a bad day can't poison a week; qdbSet adds the {t,v} wrap
   return data;
 }
+/* 1.85: the weekly EDHREC summary. A robot on GitHub collects the pages the
+   app opens most (theme and kindred lists, the most played themes, kindred
+   and commanders) into one small file on our own site. Once a week the app
+   reads it in the background and puts every page in its EDHREC cache, so
+   Inspiration and recommendations open at once, offline too. Those pages are
+   stamped two days old: the first time one is opened, the full live page is
+   fetched in the background for the next visit. A page the cache already has
+   newer is left alone. */
+const EDH_SLIM_META = './edhrec-meta.json', EDH_SLIM_FILE = './edhrec-slim.json.gz';
+let _edhSlimBusy = false;
+async function edhSlimSync(){
+  if(_edhSlimBusy) return;
+  _edhSlimBusy = true;
+  try{
+    if(!('DecompressionStream' in window) || navigator.onLine === false) return;
+    const r = await fetch(EDH_SLIM_META, { cache: 'no-store' });
+    if(!r.ok) return;                                   // not published yet: no harm done
+    const meta = await r.json();
+    const built = Number(meta && meta.built) || 0;
+    let have = 0;
+    try{ have = Number(localStorage.getItem(LS_PREFIX + 'edhSlimBuilt')) || 0; }catch(e){}
+    if(!built || built <= have) return;
+    await waitUserIdle(30000);
+    const res = await fetch(EDH_SLIM_FILE, { cache: 'no-store' });
+    if(!res.ok || !res.body) return;
+    const j = JSON.parse(await new Response(res.body.pipeThrough(new DecompressionStream('gzip'))).text());
+    const pages = (j && j.pages) || {};
+    const t = (Number(j.built) || built) - SWR_FRESH - 60000;
+    if(Date.now() - t > SWR_SERVE) return;              // too old to be of use
+    await waitUserIdle(30000);
+    const db = await qdbOpen();
+    if(!db) return;
+    const n = await new Promise((done)=>{
+      let put = 0;
+      try{
+        const tx = db.transaction('q', 'readwrite'), st = tx.objectStore('q');
+        Object.keys(pages).forEach(path=>{
+          const pg = pages[path];
+          if(!pg || !pg.container || !pg.container.json_dict) return;
+          const key = 'edh|' + path, rq = st.get(key);
+          rq.onsuccess = ()=>{ const cur = rq.result; if(!cur || !cur.v || (cur.t || 0) < t){ st.put({ t, v: pg }, key); put++; } };
+        });
+        tx.oncomplete = ()=>done(put);
+        tx.onerror = tx.onabort = ()=>done(-1);
+      }catch(e){ done(-1); }
+    });
+    if(n >= 0){
+      try{ localStorage.setItem(LS_PREFIX + 'edhSlimBuilt', String(built)); }catch(e){}
+      try{ sfJournal('edhrec summary: ' + n + ' of ' + Object.keys(pages).length + ' pages stored'); }catch(e){}
+    }
+  }catch(e){}
+  finally{ _edhSlimBusy = false; }
+}
+window.addEventListener('load', ()=>{ setTimeout(()=>{ edhSlimSync(); }, 20000); });
 /* EDHREC's card-type sections, in EDHREC's own page order. (\x7b is '{' --
    written so for the source-reading tests.) A card that no
    list of the page names (a stand-in, a fallback pick) joins the section of
@@ -33504,9 +33712,38 @@ function seatRotation(i, count){
   if(count === 2) return i===0 ? 180 : 0;
   return (i % 2 === 0) ? 90 : 270;
 }
+/* 1.85: a +/- tap on a life total only changes that number and its running
+   -N / +N -- redrawing the whole table for it took a noticeable moment per
+   tap on a phone. Anything bigger (a defeat, the damage view) still redraws
+   everything. */
+function lifePatchCard(idx){
+  try{
+    if(state.life.expandedIdx != null) return false;
+    const p = ensureLifePlayers()[idx];
+    if(!p) return false;
+    const card = document.querySelector('#lifeGrid .life-card-v2[data-idx="' + idx + '"]');
+    const val = card && card.querySelector('.lval2[data-setlife]');
+    if(!val || p.defeated) return false;
+    val.textContent = p.life;
+    const d = p._delta || 0, fresh = !!p._deltaFresh;
+    const set = (el, on, txt)=>{
+      if(!el) return;
+      el.textContent = on ? txt : '';
+      el.classList.toggle('show', on);
+      el.classList.remove('pop');
+      if(on && fresh){ void el.offsetWidth; el.classList.add('pop'); }
+    };
+    set(card.querySelector('.lval-row > .ldelta.minus'), d < 0, '\u2212' + Math.abs(d));
+    set(card.querySelector('.lval-row > .ldelta.plus'), d > 0, '+' + d);
+    delete p._deltaFresh;
+    if(state.life.setupDone) lifeAutosave();
+    return true;
+  }catch(e){ return false; }
+}
 function adjustLifeField(idx, field, d, from){
   const players = ensureLifePlayers();
   const p = players[idx];
+  const _wasDef = !!p.defeated;
   if(field==='life'){
     p.life += d; if(p.defeated && p.life>0){ }
     // Running −X / +X beside the total: rapid taps accumulate into one
@@ -33515,7 +33752,7 @@ function adjustLifeField(idx, field, d, from){
     p._deltaFresh = true;   // only THIS player's counter re-pops; re-renders from other taps keep it steady
     if(p._delta === 0){ delete p._delta; delete p._deltaFresh; }
     clearTimeout(p._deltaT);
-    p._deltaT = setTimeout(()=>{ delete p._delta; renderLifeGrid(); }, 2500);
+    p._deltaT = setTimeout(()=>{ delete p._delta; const i = ensureLifePlayers().indexOf(p); if(i < 0 || !lifePatchCard(i)) renderLifeGrid(); }, 2500);
     { const from = lifeRunStart(p, 'life', p.life - d), sum = p.life - from;
       lifeLogLive(p, 'life', sum ? `${p.name}: life ${_sgn(sum)} → ${p.life}` : null); }
   }
@@ -33556,6 +33793,7 @@ function adjustLifeField(idx, field, d, from){
       lifeLogLive(p, k, sum ? `${p.name}: cmdr dmg from ${players[from].name} ${_sgn(sum)} → ${p.dmg[from]} · life → ${p.life}` : null); }
   }
   checkDefeat(p);
+  if(field === 'life' && !_wasDef && !p.defeated && lifePatchCard(idx)) return;
   renderLifeGrid();
 }
 async function animatedHighRoll(mode){
@@ -36203,11 +36441,9 @@ function bulkIndexReady(){
       });
       await _bulkYield();
     }
-    for(let i = 0; i < meta.rulChunks; i++){
-      const arr = await bulkKvGet('rul:' + i);
-      if(Array.isArray(arr)) arr.forEach(x=>{ if(x && x.o) rulByOid.set(x.o, x.r || []); });
-      await _bulkYield();
-    }
+    // 1.85: rulings are no longer read here -- they were a third of the
+    // start-up load and most sessions never open one. bulkRulingsReady()
+    // reads them the first time a card page asks.
     const tagByOid = (meta.tagChunks > 0) ? new Map() : null;
     if(tagByOid){
       for(let i = 0; i < meta.tagChunks; i++){
@@ -36282,8 +36518,27 @@ function _bulkRulingsDecide(ix, card){
   if(c.o && ix.rulByOid.has(c.o)) return ix.rulByOid.get(c.o);
   return [];
 }
+function bulkRulingsReady(ix){
+  if(!ix || ix._rulDone) return Promise.resolve(ix);
+  if(ix._rulP) return ix._rulP;
+  ix._rulP = (async ()=>{
+    try{
+      const meta = await bulkKvGet('meta');
+      const n = (meta && meta.rulChunks) || 0;
+      for(let i = 0; i < n; i++){
+        const arr = await bulkKvGet('rul:' + i);
+        if(Array.isArray(arr)) arr.forEach(x=>{ if(x && x.o) ix.rulByOid.set(x.o, x.r || []); });
+        await _bulkYield();
+      }
+    }catch(e){}
+    ix._rulDone = true;
+    return ix;
+  })();
+  return ix._rulP;
+}
 async function bulkRulingsFor(card){
   const ix = await bulkIndexReady();
+  if(ix) await bulkRulingsReady(ix);
   return _bulkRulingsDecide(ix, card);
 }
 /* A candidate's own tags, synchronously, from the already-loaded index —

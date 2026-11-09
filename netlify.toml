@@ -1,0 +1,10 @@
+# Deckhand — what Netlify does when main changes.
+#
+# The site is the repository as it is, with one step on the way: index.html
+# is made smaller (scripts/minify.mjs), so phones download and read about a
+# third less. GitHub keeps the readable index.html. If that step meets
+# anything unexpected it leaves the file as it is, so it can never stop a
+# deploy.
+[build]
+  publish = "."
+  command = "node scripts/minify.mjs index.html"
