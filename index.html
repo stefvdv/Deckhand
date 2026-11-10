@@ -3822,6 +3822,15 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 .lctr-row > .lctr i{width:15px;height:15px;}
 .lctr-row > .lctr.lctr-m i{width:17px;height:17px;}
 @media (prefers-reduced-motion:reduce){ :where(.menu-pop, #fabMenu, .tile-menu, .otag-pop, .cselect-panel, .name-suggest, #bindersPop, .xt-body, .modal-backdrop, .modal-sheet){animation:none !important;} }
+/* ===== 1.86 MOTION (see motionIn in the script) ===== */
+.builder-tabs{position:relative;}
+.app > main > .builder-tabs{position:fixed;}
+.b-glide{position:absolute;height:2px;background:var(--brass);transform-origin:0 0;pointer-events:none;z-index:1;}
+.builder-tabs.b-gliding .b-tab.active{border-bottom-color:transparent;}
+/* the message at the foot rises with a little spring, and sinks away */
+.toast{transform:translateX(-50%) translateY(16px);transition:opacity .2s ease-in, transform .2s ease-in;}
+.toast.show{transform:translateX(-50%) translateY(-4px);transition:opacity .2s ease-out, transform .34s cubic-bezier(.3,1.6,.5,1);}
+@media (prefers-reduced-motion:reduce){ .toast, .toast.show{transition:opacity .2s;} }
 </style>
 </head>
 <body>
@@ -8346,21 +8355,23 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.85';
+const APP_VERSION = '1.86';
 const CHANGELOG_NOTES = {
   en: [
-    "Faster start: home shows at once",
-    "Big collections open instantly",
-    "Life counter reacts faster",
-    "Inspiration and tips load at once",
-    "Smaller app download"
+    "Pages glide in when they open",
+    "Card pages rise in and sink away",
+    "Tabs slide, the gold line follows",
+    "Folders slide in from the side",
+    "Deck count pops when it changes",
+    "Messages rise with a little bounce"
   ],
   nl: [
-    "Sneller opstarten: Home staat er meteen",
-    "Grote collecties openen meteen",
-    "Life counter reageert sneller",
-    "Inspiration en tips laden meteen",
-    "Kleinere app-download"
+    "Pagina’s schuiven zacht in beeld",
+    "Kaartpagina’s komen op en zakken weg",
+    "Tabbladen schuiven, gouden streep mee",
+    "Mappen schuiven in vanaf de zijkant",
+    "Decktelling springt op bij wijziging",
+    "Meldingen veren omhoog"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8368,8 +8379,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-09';
+const APP_DATE = '2026-11-10';
 const CHANGELOG_HISTORY = [
+  { v: '1.85', d: '2026-11-09',
+    en: ['Faster start: home shows at once', 'Big collections open instantly', 'Life counter reacts faster', 'Inspiration and tips load at once', 'Smaller app download'],
+    nl: ["Sneller opstarten: Home staat er meteen", "Grote collecties openen meteen", "Life counter reageert sneller", "Inspiration en tips laden meteen", "Kleinere app-download"] },
   { v: '1.84', d: '2026-11-09',
     en: ['Themes always find their commanders', 'No lost card lists after start-up', 'Faster EDHREC pages'],
     nl: ["Thema’s vinden altijd hun commanders", "Geen kwijte kaartlijsten na opstarten", "Snellere EDHREC-pagina’s"] },
@@ -9977,7 +9991,9 @@ function pushOverlay(id, closeFn, defer){
   // stack entry — those zombies made back presses vanish into silent no-op
   // pops (the element was long gone by the second pop). Reuse the entry.
   const _top = state.overlayStack[state.overlayStack.length-1];
+  closeFn = ovWrapClose(closeFn);   // 1.86: the page sinks away when it closes
   if(_top && _top.id === id){ _top.closeFn = closeFn; return; }
+  if(!defer){ ovGhostsClear(); queueMicrotask(ovMotionIn); }   // 1.86: ...and rises in when it opens
   // History entries created during page load (no user interaction yet) are
   // SKIPPED by the browser's back button as an anti-abuse measure — which
   // made hardware-back on a freshly opened share link exit the app entirely.
@@ -10182,10 +10198,13 @@ function closeTopOverlay(){
    inert pops — the state-driven ladder re-arms on every press (same
    pattern as the binder's inert entry), so back keeps behaving. */
 function dismissAllOverlays(){
-  while(state.overlayStack && state.overlayStack.length){
-    const t = state.overlayStack.pop();
-    try{ t.closeFn(); }catch(e){}
-  }
+  _ovNoGhost = true;   // a jump to another page: everything goes at once, the new page moves
+  try{
+    while(state.overlayStack && state.overlayStack.length){
+      const t = state.overlayStack.pop();
+      try{ t.closeFn(); }catch(e){}
+    }
+  }finally{ _ovNoGhost = false; }
 }
 
 /* One page's HTML without wiring — render() uses it for the live screen,
@@ -10305,6 +10324,179 @@ function bootSnapSave(){
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') bootSnapSave(); });
 let _bootNewsHtml = null, _bootSnapSeen = false;
+/* ===================== 1.86 MOTION =====================
+   Short, soft movement so you see where things come from:
+   - a new page rises in from below (from the top bar: drops in from above);
+   - a folder or binder slides in from the right, going back from the left;
+   - Decklist / Stats / Deck Log slide sideways, the gold line glides along;
+   - card pages and sub-pages rise in, and sink away again when they close
+     (opened from the top bar: they drop in and fold back up);
+   - the deck count in the top bar pops when it changes.
+   Only the page or panel itself moves (never hundreds of tiles each), at most
+   a quarter of a second, and nothing moves when the phone asks for less
+   motion (Android: "Remove animations"). */
+function motionOk(){ try{ return !window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return true; } }
+const MOTION_EASE = 'cubic-bezier(.2,.8,.2,1)';
+let _tapZone = 'other', _tapAt = 0;
+window.addEventListener('pointerdown', (e)=>{
+  try{
+    const t = e.target && e.target.closest ? e.target : null;
+    _tapAt = Date.now();
+    _tapZone = !t ? 'other' : t.closest('.page-cap, .ov-cap, .overlay .topbar') ? 'top' : t.closest('.brand-banner, .ov-nav') ? 'nav' : 'other';
+  }catch(err){}
+}, { capture: true, passive: true });
+function tapFromTop(){ return _tapZone === 'top' && Date.now() - _tapAt < 1500; }
+// What stays pinned to the screen: a part holding one of these only fades
+// (moving it would carry the pinned bit along for a moment).
+const MOTION_PINNED = '.edh-jump-row, .deck-dock, .deck-fab, .reco-fab, .ov-pick-fab, .pin-pill, .col-sel-fab, .dl-sel-bar';
+function motionIn(box, dx, dy, opts){
+  if(!box || !motionOk()) return;
+  opts = opts || {};
+  const k = isDesk() ? 0.45 : 1, ms = opts.ms || 210;
+  let n = 0;
+  for(const ch of Array.from(box.children)){
+    if(++n > 40) break;
+    if(opts.skip && ch.matches(opts.skip)) continue;
+    let cs; try{ cs = getComputedStyle(ch); }catch(e){ continue; }
+    if(cs.position === 'fixed' || cs.display === 'none' || cs.animationName !== 'none') continue;
+    const still = !!ch.querySelector(MOTION_PINNED);
+    try{
+      ch.animate(still ? [{ opacity: 0 }, { opacity: 1 }]
+        : [{ translate: `${Math.round(dx * k)}px ${Math.round(dy * k)}px`, opacity: 0 }, { translate: '0 0', opacity: 1 }],
+        { duration: ms, easing: MOTION_EASE });
+    }catch(e){}
+  }
+  // while the parts move they may poke out past the page: never let that
+  // grow the page (it would nudge the scroll position at the end)
+  if(box.style.overflow !== 'clip'){
+    const prev = box.style.overflow;
+    box.style.overflow = 'clip';
+    setTimeout(()=>{ if(box.style.overflow === 'clip') box.style.overflow = prev; }, ms + 30);
+  }
+}
+let _mPrev = null, _capPrev = null;
+function capCountPop(el){
+  if(!el || !motionOk()) return;
+  try{ el.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 280, easing: 'ease-out' }); }catch(e){}
+}
+function motionAfterRender(){
+  try{
+    const fold = (f)=>{ if(!f) return 0; try{ return (folderPath(f) || []).length || 1; }catch(e){ return 1; } };
+    const cur = { screen: state.screen, folder: state.folderNav || null, binder: (state.colFilter && state.colFilter.binder) || null };
+    const prev = _mPrev; _mPrev = cur;
+    // the deck count in the top bar
+    const cc = document.getElementById('capDeckCount');
+    const ck = cc ? { deck: state.activeDeckId, txt: cc.textContent } : null;
+    if(cc && _capPrev && _capPrev.deck === ck.deck && _capPrev.txt !== ck.txt) capCountPop(cc);
+    _capPrev = ck;
+    if(!prev) return;                                   // the very first picture: no movement
+    const main = document.querySelector('.app > main');
+    if(!main) return;
+    if(prev.screen !== cur.screen){ motionIn(main, 0, tapFromTop() ? -20 : 22); return; }
+    if(cur.screen === 'decks' && prev.folder !== cur.folder){
+      motionIn(main, fold(cur.folder) >= fold(prev.folder) ? 34 : -34, 0, { skip: '.searchbar' });
+    } else if(cur.screen === 'collection' && prev.binder !== cur.binder){
+      motionIn(main, cur.binder ? 34 : -34, 0, { skip: '.searchbar' });
+    }
+  }catch(e){}
+}
+// Decklist / Stats / Deck Log: the page slides the way of the tab, the gold
+// line under the tab glides from the old one to the new one.
+const BTAB_ORDER = ['list', 'stats', 'primer'];
+function motionTab(from, to){
+  const a = BTAB_ORDER.indexOf(from), b = BTAB_ORDER.indexOf(to);
+  if(a < 0 || b < 0 || a === b || !motionOk()) return;
+  motionIn(document.getElementById('builderBody'), b > a ? 36 : -36, 0);
+  try{
+    const bar = document.querySelector('.app > main > .builder-tabs');
+    const A = bar && bar.querySelector(`[data-btab="${from}"]`), B = bar && bar.querySelector(`[data-btab="${to}"]`);
+    if(!A || !B) return;
+    const br = bar.getBoundingClientRect(), ra = A.getBoundingClientRect(), rb = B.getBoundingClientRect();
+    if(!rb.width) return;
+    bar.querySelectorAll('.b-glide').forEach(x=>x.remove());
+    const g = document.createElement('i');
+    g.className = 'b-glide';
+    g.style.left = (rb.left - br.left - bar.clientLeft) + 'px';
+    g.style.width = rb.width + 'px';
+    g.style.top = (rb.bottom - br.top - bar.clientTop - 2) + 'px';
+    bar.appendChild(g);
+    bar.classList.add('b-gliding');
+    const done = ()=>{ g.remove(); if(!bar.querySelector('.b-glide')) bar.classList.remove('b-gliding'); };
+    g.animate([{ transform: `translateX(${ra.left - rb.left}px) scaleX(${ra.width / rb.width})` }, { transform: 'none' }], { duration: 230, easing: MOTION_EASE }).finished.then(done, done);
+  }catch(e){}
+}
+// Full-screen pages on top (card page, Recommendations, Similar, ...).
+let _ovNoGhost = false;
+const _ovGhosts = new Set();
+function ovGhostsClear(){ _ovGhosts.forEach(g=>{ try{ g.remove(); }catch(e){} }); _ovGhosts.clear(); }
+function ovMotionIn(){
+  if(!motionOk()) return;
+  try{
+    const all = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
+    const el = all[all.length - 1];
+    if(!el || el.dataset.ovIn || !el._ovBorn || performance.now() - el._ovBorn > 400) return;   // only a page that was just added
+    el.dataset.ovIn = tapFromTop() ? 'top' : 'up';
+    if(getComputedStyle(el).animationName !== 'none') return;   // it has its own entrance
+    const k = isDesk() ? 0.4 : 1, top = el.dataset.ovIn === 'top';
+    el.animate([{ translate: `0 ${Math.round((top ? -44 : 48) * k)}px`, opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 230, easing: MOTION_EASE });
+  }catch(e){}
+}
+// path of child positions from root to node, to find the same spot in a copy
+function _nodePath(root, n){ const p = []; while(n && n !== root){ const par = n.parentNode; if(!par) return null; p.unshift(Array.prototype.indexOf.call(par.children, n)); n = par; } return p; }
+function _nodeAt(root, p){ let n = root; for(const i of p){ n = n && n.children[i]; } return n; }
+function ovSnap(el){
+  try{
+    const sc = [];
+    [el].concat(Array.from(el.querySelectorAll('main, .overlay-inner, .cs-body, .po-main'))).forEach(n=>{
+      if(n.scrollTop || n.scrollLeft){ const p = _nodePath(el, n); if(p) sc.push([p, n.scrollTop, n.scrollLeft]); }
+    });
+    return { sc, z: getComputedStyle(el).zIndex };
+  }catch(e){ return null; }
+}
+function ovGhostOut(el, snap){
+  try{
+    const g = el.cloneNode(true);
+    // a copy of the closing page sinks away; it wears the page's own classes
+    // and ids so it looks exactly the same, and 'swipe-leaving' keeps every
+    // lookup of open pages from counting it. Any new page removes it at once.
+    g.classList.add('swipe-leaving');
+    g.setAttribute('aria-hidden', 'true');
+    g.style.pointerEvents = 'none';
+    if(snap && snap.z && snap.z !== 'auto') g.style.zIndex = snap.z;
+    const ocv = el.querySelectorAll('canvas'), gcv = g.querySelectorAll('canvas');
+    gcv.forEach((c, i)=>{ try{ if(ocv[i] && ocv[i].width) c.getContext('2d').drawImage(ocv[i], 0, 0); }catch(e){} });
+    HTMLElement.prototype.appendChild.call(document.body, g);
+    _ovGhosts.add(g);
+    if(snap) snap.sc.forEach(([p, t, l])=>{ const n = p.length ? _nodeAt(g, p) : g; if(n){ n.scrollTop = t; n.scrollLeft = l; } });
+    const k = isDesk() ? 0.4 : 1, top = el.dataset.ovIn === 'top';
+    const bye = ()=>{ _ovGhosts.delete(g); g.remove(); };
+    g.animate([{ translate: '0 0', opacity: 1 }, { translate: `0 ${Math.round((top ? -40 : 44) * k)}px`, opacity: 0 }], { duration: 190, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' }).finished.then(bye, bye);
+    setTimeout(bye, 700);
+  }catch(e){}
+}
+function ovWrapClose(fn){
+  if(fn && fn._ovWrapped) return fn;
+  const w = function(){
+    let list = [], top = null, snap = null;
+    const anim = !_ovNoGhost && motionOk();
+    if(anim){
+      try{ list = Array.from(document.querySelectorAll('body > .overlay:not(.swipe-leaving)')); top = list[list.length - 1] || null; snap = top ? ovSnap(top) : null; }catch(e){}
+    }
+    const r = fn.apply(this, arguments);
+    if(anim) list.forEach(el=>{ if(!el.isConnected) ovGhostOut(el, el === top ? snap : null); });
+    return r;
+  };
+  w._ovWrapped = true;
+  return w;
+}
+// every page that opens removes the copies at once (they keep the ids)
+try{
+  const _bodyAppend = document.body.appendChild;
+  document.body.appendChild = function(n){
+    if(n && n.classList && n.classList.contains('overlay') && !n.classList.contains('swipe-leaving')){ n._ovBorn = performance.now(); if(_ovGhosts.size) ovGhostsClear(); }
+    return _bodyAppend.call(this, n);
+  };
+}catch(e){}
 /* 1.85: two page states as plain classes instead of :has() tests -- those
    made the browser restyle every tile of a long list on each change.
    has-grid: the page shows a card grid; col-selecting: cards are selected. */
@@ -10341,6 +10533,7 @@ function renderInner(){
   }catch(e){ console.error('page wiring failed', state.screen, e); }
   wireNav();   // the header (nav, home, mode long-press) must survive any page's failure
   syncPageFlags();
+  motionAfterRender();
   renderModal();
   renderPreview();
   renderLifeOverlay();
@@ -16380,7 +16573,7 @@ function wireDecklistPage(){
   const d = getDeck(state.activeDeckId);
   if(!d) { wireNeedDeck(); return; }
   if(deckIsConstructed(d)){ try{ ensureFmtBans(deckFormat(d)); }catch(e){} }
-  document.querySelectorAll('.b-tab').forEach(b=>b.addEventListener('click', ()=>{ state.builderTab=b.dataset.btab; state.dlPanel=null; state.dockSet = 0; renderBuilderBody(d); updateDeckMeter(d); syncTabsUI(); scrollToPageFoot(); }));
+  document.querySelectorAll('.b-tab').forEach(b=>b.addEventListener('click', ()=>{ const _from = state.builderTab; state.builderTab=b.dataset.btab; state.dlPanel=null; state.dockSet = 0; renderBuilderBody(d); updateDeckMeter(d); syncTabsUI(); scrollToPageFoot(); motionTab(_from, state.builderTab); }));
   wireMeterRow(d);
   refreshLegality(d);
   renderBuilderBody(d);
@@ -18421,8 +18614,11 @@ function refreshCapDeckCount(d){
     const dd = (d && d.id === state.activeDeckId) ? d : getDeck(state.activeDeckId);
     if(!dd) return;
     const issues = checkDeckLegality(dd);
+    const _old = (_capPrev && _capPrev.deck === dd.id) ? _capPrev.txt : el.textContent;   // what the reader last saw
     el.style.color = deckCountColor(deckCountState(dd, issues));
     el.textContent = deckCountLabel(dd) + (issues.length ? ' \u26A0' : '');
+    if(el.textContent !== _old) capCountPop(el);   // 1.86
+    _capPrev = { deck: dd.id, txt: el.textContent };
   }catch(err){}
 }
 /* Type counts wider than their strip (8 types, a big system font): the
