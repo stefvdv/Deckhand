@@ -3832,11 +3832,8 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 html[data-main="G"] :is(.sr-tile, .pair-cell) .st-meta-row :is(.add-btn[data-name]:not([data-admiral]), .add-btn[data-mpairadd]){--pm-bg:#68A866;--pm-ink:#0B2A15;}
 
 
-/* the deck guide */
-.app > main > .guide-cta{order:99;}   /* with the pickers (99), and before them in the page: right above them */
-html.desk .app > main > .guide-cta{order:3;}
-.app > main:has(> #browseResults:not(:empty)) > .guide-cta, .app > main:has(> #bsNameResults:not(:empty)) > .guide-cta{display:none;}
-.guide-cta{display:block;width:100%;margin:2px 0 12px;padding:13px 14px;border-radius:12px;border:1px solid var(--hair-2);background:var(--panel);color:var(--head-ink);font-weight:700;font-size:15px;cursor:pointer;}
+/* the deck finder: a button beside the name search */
+.searchbar > .guide-sb{flex:none;padding:0 12px;white-space:nowrap;}   /* the house search-bar button: its own fill and ink */
 .gd-main{display:flex;flex-direction:column-reverse;gap:12px;padding:12px 12px calc(16px + env(safe-area-inset-bottom));}
 .gd-q h3{margin:6px 0 4px;font-size:21px;color:var(--head-ink);}
 .gd-q p{margin:0;color:var(--sub-text);font-size:14px;}
@@ -3856,7 +3853,27 @@ html.desk .gd-opts:not(.gd-chips){flex-direction:column;}   /* a PC reads top-do
 .gd-col.on{border-color:var(--mark);box-shadow:inset 0 0 0 1px var(--mark);color:var(--ink-text);}
 .gd-col.off{opacity:.45;}
 .gd-col.off svg{filter:grayscale(1);}
-.gd-nav{display:flex;gap:8px;}
+.gd-nav{display:flex;gap:8px;margin-bottom:20px;}   /* 1.88: room under the buttons, also when the page scrolls */
+.gd-main .st-decks{white-space:normal;margin-left:0;line-height:1.35;overflow-wrap:anywhere;}
+.gd-scale{display:flex;gap:8px;}
+.gd-sc{flex:1 1 0;height:54px;border-radius:12px;border:1px solid var(--hair-2);background:var(--panel);color:var(--ink-text);font-size:19px;font-weight:800;cursor:pointer;}
+.gd-sc.on{border-color:var(--mark);box-shadow:inset 0 0 0 1px var(--mark);}
+.gd-scale-ends{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub-text);margin-top:-4px;}
+.gd-pick{display:flex;flex-direction:column;gap:8px;}
+.gd-pick-list{max-height:min(52vh, 460px);overflow-y:auto;border:1px solid var(--hair);border-radius:12px;padding:8px;}
+.gd-pick-find{display:flex;align-items:center;gap:10px;margin:0;}
+.gd-pick-find input{flex:1 1 auto;min-width:0;}
+.gd-pick-n{flex:none;color:var(--head-ink);font-weight:700;font-size:14px;}
+.gd-pick-list .gd-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.gd-pick-list .gd-chip{width:auto;padding:8px 13px;border-radius:999px;}
+.gd-pets{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;}
+html.desk .gd-pets{grid-template-columns:repeat(5, minmax(0, 1fr));}
+.gd-pet{position:relative;padding:0;border:2px solid transparent;border-radius:7px;background:none;cursor:pointer;aspect-ratio:488/680;overflow:hidden;}
+.gd-pet img{width:100%;height:100%;object-fit:cover;display:block;border-radius:5px;}
+.gd-pet-nm{display:flex;align-items:center;justify-content:center;height:100%;padding:6px;font-size:12px;color:var(--ink-text);background:var(--panel);border-radius:5px;}
+.gd-pet > i{position:absolute;right:5px;bottom:5px;width:24px;height:24px;border-radius:50%;display:none;align-items:center;justify-content:center;font-style:normal;font-weight:800;background:var(--mark);color:var(--ink);}
+.gd-pet.on{border-color:var(--mark);}
+.gd-pet.on > i{display:flex;}
 .gd-nav > button{flex:1 1 0;margin:0;}
 .gd-note{text-align:center;margin:4px 0 0;}
 /* pull once more at the end of a list */
@@ -8396,25 +8413,21 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.87';
+const APP_VERSION = '1.88';
 const CHANGELOG_NOTES = {
   en: [
-    "New: Which deck suits me?",
-    "Pull again to open folded sections",
-    "Any colors shows top commanders at once",
-    "Colorless is its own colour choice",
-    "Colour menus in a tidier order",
-    "Partner pairs look like other tiles",
-    "Calmer green on the + buttons"
+    "Deck finder sits beside the search",
+    "Deck finder: pet cards and 10 picks",
+    "Deck finder: all creature types",
+    "Salt as a score, budget €400+",
+    "Pull opens the nearest folded part"
   ],
   nl: [
-    "Nieuw: Welk deck past bij mij?",
-    "Nog eens trekken opent ingeklapte delen",
-    "Alle kleuren toont meteen de toppers",
-    "Colorless is een eigen kleurkeuze",
-    "Kleurmenu’s in een logischer volgorde",
-    "Partnerparen zien eruit als de rest",
-    "Rustiger groen op de +-knoppen"
+    "Deckwijzer naast het zoekveld",
+    "Deckwijzer: lievelingskaarten + 10 tips",
+    "Deckwijzer: alle types wezens",
+    "Salt als score, budget €400+",
+    "Doortrekken opent het dichtstbijzijnde"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8424,6 +8437,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-11';
 const CHANGELOG_HISTORY = [
+  { v: '1.87', d: '2026-11-11',
+    en: ['New: Which deck suits me?', 'Pull again to open folded sections', 'Any colors shows top commanders at once', 'Colorless is its own colour choice', 'Colour menus in a tidier order', 'Partner pairs look like other tiles', 'Calmer green on the + buttons'],
+    nl: ["Nieuw: Welk deck past bij mij?", "Nog eens trekken opent ingeklapte delen", "Alle kleuren toont meteen de toppers", "Colorless is een eigen kleurkeuze", "Kleurmenu’s in een logischer volgorde", "Partnerparen zien eruit als de rest", "Rustiger groen op de +-knoppen"] },
   { v: '1.86', d: '2026-11-10',
     en: ['Pages glide in when they open', 'Card pages rise in and sink away', 'Tabs slide, the gold line follows', 'Folders slide in from the side', 'Deck count pops when it changes', 'Messages rise with a little bounce'],
     nl: ["Pagina’s schuiven zacht in beeld", "Kaartpagina’s komen op en zakken weg", "Tabbladen schuiven, gouden streep mee", "Mappen schuiven in vanaf de zijkant", "Decktelling springt op bij wijziging", "Meldingen veren omhoog"] },
@@ -8768,8 +8784,8 @@ function tourSteps(){
             : P('The filter searches by <strong>tags</strong>: removal, ramp, draw … combine as many as you like.') },
     { k:'inspiration', go:()=>switchPage('browse'), sel:['.browse-selects .bs-row', '#bsName'],
       t: '✦ Inspiration',
-      b: NL ? P('<strong>Top-commanders</strong>, staples en <strong>meta-decks</strong> voor elk format. Geen idee wat je wilt bouwen? <strong>Welk deck past bij mij?</strong> stelt een paar vragen en zoekt commanders die bij je passen.')
-            : P('<strong>Top commanders</strong>, staples and <strong>meta decks</strong> for every format. No idea what to build? <strong>Which deck suits me?</strong> asks a few questions and finds commanders that fit you.') },
+      b: NL ? P('<strong>Top-commanders</strong>, staples en <strong>meta-decks</strong> voor elk format. Geen idee wat je wilt bouwen? De <strong>Deckwijzer</strong> (naast het zoekveld) stelt een paar vragen en zoekt commanders en kaarten die bij je passen.')
+            : P('<strong>Top commanders</strong>, staples and <strong>meta decks</strong> for every format. No idea what to build? The <strong>Deck finder</strong> (beside the search field) asks a few questions and finds commanders and cards that fit you.') },
     { k:'extras', go:()=>switchPage('settings'), sel:['#crRow'],
       t: NL ? 'Vraag de AI-judge' : 'Ask the AI judge',
       b: NL ? P('Regelvraag aan tafel? Tag de kaarten met @ en krijg antwoord mét de officiële regels. Life Counter en Draft tools staan ernaast.')
@@ -10379,6 +10395,7 @@ let _bootNewsHtml = null, _bootSnapSeen = false;
    Without profiles (first week, offline) the theme pages alone decide. */
 const GUIDE_KEY = 'guide1';
 const _gT = (nl, en)=> appLang() === 'nl' ? nl : en;
+function guideName(){ return _gT('Deckwijzer', 'Deck finder'); }   // 1.88
 // option: v (value), l [nl, en], d [nl, en] description, w {theme: weight}, p {pref}
 const GUIDE_Q = [
   { k:'joy', q:['Waar word je het blijst van?', 'What makes you happiest?'], s:['Kies wat het meest op jou lijkt.', 'Pick what sounds most like you.'], o:[
@@ -10429,7 +10446,8 @@ const GUIDE_Q = [
   { k:'budget', q:['Wat is je budget?', 'What is your budget?'], o:[
     { v:'low', l:['Tot €50', 'Up to €50'], p:{ bu:[1, .4, 0] } },
     { v:'mid', l:['€50 – €150', '€50 – €150'], p:{ bu:[.6, 1, 0] } },
-    { v:'high', l:['€150 – €400', '€150 – €400'], p:{ bu:[0, 1, .7] } }
+    { v:'high', l:['\u20ac150 \u2013 \u20ac400', '\u20ac150 \u2013 \u20ac400'], p:{ bu:[0, 1, .7] } },
+    { v:'top', l:['\u20ac400 en meer', '\u20ac400 and up'], p:{ bu:[0, .3, 1] } }
   ]},
   { k:'cx', q:['Hoe ingewikkeld mag het zijn?', 'How complex may it be?'], o:[
     { v:'simple', l:['Simpel en overzichtelijk', 'Simple and clear'], d:['Een duidelijk plan, weinig om bij te houden.', 'A clear plan, little to keep track of.'], p:{ cx:-1 } },
@@ -10441,19 +10459,78 @@ const GUIDE_Q = [
     { v:'any', l:['Maakt niet uit', 'Doesn’t matter'], p:{ pop:0 } },
     { v:'rare', l:['Iets wat weinigen spelen', 'Something few people play'], d:['Verras de tafel.', 'Surprise the table.'], p:{ pop:-1 } }
   ]},
-  { k:'salt', q:['Hoe vriendelijk voor de tafel?', 'How friendly to the table?'], o:[
-    { v:'friendly', l:['Liever niet irritant', 'Rather not annoying'], d:['Geen decks waar de tafel van zucht. (lage EDHREC-salt)', 'No decks that make the table sigh. (low EDHREC salt)'], p:{ friendly:1 } },
-    { v:'any', l:['Maakt niet uit', 'Doesn’t matter'] }
-  ]},
-  { k:'typal', q:['Een favoriet type wezen?', 'A favourite creature type?'], s:['Voor een kindred-deck. Mag ook leeg blijven.', 'For a kindred deck. Fine to skip.'], o:
-    ['dragons', 'elves', 'zombies', 'vampires', 'goblins', 'angels', 'wizards', 'dinosaurs', 'cats', 'pirates', 'merfolk', 'knights', 'slivers', 'spirits', 'demons', 'faeries']
-      .map(t=>({ v:t, l:[t, t], typal:true }))
-  },
+  { k:'salt', scale:true, q:['Hoe vriendelijk voor de tafel?', 'How friendly to the table?'], s:['Hoe erg vind je het als de tafel zucht om je deck? (EDHREC-salt)', 'How much do you mind the table sighing at your deck? (EDHREC salt)'],
+    ends:[['Heel vriendelijk', 'Very friendly'], ['Maakt niet uit', 'Doesn\u2019t matter']] },
+  { k:'typal', types:true, q:['Favoriete types wezens?', 'Favourite creature types?'], s:['Voor een kindred-deck. Kies er een paar, of sla over.', 'For a kindred deck. Pick a few, or skip.'] },
   { k:'coll', q:['Bouwen met je eigen kaarten?', 'Build with your own cards?'], o:[
     { v:'yes', l:['Ja, liefst met wat ik heb', 'Yes, preferably with what I have'], d:['Commanders die je al bezit komen hoger.', 'Commanders you already own rank higher.'], p:{ coll:1 } },
     { v:'no', l:['Nee, alles mag', 'No, anything goes'] }
-  ]}
+  ]},
+  { k:'pets', pets:true, q:['Wat zijn je lievelingskaarten?', 'What are your pet cards?'], s:['Kaarten die passen bij je antwoorden. Kies wat je graag speelt; zoek ook op naam.', 'Cards that fit your answers. Pick what you love to play; search by name too.'] }
 ];
+const SALT_K = { 1: 1.7, 2: 1.15, 3: .6, 4: .25, 5: 0 };
+// every creature type: EDHREC's kindred list (with its deck data) plus the
+// rest of the creature types, each with the word that shows in card text
+function _typSingular(w){
+  const s0 = String(w).trim();
+  const irr = { elves:'elf', dwarves:'dwarf', wolves:'wolf', mice:'mouse', fungi:'fungus', pegasi:'pegasus', sphinxes:'sphinx', foxes:'fox', halflings:'halfling', allies:'ally', faeries:'faerie', zombies:'zombie', thopters:'thopter', myr:'myr', eldrazi:'eldrazi', samurai:'samurai', ninjas:'ninja', slivers:'sliver', octopi:'octopus' };
+  const k = s0.toLowerCase();
+  if(irr[k]) return irr[k];
+  if(/ies$/.test(k)) return k.replace(/ies$/, 'y');
+  if(/(ches|shes|xes|sses)$/.test(k)) return k.replace(/es$/, '');
+  if(/s$/.test(k) && !/ss$/.test(k)) return k.replace(/s$/, '');
+  return k;
+}
+let _guideTypes = null;
+async function guideTypeList(){
+  if(_guideTypes) return _guideTypes;
+  const out = [], seen = new Set();
+  try{
+    const d = await Promise.race([edhrecFetchJson('/pages/tags/typal.json'), new Promise(r=>setTimeout(()=>r(null), 5000))]);
+    (d ? edhrecTagCatalogFrom(d) : []).forEach(t=>{
+      const w = _typSingular(t.slug.replace(/-/g, ' '));
+      if(!w || seen.has(w) || isColorComboTag(t)) return;
+      seen.add(w); out.push({ v: t.slug, w, l: t.label, n: t.count || 0 });
+    });
+  }catch(e){}
+  (typeof TYPAL_TRIBES !== 'undefined' ? TYPAL_TRIBES : []).forEach(T=>{
+    const w = T.toLowerCase();
+    if(seen.has(w)) return;
+    seen.add(w); out.push({ v: 'w:' + w, w, l: T, n: 0 });
+  });
+  out.sort((a, b)=>(b.n - a.n) || a.l.localeCompare(b.l));
+  return (_guideTypes = out);
+}
+// Pet-card candidates: the cards of the themes your answers lean on, in
+// colours you did not rule out; the generic staples every list shares drop out.
+async function guidePetCandidates(ans){
+  const { W, P } = guideWeights(ans);
+  const ix = await bulkIndexReady().catch(()=>null);
+  const themes = Object.keys(W).sort((a, b)=>W[b] - W[a]).slice(0, 6);
+  const score = new Map(), seenIn = new Map();
+  for(const t of themes){
+    let pg = null;
+    try{ pg = await Promise.race([edhrecFetchJson('/pages/tags/' + t + '.json'), new Promise(r=>setTimeout(()=>r(null), 5000))]); }catch(e){}
+    const lists = (((pg || {}).container || {}).json_dict || {}).cardlists || [];
+    lists.filter(L=>!/commander/i.test(L.header || '')).forEach(L=>(L.cardviews || []).forEach((cv, i)=>{
+      if(!cv || !cv.name) return;
+      score.set(cv.name, (score.get(cv.name) || 0) + W[t] * (1 + 1 / (1 + i * .15)));
+      seenIn.set(cv.name, (seenIn.get(cv.name) || new Set()).add(t));
+    }));
+  }
+  const out = [];
+  score.forEach((v, nm)=>{
+    if(themes.length >= 3 && seenIn.get(nm).size >= Math.ceil(themes.length * .6)) return;   // a staple of everything
+    const bc = ix && ix.byName ? ix.byName.get(nm.toLowerCase()) : null;
+    if(!bc || /\bBasic\b/.test(bc.tl || '')) return;
+    const ci = String(bc.ci || '').toLowerCase();
+    if(P.avoid.some(c=>ci.includes(c))) return;
+    const inFav = !P.fav.length || [...ci].every(c=>P.fav.includes(c));
+    out.push({ n: bc.n, s: v * (inFav ? 1.3 : 1), bc });
+  });
+  out.sort((a, b)=>b.s - a.s);
+  return out.slice(0, 60);
+}
 function guideLoad(){ try{ const g = JSON.parse(localStorage.getItem(LS_PREFIX + GUIDE_KEY) || 'null'); if(g && g.ans) return g; }catch(e){} return { i: 0, ans: {} }; }
 function guideSave(g){ try{ localStorage.setItem(LS_PREFIX + GUIDE_KEY, JSON.stringify(g)); }catch(e){} }
 function guideLabel(slug){
@@ -10463,12 +10540,15 @@ function guideLabel(slug){
 }
 // All answers in one bag: theme weights and preferences.
 function guideWeights(ans){
-  const W = {}, P = { power:0, flavour:0, friendly:0, pop:0, cx:null, br:null, bu:null, coll:0, typal:null, fav:[], avoid:[] };
+  const W = {}, P = { power:0, flavour:0, friendly:0, pop:0, cx:null, br:null, bu:null, coll:0, types:[], pets:[], fav:[], avoid:[] };
   const add = (w, k)=>{ Object.keys(w || {}).forEach(t=>{ W[t] = (W[t] || 0) + w[t] * (k || 1); }); };
   GUIDE_Q.forEach(q=>{
     const a = ans[q.k];
     if(a == null || a === '') return;
     if(q.colors){ Object.keys(a).forEach(c=>{ if(a[c] === 1) P.fav.push(c); else if(a[c] === 2) P.avoid.push(c); }); return; }
+    if(q.scale){ P.friendly += SALT_K[a] || 0; return; }
+    if(q.types){ P.types = [].concat(a); return; }
+    if(q.pets){ P.pets = [].concat(a); return; }
     [].concat(a).forEach(v=>{
       const o = (q.o || []).find(x=>x.v === v);
       if(!o) return;
@@ -10514,13 +10594,37 @@ async function guideFromThemes(W){
   }
   return out;
 }
+// For each pet card: the commanders that play it most (EDHREC's card page),
+// as the share of that commander's decks.
+async function guidePetCommanders(pets){
+  const out = {};
+  await runLimited(pets.slice(0, 12), async (nm)=>{
+    let pg = null;
+    try{ pg = await Promise.race([edhrecFetchJson('/pages/cards/' + edhrecSlug(nm) + '.json'), new Promise(r=>setTimeout(()=>r(null), 7000))]); }catch(e){}
+    const lists = (((pg || {}).container || {}).json_dict || {}).cardlists || [];
+    lists.filter(L=>/commander/i.test(L.header || '')).forEach(L=>(L.cardviews || []).forEach(cv=>{
+      if(!cv || !cv.name || !cv.potential_decks) return;
+      const k = edhrecSlug(cv.name);
+      const o = out[k] || (out[k] = { n: cv.name, d: cv.potential_decks, r: 0, pets: [] });
+      o.r += Math.sqrt(Math.min(1, cv.num_decks / cv.potential_decks));
+      if(o.pets.indexOf(nm) < 0) o.pets.push(nm);
+    }));
+  }, 3);
+  return out;
+}
 async function guideScore(ans){
   const { W, P } = guideWeights(ans);
-  if(P.typal) W[P.typal] = (W[P.typal] || 0) + 2.5;
+  const typ = (P.types || []).map(v=>String(v));
+  const typK = typ.length ? 1 / Math.sqrt(typ.length) : 0;
+  typ.forEach(v=>{ if(v.indexOf('w:') !== 0) W[v] = (W[v] || 0) + 2.2 * typK; });
+  const typWords = typ.map(v=>v.indexOf('w:') === 0 ? v.slice(2) : _typSingular(v.replace(/-/g, ' ')));
   const flavourThemes = ['legends', 'sagas', 'historic', 'adventures', 'the-ring', 'dungeon', 'party'];
   let prof = await guideProfiles();
   const withProf = !!prof;
   if(!prof) prof = await guideFromThemes(W);
+  // pet cards: commanders that play them join in, with their share
+  const petCmd = P.pets.length ? await guidePetCommanders(P.pets) : {};
+  Object.keys(petCmd).forEach(k=>{ if(!prof[k]) prof[k] = { n: petCmd[k].n, ci: null, d: petCmd[k].d, t: [] }; });
   const ix = await bulkIndexReady().catch(()=>null);
   const owned = new Set((state.collection && state.collection.items || []).map(it=>String(it.name || '').toLowerCase()));
   const res = [];
@@ -10537,7 +10641,15 @@ async function guideScore(ans){
     // themes
     let T = 0; const why = [];
     Object.keys(W).forEach(t=>{ if(th[t]){ const v = W[t] * Math.sqrt(th[t]); T += v; why.push([t, v]); } });
-    if(P.typal && !th[P.typal]) T -= 1.2;
+    // creature types: EDHREC's kindred data, or the type in the card itself
+    if(typ.length){
+      const txt = ((card.type_line || '') + ' ' + (card.oracle_text || '') + ' ' + (card.card_faces || []).map(f=>(f.type_line || '') + ' ' + (f.oracle_text || '')).join(' ')).toLowerCase();
+      let hit = 0;
+      typ.forEach((v, i)=>{ const w = typWords[i]; const inTxt = w && new RegExp('\\b' + w.replace(/[^a-z ]/g, '') + 's?\\b').test(txt); if(th[v] || inTxt){ hit++; if(inTxt){ T += 1.1 * typK; why.push(['w:' + w, 1.1 * typK]); } } });
+      if(!hit) T -= 1.0;
+    }
+    // pet cards: this commander plays them
+    if(P.pets.length && petCmd[key]){ const v = 1.6 * petCmd[key].r / Math.sqrt(P.pets.length); T += v; why.push(['pet:' + petCmd[key].pets[0], v]); }
     let S = T;
     // colours
     if(P.fav.length){
@@ -10567,14 +10679,13 @@ async function guideScore(ans){
     // your collection
     if(P.coll && owned.has(card.name.toLowerCase())) S += .5;
     why.sort((a, b)=>b[1] - a[1]);
-    res.push({ card, S, d, why: why.slice(0, 3).map(x=>x[0]), p });
+    res.push({ card, S, d, why: why.slice(0, 3).map(x=>x[0]), p, key });
   });
   res.sort((a, b)=>b.S - a.S);
   return { list: res, withProf, P };
 }
 function guideWhyText(r, P){
-  const bits = r.why.map(guideLabel);
-  if(P.typal && r.why.indexOf(P.typal) < 0 && r.p.t && r.p.t.some(x=>x[0] === P.typal)) bits.unshift(guideLabel(P.typal));
+  const bits = r.why.map(w=>w.indexOf('w:') === 0 ? w.slice(2).replace(/\b[a-z]/g, m=>m.toUpperCase()) : w.indexOf('pet:') === 0 ? '\u2665 ' + w.slice(4) : guideLabel(w));
   const brT = (r.p.br || []).reduce((a, b)=>a + b, 0);
   if(brT){
     let best = 0; r.p.br.forEach((n, i)=>{ if(n > r.p.br[best]) best = i; });
@@ -10585,7 +10696,7 @@ function guideWhyText(r, P){
   return bits.slice(0, 4).join(' · ');
 }
 function openDeckGuide(){
-  const main = openPlainOverlay('guideOverlay', _gT('Welk deck past bij mij?', 'Which deck suits me?'));
+  const main = openPlainOverlay('guideOverlay', guideName());
   main.classList.add('gd-main');
   const g = guideLoad();
   if(g.i >= GUIDE_Q.length) g.i = 0;
@@ -10597,10 +10708,14 @@ function openDeckGuide(){
     const a = g.ans[q.k];
     const nav = `<div class="gd-nav">
         ${g.i > 0 ? `<button type="button" class="ghost-btn gd-back">‹ ${_gT('Terug', 'Back')}</button>` : ''}
-        ${(q.multi || q.colors) ? `<button type="button" class="primary-btn gd-next">${_gT('Verder', 'Next')} ›</button>` : `<button type="button" class="ghost-btn gd-skip">${_gT('Maakt niet uit', 'Doesn’t matter')} ›</button>`}
+        ${(q.multi || q.colors || q.types || q.pets) ? `<button type="button" class="primary-btn gd-next">${_gT('Verder', 'Next')} ›</button>` : `<button type="button" class="ghost-btn gd-skip">${_gT('Maakt niet uit', 'Doesn’t matter')} ›</button>`}
       </div>`;
     let opts;
-    if(q.colors){
+    if(q.scale){
+      opts = `<div class="gd-scale">${[1, 2, 3, 4, 5].map(n=>`<button type="button" class="gd-sc ${a === n ? 'on' : ''}" data-n="${n}">${n}</button>`).join('')}</div><div class="gd-scale-ends"><span>${escapeHtml(_gT(q.ends[0][0], q.ends[0][1]))}</span><span>${escapeHtml(_gT(q.ends[1][0], q.ends[1][1]))}</span></div>`;
+    } else if(q.types || q.pets){
+      opts = `<div class="gd-pick"><div class="gd-pick-list"><div class="status"><div class="spinner"></div></div></div><div class="searchbar gd-pick-find"><input type="search" placeholder="${escapeHtml(q.pets ? _gT('Zoek een kaart\u2026', 'Find a card\u2026') : _gT('Zoek een type\u2026', 'Find a type\u2026'))}" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="gd-pick-n"></span></div></div>`;
+    } else if(q.colors){
       const cur = a || {};
       opts = `<div class="gd-colors">${['w', 'u', 'b', 'r', 'g'].map(c=>`<button type="button" class="gd-col ${cur[c] === 1 ? 'on' : cur[c] === 2 ? 'off' : ''}" data-c="${c}">${manaIconSvg(c.toUpperCase(), 34)}<span>${cur[c] === 1 ? _gT('graag', 'yes please') : cur[c] === 2 ? _gT('liever niet', 'rather not') : ' '}</span></button>`).join('')}</div>`;
     } else {
@@ -10625,6 +10740,12 @@ function openDeckGuide(){
       main.querySelectorAll('.gd-opt').forEach(x=>x.classList.toggle('on', x === b));
       setTimeout(()=>go(1), 140);
     }));
+    main.querySelectorAll('.gd-sc').forEach(b=>b.addEventListener('click', ()=>{
+      g.ans[q.k] = +b.dataset.n;
+      main.querySelectorAll('.gd-sc').forEach(x=>x.classList.toggle('on', x === b));
+      setTimeout(()=>go(1), 160);
+    }));
+    if(q.types || q.pets) guidePickWire(main, q, g);
     main.querySelectorAll('.gd-col').forEach(b=>b.addEventListener('click', ()=>{
       const cur = Object.assign({}, g.ans[q.k] || {});
       cur[b.dataset.c] = ((cur[b.dataset.c] || 0) + 1) % 3;
@@ -10635,8 +10756,118 @@ function openDeckGuide(){
   };
   paint(0);
 }
+// The scrolling pick lists: every creature type, or the pet-card candidates
+// (with a name search through the whole card database).
+async function guidePickWire(main, q, g){
+  const box = main.querySelector('.gd-pick-list'), inp = main.querySelector('.gd-pick-find input'), cnt = main.querySelector('.gd-pick-n');
+  if(!box) return;
+  const chosen = new Set([].concat(g.ans[q.k] || []));
+  const count = ()=>{ if(cnt) cnt.textContent = chosen.size ? '\u2713 ' + chosen.size : ''; };
+  const save = ()=>{ g.ans[q.k] = Array.from(chosen); guideSave(g); count(); };
+  let items = [];
+  if(q.types){
+    items = (await guideTypeList()).map(t=>({ v: t.v, l: t.l, w: t.w }));
+  } else {
+    const ix = await bulkIndexReady().catch(()=>null);
+    items = (await guidePetCandidates(g.ans)).map(x=>({ v: x.n, l: x.n, img: (bulkToCardish(x.bc) || {}).image_uris }));
+    // chosen earlier but no longer suggested: keep them in view
+    chosen.forEach(nm=>{ if(!items.some(i=>i.v === nm)){ const bc = ix && ix.byName && ix.byName.get(nm.toLowerCase()); items.unshift({ v: nm, l: nm, img: bc ? (bulkToCardish(bc) || {}).image_uris : null }); } });
+  }
+  if(!document.body.contains(box)) return;
+  const tile = (it)=> q.pets
+    ? `<button type="button" class="gd-pet ${chosen.has(it.v) ? 'on' : ''}" data-v="${escapeHtml(it.v)}" title="${escapeHtml(it.l)}">${it.img && it.img.small ? `<img loading="lazy" src="${escapeHtml(it.img.small)}" alt="${escapeHtml(it.l)}">` : `<span class="gd-pet-nm">${escapeHtml(it.l)}</span>`}<i>\u2713</i></button>`
+    : `<button type="button" class="gd-opt gd-chip ${chosen.has(it.v) ? 'on' : ''}" data-v="${escapeHtml(it.v)}"><b>${escapeHtml(it.l)}</b></button>`;
+  const draw = (list)=>{
+    box.innerHTML = list.length ? `<div class="${q.pets ? 'gd-pets' : 'gd-chips'}">${list.map(tile).join('')}</div>` : `<div class="empty-note">${_gT('Niets gevonden.', 'Nothing found.')}</div>`;
+    box.querySelectorAll('[data-v]').forEach(b=>b.addEventListener('click', ()=>{
+      const v = b.dataset.v;
+      if(chosen.has(v)) chosen.delete(v); else chosen.add(v);
+      b.classList.toggle('on', chosen.has(v));
+      save();
+    }));
+  };
+  draw(items); count();
+  let t = null;
+  inp?.addEventListener('input', ()=>{
+    clearTimeout(t);
+    t = setTimeout(async ()=>{
+      const qq = inp.value.trim().toLowerCase();
+      if(!qq){ draw(items); return; }
+      let list = items.filter(it=>it.l.toLowerCase().includes(qq) || (it.w && it.w.includes(qq)));   // "elf" finds Elves
+      if(q.pets && qq.length >= 3){
+        const ix = await bulkIndexReady().catch(()=>null);
+        if(ix && ix.cards){
+          const more = [];
+          for(const c of ix.cards){ if(more.length >= 24) break; if(c.n && c.n.toLowerCase().includes(qq) && !list.some(x=>x.v === c.n) && !more.some(x=>x.v === c.n) && !/^A-/.test(c.n)) more.push({ v: c.n, l: c.n, img: (bulkToCardish(c) || {}).image_uris }); }
+          list = list.concat(more);
+        }
+      }
+      draw(list);
+    }, 200);
+  });
+}
+// The ten cards that fit best in the deck of the first pick: EDHREC's cards
+// for that commander, weighed by synergy and how often they are played, by
+// the themes of your answers, and by how much they resemble your pet cards.
+async function guideTenCards(top, ans, P, W){
+  const ix = await bulkIndexReady().catch(()=>null);
+  let page = null;
+  try{ page = await Promise.race([edhrecCommanderPage(top.card), new Promise(r=>setTimeout(()=>r(null), 9000))]); }catch(e){}
+  const ci = new Set((top.card.color_identity || []).map(c=>String(c).toLowerCase()));
+  const fits = (bc)=>[...String(bc.ci || '').toLowerCase()].every(c=>ci.has(c));
+  if(page && !(page.names && page.names.length)) page = null;   // unreachable: the themes' cards stand in
+  const stats = (page && page.stats) || {};
+  const names = new Set((page && page.names) || []);
+  // the themes' own card lists count too (and stand in when the page is out of reach)
+  const themeOf = new Map();
+  for(const t of Object.keys(W).sort((a, b)=>W[b] - W[a]).slice(0, 5)){
+    let pg = null;
+    try{ pg = await Promise.race([edhrecFetchJson('/pages/tags/' + t + '.json'), new Promise(r=>setTimeout(()=>r(null), 4000))]); }catch(e){}
+    ((((pg || {}).container || {}).json_dict || {}).cardlists || []).filter(L=>!/commander/i.test(L.header || '')).forEach(L=>(L.cardviews || []).forEach(cv=>{
+      if(!cv || !cv.name) return;
+      if(!themeOf.has(cv.name)) themeOf.set(cv.name, []);
+      themeOf.get(cv.name).push(t);
+      if(!page) names.add(cv.name);
+    }));
+  }
+  // likeness to the pet cards (the Similar-cards points)
+  let weights = null; try{ weights = await magicWordWeights(); }catch(e){}
+  const pets = (P.pets || []).map(nm=>{ const bc = ix && ix.byName && ix.byName.get(String(nm).toLowerCase()); const x = bc ? bulkToCardish(bc) : null; return x ? { x, words: magicWordSet(x), tags: _tagsLocal(ix, x.name) } : null; }).filter(Boolean);
+  const tagHas = (cc, t)=>{ const l = localTagSetSync(cc); return l ? l.has(t) : false; };
+  const petNames = new Set((P.pets || []).map(n=>String(n).toLowerCase()));
+  const out = [];
+  names.forEach(nm=>{
+    const bc = ix && ix.byName ? ix.byName.get(String(nm).toLowerCase()) : null;
+    if(!bc || bc.n === top.card.name || petNames.has(bc.n.toLowerCase()) || /\bBasic\b/.test(bc.tl || '') || !fits(bc)) return;
+    const x = bulkToCardish(bc);
+    const st = stats[bc.n.toLowerCase()] || null;
+    // three parts; the reason shown is the one that weighed most
+    // synergy (played MORE with this commander than elsewhere) beats plain
+    // popularity; a staple every deck runs gives way to real fits
+    const pPlay = st ? .8 * st[0] + 3.2 * Math.max(0, st[1]) - ((st[1] < .05 && st[0] > .45) ? .7 : 0) : 0;
+    const th = themeOf.get(bc.n) || [];
+    const pTheme = Math.min(1.2, .3 * Math.sqrt(th.reduce((a, t)=>a + (W[t] || 0), 0)));
+    let best = 0, like = '';
+    pets.forEach(pt=>{
+      try{ const r = similarityScore(pt.x, x, { srcWords: pt.words, weights, srcTags: pt.tags, eMap: new Map(), tagHas, fallbackPop: 0 }); if(r.pts > best){ best = r.pts; like = pt.x.name; } }catch(e){}
+    });
+    const pLike = best >= 32 ? Math.min(1.6, (best - 24) / 20) : 0;   // only a real likeness counts
+    const sc = pPlay + pTheme + pLike;
+    if(sc <= 0) return;
+    let why = '';
+    if(pLike >= pPlay && pLike >= pTheme && pLike > 0) why = '\u2665 ' + _gT('lijkt op ', 'like ') + like;
+    else if(pPlay >= pTheme && st) why = st[1] > 0.04 ? '+' + Math.round(st[1] * 100) + '% synergy' : Math.round(st[0] * 100) + '% ' + _gT('van de decks', 'of decks');
+    else if(th.length) why = guideLabel(th.slice().sort((a, b)=>(W[b] || 0) - (W[a] || 0))[0]);
+    out.push({ x, sc, why, like: pLike > 0 ? like : '' });
+  });
+  out.sort((a, b)=>b.sc - a.sc);
+  // never more than four for the same pet card: ten different ideas
+  const per = {}, ten = [];
+  out.forEach(o=>{ if(ten.length >= 10) return; if(o.like){ per[o.like] = (per[o.like] || 0) + 1; if(per[o.like] > 4) return; } ten.push(o); });
+  return ten;
+}
 async function guideResults(main, g, paint){
-  main.innerHTML = `<div class="status"><div class="spinner"></div>${_gT('Op zoek naar jouw commanders…', 'Finding your commanders…')}</div>`;
+  main.innerHTML = `<div class="status"><div class="spinner"></div>${(g.ans.pets || []).length ? _gT('Je lievelingskaarten bekijken\u2026', 'Looking at your pet cards\u2026') : _gT('Op zoek naar jouw commanders\u2026', 'Finding your commanders\u2026')}</div>`;
   let out = null;
   try{ out = await guideScore(g.ans); }catch(e){ out = null; }
   if(!document.getElementById('guideOverlay')) return;
@@ -10650,12 +10881,21 @@ async function guideResults(main, g, paint){
     const alts = list.slice(3, 30).filter(r=>r.S >= floor).sort((a, b)=>a.d - b.d).slice(0, 2);
     const cards = best.concat(alts).map(r=>r.card);
     const tile = (r)=>searchRowHtml(r.card, null, { showAdmiralBtn: true, sub: guideWhyText(r, out.P) });
+    // 1.88: and the ten cards that fit best in that first deck
+    const { W } = guideWeights(g.ans);
+    (out.P.types || []).forEach(v=>{ if(String(v).indexOf('w:') !== 0) W[v] = (W[v] || 0) + 1.5; });
+    let ten = [];
+    try{ ten = best.length ? await guideTenCards(best[0], g.ans, out.P, W) : []; }catch(e){ ten = []; }
+    if(!document.getElementById('guideOverlay')) return;
+    const tenCards = ten.map(t=>t.x);
     main.innerHTML = nav
       + `<div class="edh-sec"><div class="section-label">${_gT('Past het best bij jou', 'Fits you best')}</div><div class="sr-grid">${best.map(tile).join('')}</div></div>`
+      + (ten.length ? `<div class="edh-sec gd-ten"><div class="section-label">${_gT('10 kaarten voor ', '10 cards for ')}${escapeHtml(best[0].card.name.split(' // ')[0])}</div><div class="sr-grid">${ten.map(t=>searchRowHtml(t.x, null, { sub: t.why })).join('')}</div></div>` : '')
       + (alts.length ? `<div class="edh-sec"><div class="section-label">${_gT('Of probeer eens', 'Or try')}</div><div class="sr-grid">${alts.map(tile).join('')}</div></div>` : '')
       + `<p class="hint gd-note">${out.withProf ? _gT('Op basis van EDHREC: thema’s, speelsterkte, budget en salt van duizenden decks.', 'Based on EDHREC: themes, power, budget and salt across thousands of decks.') : _gT('Op basis van EDHREC-thema’s. Na de wekelijkse update weegt ook speelsterkte, budget en salt mee.', 'Based on EDHREC themes. After the weekly update, power, budget and salt count too.')} ${_gT('Tik op een kaart voor de aanbevelingen.', 'Tap a card for its recommendations.')}</p>`;
     wireResultButtons(cards, null, ()=>guideResults(main, g, paint), { onCardTap: (c)=>openAdmiralReco(c) });
-    try{ loadTilePrices(cards); }catch(e){}
+    if(tenCards.length){ const tb = main.querySelector('.gd-ten'); if(tb) wireResultButtons(tenCards, null, ()=>{}, { onCardTap: (c)=>openCardInfo(c, { pool: tenCards, poolIdx: tenCards.indexOf(c) }) }); }
+    try{ loadTilePrices(cards.concat(tenCards)); }catch(e){}
   }
   main.querySelector('.gd-back')?.addEventListener('click', ()=>{ g.i = GUIDE_Q.length - 1; paint(-1); });
   main.querySelector('.gd-again')?.addEventListener('click', ()=>{ g.i = 0; g.ans = {}; paint(-1); });
@@ -10674,7 +10914,9 @@ async function guideResults(main, g, paint){
     if(!hs.length) return null;
     const rs = hs.map(h=>[h, h.getBoundingClientRect()]).filter(([, r])=>r.bottom > 0 && r.top < window.innerHeight);
     if(!rs.length) return null;
-    rs.sort((a, b)=>isDesk() ? b[1].top - a[1].top : a[1].top - b[1].top);
+    // 1.88: the first folded section on the way (nearest to where you were
+    // reading), not the far one -- the next pull opens the next.
+    rs.sort((a, b)=>isDesk() ? a[1].top - b[1].top : b[1].top - a[1].top);
     return rs[0][0];
   };
   let hint = null;
@@ -12329,7 +12571,7 @@ function wireHome(){
       e.stopPropagation();
       openFabMenu([
         ['fabNewDeck', '⚔ New deck', ()=>openModal('newdeck')],
-        ['fabGuide', '✦ ' + _gT('Welk deck past bij mij?', 'Which deck suits me?'), ()=>openDeckGuide()],
+        ['fabGuide', '✦ ' + guideName(), ()=>openDeckGuide()],
         ['fabNewFolder', `<span class="ib">${ICONS.decks}</span>New folder`, ()=>openNewFolderPrompt(state.folderNav||null)],
         // One Import: the sheet takes a pasted list AND loads a .txt file.
         ['fabImportDeck', mIco('file') + trS('Import'), ()=>openPasteListSheet()],
@@ -28144,9 +28386,9 @@ function browsePageHtml(){
   <main>
     ${swd ? `<div class="panel-card" style="margin-bottom:10px;border-color:var(--brass);"><div class="panel-h">${modeGlyph()} Switching ${fmtName(swd)}</div><p class="hint" style="margin:4px 0 0;">Tap any leader below to make it the new ${fmtName(swd)} of <strong style="color:var(--head-ink);">${escapeHtml(swd.name)}</strong> — the current one returns to the deck${swd.partner?', and a still-compatible second seat stays':''}.</p></div>` : ''}
     <div class="browse-hero" id="inspFeed"></div>
-    ${browseIsMeta() || swd ? '' : `<button type="button" class="guide-cta" id="guideBtn">✦ ${_gT('Welk deck past bij mij?', 'Which deck suits me?')}</button>`}
+
     <div class="searchbar" style="margin:0 0 10px;">
-      <input id="bsName" enterkeyhint="search" placeholder="${trS('Search by card name')}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${escapeHtml(state.browseNameQ||'')}">
+      <input id="bsName" enterkeyhint="search" placeholder="${trS('Search by card name')}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${escapeHtml(state.browseNameQ||'')}">${swd ? '' : `<button type="button" class="guide-sb" id="guideBtn" title="${_gT('Welk deck past bij mij?', 'Which deck suits me?')}">✦ ${guideName()}</button>`}
     </div>
     <div class="browse-selects">
       <div class="bs-row">${cselectHtml('bsFmt', FMT_ORDER.map(f=>({v:f, l:fmtFolderGlyph(f, 14)+' '+fmtLabelOf(f), art:(FMT_ICON_CARDS[f] ? 'nm|'+FMT_ICON_CARDS[f] : 'sf|'+artFmtParam(f)+'|'+leaderArtClause(f))})), state.browseFormat||'commander', 'Format', {tiles:true})}</div>
