@@ -3822,6 +3822,23 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 .lctr-row > .lctr i{width:15px;height:15px;}
 .lctr-row > .lctr.lctr-m i{width:17px;height:17px;}
 @media (prefers-reduced-motion:reduce){ :where(.menu-pop, #fabMenu, .tile-menu, .otag-pop, .cselect-panel, .name-suggest, #bindersPop, .xt-body, .modal-backdrop, .modal-sheet){animation:none !important;} }
+
+/* ===== 1.90 ===== */
+/* offline: a bolt in the logo button, same size and shape, same button */
+.brand-banner .nav-home .nav-logo-box{position:relative;display:block;font-style:normal;}   /* an <i>: the label <span>s are hidden in the bar */
+.brand-banner .nav-home .nav-off{position:absolute;inset:0;display:none;align-items:center;justify-content:center;border-radius:26%;background:#000;color:var(--gold);box-shadow:0 0 0 1px var(--hair-2);}
+.brand-banner .nav-home .nav-off svg{width:52%;height:52%;}
+.brand-banner .nav-home.offline .nav-off{display:flex;}
+.brand-banner .nav-home.offline.active .nav-off{box-shadow:0 0 0 1.5px var(--mark);}
+/* advanced filters: the six mana symbols always on one line (they shrink
+   when room is short, e.g. with large system text), rarity in two rows */
+.adv-row .color-check-row{flex-wrap:nowrap;gap:clamp(2px, 1.2vw, 6px);}
+.adv-row .color-check-row > .ccheck{flex:0 1 auto;min-width:0;display:flex;}
+.adv-row .color-check-row .mana-check{width:100%;max-width:30px;}
+.adv-row .color-check-row .mana-check svg{width:100%;height:auto;}
+.adv-row .rarity-row{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:6px;}
+.adv-row .rarity-row > .rcheck{min-width:0;display:block;}
+.adv-row .rarity-row .rpill{display:block;text-align:center;padding:6px 2px;font-size:clamp(10.5px, 3.3vw, 12px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* ===== 1.89 ===== */
 /* a heading that sticks at the foot over the cards is a solid bar again
    (since 1.79 every heading was see-through, so it floated over the art) */
@@ -6876,17 +6893,19 @@ async function _netConfirmDown(){
 /* The offline notice lives in the page-name bar: one short chip on the left,
    rebuilt by every render and kept in sync the moment the network flips. */
 function netChipHtml(){
+  return '';   // 1.90: the offline sign sits in the logo button now (navHtml)
+  // eslint-disable-next-line no-unreachable
   return _netDown ? `<span class="net-chip" id="netChip" title="${appLang()==='nl' ? 'Geen verbinding \u2014 je ziet de opgeslagen versie, dit herstelt vanzelf' : 'No connection \u2014 showing cached data, recovers by itself'}">\u26a1 Offline</span>` : '';
 }
 function _netChipSync(){
   try{
-    const cap = document.querySelector('.page-cap');
-    const chip = document.getElementById('netChip');
-    if(_netDown){
-      if(!chip && cap) cap.insertAdjacentHTML('afterbegin', netChipHtml());
-    } else if(chip){ chip.remove(); }
+    document.getElementById('netChip')?.remove();
+    const hb = document.getElementById('homeBtn');
+    if(hb){ hb.classList.toggle('offline', !!_netDown); hb.title = _netDown ? netOffTitle() : 'Extras'; }
   }catch(e){}
 }
+function netOffTitle(){ return appLang() === 'nl' ? 'Geen verbinding \u2014 je ziet de opgeslagen versie, dit herstelt vanzelf' : 'No connection \u2014 showing cached data, recovers by itself'; }
+const NET_OFF_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 2 4 14h6.5L9.5 22 20 9.5h-6.6z"/></svg>';
 function _netSetDown(down){
   if(_netDown === down) return;
   _netDown = down;
@@ -8435,23 +8454,19 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.89';
+const APP_VERSION = '1.90';
 const CHANGELOG_NOTES = {
   en: [
-    "Inspiration opens on new commanders",
-    "Headings no longer float over cards",
-    "Pictures reload when back online",
-    "Deck finder: every card type",
-    "Deck finder: creature types with art",
-    "Build from collection: tidier colours"
+    "No logo flash when switching apps",
+    "Slow line: plain card after 8 s",
+    "Offline sign in the logo button",
+    "Filters: colours on one line"
   ],
   nl: [
-    "Eerst nieuwe commanders in Inspiration",
-    "Koppen zweven niet meer over kaarten",
-    "Plaatjes laden weer zodra je online bent",
-    "Deckwijzer: alle kaarttypes",
-    "Deckwijzer: types wezens met plaatjes",
-    "Bouwen uit collectie: nette kleuren"
+    "Geen logoflits bij wisselen van app",
+    "Traag internet: kaart zonder plaatje",
+    "Offline-teken in de logoknop",
+    "Filters: kleuren op één regel"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8461,6 +8476,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-11';
 const CHANGELOG_HISTORY = [
+  { v: '1.89', d: '2026-11-11',
+    en: ['Inspiration opens on new commanders', 'Headings no longer float over cards', 'Pictures reload when back online', 'Deck finder: every card type', 'Deck finder: creature types with art', 'Build from collection: tidier colours'],
+    nl: ["Eerst nieuwe commanders in Inspiration", "Koppen zweven niet meer over kaarten", "Plaatjes laden weer zodra je online bent", "Deckwijzer: alle kaarttypes", "Deckwijzer: types wezens met plaatjes", "Bouwen uit collectie: nette kleuren"] },
   { v: '1.88', d: '2026-11-11',
     en: ['Deck finder sits beside the search', 'Deck finder: pet cards and 10 picks', 'Deck finder: all creature types', 'Salt as a score, budget €400+', 'Pull opens the nearest folded part'],
     nl: ["Deckwijzer naast het zoekveld", "Deckwijzer: lievelingskaarten + 10 tips", "Deckwijzer: alle types wezens", "Salt als score, budget €400+", "Doortrekken opent het dichtstbijzijnde"] },
@@ -9626,6 +9644,14 @@ function applyTheme(){
   document.documentElement.style.setProperty('--count-bad-tile', g.side === 'W' ? '#B5484D' : '#F4B6A2');
   // The Android app draws the cursor's grab handle itself: tell it too.
   try{ if(window.DeckhandNotify && typeof DeckhandNotify.setAccent === 'function') DeckhandNotify.setAccent(caret); }catch(e){}
+  // 1.90: and the page colour, for the window behind the page -- coming back
+  // to the app, that is what shows for a moment, not the launch logo (APK 1.1)
+  try{
+    if(window.DeckhandNotify && typeof DeckhandNotify.setBackdrop === 'function'){
+      const m = String(getComputedStyle(document.documentElement).backgroundColor || '').match(/\d+/g);
+      if(m && m.length >= 3) DeckhandNotify.setBackdrop('#' + m.slice(0, 3).map(x=>(+x).toString(16).padStart(2, '0')).join(''));
+    }
+  }catch(e){}
   document.title = brandTitle();
 }
 const CARET_BY_SIDE = { W:'#8A6A1E', U:'#A6D0EE', B:'#D6D1CA', R:'#F4B6A2', G:'#B4DAB4' };
@@ -10403,6 +10429,7 @@ function bootSnapSave(){
     const clone = root.cloneNode(true);
     clone.querySelectorAll('*').forEach(el=>{ Array.from(el.attributes).forEach(at=>{ if(/^on/i.test(at.name)) el.removeAttribute(at.name); }); });
     clone.querySelectorAll('script, iframe, video, .net-chip, #installPill').forEach(el=>el.remove());
+    clone.querySelector('#homeBtn')?.classList.remove('offline');
     const h = clone.innerHTML;
     if(h.length > 200000) return;
     const de = document.documentElement, a = {};
@@ -11378,7 +11405,7 @@ function navHtml(){
     <div class="brand-txt ${editable?'editable':''} two-line" id="brandTitle" ${editable?'title="Tap to rename this deck"':''}><span id="brandTitleInner">${capInner}</span></div>
     ${state._capNote ? `<span class="cap-note${(state.screen === 'collection' || state.screen === 'decklist') ? ' cap-tap' : ''}" id="capNoteBtn"${state.screen === 'decklist' ? ' role="button"' : ''}>${state._capNote}</span>` : ''}
   </div><div class="brand-banner">
-    <button type="button" class="nav-it nav-home ${activeKey==='settings'?'active':''}" id="homeBtn" title="Extras" aria-label="Extras"><img src="icon-192.png" alt=""><span>Extras</span></button>
+    <button type="button" class="nav-it nav-home ${activeKey==='settings'?'active':''}${_netDown ? ' offline' : ''}" id="homeBtn" title="${_netDown ? netOffTitle() : 'Extras'}" aria-label="Extras"><i class="nav-logo-box"><img src="icon-192.png" alt=""><i class="nav-off">${NET_OFF_SVG}</i></i><span>Extras</span></button>
     <div class="spacer"></div>
     <div class="banner-tabs">${items.map(it=>`<button class="banner-tab nav-it ${activeKey===it.k?'active':''}" data-page="${it.k}" title="${it.l}" aria-label="${it.l}">${it.i}<span>${it.l}</span></button>`).join('')}</div>
   </div>`;
@@ -31750,7 +31777,7 @@ document.addEventListener('click', (e)=>{ if(e.target.closest && e.target.closes
    4.3 the app downloads it and opens Android's installer itself; an older
    app hands the download to the browser. Android always asks the person to
    confirm, and the same signature means every deck and card stays. */
-const APK_LATEST = '1.0';
+const APK_LATEST = '1.0';   // APK 1.1 is waiting for its build: raise this once Deckhand.apk 1.1 is in the repo
 /* The APK line restarted at 1.0 too (it was 3.0 ... 5.0). An app from the old
    line is always older than any app from the new one. */
 function apkCmp(a, b){
@@ -37938,6 +37965,46 @@ function paintPendingArt(root){
     im.addEventListener('load', done, { once:true });
   });
 }
+/* 1.90: on a very slow line a picture could keep coming in for ever, the
+   tile stuck between the art-less card and a half-drawn picture. Past
+   SLOW_ART_MS the art-less card shows, steady. The picture keeps loading out
+   of sight and takes its place only once it is complete; when the line comes
+   back after being down, retryMissingArt asks again. */
+const SLOW_ART_MS = 8000;
+const BLANK_CARD_URI = 'data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='488' height='680'/>");
+// Which pictures are on (or near) the screen: the browser keeps that up to
+// date by itself, so the sweep below never has to measure anything.
+let _artIO = null;
+try{ _artIO = new IntersectionObserver((ents)=>{ ents.forEach(en=>{ en.target._artNear = en.isIntersecting; }); }, { rootMargin: '100% 0px' }); }catch(e){}
+function artSlowSweep(){
+  const now = Date.now();
+  const imgs = document.images;
+  for(let i = 0; i < imgs.length; i++){
+    const im = imgs[i];
+    if(im.complete){ if(im._artSeen) delete im._artSeen; continue; }   // there, or failed (the error handler has it)
+    if(im._artIO !== true){
+      if(!/scryfall\.io/.test(im.getAttribute('src') || '')) continue;
+      im._artIO = true;
+      if(_artIO) _artIO.observe(im); else im._artNear = true;
+      continue;
+    }
+    if(!im._artNear || im.classList.contains('art-missing') || im.classList.contains('art-slow')) continue;
+    if(!im._artSeen){ im._artSeen = now; continue; }
+    if(now - im._artSeen < SLOW_ART_MS) continue;
+    const src = im.getAttribute('src') || '';
+    if(!/scryfall\.io/.test(src)) continue;
+    const nm = im.getAttribute('alt') || '';
+    try{ if(nm) im.style.setProperty('--sk', _skFor(nm)); }catch(e){}
+    im.dataset.artsrc = src;
+    im.classList.add('art-slow', 'art-pending');
+    im.src = BLANK_CARD_URI;
+    try{ if(_artIO) _artIO.unobserve(im); }catch(e){}
+    const probe = new Image();
+    probe.onload = ()=>{ if(im.isConnected && im.classList.contains('art-slow')){ im.classList.remove('art-slow', 'art-pending'); im._artIO = false; im.src = src; } };
+    probe.src = src;
+  }
+}
+setInterval(()=>{ try{ if(!document.hidden) artSlowSweep(); }catch(e){} }, 1000);
 /* Redraw every skeleton on screen — used once the card database finishes
    loading, so the frames fill in with type, cost and stats by themselves. */
 function repaintSkeletons(){
