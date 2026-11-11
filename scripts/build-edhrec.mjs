@@ -10,10 +10,14 @@
 // offline too. The app still fetches the live page in the background, so it
 // never stays more than a few days behind EDHREC.
 //
+// It also keeps a short profile of the ~700 most played commanders (how
+// strong, how expensive, how much the table hates it, its themes): the
+// deck guide ("Which deck suits me?") picks commanders from these.
+//
 // Polite: one request at a time with a pause between them, once a week.
 //
 //   node scripts/build-edhrec.mjs --out data/edhrec-slim.json.gz   (also writes data/edhrec-meta.json)
-//        [--themes 120] [--typal 40] [--commanders 100] [--delay 300]
+//        [--themes 120] [--typal 40] [--commanders 100] [--profiles 700] [--delay 300]
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -22,6 +26,7 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ?
 const OUT = arg('out', 'data/edhrec-slim.json.gz');
 const N_THEMES = +arg('themes', 120), N_TYPAL = +arg('typal', 40), N_CMD = +arg('commanders', 100);
 const DELAY = +arg('delay', 300);
+const N_PROF = +arg('profiles', 700);
 const BASE = 'https://json.edhrec.com';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -90,13 +95,35 @@ function tagLinks(page) {
 }
 
 const pages = {};
+const profiles = {};
 let fetched = 0, missed = 0;
+// One commander, in a few numbers: colours, decks, rank, salt, decks per
+// power bracket (1-5), per budget (budget / middle / expensive), its top themes.
+function profileOf(p) {
+  try {
+    const c = (p.container.json_dict.card) || {};
+    if (!c.name) return null;
+    const tl = (p.panels && p.panels.taglinks) || [];
+    const br = p.bracket_counts || {}, bu = p.budget_counts || {};
+    return {
+      n: c.name,
+      ci: (c.color_identity || []).join('').toLowerCase(),
+      d: c.num_decks || 0,
+      r: c.rank || 0,
+      sa: Math.round((c.salt || 0) * 100) / 100,
+      br: [1, 2, 3, 4, 5].map((k) => br[k] || 0),
+      bu: [bu.budget || 0, bu.middle || 0, bu.expensive || 0],
+      t: tl.filter((t) => t && t.slug).sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 16).map((t) => [t.slug, t.count || 0]),
+    };
+  } catch (e) { return null; }
+}
 async function take(path, opts) {
   if (pages[path]) return pages[path];
   await sleep(DELAY);
   const p = await get(path);
   if (!p) { missed++; return null; }
   fetched++;
+  if (opts && opts.keep === false) return p;          // read for its profile only
   pages[path] = slimPage(p, opts);
   if (fetched % 25 === 0) console.log(`  ${fetched} pages…`);
   return p;
@@ -130,13 +157,46 @@ for (const per of periods) {
 }
 const cmds = [...score.entries()].sort((a, b) => b[1] - a[1]).slice(0, N_CMD).map((x) => x[0]);
 console.log(`Commanders: ${cmds.length}`);
-for (const c of cmds) await take('/pages/commanders/' + c + '.json', { cap: CMD_CAP });
+for (const c of cmds) { const p = await take('/pages/commanders/' + c + '.json', { cap: CMD_CAP }); const pf = p && profileOf(p); if (pf) profiles[c] = pf; }
+
+// Profiles: the most played commanders of every colour combination (EDHREC's
+// colour pages), so a guide answer like "mono-white" always has candidates.
+const COLOR_PAGES = ['mono-white', 'mono-blue', 'mono-black', 'mono-red', 'mono-green', 'colorless',
+  'azorius', 'dimir', 'rakdos', 'gruul', 'selesnya', 'orzhov', 'izzet', 'golgari', 'boros', 'simic',
+  'esper', 'grixis', 'jund', 'naya', 'bant', 'abzan', 'jeskai', 'sultai', 'mardu', 'temur',
+  'yore-tiller', 'glint-eye', 'dune-brood', 'ink-treader', 'witch-maw', 'five-color'];
+const pool = new Map();
+const perColor = [];
+for (const cp of COLOR_PAGES) {
+  await sleep(DELAY);
+  const p = await get('/pages/commanders/' + cp + '.json');
+  if (!p) { missed++; continue; }
+  const list = [];
+  for (const L of p.container.json_dict.cardlists || []) for (const cv of L.cardviews || []) {
+    if (!cv || !cv.sanitized) continue;
+    list.push([cv.sanitized, cv.num_decks || 0]);
+    pool.set(cv.sanitized, Math.max(pool.get(cv.sanitized) || 0, cv.num_decks || 0));
+  }
+  perColor.push(list.sort((a, b) => b[1] - a[1]));
+}
+// every colour's top 12 first, then the most played overall
+const want = [];
+const seen = new Set(Object.keys(profiles));
+perColor.forEach((list) => list.slice(0, 12).forEach(([s]) => { if (!seen.has(s)) { seen.add(s); want.push(s); } }));
+[...pool.entries()].sort((a, b) => b[1] - a[1]).forEach(([s]) => { if (!seen.has(s)) { seen.add(s); want.push(s); } });
+const need = Math.max(0, N_PROF - Object.keys(profiles).length);
+console.log(`Profiles: ${Object.keys(profiles).length} from the pages above, ${Math.min(need, want.length)} more to read`);
+for (const s of want.slice(0, need)) {
+  const p = await take('/pages/commanders/' + s + '.json', { keep: false });
+  const pf = p && profileOf(p);
+  if (pf) profiles[s] = pf;
+}
 
 const built = Date.now();
-const body = JSON.stringify({ built, pages });
+const body = JSON.stringify({ built, pages, profiles });
 const gz = gzipSync(body, { level: 9 });
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, gz);
 // the small file the app checks first, so it downloads the big one only once a week
-writeFileSync(join(dirname(OUT), 'edhrec-meta.json'), JSON.stringify({ built, pages: Object.keys(pages).length, bytes: gz.length }) + '\n');
-console.log(`Wrote ${OUT}: ${Object.keys(pages).length} pages (${missed} missing), ${(body.length / 1048576).toFixed(1)} MB → ${(gz.length / 1048576).toFixed(2)} MB gzip`);
+writeFileSync(join(dirname(OUT), 'edhrec-meta.json'), JSON.stringify({ built, pages: Object.keys(pages).length, profiles: Object.keys(profiles).length, bytes: gz.length }) + '\n');
+console.log(`Wrote ${OUT}: ${Object.keys(pages).length} pages, ${Object.keys(profiles).length} profiles (${missed} missing), ${(body.length / 1048576).toFixed(1)} MB → ${(gz.length / 1048576).toFixed(2)} MB gzip`);

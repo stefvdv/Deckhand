@@ -3822,6 +3822,46 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 .lctr-row > .lctr i{width:15px;height:15px;}
 .lctr-row > .lctr.lctr-m i{width:17px;height:17px;}
 @media (prefers-reduced-motion:reduce){ :where(.menu-pop, #fabMenu, .tile-menu, .otag-pop, .cselect-panel, .name-suggest, #bindersPop, .xt-body, .modal-backdrop, .modal-sheet){animation:none !important;} }
+/* ===== 1.87 ===== */
+.cs-artscroll > .art-spacer{visibility:hidden;}
+/* partner pairs: no rim, like every other card tile; their + is green too */
+.pair-cell{background:none !important;background-image:none !important;border:none !important;box-shadow:none !important;border-radius:0 !important;padding:0 !important;}
+:is(.sr-tile, .pair-cell) .st-meta-row .add-btn[data-mpairadd]{background:var(--pm-bg) !important;color:var(--pm-ink) !important;border:2px solid color-mix(in srgb, #ffffff 65%, var(--pm-bg)) !important;box-shadow:0 2px 6px rgba(0,0,0,0.35);font-weight:800;}
+/* a calmer, more natural green for the + */
+:is(.sr-tile, .pair-cell) .st-meta-row :is(.add-btn[data-name]:not([data-admiral]), .add-btn[data-mpairadd]){--pm-bg:#3E8B50;--pm-ink:#ffffff;}
+html[data-main="G"] :is(.sr-tile, .pair-cell) .st-meta-row :is(.add-btn[data-name]:not([data-admiral]), .add-btn[data-mpairadd]){--pm-bg:#68A866;--pm-ink:#0B2A15;}
+
+
+/* the deck guide */
+.app > main > .guide-cta{order:99;}   /* with the pickers (99), and before them in the page: right above them */
+html.desk .app > main > .guide-cta{order:3;}
+.app > main:has(> #browseResults:not(:empty)) > .guide-cta, .app > main:has(> #bsNameResults:not(:empty)) > .guide-cta{display:none;}
+.guide-cta{display:block;width:100%;margin:2px 0 12px;padding:13px 14px;border-radius:12px;border:1px solid var(--hair-2);background:var(--panel);color:var(--head-ink);font-weight:700;font-size:15px;cursor:pointer;}
+.gd-main{display:flex;flex-direction:column-reverse;gap:12px;padding:12px 12px calc(16px + env(safe-area-inset-bottom));}
+.gd-q h3{margin:6px 0 4px;font-size:21px;color:var(--head-ink);}
+.gd-q p{margin:0;color:var(--sub-text);font-size:14px;}
+.gd-n{font-size:12.5px;color:var(--sub-text);letter-spacing:.3px;}
+.gd-prog{height:3px;border-radius:2px;background:var(--hair);overflow:hidden;margin-bottom:8px;}
+.gd-prog > i{display:block;height:100%;background:var(--gold);transition:width .25s ease;}
+.gd-opts{display:flex;flex-direction:column-reverse;gap:8px;}
+html.desk .gd-opts:not(.gd-chips){flex-direction:column;}   /* a PC reads top-down: the first answer on top */
+.gd-opt{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--hair-2);background:var(--panel);color:var(--ink-text);cursor:pointer;}
+.gd-opt b{font-size:15.5px;}
+.gd-opt span{font-size:13px;color:var(--sub-text);line-height:1.35;}
+.gd-opt.on{border-color:var(--mark);box-shadow:inset 0 0 0 1px var(--mark);}
+.gd-chips{flex-direction:row;flex-wrap:wrap-reverse;}
+.gd-chips .gd-opt{width:auto;flex:0 0 auto;padding:9px 14px;border-radius:999px;}
+.gd-colors{display:flex;justify-content:space-between;gap:6px;}
+.gd-col{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 2px 9px;border-radius:12px;border:1px solid var(--hair-2);background:var(--panel);color:var(--sub-text);font-size:11.5px;cursor:pointer;}
+.gd-col.on{border-color:var(--mark);box-shadow:inset 0 0 0 1px var(--mark);color:var(--ink-text);}
+.gd-col.off{opacity:.45;}
+.gd-col.off svg{filter:grayscale(1);}
+.gd-nav{display:flex;gap:8px;}
+.gd-nav > button{flex:1 1 0;margin:0;}
+.gd-note{text-align:center;margin:4px 0 0;}
+/* pull once more at the end of a list */
+.pull-hint{position:fixed;left:50%;top:calc(var(--top-h, 50px) + 10px);transform:translateX(-50%) scale(calc(.85 + .15 * var(--pk, 0)));z-index:60;padding:7px 16px;border-radius:999px;background:var(--panel);border:1px solid var(--hair-2);color:var(--head-ink);font-weight:700;font-size:13.5px;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.35);}
+html.desk .pull-hint{top:auto;bottom:24px;}
 /* ===== 1.86 MOTION (see motionIn in the script) ===== */
 .builder-tabs{position:relative;}
 .app > main > .builder-tabs{position:fixed;}
@@ -4320,6 +4360,7 @@ function cselectHtml(id, options, value, placeholder, o){
         });
       }
       const opts = (o.tiles ? options.slice().reverse() : options).map(x=>{
+        if(x.spacer) return o.tiles ? '<span class="art-spacer" aria-hidden="true"></span>' : '';
         const selCls = String(x.v)===String(value ?? '')?'sel':'';
         if(o.tiles){
           // Art keys can carry Scryfall clauses with double quotes
@@ -7591,7 +7632,7 @@ async function openBuildable(){
     bp._paint = paintPick;   // outside taps and hardware back repaint via csRerender
     const combos = COLOR_COMBOS[pickCount] || [];
     bp.innerHTML = `
-      <div class="browse-selects bld-sel"><div class="bs-row">${cselectHtml('bldCount', COLOR_COUNTS.filter(c=>c.key).map(c=>({v: c.key, l: trS(c.label), art: bsArtSf(c.clause)})), pickCount, trS('2 colors'), {tiles: true})}</div>
+      <div class="browse-selects bld-sel"><div class="bs-row">${cselectHtml('bldCount', COLOR_COUNTS.filter(c=>c.key && c.key !== '0').map(c=>({v: c.key, l: trS(c.label), art: bsArtSf(c.clause)})), pickCount, trS('2 colors'), {tiles: true})}</div>
       <div class="bs-row">${cselectHtml('bldCombo', sortCombosByPlay(combos).map(cb=>({v: cb.key, l: escapeHtml(cb.label), icons: manaRowSvg(cb.key, 18), art: bsArtSf(cb.key === 'c' ? 'id=c' : 'id=' + cb.key)})), combo, trS('Choose a combination…'), {tiles: true})}</div></div>`;
     _csHandlers['bldCount'] = v=>{ pickCount = v; combo = ''; state.openCSelect = null; paintPick(); };
     _csHandlers['bldCombo'] = v=>{ combo = v; state.openCSelect = null; paintPick(); runBuild(v, ++run); };
@@ -8355,23 +8396,25 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.86';
+const APP_VERSION = '1.87';
 const CHANGELOG_NOTES = {
   en: [
-    "Pages glide in when they open",
-    "Card pages rise in and sink away",
-    "Tabs slide, the gold line follows",
-    "Folders slide in from the side",
-    "Deck count pops when it changes",
-    "Messages rise with a little bounce"
+    "New: Which deck suits me?",
+    "Pull again to open folded sections",
+    "Any colors shows top commanders at once",
+    "Colorless is its own colour choice",
+    "Colour menus in a tidier order",
+    "Partner pairs look like other tiles",
+    "Calmer green on the + buttons"
   ],
   nl: [
-    "Pagina’s schuiven zacht in beeld",
-    "Kaartpagina’s komen op en zakken weg",
-    "Tabbladen schuiven, gouden streep mee",
-    "Mappen schuiven in vanaf de zijkant",
-    "Decktelling springt op bij wijziging",
-    "Meldingen veren omhoog"
+    "Nieuw: Welk deck past bij mij?",
+    "Nog eens trekken opent ingeklapte delen",
+    "Alle kleuren toont meteen de toppers",
+    "Colorless is een eigen kleurkeuze",
+    "Kleurmenu’s in een logischer volgorde",
+    "Partnerparen zien eruit als de rest",
+    "Rustiger groen op de +-knoppen"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8379,8 +8422,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-10';
+const APP_DATE = '2026-11-11';
 const CHANGELOG_HISTORY = [
+  { v: '1.86', d: '2026-11-10',
+    en: ['Pages glide in when they open', 'Card pages rise in and sink away', 'Tabs slide, the gold line follows', 'Folders slide in from the side', 'Deck count pops when it changes', 'Messages rise with a little bounce'],
+    nl: ["Pagina’s schuiven zacht in beeld", "Kaartpagina’s komen op en zakken weg", "Tabbladen schuiven, gouden streep mee", "Mappen schuiven in vanaf de zijkant", "Decktelling springt op bij wijziging", "Meldingen veren omhoog"] },
   { v: '1.85', d: '2026-11-09',
     en: ['Faster start: home shows at once', 'Big collections open instantly', 'Life counter reacts faster', 'Inspiration and tips load at once', 'Smaller app download'],
     nl: ["Sneller opstarten: Home staat er meteen", "Grote collecties openen meteen", "Life counter reageert sneller", "Inspiration en tips laden meteen", "Kleinere app-download"] },
@@ -8722,8 +8768,8 @@ function tourSteps(){
             : P('The filter searches by <strong>tags</strong>: removal, ramp, draw … combine as many as you like.') },
     { k:'inspiration', go:()=>switchPage('browse'), sel:['.browse-selects .bs-row', '#bsName'],
       t: '✦ Inspiration',
-      b: NL ? P('<strong>Top-commanders</strong>, staples en <strong>meta-decks</strong> voor elk format.')
-            : P('<strong>Top commanders</strong>, staples and <strong>meta decks</strong> for every format.') },
+      b: NL ? P('<strong>Top-commanders</strong>, staples en <strong>meta-decks</strong> voor elk format. Geen idee wat je wilt bouwen? <strong>Welk deck past bij mij?</strong> stelt een paar vragen en zoekt commanders die bij je passen.')
+            : P('<strong>Top commanders</strong>, staples and <strong>meta decks</strong> for every format. No idea what to build? <strong>Which deck suits me?</strong> asks a few questions and finds commanders that fit you.') },
     { k:'extras', go:()=>switchPage('settings'), sel:['#crRow'],
       t: NL ? 'Vraag de AI-judge' : 'Ask the AI judge',
       b: NL ? P('Regelvraag aan tafel? Tag de kaarten met @ en krijg antwoord mét de officiële regels. Life Counter en Draft tools staan ernaast.')
@@ -10324,6 +10370,370 @@ function bootSnapSave(){
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') bootSnapSave(); });
 let _bootNewsHtml = null, _bootSnapSeen = false;
+/* ===================== 1.87 DECK GUIDE =====================
+   "Which deck suits me?" -- a few questions, one per screen, then the
+   commanders that fit the answers best, each with why. The answers weigh
+   EDHREC's themes (aristocrats, tokens, voltron ...) and, from the weekly
+   commander profiles, how strong decks with that commander are played
+   (brackets 1-5), how expensive, and how much the table dislikes it (salt).
+   Without profiles (first week, offline) the theme pages alone decide. */
+const GUIDE_KEY = 'guide1';
+const _gT = (nl, en)=> appLang() === 'nl' ? nl : en;
+// option: v (value), l [nl, en], d [nl, en] description, w {theme: weight}, p {pref}
+const GUIDE_Q = [
+  { k:'joy', q:['Waar word je het blijst van?', 'What makes you happiest?'], s:['Kies wat het meest op jou lijkt.', 'Pick what sounds most like you.'], o:[
+    { v:'timmy', l:['Groots en spectaculair', 'Big and spectacular'], d:['Enorme wezens, grote spreuken, het moment dat de tafel "wauw" zegt. (Timmy/Tammy)', 'Huge creatures, big spells, the moment the table says "wow". (Timmy/Tammy)'], w:{ ramp:1, 'big-mana':1, stompy:1, dragons:.7, eldrazi:.7, 'plus-1-plus-1-counters':.5, 'extra-combats':.5, landfall:.4, 'x-spells':.4 } },
+    { v:'johnny', l:['Slimme combinaties', 'Clever combinations'], d:['Kaarten die samen meer doen dan apart, en dat ene moment dat alles klikt. (Johnny/Jenny)', 'Cards that do more together, and the moment it all clicks. (Johnny/Jenny)'], w:{ combo:1, storm:.7, spellslinger:.5, blink:.6, aristocrats:.6, wheels:.5, clones:.5, 'spell-copy':.6, 'birthing-pod':.5, 'rube-goldberg':.5, artifacts:.3 } },
+    { v:'spike', l:['Winnen', 'Winning'], d:['Het sterkste deck dat je kunt bouwen, scherp gespeeld. (Spike)', 'The strongest deck you can build, played sharp. (Spike)'], w:{ combo:.6, control:.4, stax:.3, 'good-stuff':.3 }, p:{ power:1 } },
+    { v:'vorthos', l:['Verhaal en sfeer', 'Story and flavour'], d:['Een deck dat een verhaal vertelt: een volk, een wereld, een personage. (Vorthos)', 'A deck that tells a story: a people, a world, a character. (Vorthos)'], w:{ legends:.5, sagas:.5, historic:.4, adventures:.4, 'the-ring':.3, dungeon:.4, party:.3 }, p:{ flavour:1 } }
+  ]},
+  { k:'style', q:['Hoe speel je het liefst?', 'How do you like to play?'], o:[
+    { v:'aggro', l:['Aanvallen', 'Attacking'], d:['Vroeg druk zetten en de tafel klein houden. (aggro)', 'Pressure early and keep the table small. (aggro)'], w:{ aggro:1, 'go-wide':.6, tokens:.4, 'extra-combats':.6, voltron:.4, burn:.4, haste:.5 } },
+    { v:'tempo', l:['Snel en sluw', 'Quick and sly'], d:['Precies op tijd, met flash, ontwijken en verrassen. (tempo)', 'Right on time, with flash, evasion and surprises. (tempo)'], w:{ tempo:1, ninjutsu:.8, flash:.7, unblockable:.6, bounce:.5, prowess:.4 } },
+    { v:'ramp', l:['Opbouwen, dan groot', 'Build up, then go big'], d:['Eerst mana en lands, daarna de grote klappers. (ramp)', 'Mana and lands first, then the big hitters. (ramp)'], w:{ ramp:1, 'big-mana':.8, landfall:.6, 'lands-matter':.5, 'x-spells':.5 } },
+    { v:'control', l:['Alles onder controle', 'In control'], d:['Tegenhouden, opruimen en pas winnen als het veilig is. (control)', 'Stop things, clean up, and win once it is safe. (control)'], w:{ control:1, counterspells:.7, stax:.3, 'pillow-fort':.4, 'card-draw':.4 } },
+    { v:'hug', l:['Samen spelen', 'Playing together'], d:['Iedereen helpen, deals sluiten, de tafel bespelen. (group hug, politiek)', 'Help everyone, make deals, play the table. (group hug, politics)'], w:{ 'group-hug':1, politics:.8, monarch:.6, voting:.5, donate:.5, chaos:.3 }, p:{ friendly:.5 } }
+  ]},
+  { k:'focus', q:['Thema of kracht?', 'Theme or strength?'], o:[
+    { v:'theme', l:['Thematisch', 'Thematic'], d:['Het idee telt: alles past bij elkaar, ook als het iets minder sterk is.', 'The idea counts: everything belongs together, even if a bit weaker.'], p:{ flavour:1, power:-.5 } },
+    { v:'mix', l:['Allebei een beetje', 'A bit of both'], d:['Een duidelijk plan dat ook gewoon goed werkt.', 'A clear plan that also simply works.'] },
+    { v:'eff', l:['Efficiënt', 'Efficient'], d:['De beste kaarten voor het plan, geen franje.', 'The best cards for the plan, no frills.'], w:{ 'good-stuff':.4, combo:.3, midrange:.3 }, p:{ power:.6 } }
+  ]},
+  { k:'turns', q:['Hoe ziet jouw beurt eruit?', 'What does your turn look like?'], o:[
+    { v:'own', l:['Zelf veel doen', 'Doing lots myself'], d:['Veel acties, triggers en kaarten trekken in je eigen beurt.', 'Lots of actions, triggers and card draw on your own turn.'], w:{ spellslinger:.5, tokens:.4, landfall:.5, aristocrats:.4, artifacts:.4, blink:.5, 'card-draw':.4, 'activated-abilities':.4, 'triggered-abilities':.3 } },
+    { v:'react', l:['Reageren op anderen', 'Reacting to others'], d:['Interactie: tegenhouden, wegnemen, op het juiste moment toeslaan.', 'Interaction: stopping, removing, striking at the right moment.'], w:{ control:.8, counterspells:.8, flash:.7, aikido:.5, exile:.3 } },
+    { v:'defend', l:['Veilig verdedigen', 'Defending safely'], d:['Muren, levenswinst en zorgen dat niemand je aanvalt.', 'Walls, lifegain and making sure nobody attacks you.'], w:{ lifegain:.8, 'pillow-fort':1, defenders:.7, 'toughness-matters':.6, enchantress:.3, 'turbo-fog':.6 } }
+  ]},
+  { k:'win', q:['Hoe wil je winnen?', 'How do you want to win?'], o:[
+    { v:'army', l:['Met een leger', 'With an army'], d:['Veel wezens of tokens die samen aanvallen.', 'Lots of creatures or tokens attacking together.'], w:{ tokens:1, 'go-wide':.8, aggro:.4, anthems:.6, 'plus-1-plus-1-counters':.4 } },
+    { v:'voltron', l:['Met je commander', 'With your commander'], d:['Je commander groot maken en zo winnen. (voltron)', 'Make your commander huge and win with it. (voltron)'], w:{ voltron:1, equipment:.8, auras:.7, 'commander-matters':.5 } },
+    { v:'drain', l:['Leven wegzuigen', 'Draining life'], d:['Wezens offeren, iedereen een beetje leven afnemen. (aristocrats)', 'Sacrifice creatures, take a little life from everyone. (aristocrats)'], w:{ aristocrats:1, lifedrain:.9, sacrifice:.7, lifegain:.3, 'group-slug':.4 } },
+    { v:'combo', l:['Met een combo', 'With a combo'], d:['Twee of drie kaarten die samen meteen winnen.', 'Two or three cards that win together on the spot.'], w:{ combo:1, storm:.5 } },
+    { v:'alt', l:['Iets aparts', 'Something different'], d:['Bibliotheken leegmaken, gif, extra beurten of een andere manier.', 'Empty libraries, poison, extra turns or another way.'], w:{ mill:1, infect:.9, proliferate:.5, 'extra-turns':.5, 'self-mill':.3 } }
+  ]},
+  { k:'cards', multi:true, q:['Met welke kaarten speel je graag?', 'Which cards do you like to play?'], s:['Kies er zoveel als je wilt.', 'Pick as many as you like.'], o:[
+    { v:'crea', l:['Wezens', 'Creatures'], w:{ 'plus-1-plus-1-counters':.4, tokens:.3, stompy:.4, etb:.4, 'go-wide':.3 } },
+    { v:'spells', l:['Instants en sorceries', 'Instants and sorceries'], w:{ spellslinger:1, storm:.5, cantrips:.5, 'x-spells':.3, prowess:.4, 'spell-copy':.4 } },
+    { v:'arts', l:['Artefacten', 'Artifacts'], w:{ artifacts:1, equipment:.5, treasure:.6, vehicles:.5, affinity:.4 } },
+    { v:'ench', l:['Enchantments', 'Enchantments'], w:{ enchantress:1, auras:.6, sagas:.4 } },
+    { v:'lands', l:['Lands', 'Lands'], w:{ 'lands-matter':1, landfall:.9, ramp:.3 } },
+    { v:'yard', l:['Het kerkhof', 'The graveyard'], w:{ graveyard:1, reanimator:.9, 'self-mill':.6, dredge:.5, flashback:.4 } }
+  ]},
+  { k:'colors', colors:true, q:['Welke kleuren?', 'Which colours?'], s:['Tik één keer voor "graag", twee keer voor "liever niet".', 'Tap once for "yes please", twice for "rather not".'] },
+  { k:'power', q:['Hoe sterk mag het deck zijn?', 'How strong should the deck be?'], s:['Volgens de officiële Commander Brackets.', 'By the official Commander Brackets.'], o:[
+    { v:'casual', l:['Casual', 'Casual'], d:['Ontspannen potjes, precons en zelfgemaakte thema’s. (bracket 1–2)', 'Relaxed games, precons and homebrew themes. (brackets 1–2)'], p:{ br:[1, 2] } },
+    { v:'focused', l:['Gemiddeld', 'Focused'], d:['Een sterk plan, maar zonder snelle combo’s. (bracket 3)', 'A strong plan, but no fast combos. (bracket 3)'], p:{ br:[3] } },
+    { v:'high', l:['Sterk', 'Strong'], d:['Alles uit de kast, maar nog geen toernooi. (bracket 4)', 'Everything out, short of a tournament. (bracket 4)'], p:{ br:[4] } },
+    { v:'cedh', l:['cEDH', 'cEDH'], d:['Toernooiniveau: zo snel en sterk als het kan. (bracket 5)', 'Tournament level: as fast and strong as it gets. (bracket 5)'], p:{ br:[5] } }
+  ]},
+  { k:'budget', q:['Wat is je budget?', 'What is your budget?'], o:[
+    { v:'low', l:['Tot €50', 'Up to €50'], p:{ bu:[1, .4, 0] } },
+    { v:'mid', l:['€50 – €150', '€50 – €150'], p:{ bu:[.6, 1, 0] } },
+    { v:'high', l:['€150 – €400', '€150 – €400'], p:{ bu:[0, 1, .7] } }
+  ]},
+  { k:'cx', q:['Hoe ingewikkeld mag het zijn?', 'How complex may it be?'], o:[
+    { v:'simple', l:['Simpel en overzichtelijk', 'Simple and clear'], d:['Een duidelijk plan, weinig om bij te houden.', 'A clear plan, little to keep track of.'], p:{ cx:-1 } },
+    { v:'some', l:['Een beetje uitdaging', 'A bit of a challenge'], p:{ cx:0 } },
+    { v:'complex', l:['Veel keuzes en triggers', 'Lots of choices and triggers'], d:['Puzzelen hoort erbij.', 'Puzzling is part of the fun.'], p:{ cx:1 } }
+  ]},
+  { k:'pop', q:['Populair of verrassend?', 'Popular or surprising?'], o:[
+    { v:'popular', l:['Wat veel gespeeld wordt', 'What many people play'], d:['Bewezen, en er is volop hulp en inspiratie te vinden.', 'Proven, with plenty of help and ideas around.'], p:{ pop:1 } },
+    { v:'any', l:['Maakt niet uit', 'Doesn’t matter'], p:{ pop:0 } },
+    { v:'rare', l:['Iets wat weinigen spelen', 'Something few people play'], d:['Verras de tafel.', 'Surprise the table.'], p:{ pop:-1 } }
+  ]},
+  { k:'salt', q:['Hoe vriendelijk voor de tafel?', 'How friendly to the table?'], o:[
+    { v:'friendly', l:['Liever niet irritant', 'Rather not annoying'], d:['Geen decks waar de tafel van zucht. (lage EDHREC-salt)', 'No decks that make the table sigh. (low EDHREC salt)'], p:{ friendly:1 } },
+    { v:'any', l:['Maakt niet uit', 'Doesn’t matter'] }
+  ]},
+  { k:'typal', q:['Een favoriet type wezen?', 'A favourite creature type?'], s:['Voor een kindred-deck. Mag ook leeg blijven.', 'For a kindred deck. Fine to skip.'], o:
+    ['dragons', 'elves', 'zombies', 'vampires', 'goblins', 'angels', 'wizards', 'dinosaurs', 'cats', 'pirates', 'merfolk', 'knights', 'slivers', 'spirits', 'demons', 'faeries']
+      .map(t=>({ v:t, l:[t, t], typal:true }))
+  },
+  { k:'coll', q:['Bouwen met je eigen kaarten?', 'Build with your own cards?'], o:[
+    { v:'yes', l:['Ja, liefst met wat ik heb', 'Yes, preferably with what I have'], d:['Commanders die je al bezit komen hoger.', 'Commanders you already own rank higher.'], p:{ coll:1 } },
+    { v:'no', l:['Nee, alles mag', 'No, anything goes'] }
+  ]}
+];
+function guideLoad(){ try{ const g = JSON.parse(localStorage.getItem(LS_PREFIX + GUIDE_KEY) || 'null'); if(g && g.ans) return g; }catch(e){} return { i: 0, ans: {} }; }
+function guideSave(g){ try{ localStorage.setItem(LS_PREFIX + GUIDE_KEY, JSON.stringify(g)); }catch(e){} }
+function guideLabel(slug){
+  const t = (state.edhrecTags || []).find(x=>String(x.slug).toLowerCase() === slug);
+  if(t && t.label) return t.label;
+  return String(slug).replace(/^plus-1-plus-1/, '+1/+1').replace(/^minus-1-minus-1/, '-1/-1').replace(/-/g, ' ').replace(/\b[a-z]/g, m=>m.toUpperCase());
+}
+// All answers in one bag: theme weights and preferences.
+function guideWeights(ans){
+  const W = {}, P = { power:0, flavour:0, friendly:0, pop:0, cx:null, br:null, bu:null, coll:0, typal:null, fav:[], avoid:[] };
+  const add = (w, k)=>{ Object.keys(w || {}).forEach(t=>{ W[t] = (W[t] || 0) + w[t] * (k || 1); }); };
+  GUIDE_Q.forEach(q=>{
+    const a = ans[q.k];
+    if(a == null || a === '') return;
+    if(q.colors){ Object.keys(a).forEach(c=>{ if(a[c] === 1) P.fav.push(c); else if(a[c] === 2) P.avoid.push(c); }); return; }
+    [].concat(a).forEach(v=>{
+      const o = (q.o || []).find(x=>x.v === v);
+      if(!o) return;
+      if(o.typal){ P.typal = o.v; return; }
+      add(o.w, q.multi ? .7 : 1);
+      const p = o.p || {};
+      Object.keys(p).forEach(k=>{ if(Array.isArray(p[k])) P[k] = p[k]; else if(typeof p[k] === 'number' && k !== 'cx') P[k] += p[k]; else P[k] = p[k]; });
+    });
+  });
+  return { W, P };
+}
+// A rough "how much is there to keep track of": the commander's own text
+// length, plus engine themes.
+function guideComplexity(card, themes){
+  const len = String(((card && (card.oracle_text || ((card.card_faces || []).map(f=>f.oracle_text).join(' ')))) || '')).length;
+  let cx = Math.min(1, len / 420);
+  ['storm', 'combo', 'spellslinger', 'blink', 'wheels', 'stax', 'birthing-pod', 'rube-goldberg'].forEach(t=>{ if(themes[t] > .25) cx += .2; });
+  return Math.min(1.4, cx);
+}
+async function guideProfiles(){
+  try{ const r = await qdbGet('edhProfiles'); if(r && r.v && Object.keys(r.v).length > 50) return r.v; }catch(e){}
+  return null;
+}
+// Without the weekly profiles: commanders from the theme pages of the most
+// weighted themes (their deck counts in that theme), colours from the card.
+async function guideFromThemes(W){
+  const top = Object.keys(W).sort((a, b)=>W[b] - W[a]).slice(0, 8);
+  const out = {};
+  for(const slug of top){
+    let pg = null;
+    try{ pg = await edhrecFetchJson('/pages/tags/' + slug + '.json'); }catch(e){}
+    const lists = (((pg || {}).container || {}).json_dict || {}).cardlists || [];
+    const L = lists.filter(l=>/commander/i.test(l.header || ''));
+    const mx = Math.max(1, ...[].concat(...L.map(l=>(l.cardviews || []).map(cv=>cv.num_decks || 0))));
+    L.forEach(l=>(l.cardviews || []).forEach(cv=>{
+      if(!cv || !cv.name) return;
+      const k = edhrecSlug(cv.name);
+      const o = out[k] || (out[k] = { n: cv.name, ci: null, d: 0, t: [] });
+      o.d += cv.num_decks || 0;
+      o.t.push([slug, (cv.num_decks || 0) / mx]);
+      o._rel = true;   // theme values are already shares
+    }));
+  }
+  return out;
+}
+async function guideScore(ans){
+  const { W, P } = guideWeights(ans);
+  if(P.typal) W[P.typal] = (W[P.typal] || 0) + 2.5;
+  const flavourThemes = ['legends', 'sagas', 'historic', 'adventures', 'the-ring', 'dungeon', 'party'];
+  let prof = await guideProfiles();
+  const withProf = !!prof;
+  if(!prof) prof = await guideFromThemes(W);
+  const ix = await bulkIndexReady().catch(()=>null);
+  const owned = new Set((state.collection && state.collection.items || []).map(it=>String(it.name || '').toLowerCase()));
+  const res = [];
+  Object.keys(prof).forEach(key=>{
+    const p = prof[key];
+    if(!p || !p.n || / \/\/ |\+/.test(p.n) && !(ix && ix.byName && ix.byName.get(p.n.toLowerCase()))) return;
+    const bc = ix && ix.byName ? ix.byName.get(String(p.n).toLowerCase()) : null;
+    const card = bc ? bulkToCardish(bc) : null;
+    if(!card) return;
+    const ci = (p.ci != null ? p.ci : (bc.ci || '')).toLowerCase();
+    if(P.avoid.some(c=>ci.includes(c))) return;
+    const th = {};
+    (p.t || []).forEach(([t, n])=>{ th[t] = p._rel ? n : Math.min(1, (n || 0) / Math.max(1, p.d)); });
+    // themes
+    let T = 0; const why = [];
+    Object.keys(W).forEach(t=>{ if(th[t]){ const v = W[t] * Math.sqrt(th[t]); T += v; why.push([t, v]); } });
+    if(P.typal && !th[P.typal]) T -= 1.2;
+    let S = T;
+    // colours
+    if(P.fav.length){
+      const hit = P.fav.filter(c=>ci.includes(c)).length;
+      S += hit ? .9 * hit / Math.max(P.fav.length, ci.length || 1) : -.9;
+    }
+    // strength: the share of its decks in the wanted brackets
+    const brT = (p.br || []).reduce((a, b)=>a + b, 0);
+    if(brT){
+      const share = (lo)=>lo.reduce((a, k)=>a + (p.br[k - 1] || 0), 0) / brT;
+      if(P.br) S += 1.3 * share(P.br) - .3;
+      else if(P.power) S += .5 * P.power * (share([4, 5]) - share([1, 2]));
+    }
+    if(P.flavour > 0) S += .25 * P.flavour * flavourThemes.reduce((a, t)=>a + Math.sqrt(th[t] || 0), 0);
+    // budget
+    const buT = (p.bu || []).reduce((a, b)=>a + b, 0);
+    if(P.bu && buT) S += .9 * (P.bu[0] * p.bu[0] + P.bu[1] * p.bu[1] + P.bu[2] * p.bu[2]) / buT - .3;
+    // the table
+    if(P.friendly > 0 && p.sa != null) S -= .45 * P.friendly * Math.max(0, p.sa - 1.1);
+    // popularity
+    const d = p.d || 0, lg = Math.log10(d + 1);
+    if(P.pop > 0) S += .22 * lg;
+    else if(P.pop < 0){ S += (d > 120 && d < 4000) ? .45 : (d >= 12000 ? -.35 : 0); }
+    else S += .06 * lg;
+    // complexity
+    if(P.cx != null && P.cx !== 0){ const cx = guideComplexity(card, th); S += P.cx < 0 ? -.55 * cx : .35 * cx; }
+    // your collection
+    if(P.coll && owned.has(card.name.toLowerCase())) S += .5;
+    why.sort((a, b)=>b[1] - a[1]);
+    res.push({ card, S, d, why: why.slice(0, 3).map(x=>x[0]), p });
+  });
+  res.sort((a, b)=>b.S - a.S);
+  return { list: res, withProf, P };
+}
+function guideWhyText(r, P){
+  const bits = r.why.map(guideLabel);
+  if(P.typal && r.why.indexOf(P.typal) < 0 && r.p.t && r.p.t.some(x=>x[0] === P.typal)) bits.unshift(guideLabel(P.typal));
+  const brT = (r.p.br || []).reduce((a, b)=>a + b, 0);
+  if(brT){
+    let best = 0; r.p.br.forEach((n, i)=>{ if(n > r.p.br[best]) best = i; });
+    bits.push('Bracket ' + (best + 1));
+  }
+  const buT = (r.p.bu || []).reduce((a, b)=>a + b, 0);
+  if(buT && r.p.bu[0] / buT > .2) bits.push(_gT('budgetvriendelijk', 'budget friendly'));
+  return bits.slice(0, 4).join(' · ');
+}
+function openDeckGuide(){
+  const main = openPlainOverlay('guideOverlay', _gT('Welk deck past bij mij?', 'Which deck suits me?'));
+  main.classList.add('gd-main');
+  const g = guideLoad();
+  if(g.i >= GUIDE_Q.length) g.i = 0;
+  const paint = (dir)=>{
+    if(!document.getElementById('guideOverlay')) return;
+    guideSave(g);
+    if(g.i >= GUIDE_Q.length){ guideResults(main, g, paint); return; }
+    const q = GUIDE_Q[g.i];
+    const a = g.ans[q.k];
+    const nav = `<div class="gd-nav">
+        ${g.i > 0 ? `<button type="button" class="ghost-btn gd-back">‹ ${_gT('Terug', 'Back')}</button>` : ''}
+        ${(q.multi || q.colors) ? `<button type="button" class="primary-btn gd-next">${_gT('Verder', 'Next')} ›</button>` : `<button type="button" class="ghost-btn gd-skip">${_gT('Maakt niet uit', 'Doesn’t matter')} ›</button>`}
+      </div>`;
+    let opts;
+    if(q.colors){
+      const cur = a || {};
+      opts = `<div class="gd-colors">${['w', 'u', 'b', 'r', 'g'].map(c=>`<button type="button" class="gd-col ${cur[c] === 1 ? 'on' : cur[c] === 2 ? 'off' : ''}" data-c="${c}">${manaIconSvg(c.toUpperCase(), 34)}<span>${cur[c] === 1 ? _gT('graag', 'yes please') : cur[c] === 2 ? _gT('liever niet', 'rather not') : ' '}</span></button>`).join('')}</div>`;
+    } else {
+      const sel = [].concat(a == null ? [] : a);
+      opts = `<div class="gd-opts${q.k === 'typal' ? ' gd-chips' : ''}">${q.o.map(o=>`<button type="button" class="gd-opt ${sel.indexOf(o.v) >= 0 ? 'on' : ''}" data-v="${escapeHtml(o.v)}"><b>${escapeHtml(o.typal ? guideLabel(o.v) : _gT(o.l[0], o.l[1]))}</b>${o.d ? `<span>${escapeHtml(_gT(o.d[0], o.d[1]))}</span>` : ''}</button>`).join('')}</div>`;
+    }
+    const pct = Math.round(g.i / GUIDE_Q.length * 100);
+    main.innerHTML = nav + opts + `<div class="gd-q"><div class="gd-prog"><i style="width:${pct}%"></i></div><div class="gd-n">${_gT('Vraag', 'Question')} ${g.i + 1} / ${GUIDE_Q.length}</div><h3>${escapeHtml(_gT(q.q[0], q.q[1]))}</h3>${q.s ? `<p>${escapeHtml(_gT(q.s[0], q.s[1]))}</p>` : ''}</div>`;
+    const go = (step)=>{ g.i = Math.max(0, g.i + step); paint(step); };
+    main.querySelector('.gd-back')?.addEventListener('click', ()=>go(-1));
+    main.querySelector('.gd-next')?.addEventListener('click', ()=>go(1));
+    main.querySelector('.gd-skip')?.addEventListener('click', ()=>{ delete g.ans[q.k]; go(1); });
+    main.querySelectorAll('.gd-opt').forEach(b=>b.addEventListener('click', ()=>{
+      const v = b.dataset.v;
+      if(q.multi){
+        const cur = [].concat(g.ans[q.k] || []);
+        const i = cur.indexOf(v); if(i >= 0) cur.splice(i, 1); else cur.push(v);
+        g.ans[q.k] = cur; b.classList.toggle('on', i < 0); guideSave(g);
+        return;
+      }
+      g.ans[q.k] = v;
+      main.querySelectorAll('.gd-opt').forEach(x=>x.classList.toggle('on', x === b));
+      setTimeout(()=>go(1), 140);
+    }));
+    main.querySelectorAll('.gd-col').forEach(b=>b.addEventListener('click', ()=>{
+      const cur = Object.assign({}, g.ans[q.k] || {});
+      cur[b.dataset.c] = ((cur[b.dataset.c] || 0) + 1) % 3;
+      g.ans[q.k] = cur; paint(0);
+    }));
+    if(dir) motionIn(main, dir > 0 ? 36 : -36, 0);
+    requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+  };
+  paint(0);
+}
+async function guideResults(main, g, paint){
+  main.innerHTML = `<div class="status"><div class="spinner"></div>${_gT('Op zoek naar jouw commanders…', 'Finding your commanders…')}</div>`;
+  let out = null;
+  try{ out = await guideScore(g.ans); }catch(e){ out = null; }
+  if(!document.getElementById('guideOverlay')) return;
+  const list = (out && out.list) || [];
+  const nav = `<div class="gd-nav"><button type="button" class="ghost-btn gd-back">‹ ${_gT('Antwoorden aanpassen', 'Change answers')}</button><button type="button" class="ghost-btn gd-again">↺ ${_gT('Opnieuw', 'Start over')}</button></div>`;
+  if(!list.length){
+    main.innerHTML = nav + `<div class="empty-note">${_gT('Geen commanders gevonden. Zet de kaartendatabase aan (Extra’s) of probeer andere antwoorden.', 'No commanders found. Turn on the card database (Extras) or try other answers.')}</div>`;
+  } else {
+    const best = list.slice(0, 3);
+    const floor = best.length ? best[best.length - 1].S * .7 : 0;
+    const alts = list.slice(3, 30).filter(r=>r.S >= floor).sort((a, b)=>a.d - b.d).slice(0, 2);
+    const cards = best.concat(alts).map(r=>r.card);
+    const tile = (r)=>searchRowHtml(r.card, null, { showAdmiralBtn: true, sub: guideWhyText(r, out.P) });
+    main.innerHTML = nav
+      + `<div class="edh-sec"><div class="section-label">${_gT('Past het best bij jou', 'Fits you best')}</div><div class="sr-grid">${best.map(tile).join('')}</div></div>`
+      + (alts.length ? `<div class="edh-sec"><div class="section-label">${_gT('Of probeer eens', 'Or try')}</div><div class="sr-grid">${alts.map(tile).join('')}</div></div>` : '')
+      + `<p class="hint gd-note">${out.withProf ? _gT('Op basis van EDHREC: thema’s, speelsterkte, budget en salt van duizenden decks.', 'Based on EDHREC: themes, power, budget and salt across thousands of decks.') : _gT('Op basis van EDHREC-thema’s. Na de wekelijkse update weegt ook speelsterkte, budget en salt mee.', 'Based on EDHREC themes. After the weekly update, power, budget and salt count too.')} ${_gT('Tik op een kaart voor de aanbevelingen.', 'Tap a card for its recommendations.')}</p>`;
+    wireResultButtons(cards, null, ()=>guideResults(main, g, paint), { onCardTap: (c)=>openAdmiralReco(c) });
+    try{ loadTilePrices(cards); }catch(e){}
+  }
+  main.querySelector('.gd-back')?.addEventListener('click', ()=>{ g.i = GUIDE_Q.length - 1; paint(-1); });
+  main.querySelector('.gd-again')?.addEventListener('click', ()=>{ g.i = 0; g.ans = {}; paint(-1); });
+  motionIn(main, 0, 22);
+  requestAnimationFrame(()=>{ main.scrollTop = main.scrollHeight; });
+}
+/* 1.87: at the end of a card list, one more pull opens a folded section
+   (Maybeboard, Tokens, a folded category) and the list carries on into it.
+   Only a NEW pull that starts at the end counts -- arriving there never
+   opens anything by itself. */
+(function pullToOpen(){
+  const PULL = 70;
+  const atEnd = ()=>{ const de = document.documentElement; return isDesk() ? (window.scrollY + window.innerHeight >= de.scrollHeight - 2) : window.scrollY <= 1; };
+  const nearestFolded = ()=>{
+    const hs = Array.from(document.querySelectorAll('.app > main .cat-head.collapsed')).filter(h=>h.offsetParent);
+    if(!hs.length) return null;
+    const rs = hs.map(h=>[h, h.getBoundingClientRect()]).filter(([, r])=>r.bottom > 0 && r.top < window.innerHeight);
+    if(!rs.length) return null;
+    rs.sort((a, b)=>isDesk() ? b[1].top - a[1].top : a[1].top - b[1].top);
+    return rs[0][0];
+  };
+  let hint = null;
+  const showHint = (h, k)=>{
+    if(!hint){ hint = document.createElement('div'); hint.className = 'pull-hint'; document.body.appendChild(hint); }
+    const t = (h.querySelector('.t') || h).textContent.trim();
+    hint.textContent = (isDesk() ? '▾ ' : '▴ ') + t;
+    hint.style.opacity = Math.min(1, k).toFixed(2);
+    hint.style.setProperty('--pk', Math.min(1, k).toFixed(2));
+  };
+  const hideHint = ()=>{ if(hint){ hint.remove(); hint = null; } };
+  const openIt = (h)=>{
+    hideHint();
+    const key = h.dataset.cat;
+    try{ navigator.vibrate && navigator.vibrate(8); }catch(e){}
+    h.click();
+    // the section opened around its heading: glide on into it
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      let nh = null; try{ nh = document.querySelector('.app > main .cat-head[data-cat="' + CSS.escape(key) + '"]'); }catch(e){}
+      const body = nh && nh.parentElement && nh.parentElement.querySelector(':scope > .cat-body');
+      if(body && motionOk()){ try{ body.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: 'ease-out' }); }catch(e){} }
+      const step = Math.min(window.innerHeight * .45, body ? body.offsetHeight : 300);
+      try{ window.scrollBy({ top: isDesk() ? step : -step, behavior: motionOk() ? 'smooth' : 'auto' }); }catch(e){ window.scrollBy(0, isDesk() ? step : -step); }
+    }));
+  };
+  // touch: a new drag that begins at the end
+  let sy = null, sx = 0, armed = null, fired = false;
+  document.addEventListener('touchstart', (e)=>{
+    armed = null; fired = false;
+    if(e.touches.length !== 1 || isDesk() || document.querySelector('body > .overlay:not(.swipe-leaving)') || !atEnd()) return;
+    if(e.target && e.target.closest && e.target.closest('input, textarea, .cselect-panel, .menu-pop')) return;
+    armed = nearestFolded();
+    sy = e.touches[0].clientY; sx = e.touches[0].clientX;
+  }, { passive: true });
+  document.addEventListener('touchmove', (e)=>{
+    if(!armed || fired) return;
+    const dy = e.touches[0].clientY - sy, dx = Math.abs(e.touches[0].clientX - sx);
+    if(dx > Math.abs(dy) + 10 || dy < -6 || !atEnd()){ armed = null; hideHint(); return; }
+    if(dy > 12) showHint(armed, dy / PULL);
+    if(dy >= PULL){ fired = true; openIt(armed); }
+  }, { passive: true });
+  const end = ()=>{ armed = null; if(!fired) hideHint(); };
+  document.addEventListener('touchend', end, { passive: true });
+  document.addEventListener('touchcancel', end, { passive: true });
+  // mouse wheel / touchpad: at the end, after a moment of rest, roll on
+  let lastMove = 0, acc = 0, accAt = 0;
+  window.addEventListener('scroll', ()=>{ lastMove = Date.now(); }, { passive: true });
+  window.addEventListener('wheel', (e)=>{
+    if(document.querySelector('body > .overlay:not(.swipe-leaving)')) return;
+    const toEnd = isDesk() ? e.deltaY > 0 : e.deltaY < 0;
+    if(!toEnd || !atEnd() || Date.now() - lastMove < 450){ acc = 0; hideHint(); return; }
+    const h = nearestFolded(); if(!h){ acc = 0; return; }
+    if(Date.now() - accAt > 700) acc = 0;
+    acc += Math.abs(e.deltaY); accAt = Date.now();
+    showHint(h, acc / 240);
+    if(acc >= 240){ acc = 0; lastMove = Date.now(); openIt(h); }
+    else setTimeout(()=>{ if(Date.now() - accAt >= 690) hideHint(); }, 720);
+  }, { passive: true });
+})();
 /* ===================== 1.86 MOTION =====================
    Short, soft movement so you see where things come from:
    - a new page rises in from below (from the top bar: drops in from above);
@@ -10368,7 +10778,9 @@ function motionIn(box, dx, dy, opts){
   }
   // while the parts move they may poke out past the page: never let that
   // grow the page (it would nudge the scroll position at the end)
-  if(box.style.overflow !== 'clip'){
+  // (a scrolling box keeps its own overflow: switching it would lose the scroll position)
+  let _ovy = 'visible'; try{ _ovy = getComputedStyle(box).overflowY; }catch(e){}
+  if(box.style.overflow !== 'clip' && (_ovy === 'visible' || _ovy === 'clip')){
     const prev = box.style.overflow;
     box.style.overflow = 'clip';
     setTimeout(()=>{ if(box.style.overflow === 'clip') box.style.overflow = prev; }, ms + 30);
@@ -11917,6 +12329,7 @@ function wireHome(){
       e.stopPropagation();
       openFabMenu([
         ['fabNewDeck', '⚔ New deck', ()=>openModal('newdeck')],
+        ['fabGuide', '✦ ' + _gT('Welk deck past bij mij?', 'Which deck suits me?'), ()=>openDeckGuide()],
         ['fabNewFolder', `<span class="ib">${ICONS.decks}</span>New folder`, ()=>openNewFolderPrompt(state.folderNav||null)],
         // One Import: the sheet takes a pasted list AND loads a .txt file.
         ['fabImportDeck', mIco('file') + trS('Import'), ()=>openPasteListSheet()],
@@ -25973,6 +26386,7 @@ async function refillInspireCache(cacheKey, d){
 
 const COLOR_COUNTS = [
   {key:'',   label:'Any number of colors', clause:''},
+  {key:'0',  label:'Colorless', clause:'id=c'},   // 1.87: its own choice (combo 'c'), no second menu
   {key:'1',  label:'Monocolored', clause:'c=1'},
   {key:'2',  label:'2 colors', clause:'c=2'},
   {key:'3',  label:'3 colors', clause:'c=3'},
@@ -27708,25 +28122,39 @@ async function loadDeckMeta(d){
   hydrateMetaArt(live);
   scrollToPageFoot();
 }
+/* 1.87: the colour menus fill from the foot: the first choice bottom-left,
+   'any' right beside it, then upward, left to right. (cselectHtml shows tile
+   options last-first from the top, so the list is handed over in that order.) */
+function bsTileOrder(anyOpt, list){
+  const rows = [[list[0], anyOpt].filter(Boolean)];
+  for(let i = 1; i < list.length; i += 2) rows.push(list.slice(i, i + 2));
+  // an odd count leaves the top row half full: an invisible spacer keeps
+  // every tile below it in its own column
+  const top = rows[rows.length - 1];
+  if(rows.length > 1 && top.length === 1) top.push({ spacer: true });
+  return rows.reverse().flat().reverse();
+}
 function browsePageHtml(){
   if(browseIsMeta()) return metaBrowseHtml();
   const sel = state.browseSel;
+  if(sel.combo === 'c' && sel.count !== '0') sel.count = '0';   // 1.87: colorless lives on its own
   const combos = COLOR_COMBOS[sel.count] || null;
   const swd = state.switchSeat ? getDeck(state.switchSeat) : null;
   return `
   <main>
     ${swd ? `<div class="panel-card" style="margin-bottom:10px;border-color:var(--brass);"><div class="panel-h">${modeGlyph()} Switching ${fmtName(swd)}</div><p class="hint" style="margin:4px 0 0;">Tap any leader below to make it the new ${fmtName(swd)} of <strong style="color:var(--head-ink);">${escapeHtml(swd.name)}</strong> — the current one returns to the deck${swd.partner?', and a still-compatible second seat stays':''}.</p></div>` : ''}
     <div class="browse-hero" id="inspFeed"></div>
+    ${browseIsMeta() || swd ? '' : `<button type="button" class="guide-cta" id="guideBtn">✦ ${_gT('Welk deck past bij mij?', 'Which deck suits me?')}</button>`}
     <div class="searchbar" style="margin:0 0 10px;">
       <input id="bsName" enterkeyhint="search" placeholder="${trS('Search by card name')}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${escapeHtml(state.browseNameQ||'')}">
     </div>
     <div class="browse-selects">
       <div class="bs-row">${cselectHtml('bsFmt', FMT_ORDER.map(f=>({v:f, l:fmtFolderGlyph(f, 14)+' '+fmtLabelOf(f), art:(FMT_ICON_CARDS[f] ? 'nm|'+FMT_ICON_CARDS[f] : 'sf|'+artFmtParam(f)+'|'+leaderArtClause(f))})), state.browseFormat||'commander', 'Format', {tiles:true})}</div>
       <div class="bs-row">${cselectHtml('bsCount',
-        [{v:'', l:fmtFolderGlyph(browseFmt(), 14)+' '+leaderNoun(browseFmt(), true)+' — any colors', gen:manaPentagonSvg(20)}].concat(COLOR_COUNTS.filter(c=>c.key).map(c=>({v:c.key, l:c.label, art:bsArtSf(c.clause)}))),
+        bsTileOrder({v:'', l:fmtFolderGlyph(browseFmt(), 14)+' '+leaderNoun(browseFmt(), true)+' — any colors', gen:manaPentagonSvg(20)}, COLOR_COUNTS.filter(c=>c.key).map(c=>c.key === '0' ? {v:'0', l:c.label, icons:manaIconSvg('C', 18), art:bsArtSf('id=c')} : {v:c.key, l:c.label, art:bsArtSf(c.clause)})),
         sel.count, fmtFolderGlyph(browseFmt(), 14)+' '+leaderNoun(browseFmt(), true)+' — any colors', {tiles:true})}</div>
       ${combos ? `<div class="bs-row">${cselectHtml('bsCombo',
-        [{v:'', l:'Any combination', gen:manaPentagonSvg(20)}].concat(sortCombosByPlay(combos).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18), art:bsArtSf(c.key==='c'?'id=c':'id='+c.key)}))),
+        bsTileOrder({v:'', l:'Any combination', gen:manaPentagonSvg(20)}, (sel.count === '1' ? combos.filter(c=>c.key !== 'c') : sortCombosByPlay(combos)).map(c=>({v:c.key, l:c.label, icons:manaRowSvg(c.key,18), art:bsArtSf(c.key==='c'?'id=c':'id='+c.key)}))),
         sel.combo, 'Colors — any combination', {tiles:true})}</div>` : ''}
       ${sel.tribe ? '' : `<div class="bs-row">${cselectHtml('bsTheme', [{v:'', l:'Theme — none', gen:'📜'}].concat(browseThemeOptions().map(o=>Object.assign({}, o, {art:bsThemeArt(o.v)}))), sel.theme, 'Theme — none', {search:true, tiles:true})}</div>`}
       ${sel.theme ? '' : `<div class="bs-row">${cselectHtml('bsTribe', [{v:'', l:'Kindred — none', gen:'🐾'}].concat(browseKindredOptions().map(t=>({v:t.slug, l:t.label, art:bsArtEd(t.slug)}))), sel.tribe||'', 'Kindred — none', {search:true, tiles:true})}</div>`}
@@ -28005,13 +28433,20 @@ function wireBrowsePage(){
     const q = (document.getElementById('bsName')?.value||'').trim();
     if(q) runLeaderSearch();
   };
+  document.getElementById('guideBtn')?.addEventListener('click', ()=>openDeckGuide());
   _csHandlers.bsCount = v=>{
     sfDropQueuedFor('browse');
     state.browseSel.count = v;
-    state.browseSel.combo = '';       // combos belong to a color count
+    state.browseSel.combo = v === '0' ? 'c' : '';   // combos belong to a color count; Colorless is one
     state.browseTypal = null;
-    state.openCSelect = 'bsCombo';    // flow straight into picking the combination
+    // 1.87: only a count WITH combinations flows on into that second menu.
+    // "Any colors" has none: it used to wait for a menu that never came,
+    // with the Top Commanders hidden until the next tap.
+    const more = !!COLOR_COMBOS[v];
+    state.openCSelect = more ? 'bsCombo' : null;
+    if(v === '0') ensureComboTagRanks('c');
     render();
+    if(!more) return;
     // 1.31: this opening skips csRerender, so the page did not know a sheet
     // was open and the Top Commanders feed showed behind the picker.
     try{ const m = document.querySelector('.app > main'); if(m) m.classList.add('cs-open'); }catch(e){}
@@ -30011,6 +30446,7 @@ async function edhSlimSync(){
     if(n >= 0){
       try{ localStorage.setItem(LS_PREFIX + 'edhSlimBuilt', String(built)); }catch(e){}
       try{ sfJournal('edhrec summary: ' + n + ' of ' + Object.keys(pages).length + ' pages stored'); }catch(e){}
+      if(j.profiles && typeof j.profiles === 'object') qdbSet('edhProfiles', j.profiles);   // 1.87: for the deck guide
     }
   }catch(e){}
   finally{ _edhSlimBusy = false; }
@@ -31090,7 +31526,7 @@ function newAdmiralPill(key){
 function aboutHtml(){
   const NL = appLang() === 'nl';
   const items = NL ? [
-    ['Een complete ervaring', 'decks, collectie, zoeken, spoilers, life counter, drafttools, een AI-judge voor je regelvragen en AI-hulp bij je lands: alles wat je als Magic-speler nodig hebt, in één app.'],
+    ['Een complete ervaring', 'decks, collectie, zoeken, spoilers, life counter, drafttools, een AI-judge voor je regelvragen, AI-hulp bij je lands en een bouwhulp die commanders bij jouw speelstijl zoekt: alles wat je als Magic-speler nodig hebt, in één app.'],
     ['Open source', 'de code staat openbaar op GitHub (GPL v3). Kijk erin, leer ervan, maak hem beter.'],
     ['Voor altijd gratis', 'geen betaalde versie, geen abonnement, niets achter een betaalmuur.'],
     ['Geen reclame', 'niets dat in de weg zit, niets dat je verkocht wordt.'],
@@ -31101,7 +31537,7 @@ function aboutHtml(){
     ['Zuinig op de community', 'kaartdata van Scryfall, thema’s van EDHREC: altijd met naam genoemd, en nooit vaker gevraagd dan nodig.'],
     ['Door Magic-spelers, voor Magic-spelers', 'gebouwd uit wat we aan onze eigen tafels misten. Ideeën zijn welkom.']
   ] : [
-    ['A complete experience', 'decks, collection, search, spoilers, life counter, draft tools, an AI judge for your rules questions and AI help with your lands: everything a Magic player needs, in one app.'],
+    ['A complete experience', 'decks, collection, search, spoilers, life counter, draft tools, an AI judge for your rules questions, AI help with your lands and a guide that finds commanders for your play style: everything a Magic player needs, in one app.'],
     ['Open source', 'the code is public on GitHub (GPL v3). Look inside, learn from it, make it better.'],
     ['Free forever', 'no paid version, no subscription, nothing behind a paywall.'],
     ['No ads', 'nothing in your way, nothing being sold to you.'],
