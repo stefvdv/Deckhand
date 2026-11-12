@@ -2,7 +2,7 @@
 
 Deckhand is Stefs MTG-deckbuilder. Het is een PWA die vooral bestaat uit `index.html` (alle app-code in één bestand) en `sw.js` (de service worker), met daarnaast `version.json` en Netlify-functies.
 
-- **Live zetten:** elke push naar `main` gaat via Netlify meteen live (admirals-and-commanders.netlify.app).
+- **Live zetten:** elke push naar `main` gaat via Netlify meteen live (deckhandcompanion.netlify.app).
 - **Testen:** Stef test alleen op Android (Fairphone) en soms op een pc. Zijn screenshots en video's zijn de waarheid.
 - **Taal:** schrijf aan Stef in kort, gewoon Nederlands, zonder vakjargon. Stef is geen programmeur.
 
