@@ -8454,13 +8454,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.91';
+const APP_VERSION = '1.92';
 const CHANGELOG_NOTES = {
   en: [
-    "Android app 1.1: no logo flash"
+    "Updates arrive by themselves",
+    "Logo stays on a poor connection"
   ],
   nl: [
-    "Android-app 1.1: geen logoflits meer"
+    "Updates komen vanzelf binnen",
+    "Logo blijft staan bij slecht internet"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8470,6 +8472,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-12';
 const CHANGELOG_HISTORY = [
+  { v: '1.91', d: '2026-11-12',
+    en: ['Android app 1.1: no logo flash'],
+    nl: ["Android-app 1.1: geen logoflits meer"] },
   { v: '1.90', d: '2026-11-11',
     en: ['No logo flash when switching apps', 'Slow line: plain card after 8 s', 'Offline sign in the logo button', 'Filters: colours on one line'],
     nl: ["Geen logoflits bij wisselen van app", "Traag internet: kaart zonder plaatje", "Offline-teken in de logoknop", "Filters: kleuren op één regel"] },
@@ -37688,7 +37693,7 @@ if('serviceWorker' in navigator && /^https:/.test(location.protocol)){
     if(!swc) return;
     swc.register('sw.js').then(reg=>{
       const promote = w => { if(w) w.postMessage({type:'SKIP_WAITING'}); };
-      try{ reg.update(); }catch(e){}
+      try{ reg.update().catch(()=>{}); }catch(e){}
       if(reg.waiting && navigator.serviceWorker.controller) promote(reg.waiting);
       reg.addEventListener('updatefound', ()=>{
         const nw = reg.installing;
@@ -37697,7 +37702,7 @@ if('serviceWorker' in navigator && /^https:/.test(location.protocol)){
         });
       });
       // Catch updates that land while the app is open
-      setInterval(()=>{ try{ reg.update(); }catch(e){} }, 60*60*1000);
+      setInterval(()=>{ try{ reg.update().catch(()=>{}); }catch(e){} }, 60*60*1000);
     }).catch(e=>console.warn('SW registration failed', e));
   });
 }
@@ -38096,20 +38101,75 @@ document.addEventListener('error', (e)=>{
   }catch(err){}
 }, true);
 setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
-/* The page may have been served from the cache to keep the launch quick, so
-   the newest deploy can be one start behind. Only noted in the journal --
-   no toast: the next start picks the new version up by itself. */
-setTimeout(async ()=>{
+/* 1.92: the app keeps itself current. The page may come from the cache (a
+   slow line, or Android keeping the app alive for days), so a newer deploy
+   could stay out of reach. Now: shortly after start and each time the app
+   comes back to the front (at most every 10 minutes), version.json is asked.
+   Newer? The new page is fetched and checked (it must really say that
+   version), stored where the service worker looks first, and the service
+   worker is told to update. The app then refreshes once: right away if it
+   just started and nothing is open, otherwise the next time it comes back
+   to the front -- never in the middle of something. */
+let _updReady = null, _updLast = 0, _updBusy = false;
+function verNewer(a, b){
+  const x = String(a || '0').split('.').map(Number), y = String(b || '0').split('.').map(Number);
+  for(let i = 0; i < Math.max(x.length, y.length); i++){ const d = (x[i] || 0) - (y[i] || 0); if(d) return d > 0; }
+  return false;
+}
+async function appUpdateCheck(){
+  if(_updBusy || _updReady || !/^https:/.test(location.protocol)) return;
+  if(Date.now() - _updLast < 10 * 60000) return;
+  _updBusy = true; _updLast = Date.now();
   try{
-    if(!/^https:/.test(location.protocol)) return;
-    const r = await fetch('version.json?t=' + Date.now(), { cache:'no-store' });
+    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
     if(!r || !r.ok) return;
     const v = await r.json();
-    if(v && v.version && v.version !== APP_VERSION){
-      sfJournal('update: v' + v.version + ' staat klaar (deze sessie draait v' + APP_VERSION + ')');
+    if(!v || !v.version || !verNewer(v.version, APP_VERSION)) return;
+    sfJournal('update: v' + v.version + ' staat klaar (deze sessie draait v' + APP_VERSION + ')');
+    // a refresh for this version already happened and did not take: stop
+    let tried = null; try{ tried = JSON.parse(localStorage.getItem(LS_PREFIX + 'updTried') || 'null'); }catch(e){}
+    if(tried && tried.v === v.version && Date.now() - (tried.t || 0) < 6 * 3600000) return;
+    const res = await fetch('./?fresh=' + Date.now(), { cache: 'no-store' });
+    if(!res || !res.ok) return;
+    const html = await res.clone().text();
+    const esc = v.version.replace(/\./g, '\\.');
+    if(!new RegExp('APP_VERSION\\s*=\\s*["\']' + esc + '["\']').test(html)) return;   // not the new page (yet)
+    if(window.caches){
+      const keys = await caches.keys();
+      const own = keys.filter(k=>/^admiral-v/.test(k));
+      const head = { headers: { 'Content-Type': 'text/html; charset=utf-8' } };
+      for(const k of own){
+        const c = await caches.open(k);
+        await c.put(new URL('./', location.href).href, new Response(html, head));
+        await c.put(new URL('./index.html', location.href).href, new Response(html, head));
+      }
     }
+    try{ const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if(reg) reg.update().catch(()=>{}); }catch(e){}
+    _updReady = v.version;
+    // just started and nothing open: refresh now; otherwise on the next return
+    if(performance.now() < 30000 && !_updBusyScreen()) appUpdateApply();
+  }catch(e){
+  }finally{ _updBusy = false; }
+}
+function _updBusyScreen(){
+  try{
+    if((state.overlayStack || []).length) return true;
+    if(document.querySelector('.overlay, #changelogScrim, #inAppConfirm, #welcomeScrim, #formatChangeScrim, input:focus, textarea:focus')) return true;
   }catch(e){}
-}, 6000);
+  return false;
+}
+function appUpdateApply(){
+  if(!_updReady) return;
+  try{ localStorage.setItem(LS_PREFIX + 'updTried', JSON.stringify({ v: _updReady, t: Date.now() })); }catch(e){}
+  sfJournal('update: ververst naar v' + _updReady);
+  location.reload();
+}
+setTimeout(()=>{ appUpdateCheck(); }, 6000);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState !== 'visible') return;
+  if(_updReady && !_updBusyScreen()){ appUpdateApply(); return; }
+  setTimeout(()=>{ appUpdateCheck(); }, 1500);
+});
 // Safety: the shell may never be left holding an icon over a working app.
 // Later than it was -- the point is to lose to the real signal, not beat it.
 setTimeout(appReady, pendingShareToken() ? 6000 : 5000);

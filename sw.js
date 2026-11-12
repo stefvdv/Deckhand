@@ -8,7 +8,7 @@
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v1.91';
+const VERSION = 'admiral-v1.92';
 // Card images and fonts survive app updates: this cache is deliberately
 // NOT version-named, so activating a new version never wipes it.
 const ASSETS = 'admiral-assets-v1';
@@ -110,7 +110,9 @@ self.addEventListener('fetch', (e) => {
       (async () => {
         const store = caches.open(VERSION);
         const live = fetch(e.request).then(res => {
-          if (res && res.ok) { const copy = res.clone(); store.then(c => c.put(e.request, copy)); }
+          // 1.92: one copy per file -- 'version.json?t=...' and friends are
+          // kept under their plain name, not as a new entry every time
+          if (res && res.ok) { const copy = res.clone(); store.then(c => c.put(url.search ? url.origin + url.pathname : e.request, copy)); }
           return res;
         });
         if (isPage) {
@@ -126,11 +128,16 @@ self.addEventListener('fetch', (e) => {
             return cached;
           }
         }
-        try {
-          const res = await live;
-          if (res) return res;
-        } catch (err) {}
-        return (await caches.match(e.request, { ignoreSearch: true })) || (await caches.match('./index.html'));
+        // 1.92: a network that answers with an error page (a hotel or
+        // captive wifi, a blocked site) no longer replaces a good cached
+        // copy: the logo, the page and the rest keep working from the cache.
+        let res = null;
+        try { res = await live; } catch (err) {}
+        if (res && res.ok) return res;
+        const hit = await caches.match(e.request, { ignoreSearch: true });
+        if (hit) return hit;
+        if (res) return res;
+        return (isPage && await caches.match('./index.html')) || Response.error();
       })()
     );
   }
