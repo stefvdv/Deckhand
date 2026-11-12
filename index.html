@@ -8454,19 +8454,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.90';
+const APP_VERSION = '1.91';
 const CHANGELOG_NOTES = {
   en: [
-    "No logo flash when switching apps",
-    "Slow line: plain card after 8 s",
-    "Offline sign in the logo button",
-    "Filters: colours on one line"
+    "Android app 1.1: no logo flash"
   ],
   nl: [
-    "Geen logoflits bij wisselen van app",
-    "Traag internet: kaart zonder plaatje",
-    "Offline-teken in de logoknop",
-    "Filters: kleuren op één regel"
+    "Android-app 1.1: geen logoflits meer"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8474,8 +8468,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-11';
+const APP_DATE = '2026-11-12';
 const CHANGELOG_HISTORY = [
+  { v: '1.90', d: '2026-11-11',
+    en: ['No logo flash when switching apps', 'Slow line: plain card after 8 s', 'Offline sign in the logo button', 'Filters: colours on one line'],
+    nl: ["Geen logoflits bij wisselen van app", "Traag internet: kaart zonder plaatje", "Offline-teken in de logoknop", "Filters: kleuren op één regel"] },
   { v: '1.89', d: '2026-11-11',
     en: ['Inspiration opens on new commanders', 'Headings no longer float over cards', 'Pictures reload when back online', 'Deck finder: every card type', 'Deck finder: creature types with art', 'Build from collection: tidier colours'],
     nl: ["Eerst nieuwe commanders in Inspiration", "Koppen zweven niet meer over kaarten", "Plaatjes laden weer zodra je online bent", "Deckwijzer: alle kaarttypes", "Deckwijzer: types wezens met plaatjes", "Bouwen uit collectie: nette kleuren"] },
@@ -8751,6 +8748,8 @@ const CHANGELOG_HISTORY = [
    before installing, and again at the first start after the install (people
    tap Install without reading). */
 const APK_NOTES = {
+  '1.1': { en: ['No logo flash when switching apps'],
+           nl: ['Geen logoflits bij wisselen van app'] },
   '1.0': { en: ['Scanner uses your phone\u2019s camera', 'Reads cards faster and sharper', 'True colours and a lamp'],
            nl: ['Scanner gebruikt je eigen camera', 'Leest kaarten sneller en scherper', 'Echte kleuren en een lamp'] }
 };
@@ -31777,7 +31776,7 @@ document.addEventListener('click', (e)=>{ if(e.target.closest && e.target.closes
    4.3 the app downloads it and opens Android's installer itself; an older
    app hands the download to the browser. Android always asks the person to
    confirm, and the same signature means every deck and card stays. */
-const APK_LATEST = '1.0';   // APK 1.1 is waiting for its build: raise this once Deckhand.apk 1.1 is in the repo
+const APK_LATEST = '1.1';
 /* The APK line restarted at 1.0 too (it was 3.0 ... 5.0). An app from the old
    line is always older than any app from the new one. */
 function apkCmp(a, b){
