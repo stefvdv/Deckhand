@@ -1505,7 +1505,9 @@ main.has-dock{padding-bottom:84px;}
    the line is back the real picture takes over again.
    Pseudo-elements only render on a FAILED image, which is precisely when
    this is wanted, and the ::after covers whatever the browser drew. */
-img.art-pending{background:var(--sk) center/cover no-repeat;}
+img.art-pending{background:var(--sk) center/cover no-repeat !important;object-position:-99999px 0 !important;}
+/* 1.94: a picture still on its way already has the card's shape */
+img.art-pending:not(.art-slow){aspect-ratio:488/680;}
 /* Before a picture arrives (or fails, offline) it already has a card's shape:
    an image without size collapsed to nothing for a frame, then jumped to
    full height -- the flash when opening a card offline. */
@@ -8473,19 +8475,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.93';
+const APP_VERSION = '1.94';
 const CHANGELOG_NOTES = {
   en: [
-    "Logo button no longer reloads",
-    "Offline: EDHREC pages stay longer",
-    "Offline: rules and deck finder stay",
-    "Offline: the last news stays readable"
+    "Every card shows at once, plain first",
+    "The picture appears when fully loaded"
   ],
   nl: [
-    "Logoknop laadt niet steeds opnieuw",
-    "Offline: EDHREC-pagina's blijven",
-    "Offline: regels en Deckwijzer blijven",
-    "Offline: laatste nieuws blijft leesbaar"
+    "Elke kaart staat er meteen, eerst kaal",
+    "Plaatje pas te zien als het compleet is"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8495,6 +8493,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-13';
 const CHANGELOG_HISTORY = [
+  { v: '1.93', d: '2026-11-13',
+    en: ['Logo button no longer reloads', 'Offline: EDHREC pages stay longer', 'Offline: rules and deck finder stay', 'Offline: the last news stays readable'],
+    nl: ["Logoknop laadt niet steeds opnieuw", "Offline: EDHREC-pagina's blijven", "Offline: regels en Deckwijzer blijven", "Offline: laatste nieuws blijft leesbaar"] },
   { v: '1.92', d: '2026-11-12',
     en: ['Updates arrive by themselves', 'Logo stays on a poor connection'],
     nl: ["Updates komen vanzelf binnen", "Logo blijft staan bij slecht internet"] },
@@ -37994,26 +37995,76 @@ function _skLookup(name){
 function _skFor(name){
   return cardSkeletonUri(_skLookup(name) || { name });
 }
-/* Every card picture still on its way gets its skeleton painted BEHIND it,
-   so nothing is ever blank or broken while it loads -- and offline the
-   frame is simply what stays. The picture covers it the moment it lands. */
+/* 1.94: EVERY card picture starts as the art-less card. The card's details
+   (name, cost, type, text, power/toughness) come from the card database on
+   the phone, so the plain card is there at once, on any line and offline.
+   The picture loads on top of it unseen and takes its place only once it is
+   complete -- never half-drawn. A watcher on the whole page does this for
+   every picture the moment it appears, so no screen can forget it. */
+function _artNameOf(im){
+  let nm = im.getAttribute('alt') || '';
+  if(!nm){
+    const h = im.closest('[data-name],[data-spn],[data-scn]');
+    if(h){
+      nm = h.dataset.spn || h.dataset.scn || '';
+      if(!nm && h.dataset.name){ try{ nm = decodeURIComponent(h.dataset.name); }catch(err){ nm = h.dataset.name; } }
+    }
+  }
+  return nm;
+}
+function _isCardArt(src){ return /scryfall\.io/.test(src) && !/\/art_crop\//.test(src); }
+function artPendingOne(im){
+  if(im.classList.contains('art-missing') || im.classList.contains('art-pending')) return false;
+  const src = im.getAttribute('src') || '';
+  if(!_isCardArt(src)) return false;
+  if(im.complete && im.naturalWidth > 0) return false;   // already there
+  const nm = _artNameOf(im);
+  if(!nm) return false;
+  try{ im.style.setProperty('--sk', _skFor(nm)); im.classList.add('art-pending'); }catch(e){ return false; }
+  return true;
+}
+// Drawing a plain card costs about a millisecond on a phone: the pictures on
+// (or near) the screen get theirs in the same frame, the rest of a long list
+// just before they scroll into view.
+let _skIO = null;
+try{ _skIO = new IntersectionObserver((ents)=>{ ents.forEach(en=>{ if(en.isIntersecting){ _skIO.unobserve(en.target); artPendingOne(en.target); } }); }, { rootMargin: '150% 0px' }); }catch(e){}
 function paintPendingArt(root){
   const scope = root || document;
-  let n = 0;
-  scope.querySelectorAll('img').forEach(im=>{
-    if(n > 80) return;                                  // never a long job
-    if(im.classList.contains('art-missing') || im.classList.contains('art-pending')) return;
-    const src = String(im.currentSrc || im.src || '');
-    if(!/scryfall\.io/.test(src)) return;
-    if(im.complete && im.naturalWidth > 0) return;      // already there
-    const nm = im.getAttribute('alt') || '';
-    if(!nm) return;
-    n++;
-    try{ im.style.setProperty('--sk', _skFor(nm)); im.classList.add('art-pending'); }catch(e){}
-    const done = ()=>{ im.classList.remove('art-pending'); };
-    im.addEventListener('load', done, { once:true });
-  });
+  try{
+    const list = [];
+    (scope.tagName === 'IMG' ? [scope] : scope.querySelectorAll('img')).forEach(im=>{
+      if(im.classList.contains('art-missing') || im.classList.contains('art-pending')) return;
+      if(!_isCardArt(im.getAttribute('src') || '') || (im.complete && im.naturalWidth > 0)) return;
+      list.push(im);
+    });
+    if(!list.length) return;
+    if(list.length <= 16 || !_skIO){ list.forEach(artPendingOne); return; }
+    // read every position first (one layout), then draw
+    const vh = window.innerHeight || 800;
+    const near = list.map(im=>{ const r = im.getBoundingClientRect(); return r.bottom > -vh * 0.5 && r.top < vh * 1.5; });
+    list.forEach((im, i)=>{ if(near[i]) artPendingOne(im); else _skIO.observe(im); });
+  }catch(e){}
 }
+// The picture is complete: it takes over, the plain card goes.
+document.addEventListener('load', (e)=>{
+  const im = e.target;
+  if(!im || im.tagName !== 'IMG' || !im.classList.contains('art-pending')) return;
+  if(im.classList.contains('art-slow') || !(im.naturalWidth > 0) || !_isCardArt(im.getAttribute('src') || '')) return;
+  im.classList.remove('art-pending');
+  im.style.removeProperty('--sk');
+}, true);
+try{
+  new MutationObserver((muts)=>{
+    for(const m of muts){
+      if(m.type === 'attributes'){
+        const im = m.target;
+        if(im.tagName === 'IMG' && !im.classList.contains('art-slow')){ im.classList.remove('art-pending'); artPendingOne(im); }
+        continue;
+      }
+      m.addedNodes.forEach(nd=>{ if(nd.nodeType === 1) paintPendingArt(nd); });
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+}catch(e){}
 /* 1.90: on a very slow line a picture could keep coming in for ever, the
    tile stuck between the art-less card and a half-drawn picture. Past
    SLOW_ART_MS the art-less card shows, steady. The picture keeps loading out
