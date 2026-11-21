@@ -169,6 +169,60 @@ export async function pickPaperPrints(wanted, prints){
   return best;
 }
 
+/* ---- the most recognisable art ----
+   Scryfall shows a card through its newest ordinary printing. People know a
+   card by the picture printed most often: the art that keeps coming back in
+   reprints. Every printing names its illustration, so the art printed most
+   often is counted here, and the card's best-looking printing of THAT art
+   becomes 'ia' in the card file (left out when it is the printing already
+   shown). Ties go to the art that came first. */
+const ART_SKIP_SETS = new Set(['token', 'memorabilia', 'minigame', 'alchemy', 'funny']);
+function artOf(c){
+  return c.illustration_id || (Array.isArray(c.card_faces) && c.card_faces[0] && c.card_faces[0].illustration_id) || '';
+}
+// how good a printing of the art looks: a regular modern card beats a promo,
+// a showcase frame, a full-art or a white border
+function printLooks(c){
+  let p = 0;
+  if(!c.promo) p += 8;
+  if(c.set_type !== 'promo' && c.set !== 'plst' && !/^(sld|slp|slc|sch)$/.test(String(c.set || ''))) p += 6;   // no list stamp, no special series
+  if(String(c.frame) === '2015') p += 4;
+  if(!Array.isArray(c.frame_effects) || !c.frame_effects.some(x=>/showcase|extendedart|etched|inverted|shatteredglass|textless/.test(x))) p += 4;
+  if(c.border_color === 'black') p += 2;
+  if(!c.full_art) p += 2;
+  if(c.highres_image) p += 1;
+  return p;
+}
+export async function pickIconicArt(prints, wanted){
+  // wanted: optional Set of oracle_ids; prints: iterable of printing objects
+  const by = new Map();   // oracle_id -> Map(art -> { n, first, best })
+  for await (const c of prints){
+    if(!c || !c.oracle_id || !isPaperPrint(c) || c.oversized) continue;
+    if(wanted && !wanted.has(c.oracle_id)) continue;
+    if(ART_SKIP_SETS.has(c.set_type) || (c.lang && c.lang !== 'en')) continue;
+    const art = artOf(c);
+    if(!art || !c.id) continue;
+    let arts = by.get(c.oracle_id);
+    if(!arts){ arts = new Map(); by.set(c.oracle_id, arts); }
+    const rel = String(c.released_at || '9999');
+    const look = printLooks(c);
+    const a = arts.get(art);
+    if(!a){ arts.set(art, { n: 1, first: rel, best: c.id, look, rel }); continue; }
+    a.n++;
+    if(rel < a.first) a.first = rel;
+    if(look > a.look || (look === a.look && rel > a.rel)){ a.best = c.id; a.look = look; a.rel = rel; }
+  }
+  const out = new Map();   // oracle_id -> printing id
+  for(const [oid, arts] of by){
+    let top = null;
+    for(const a of arts.values()){
+      if(!top || a.n > top.n || (a.n === top.n && a.first < top.first)) top = a;
+    }
+    if(top) out.set(oid, top.best);
+  }
+  return out;
+}
+
 /* ---- trimming ---- */
 const SKIP_LAYOUTS = new Set(['art_series', 'token', 'double_faced_token', 'emblem']);
 
@@ -468,7 +522,7 @@ async function main(){
       if(card && card.digital && card.oracle_id && !SKIP_LAYOUTS.has(card.layout)) digitalOnly.add(card.oracle_id);
       skipped++; continue;
     }
-    oracleOut.push(JSON.stringify(t) + '\n');
+    oracleOut.push(t);
     oracleCount++;
   }
   // Their paper printings, from Default Cards. A failure here only costs
@@ -480,13 +534,26 @@ async function main(){
       const got = await pickPaperPrints(digitalOnly, bulkLines(requireDownloadUrl(dEntry, 'Default Cards')));
       for(const c of got.values()){
         const t = trimCard(c);
-        if(t){ oracleOut.push(JSON.stringify(t) + '\n'); oracleCount++; skipped--; }
+        if(t){ oracleOut.push(t); oracleCount++; skipped--; }
       }
       console.log(`Digital stand-ins: ${digitalOnly.size} cards, ${got.size} given their paper printing.`);
     }catch(e){ console.log('Digital stand-ins: skipped this week (' + e.message + ').'); }
   }
   if(oracleCount < 25000) throw new Error(`Sanity check failed: only ${oracleCount} oracle cards — refusing to publish a broken file.`);
-  const oracleSha = await writeJsonlGz(`${OUT_DIR}/oracle-slim.jsonl.gz`, oracleOut);
+  // The most recognisable art, from Default Cards (every printing). A failure
+  // here only means this week's file shows Scryfall's own pick, as before.
+  try{
+    const dEntry = idx.default_cards || idx['default-cards'];
+    if(!dEntry) throw new Error('no default_cards entry');
+    const iconic = await pickIconicArt(bulkLines(requireDownloadUrl(dEntry, 'Default Cards')));
+    let set = 0;
+    for(const t of oracleOut){
+      const ia = t.o && iconic.get(t.o);
+      if(ia && ia !== t.id){ t.ia = ia; set++; }
+    }
+    console.log(`Recognisable art: ${iconic.size} cards counted, ${set} shown with their most printed art.`);
+  }catch(e){ console.log('Recognisable art: skipped this week (' + e.message + ').'); }
+  const oracleSha = await writeJsonlGz(`${OUT_DIR}/oracle-slim.jsonl.gz`, oracleOut.map(t=>JSON.stringify(t) + '\n'));
   console.log(`oracle-slim.jsonl.gz: ${oracleCount} cards (${skipped} skipped)`);
 
   // Rulings — group by oracle_id, write. Monthly: a card's official rulings
