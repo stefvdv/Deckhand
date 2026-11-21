@@ -3825,6 +3825,12 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 .lctr-row > .lctr.lctr-m i{width:17px;height:17px;}
 @media (prefers-reduced-motion:reduce){ :where(.menu-pop, #fabMenu, .tile-menu, .otag-pop, .cselect-panel, .name-suggest, #bindersPop, .xt-body, .modal-backdrop, .modal-sheet){animation:none !important;} }
 
+/* ===== 1.96 ===== */
+/* partner pair: the card tapped from behind comes to the front */
+.pair-imgs img{transition:transform 0.18s ease;}
+.pair-imgs.pair-swap img:last-child{z-index:3;}
+.leader-stack.pair-swap > .leader-wrap:not(.leader-overlap){z-index:3;filter:drop-shadow(5px 7px 14px rgba(0,0,0,0.6));}
+
 /* ===== 1.95 ===== */
 /* the jump button in each section heading */
 .edh-jump-row.jump-in-labels{visibility:hidden !important;pointer-events:none !important;}
@@ -6233,8 +6239,44 @@ function setPrintPref(chosen){
     });
   }catch(e){}
 }
+/* 1.96: which picture a card wears when nobody picked a printing for it.
+   1. A copy in your collection: that printing -- the card you hold.
+   2. The most recognisable art: the picture printed most often, when the
+      weekly card database carries it (field ia), instead of Scryfall's
+      newest printing.
+   A printing chosen on purpose (in a deck, on the card sheet) always wins. */
+let _ownArt = null, _ownArtSig = '';
+function ownedArtImg(card){
+  const items = state.collection && state.collection.items;
+  if(!items || !items.length) return '';
+  const sig = items.length + '|' + (state._colArtVer || 0);
+  if(sig !== _ownArtSig){
+    _ownArtSig = sig; _ownArt = new Map();
+    items.forEach(it=>{
+      if(!it || !it.name || !it.img || !/scryfall\.io/.test(it.img)) return;
+      const k = String(it.name).toLowerCase();
+      if(!_ownArt.has(k)) _ownArt.set(k, { img: it.img, prints: new Set() });
+      if(it.set) _ownArt.get(k).prints.add(it.set + '#' + (it.cn || ''));
+    });
+  }
+  const o = _ownArt.get(String(card.name).toLowerCase());
+  if(!o) return '';
+  if(card.set && o.prints.has(card.set + '#' + (card.collector_number || ''))) return '';   // this IS one of your copies
+  return o.img;
+}
+function artOverride(card, size){
+  if(!card || !card.name || card.pin) return '';
+  const own = ownedArtImg(card);
+  if(own) return own.replace(/\/(small|normal|large)\//, '/' + size + '/');
+  try{
+    const bc = _bulkIdx && _bulkIdx.byName && _bulkIdx.byName.get(String(card.name).toLowerCase());
+    if(bc && bc.ia && bc.ia !== card.id) return 'https://cards.scryfall.io/' + size + '/front/' + bc.ia[0] + '/' + bc.ia[1] + '/' + bc.ia + '.jpg';
+  }catch(e){}
+  return '';
+}
 function cardImage(card){
   const pp = printPrefFor(card); if(pp) return pp.i.s || pp.i.n;
+  { const ov = artOverride(card, 'small'); if(ov) return ov; }
   if(card.image_uris) return card.image_uris.small || card.image_uris.normal;
   if(card.card_faces && card.card_faces[0].image_uris) return card.card_faces[0].image_uris.small || card.card_faces[0].image_uris.normal;
   return '';
@@ -6251,6 +6293,7 @@ function cardImageMedRaw(card){
 }
 function cardImageMed(card){
   const pp = printPrefFor(card); if(pp) return pp.i.n || pp.i.s;
+  { const ov = artOverride(card, 'normal'); if(ov) return ov; }
   if(card.image_uris) return card.image_uris.normal || card.image_uris.large || card.image_uris.small;
   if(card.card_faces && card.card_faces[0].image_uris) return card.card_faces[0].image_uris.normal || card.card_faces[0].image_uris.small;
   return '';
@@ -6265,6 +6308,7 @@ function cardImageLargeRaw(card){
 }
 function cardImageLarge(card){
   const pp = printPrefFor(card); if(pp) return pp.i.n || pp.i.s;
+  { const ov = artOverride(card, 'normal'); if(ov) return ov; }
   if(card.image_uris) return card.image_uris.normal || card.image_uris.large;
   if(card.card_faces && card.card_faces[0].image_uris) return card.card_faces[0].image_uris.normal;
   return '';
@@ -8502,17 +8546,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.95';
+const APP_VERSION = '1.96';
 const CHANGELOG_NOTES = {
   en: [
-    "Search: pick several sets at once",
-    "Jump button stays on its heading",
-    "Focus bars sit above the card"
+    "Partner pair: tap the back card forward",
+    "Your own copy's art shows everywhere"
   ],
   nl: [
-    "Zoeken: meerdere sets tegelijk",
-    "Springknop blijft op zijn kop",
-    "Focusbalken staan boven de kaart"
+    "Partnerpaar: tik achterste naar voren",
+    "Jouw eigen exemplaar overal te zien"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8522,6 +8564,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-21';
 const CHANGELOG_HISTORY = [
+  { v: '1.95', d: '2026-11-21',
+    en: ['Search: pick several sets at once', 'Jump button stays on its heading', 'Focus bars sit above the card'],
+    nl: ["Zoeken: meerdere sets tegelijk", "Springknop blijft op zijn kop", "Focusbalken staan boven de kaart"] },
   { v: '1.94', d: '2026-11-13',
     en: ['Every card shows at once, plain first', 'The picture appears when fully loaded'],
     nl: ["Elke kaart staat er meteen, eerst kaal", "Plaatje pas te zien als het compleet is"] },
@@ -15719,6 +15764,7 @@ async function repriceCollectionDaily(){
 }
 function saveCollection(){
   state._ownedSet = null;
+  state._colArtVer = (state._colArtVer || 0) + 1;   // 1.96: owned art follows
   try{ localStorage.setItem(LS_PREFIX+'collection', JSON.stringify(state.collection)); }
   catch(e){
     // Make room: move any decks still in localStorage to the deck store, then retry.
@@ -15742,7 +15788,7 @@ function colFoilSlim(slim, card, foil){
 }
 function slimForCollection(card){
   return { name: card.name, set: card.set, set_name: card.set_name||'', cn: card.collector_number||'',
-    img: cardImageMed(card), eur: (card.prices && (parseFloat(card.prices.eur)||parseFloat(card.prices.eur_foil)))||null,
+    img: cardImageMedRaw(card) || cardImageMed(card), eur: (card.prices && (parseFloat(card.prices.eur)||parseFloat(card.prices.eur_foil)))||null,
     type_line: card.type_line||'', colors: (card.color_identity||card.colors||[]),
     foil: card._foilPick ? true : undefined,
     mv: typeof card.cmc === 'number' ? card.cmc : undefined,
@@ -19237,7 +19283,7 @@ function leaderZoneHtml(d){
   // Two seats: the second card overlaps the first diagonally, so the command
   // zone stays compact — the first card's name band remains visible and
   // tappable above the overlap.
-  return `<div class="leader-stack"><div class="leader-wrap">${inner}</div><div class="leader-wrap leader-overlap">${cardTileHtml(d.partner,-1,'partner')}</div></div>`;
+  return `<div class="leader-stack${state._pairSwap && state._pairSwap.has('deck:' + d.id) ? ' pair-swap' : ''}" data-swapkey="deck:${escapeHtml(String(d.id))}"><div class="leader-wrap">${inner}</div><div class="leader-wrap leader-overlap">${cardTileHtml(d.partner,-1,'partner')}</div></div>`;
 }
 function setPartner(d, c){
   // A copy already sitting in the deck is the one promoted to the second seat.
@@ -21558,6 +21604,32 @@ document.addEventListener('click', (e)=>{
   e.stopPropagation(); e.preventDefault();
   state.openCSelect = null; state.advOpen = false;
   render(); runAdvancedSearch();
+}, true);
+/* 1.96: two cards on top of each other (a partner pair, a deck's two
+   commanders): tapping the one BEHIND brings it to the front; tapping the
+   one in front works as always. Remembered while the app is open. */
+document.addEventListener('click', (e)=>{
+  const t = e.target;
+  if(!t || !t.closest) return;
+  let box = null, front = true;
+  const pi = t.closest('.pair-imgs > img');
+  if(pi){
+    box = pi.parentElement;
+    front = box.classList.contains('pair-swap') ? pi === box.lastElementChild : pi === box.firstElementChild;
+  } else {
+    const lw = t.closest('.leader-stack > .leader-wrap');
+    if(!lw || t.closest('button, input, a, select, .pair-add')) return;
+    box = lw.parentElement;
+    front = box.classList.contains('pair-swap') ? !lw.classList.contains('leader-overlap') : lw.classList.contains('leader-overlap');
+  }
+  if(!box || front) return;
+  e.stopPropagation(); e.preventDefault();
+  box.classList.toggle('pair-swap');
+  const k = box.dataset.swapkey;
+  if(k){
+    state._pairSwap = state._pairSwap || new Set();
+    if(box.classList.contains('pair-swap')) state._pairSwap.add(k); else state._pairSwap.delete(k);
+  }
 }, true);
 async function runAdvancedSearch(){
   const clause = buildAdvancedClause();
@@ -25724,7 +25796,7 @@ function openTradeAdd(side){
 function openTradePrints(side, card){
   openPrintingGrid(card, (chosen)=>{
     loadTrade();
-    state.trade[side].push({ name: chosen.name, set: chosen.set, set_name: chosen.set_name||'', cn: chosen.collector_number||'', img: cardImage(chosen), wb: chosen.border_color==='white'?1:0, eur: printEur(chosen), foil: !!chosen._foilPick, pt: Date.now(), qty: 1, type_line: chosen.type_line||'', colors: chosen.colors || chosen.color_identity || [], rarity: chosen.rarity||'' });
+    state.trade[side].push({ name: chosen.name, set: chosen.set, set_name: chosen.set_name||'', cn: chosen.collector_number||'', img: (cardImageMedRaw(chosen) || cardImage(chosen)).replace('/normal/', '/small/'), wb: chosen.border_color==='white'?1:0, eur: printEur(chosen), foil: !!chosen._foilPick, pt: Date.now(), qty: 1, type_line: chosen.type_line||'', colors: chosen.colors || chosen.color_identity || [], rarity: chosen.rarity||'' });
     saveTrade(); tradeLogStep(`${chosen.name} \u2192 ${side === 'a' ? (appLang() === 'nl' ? 'Ik' : 'Me') : (appLang() === 'nl' ? 'Jij' : 'You')}`);   // 1.58
     toast(trS('Added to trade.'));
     // The chooser already closed itself; closing the search overlay beneath
@@ -29640,8 +29712,9 @@ document.addEventListener('click', (e)=>{
    overlap (lead card in front, partner peeking out behind) and the same two
    actions a single-commander tile offers. idx addresses the merged array. */
 function pairTileHtml(pr, idx, decks){
+  const swk = 'pair:' + pr[0].name + '|' + pr[1].name;
   return `<div class="pair-cell">
-        <div class="pair-imgs">
+        <div class="pair-imgs${state._pairSwap && state._pairSwap.has(swk) ? ' pair-swap' : ''}" data-swapkey="${escapeHtml(swk)}">
           <img loading="lazy" class="${wbClass(pr[0])}" src="${cardImageMed(pr[0])}" data-mpcard="${idx}:0" alt="${escapeHtml(pr[0].name)}">
           <img loading="lazy" class="${wbClass(pr[1])}" src="${cardImageMed(pr[1])}" data-mpcard="${idx}:1" alt="${escapeHtml(pr[1].name)}">
         </div>
