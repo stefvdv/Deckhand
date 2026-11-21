@@ -1802,7 +1802,7 @@ html[data-main="W"] :is(.sr-tile, .pair-cell) .st-meta-row .add-btn svg{color:#2
 .budget-star img{width:min(56%,200px);border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,0.45);cursor:pointer;aspect-ratio:63/88;background:#0006;}
 .budget-star .bs-nm{font-size:14.5px;font-weight:700;margin-top:8px;}
 .budget-star .bs-pr{font-size:13px;color:var(--brass);font-family:'JetBrains Mono',monospace;margin-top:2px;}
-.budget-star .tag-focus-row{margin:8px auto 0;}
+.budget-star .tag-focus-row{margin:0 auto 8px;}
 .budget-subs{margin-top:6px;}
 
 
@@ -3825,6 +3825,20 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 .lctr-row > .lctr.lctr-m i{width:17px;height:17px;}
 @media (prefers-reduced-motion:reduce){ :where(.menu-pop, #fabMenu, .tile-menu, .otag-pop, .cselect-panel, .name-suggest, #bindersPop, .xt-body, .modal-backdrop, .modal-sheet){animation:none !important;} }
 
+/* ===== 1.95 ===== */
+/* the jump button in each section heading */
+.edh-jump-row.jump-in-labels{visibility:hidden !important;pointer-events:none !important;}
+.edh-sec > .section-label:has(> .lbl-jump){padding-right:52px !important;}
+.edh-sec > .section-label > .lbl-jump{position:absolute;right:6px;top:50%;transform:translateY(-50%);margin:0;-webkit-text-fill-color:currentColor;pointer-events:auto;}
+/* several sets: ticks, and the list's own search button at its foot */
+.cselect-panel.cs-multi .cselect-opt.sel::before{content:'\2713';margin-right:6px;font-weight:800;}
+.cselect-panel.cs-multi > .cs-multi-go{position:sticky;bottom:0;z-index:3;flex:0 0 auto;width:100%;margin:6px 0 0;}
+/* the focus bars sit above the commander card */
+.reco-admiral #recoChipsSlot .reco-themes{margin:0 0 10px;}
+/* the big card on these pages, offline: the plain card at full size, not a
+   tiny broken-picture box (a broken picture is drawn inline, ignoring width) */
+.reco-admiral img.art-missing, .reco-admiral img.art-pending{display:inline-block;vertical-align:top;}
+
 /* ===== 1.93 ===== */
 /* offline news: a quiet line at the foot of the box, under the newest article */
 .home-news > .l2.nw-old{margin:0;flex:0 0 auto;padding:8px 4px 6px;font-size:12.5px;text-align:center;}
@@ -4380,6 +4394,14 @@ let saveTimers = {};
    options, matches the app's styling, and only one is open at a time
    (state.openCSelect). Handlers register per id in _csHandlers. */
 const _csHandlers = {};
+/* 1.95: lists where a tap ticks an option instead of choosing it (several
+   sets at once). The handler gets the value and the tapped button; the panel
+   stays open, its own button at the foot runs the search. */
+const _csMulti = {};
+function csMultiGoLabel(n){
+  const nl = appLang() === 'nl';
+  return n ? (nl ? `Zoek in ${n} ${n === 1 ? 'set' : 'sets'}` : `Search in ${n} ${n === 1 ? 'set' : 'sets'}`) : (nl ? 'Zoek in alle sets' : 'Search all sets');
+}
 /* The symbol for a set code, as ink-coloured HTML — empty when the set list
    has not arrived yet, so a picker never waits on it. */
 function setIconHtml(code){
@@ -4421,7 +4443,7 @@ function cselectHtml(id, options, value, placeholder, o){
       }
       const opts = (o.tiles ? options.slice().reverse() : options).map(x=>{
         if(x.spacer) return o.tiles ? '<span class="art-spacer" aria-hidden="true"></span>' : '';
-        const selCls = String(x.v)===String(value ?? '')?'sel':'';
+        const selCls = o.multi ? ((x.v === '' ? !o.multi.length : o.multi.includes(String(x.v))) ? 'sel' : '') : (String(x.v)===String(value ?? '')?'sel':'');
         if(o.tiles){
           // Art keys can carry Scryfall clauses with double quotes
           // (o:"draw a card") — escapeHtml leaves " alone, so the data-art
@@ -4440,7 +4462,9 @@ function cselectHtml(id, options, value, placeholder, o){
       // (reversed, most popular at the foot) and the search bar is a plain
       // flex child at the panel's foot -- the list scrolls away behind it
       // by construction, no sticky involved.
-      return `<div class="cselect-panel${o.tall?' tall':''}${o.inline?' inline':''}${o.tiles?' cs-artgrid':''}">${o.tiles ? (`<div class="cs-artscroll">${opts}</div>` + noRes + searchRow) : (searchRow + opts + noRes)}</div>`;
+      // 1.95: a multi-pick list ends in its own search button (at the foot)
+      const goRow = o.multi ? `<button type="button" class="primary-btn cs-multi-go" data-csgo="${id}">${csMultiGoLabel(o.multi.length)}</button>` : '';
+      return `<div class="cselect-panel${o.tall?' tall':''}${o.inline?' inline':''}${o.tiles?' cs-artgrid':''}${o.multi?' cs-multi':''}">${o.tiles ? (`<div class="cs-artscroll">${opts}</div>` + noRes + searchRow) : (goRow + searchRow + opts + noRes)}</div>`;
     })() : ''}
   </div>`;
 }
@@ -4594,6 +4618,7 @@ function wireCSelects(){
   document.querySelectorAll('[data-csopt]').forEach(opt=>opt.addEventListener('click', e=>{
     e.stopPropagation();
     const id = opt.dataset.csopt, val = opt.dataset.val;
+    if(_csMulti[id]){ _csMulti[id](val, opt); return; }   // 1.95: tick, stay open
     state.openCSelect = null;
     const h = _csHandlers[id];
     if(h) h(val); else csRerender();
@@ -8203,12 +8228,13 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
     // sets, the format's ban list included, lands welcome. 'any' asks for
     // no legality at all.
     let base = (baseClause||'').replace(/\s*-t:land/g, '');
-    if(opts.restrictSet) base += ' set:'+opts.restrictSet;
+    const rsList = String(opts.restrictSet || '').split(',').filter(Boolean);   // 1.95: one set or several
+    if(rsList.length) base += rsList.length > 1 ? ' (' + rsList.map(c=>'set:' + c).join(' OR ') + ')' : ' set:' + rsList[0];
     // A previewing set's cards are often still marked not_legal until
     // release day — demanding legal:commander would hide the very spoilers
     // being searched for. The format flag returns the moment it releases.
     let rsPreview = false;
-    try{ rsPreview = !!opts.restrictSet && (currentPreviewSets()||[]).some(x=>x.code===opts.restrictSet); }catch(e){}
+    try{ rsPreview = rsList.length > 0 && (currentPreviewSets()||[]).some(x=>rsList.includes(x.code)); }catch(e){}
     const q = `${base} ${(rsPreview || fmtWanted === 'any') ? '' : sfLegalClause(fmtWanted) + ' '}game:paper -is:digital -st:memorabilia -st:token -st:minigame`.trim();
     const url = `${SF_BASE}/cards/search?unique=cards&order=${orderParam}&dir=${dir}&q=${encodeURIComponent(q)}`;
     const out = [];
@@ -8238,7 +8264,8 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
   // A chosen set narrows the search, but only if it's actually format-legal —
   // otherwise we'd be offering cards that can't be played.
   if(opts.restrictSet){
-    codes = codes.includes(opts.restrictSet) ? [opts.restrictSet] : [];
+    const rsList = String(opts.restrictSet).split(',').filter(Boolean);   // 1.95: several sets
+    codes = codes.filter(c=>rsList.includes(c));
     if(!codes.length) return { results: [], error: false };
   }
   if(!codes.length) return { results: [], error: true };
@@ -8475,15 +8502,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.94';
+const APP_VERSION = '1.95';
 const CHANGELOG_NOTES = {
   en: [
-    "Every card shows at once, plain first",
-    "The picture appears when fully loaded"
+    "Search: pick several sets at once",
+    "Jump button stays on its heading",
+    "Focus bars sit above the card"
   ],
   nl: [
-    "Elke kaart staat er meteen, eerst kaal",
-    "Plaatje pas te zien als het compleet is"
+    "Zoeken: meerdere sets tegelijk",
+    "Springknop blijft op zijn kop",
+    "Focusbalken staan boven de kaart"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8491,8 +8520,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-13';
+const APP_DATE = '2026-11-21';
 const CHANGELOG_HISTORY = [
+  { v: '1.94', d: '2026-11-13',
+    en: ['Every card shows at once, plain first', 'The picture appears when fully loaded'],
+    nl: ["Elke kaart staat er meteen, eerst kaal", "Plaatje pas te zien als het compleet is"] },
   { v: '1.93', d: '2026-11-13',
     en: ['Logo button no longer reloads', 'Offline: EDHREC pages stay longer', 'Offline: rules and deck finder stay', 'Offline: the last news stays readable'],
     nl: ["Logoknop laadt niet steeds opnieuw", "Offline: EDHREC-pagina's blijven", "Offline: regels en Deckwijzer blijven", "Offline: laatste nieuws blijft leesbaar"] },
@@ -20908,7 +20940,7 @@ function advancedPanelHtml(){
       ${[['common','Common'],['uncommon','Uncommon'],['rare','Rare'],['mythic','Mythic']].map(([v,l])=>`<label class="rcheck"><input type="checkbox" data-rarity="${v}" ${s.searchRarity[v]?'checked':''}><span class="rpill r-${v}">${l}</span></label>`).join('')}
     </div></div>
     <div class="adv-row"><label>Set / Expansion</label>
-      ${cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name), icons:setIconHtml(code)}))), s.searchSetCode, 'Any Set', {search:true, cls:'cs-up cs-foot'})}
+      ${(()=>{ const pick = searchSetList(); return cselectHtml('setSel', [{v:'',l:'Any Set'}].concat(sets.map(([code,name])=>({v:code, l:escapeHtml(name), icons:setIconHtml(code)}))), pick.length === 1 ? pick[0] : (pick.length ? '\u0000' : ''), pick.length > 1 ? setsChosenLabel(pick.length) : 'Any Set', {search:true, cls:'cs-up cs-foot', multi: pick}); })()}
       ${sets.length?'':`<p class="adv-hint">Set list still loading…</p>`}
     </div>
     ${(()=>{ const pk = pkgAll().filter(p=>p.cards.length); return pk.length ? `<div class="adv-row"><label>${appLang() === 'nl' ? 'Pakketten' : 'Packages'}</label><div class="adv-go-pkg"><select id="advPkgSel"><option value="">${appLang() === 'nl' ? 'Kies een pakket' : 'Pick a package'}</option>${pk.map(p=>`<option value="${p.id}">${pkgLabel(p)}</option>`).join('')}</select></div></div>` : ''; })()}
@@ -21083,6 +21115,26 @@ function wireAdvancedPanel(){
   _csHandlers.touOp = v=>{ state.searchTouOp=v; render(); };
   _csHandlers.loyOp = v=>{ state.searchLoyOp=v; render(); };
   _csHandlers.setSel = v=>{ state.searchSetCode=v; render(); };
+  // 1.95: tap = tick (several sets), "Any Set" = none; the button runs the search
+  _csMulti.setSel = (v, opt)=>{
+    const pick = new Set(searchSetList());
+    if(!v) pick.clear(); else if(pick.has(v)) pick.delete(v); else pick.add(v);
+    state.searchSetCode = [...pick].join(',');
+    const panel = opt.closest('.cselect-panel');
+    if(panel){
+      panel.querySelectorAll('.cselect-opt').forEach(b=>{ const bv = b.dataset.val; b.classList.toggle('sel', bv === '' ? !pick.size : pick.has(bv)); });
+      const go = panel.querySelector('.cs-multi-go'); if(go) go.textContent = csMultiGoLabel(pick.size);
+      const btn = panel.parentElement && panel.parentElement.querySelector('.cselect-btn');
+      if(btn){
+        btn.querySelector('.co-icons')?.remove();
+        const one = pick.size === 1 ? panel.querySelector(`.cselect-opt[data-val="${CSS.escape([...pick][0])}"]`) : null;
+        const lab = btn.querySelector('.cs-label');
+        if(lab) lab.innerHTML = pick.size > 1 ? setsChosenLabel(pick.size) : one ? one.innerHTML : 'Any Set';
+        if(lab && one) lab.querySelector('.co-icons')?.remove();
+        if(one && one.querySelector('.co-icons')) btn.insertBefore(one.querySelector('.co-icons').cloneNode(true), btn.firstChild);
+      }
+    }
+  };
   _csHandlers.fmtSel = v=>{ state.searchFormat=v; if(isConstructedFmt(v)){ try{ ensureFmtBans(v); }catch(e){} } render(); };
   wireCSelects();
   document.querySelectorAll('[data-rarity]').forEach(chk=>chk.addEventListener('change', ()=>{ state.searchRarity[chk.dataset.rarity] = chk.checked; }));
@@ -21497,6 +21549,16 @@ function _lsMerge(localList, extras){
 }
 
 let _searchSeq = 0;
+// 1.95: the chosen sets (one or several, comma-separated in searchSetCode)
+function searchSetList(){ return String(state.searchSetCode || '').split(',').map(x=>x.trim()).filter(Boolean); }
+function setsChosenLabel(n){ return appLang() === 'nl' ? `${n} sets gekozen` : `${n} sets chosen`; }
+document.addEventListener('click', (e)=>{
+  const g = e.target.closest && e.target.closest('[data-csgo="setSel"]');
+  if(!g) return;
+  e.stopPropagation(); e.preventDefault();
+  state.openCSelect = null; state.advOpen = false;
+  render(); runAdvancedSearch();
+}, true);
 async function runAdvancedSearch(){
   const clause = buildAdvancedClause();
   state.searchRan = true; state.searchError = false;
@@ -21507,8 +21569,8 @@ async function runAdvancedSearch(){
   // old two-pool pre-check fired the Admiral-era switch-it-on message in
   // Commander mode as well -- that era is over.
   if((state.searchFormat || 'any') === 'admiral'
-     && state.searchSetCode && !activeLegalSetCodes().includes(state.searchSetCode)){
-    const nm = (state.legalSetsMeta||{})[state.searchSetCode] || 'That set';
+     && searchSetList().length && !searchSetList().some(c=>activeLegalSetCodes().includes(c))){
+    const nm = (state.legalSetsMeta||{})[searchSetList()[0]] || 'That set';
     document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">${escapeHtml(nm)} isn't in the Admiral card pool — switch it on under Extras → Ban lists → Admiral, or set the Format filter to another format to search it.</div>`;
     return;
   }
@@ -21803,7 +21865,7 @@ function renderSearchResultsBox(){
     // went nowhere. Every other grid already passes its live pool.
     (chunk, shown)=>{ wireResultButtons(srPool, d, searchGridRefresh); wireSearchSelect(box, srPool); loadTilePrices(chunk); },
     { initial: prevShown });
-  if(state.searchSetCode){ box.insertAdjacentHTML('beforeend', setProgressHtml(state.searchSetCode)); }   // 1.63: the foot of the results
+  if(searchSetList().length === 1){ box.insertAdjacentHTML('beforeend', setProgressHtml(searchSetList()[0])); }   // 1.63: the foot of the results
   if(prevShown) window.scrollTo(0, y);
   else {
     // A fresh result set lands at the foot — but images and prices inflate
@@ -25358,10 +25420,10 @@ async function openSimilarCards(card, colorScope){
   el.innerHTML = `<div class="overlay-inner">
     ${overlayCapHtml(card.name)}
     <main>
-      <div class="tag-focus-row" id="simTagRow" hidden></div>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="simCardImg" alt="${escapeHtml(card.name)}">
       </div>
+      <div class="tag-focus-row" id="simTagRow" hidden></div>
       ${deckColorNoteHtml(scopeDeck)}
       <div id="simBody"><div class="status"><div class="spinner"></div></div></div>
     </main>
@@ -25944,8 +26006,44 @@ function deskFabAlign(){
   const top = Math.round(r.top + (r.height - bb - fab.offsetHeight) / 2);
   if(fab.style.top !== top + 'px') fab.style.top = top + 'px';
 }
-function placeJumpOnLabels(){
+/* 1.95: the jump button sits IN every section heading, so it moves with the
+   heading by itself -- no more chasing it frame by frame (it lagged behind
+   and floated over the cards while scrolling). The page's own button stays,
+   unseen, as the one that opens the menu. */
+function labelJumps(){
   document.querySelectorAll('.edh-jump-row').forEach(row=>{
+    const jb = row.querySelector('.edh-jump');
+    const scope = row.closest('.overlay') || document.querySelector('.app > main');
+    const on = !!(jb && scope && row.style.display !== 'none' && !isDesk() && getComputedStyle(row).position === 'fixed');
+    const labs = on ? scope.querySelectorAll('.edh-sec > .section-label') : [];
+    row.classList.toggle('jump-in-labels', labs.length > 0);
+    labs.forEach(L=>{
+      if(L.querySelector(':scope > .lbl-jump')) return;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'icon-btn edh-jump lbl-jump'; b.textContent = '\u2630';
+      b.title = jb.title || ''; b.setAttribute('aria-label', jb.title || 'Jump');
+      L.appendChild(b);
+    });
+  });
+}
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest && e.target.closest('.lbl-jump');
+  if(!b) return;
+  e.stopPropagation(); e.preventDefault();
+  const scope = b.closest('.overlay') || document.querySelector('.app > main');
+  const jb = scope && scope.querySelector('.edh-jump-row .edh-jump');
+  if(!jb) return;
+  // the menu opens from the heading that was tapped
+  const row = jb.closest('.edh-jump-row'), r = b.getBoundingClientRect();
+  row.style.transition = 'none';
+  row.style.bottom = Math.round(window.innerHeight - r.bottom) + 'px';
+  row.style.right = Math.round(window.innerWidth - r.right) + 'px';
+  jb.click();
+}, true);
+function placeJumpOnLabels(){
+  try{ labelJumps(); }catch(e){}
+  document.querySelectorAll('.edh-jump-row').forEach(row=>{
+    if(row.classList.contains('jump-in-labels')) return;   // 1.95: the headings carry it
     if(!row.offsetHeight || getComputedStyle(row).position !== 'fixed') return;
     const ov = row.closest('.overlay');
     const scope = ov || document.querySelector('.app > main');
@@ -29822,11 +29920,11 @@ function openCardReco(card, forDeck, comboKey){
   el.innerHTML = `<div class="overlay-inner">
     ${overlayCapHtml((appLang() === 'nl' ? 'Gespeeld met ' : 'Played with ') + card.name)}
     <main>
-      <div class="tag-focus-row" id="crTagRow" hidden></div>
       <div class="reco-admiral">
         <img class="${wbClass(card)}" src="${cardImageLarge(card)}" id="crImg" alt="${escapeHtml(card.name)}">
         ${deckColorNoteHtml(forDeck)}
       </div>
+      <div class="tag-focus-row" id="crTagRow" hidden></div>
       <div id="crBody"><div class="status"><div class="spinner"></div></div></div>
     </main>
     ${overlayNavHtml()}
@@ -30255,10 +30353,10 @@ async function loadBudgetAlternatives(d){
     trio.className = 'budget-trio';
     trio.innerHTML = `
       <div class="budget-star">
+        <div class="tag-focus-row" id="bgTagRow${trioRefs.length}" data-sel="bgTagSel${trioRefs.length}" hidden></div>
         <img class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">
         <div class="bs-nm">${escapeHtml(c.name)}</div>
         <div class="bs-pr">${fmtEur(v)}</div>
-        <div class="tag-focus-row" id="bgTagRow${trioRefs.length}" data-sel="bgTagSel${trioRefs.length}" hidden></div>
       </div>
       <div class="sr-grid budget-subs"><div class="status" style="grid-column:1/-1;padding:8px 0;"><div class="spinner"></div></div></div>`;
     box.appendChild(trio);
@@ -30754,11 +30852,11 @@ function renderRecoOverlay(){
     <main>
       <div class="reco-admiral">
         <div class="ra-hint" style="position:static;border-top:none;margin:0 0 6px;padding:0;">tap cards to select</div>
+        <div id="recoChipsSlot"></div>
         ${R.partner ? `<div class="reco-pair-grid">
           <img class="${wbClass(R.admiral)}" src="${cardImageLarge(R.admiral)}" id="recoAdmImg" alt="${escapeHtml(R.admiral.name)}">
           <img class="${wbClass(R.partner)}" src="${cardImageLarge(R.partner)}" id="recoAdmImg2" alt="${escapeHtml(R.partner.name)}">
         </div>` : `<img class="${wbClass(R.admiral)}" src="${cardImageLarge(R.admiral)}" id="recoAdmImg" alt="${escapeHtml(R.admiral.name)}">`}
-        <div id="recoChipsSlot"></div>
       </div>
       <div id="recoBody">${R.loading ? `<div class="status"><div class="spinner"></div>${R._seedTheme ? trS('Charting themed recommendations…') : 'Charting recommendations…'}</div>` : ''}</div>
     </main>
@@ -31415,8 +31513,7 @@ function placeRecoJump(){
   const menus = ov.querySelector('#recoChipsSlot .reco-themes');
   let b = base;
   if(menus && menus.offsetHeight){ const top = menus.getBoundingClientRect().top; if(top > 0) b = Math.max(base, window.innerHeight - top + 8); }
-  row.style.transition = 'none';
-  row.style.bottom = Math.round(b) + 'px';
+  if(!row.classList.contains('jump-in-labels')){ row.style.transition = 'none'; row.style.bottom = Math.round(b) + 'px'; }
   try{ placeJumpOnLabels(); }catch(e){}   // 1.72
 }
 function bindRecoJump(){
