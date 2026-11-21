@@ -3825,6 +3825,13 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 .lctr-row > .lctr.lctr-m i{width:17px;height:17px;}
 @media (prefers-reduced-motion:reduce){ :where(.menu-pop, #fabMenu, .tile-menu, .otag-pop, .cselect-panel, .name-suggest, #bindersPop, .xt-body, .modal-backdrop, .modal-sheet){animation:none !important;} }
 
+/* ===== 1.98 ===== */
+/* a filter sheet already open does not slide in again when a list opens */
+html.sheet-stay .app > main :is(.adv-panel, #colAdvBox, #spAdvBox){animation:none !important;}
+/* the history button: the magnifier's gold, a size smaller, at its right */
+.adv-go-row > .adv-go.adv-hist{width:36px;height:36px;margin-left:10px;align-self:center;}
+.adv-go-row > .adv-go.adv-hist svg{width:19px;height:19px;}
+
 /* ===== 1.96 ===== */
 /* partner pair: the card tapped from behind comes to the front */
 .pair-imgs img{transition:transform 0.18s ease;}
@@ -8548,13 +8555,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.97';
+const APP_VERSION = '1.98';
 const CHANGELOG_NOTES = {
   en: [
-    "Jump button: one, on the bottom heading"
+    "Search: your last 5 searches back",
+    "Filters no longer reload on a list",
+    "Results stay put when filters open"
   ],
   nl: [
-    "Springknop: één, op de onderste kop"
+    "Zoeken: laatste 5 zoekopdrachten terug",
+    "Filters laden niet opnieuw bij een lijst",
+    "Resultaten blijven staan bij filters"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8564,6 +8575,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-21';
 const CHANGELOG_HISTORY = [
+  { v: '1.97', d: '2026-11-21',
+    en: ['Jump button: one, on the bottom heading'],
+    nl: ["Springknop: één, op de onderste kop"] },
   { v: '1.96', d: '2026-11-21',
     en: ['Partner pair: tap the back card forward', "Your own copy's art shows everywhere"],
     nl: ["Partnerpaar: tik achterste naar voren", "Jouw eigen exemplaar overal te zien"] },
@@ -10455,6 +10469,9 @@ var _firstPaintDone = false;
 var _bootScriptMs = 0, _bootRenderMs = 0, _bootPaintMs = 0;
 try{ _bootScriptMs = Math.round(performance.now()); }catch(e){}
 function render(){
+  // 1.98: a filter sheet that is already open stays put while the page is
+  // redrawn around it (a list opening inside it): no second slide-in
+  try{ document.documentElement.classList.toggle('sheet-stay', !!document.querySelector('.app > main :is(.adv-panel, #colAdvBox, #spAdvBox)')); }catch(e){}
   document.getElementById('tradeBarHost')?.remove();   // trade's portal bar, page-scoped
   // The navigation ladder: every screen change made by the USER (not by a
   // back press) records its rung. Home resets the ladder; returning to a
@@ -20926,6 +20943,63 @@ function advInfo(key){
   };
   return infoBtnHtml(T[key] || '');
 }
+/* 1.98: the last five searches. Every search that runs is remembered with
+   all its criteria; the clock button beside the magnifier offers them, and
+   picking one puts every criterion back in the filters -- without running
+   the search, so it can still be changed first. */
+const SEARCH_HIST_KEYS = ['searchName','searchColors','searchColorMode','searchCardColors','searchCardColorMode','searchSetCode','searchFormat','searchManaCost','searchRarity','searchEurMin','searchEurMax','searchArtist','searchFlavorText','searchKeyword','searchPowOp','searchPowVal','searchTouOp','searchTouVal','searchLoyOp','searchLoyVal','searchCmcOp','searchCmcVal','searchTypeText','searchOracleText','searchOtag','searchSort','searchSortDir'];
+const HIST_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4.5h4.5"/><path d="M12 7.5V12l3 2"/></svg>';
+function searchHist(){
+  try{ const a = JSON.parse(localStorage.getItem(LS_PREFIX + 'searchHist') || '[]'); return Array.isArray(a) ? a.filter(x=>x && x.s) : []; }catch(e){ return []; }
+}
+function searchSnap(){
+  const o = {};
+  SEARCH_HIST_KEYS.forEach(k=>{ const v = state[k]; o[k] = (v && typeof v === 'object') ? Object.assign({}, v) : v; });
+  return o;
+}
+function searchSnapLabel(x){
+  const nl = appLang() === 'nl', parts = [];
+  const on = (obj)=>Object.keys(obj || {}).filter(k=>obj[k]);
+  if(x.searchName) parts.push('\u201c' + x.searchName + '\u201d');
+  if(on(x.searchColors).length) parts.push((nl ? 'identiteit ' : 'identity ') + on(x.searchColors).join(''));
+  if(on(x.searchCardColors).length) parts.push((nl ? 'kleur ' : 'colour ') + on(x.searchCardColors).join(''));
+  if(x.searchTypeText) parts.push(x.searchTypeText);
+  if(x.searchOracleText) parts.push('\u201c' + x.searchOracleText + '\u201d');
+  if(x.searchKeyword) parts.push(x.searchKeyword);
+  if(x.searchOtag) parts.push('#' + x.searchOtag);
+  const sets = String(x.searchSetCode || '').split(',').filter(Boolean);
+  if(sets.length) parts.push(sets.length > 1 ? sets.length + ' sets' : (((state.legalSetsMeta || {})[sets[0]]) || sets[0].toUpperCase()));
+  if(x.searchFormat) parts.push(fmtLabelOf(x.searchFormat));
+  if(on(x.searchRarity).length) parts.push(on(x.searchRarity).map(r=>r[0].toUpperCase()).join(''));
+  if(x.searchManaCost) parts.push(x.searchManaCost);
+  [['MV', 'searchCmcOp', 'searchCmcVal'], ['P', 'searchPowOp', 'searchPowVal'], ['T', 'searchTouOp', 'searchTouVal'], ['L', 'searchLoyOp', 'searchLoyVal']].forEach(([l, o, v])=>{ if(x[o] && x[v] !== '') parts.push(l + x[o] + x[v]); });
+  if(x.searchArtist) parts.push(x.searchArtist);
+  if(x.searchFlavorText) parts.push('\u201c' + x.searchFlavorText + '\u201d');
+  if(x.searchEurMin > 0 || x.searchEurMax != null) parts.push('\u20ac' + (x.searchEurMin || 0) + '\u2013' + (x.searchEurMax != null ? x.searchEurMax : '\u221e'));
+  const t = parts.join(' \u00b7 ');
+  return t.length > 70 ? t.slice(0, 68) + '\u2026' : t;
+}
+function searchHistPush(){
+  const snap = searchSnap();
+  if(!searchSnapLabel(snap)) return;
+  const sig = JSON.stringify(snap);
+  const list = searchHist().filter(x=>JSON.stringify(x.s) !== sig);
+  list.unshift({ s: snap, t: Date.now() });
+  try{ localStorage.setItem(LS_PREFIX + 'searchHist', JSON.stringify(list.slice(0, 5))); }catch(e){}
+}
+function searchHistRestore(snap){
+  SEARCH_HIST_KEYS.forEach(k=>{ if(!(k in snap)) return; const v = snap[k]; state[k] = (v && typeof v === 'object') ? Object.assign({}, v) : v; });
+  state.openCSelect = null; state.advOpen = true;
+  render();
+  toast(appLang() === 'nl' ? 'Zoekopdracht teruggezet \u2014 tik op het vergrootglas om te zoeken' : 'Search restored \u2014 tap the magnifier to search');
+}
+function openSearchHist(btn){
+  const list = searchHist();
+  const nl = appLang() === 'nl';
+  if(!list.length){ toast(nl ? 'Nog geen eerdere zoekopdrachten' : 'No earlier searches yet'); return; }
+  // drop-up: the newest sits at the foot, nearest the button
+  openTileMenu(btn, list.slice().reverse().map(x=>({ label: escapeHtml(searchSnapLabel(x.s)), fn: ()=>searchHistRestore(x.s) })));
+}
 function advGoHtml(id, extra){
   return `<div class="adv-go-row"><button type="button" class="adv-go" id="${id}" title="${trS('Search')}" aria-label="${trS('Search')}">${ICONS.search}</button>${extra || ''}</div>`;
 }
@@ -20961,7 +21035,7 @@ function advancedPanelHtml(){
   }catch(e){}
   const colorChecks = (attr, stateObj) => `<div class="color-check-row">${colorOrder.map(c=>`<label class="ccheck"><input type="checkbox" ${attr}="${c}" ${stateObj[c]?'checked':''}><span class="mana-check">${manaIconSvg(c, 26)}</span></label>`).join('')}</div>`;
   return `<div class="adv-panel" style="display:flex;flex-direction:column-reverse;"><div class="panel-card adv-frame" style="display:flex;flex-direction:column-reverse;">
-    ${advGoHtml('advGo')}
+    ${advGoHtml('advGo', `<button type="button" class="adv-go adv-hist" id="advHist" title="${appLang() === 'nl' ? 'Eerdere zoekopdrachten' : 'Earlier searches'}" aria-label="${appLang() === 'nl' ? 'Eerdere zoekopdrachten' : 'Earlier searches'}">${HIST_SVG}</button>`)}
     <div class="adv-row"><label>Oracle Text${advInfo('oracle')}</label><input id="oracleText" type="text" value="${escapeHtml(s.searchOracleText)}">
     </div>
     <div class="adv-row"><label>Card Type</label><input id="typeText" type="text" value="${escapeHtml(s.searchTypeText)}"></div>
@@ -21061,7 +21135,10 @@ function wireSearchPage(){
     const slot = document.getElementById('advSlot');
     if(!slot) return;
     slot.innerHTML = state.advOpen ? advancedPanelHtml() : '';
-    if(state.advOpen){ wireAdvancedPanel(); scrollToPageFoot(); }   // open showing the BOTTOM of the menu
+    // 1.98: the sheet floats over the results, so the results stay exactly
+    // where they were scrolled to -- only the sheet itself opens at its foot
+    const _y = window.scrollY;
+    if(state.advOpen){ wireAdvancedPanel(); requestAnimationFrame(()=>{ try{ if(Math.abs(window.scrollY - _y) > 1) window.scrollTo(0, _y); }catch(e){} }); }
     try{ csFitSheetFoot(); }catch(e){}
     // The Random Card steps aside while the filter menu is open, so the
     // menu sits right at the page foot by the search bar.
@@ -21123,6 +21200,11 @@ function renderCotd(card){
   document.getElementById('cotdReroll').addEventListener('click', ()=>loadCardOfTheDay(true));
 }
 function wireAdvancedPanel(){
+  document.getElementById('advHist')?.addEventListener('click', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    try{ document.activeElement && document.activeElement.blur && document.activeElement.blur(); }catch(err){}
+    openSearchHist(e.currentTarget);
+  });
   document.getElementById('advGo')?.addEventListener('click', (e)=>{
     e.preventDefault(); e.stopPropagation();
     try{ document.activeElement && document.activeElement.blur && document.activeElement.blur(); }catch(err){}   // a pending 'change' lands first
@@ -21637,6 +21719,7 @@ document.addEventListener('click', (e)=>{
 async function runAdvancedSearch(){
   const clause = buildAdvancedClause();
   state.searchRan = true; state.searchError = false;
+  if(clause || state.searchSetCode || state.searchFormat){ try{ searchHistPush(); }catch(e){} }   // 1.98
   if(!clause && !state.searchSetCode && !state.searchFormat){ document.getElementById('searchResultsBox').innerHTML = `<div class="empty-note">Enter a name or set at least one filter.</div>`; return; }
   // The curated card pool belongs to the ADMIRAL format alone. Every other
   // format ('any' included) searches ANY set: Scryfall's own legal: flag is
