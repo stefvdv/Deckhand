@@ -8555,17 +8555,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.98';
+const APP_VERSION = '1.99';
 const CHANGELOG_NOTES = {
   en: [
-    "Search: your last 5 searches back",
-    "Filters no longer reload on a list",
-    "Results stay put when filters open"
+    "Inspiration: pick several cards at once",
+    "More stays open after adding a card"
   ],
   nl: [
-    "Zoeken: laatste 5 zoekopdrachten terug",
-    "Filters laden niet opnieuw bij een lijst",
-    "Resultaten blijven staan bij filters"
+    "Inspiratie: meerdere kaarten kiezen",
+    "Meer blijft open na kaart toevoegen"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8573,8 +8571,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-21';
+const APP_DATE = '2026-11-22';
 const CHANGELOG_HISTORY = [
+  { v: '1.98', d: '2026-11-21',
+    en: ['Search: your last 5 searches back', 'Filters no longer reload on a list', 'Results stay put when filters open'],
+    nl: ["Zoeken: laatste 5 zoekopdrachten terug", "Filters laden niet opnieuw bij een lijst", "Resultaten blijven staan bij filters"] },
   { v: '1.97', d: '2026-11-21',
     en: ['Jump button: one, on the bottom heading'],
     nl: ["Springknop: één, op de onderste kop"] },
@@ -10486,6 +10487,7 @@ function render(){
   // with the defaults \u2014 every category unfolded, the Maybeboard folded.
   if(state.screen !== 'decklist' && Object.keys(state.collapsed || {}).length) state.collapsed = {};
   if(state.screen !== 'decklist' && state.legalityOpen) state.legalityOpen = false;
+  if(state.screen !== 'browse' && state.inspPick) state.inspPick = null;   // 1.99: picks belong to the page
   // Opening a deck (re)loads the banlist at most once a day — the whole
   // legality check is otherwise offline name comparison, zero per-deck
   // network. ensureCmdrBans throttles itself via its 24h freshness stamp.
@@ -15238,6 +15240,69 @@ function colSelClear(){
   document.querySelectorAll('.col-tile .csel-mark').forEach(m=>m.remove());
   document.getElementById('colSelFab')?.remove();
 }
+/* 1.99: Inspiration's results pick several cards too -- with or without a
+   commander chosen. The same gestures as Search: a long press picks a card
+   (gold tick), then every tap picks one more or drops it; the gold button
+   in the search bar (in the Deck finder's place) holds the actions. Wired
+   once for the whole page, so every list on it -- themes, colours, More,
+   a redraw after adding -- takes part by itself. */
+const _tileCards = new Map();   // name -> card, as the lists hand them out
+function inspSelOn(){ return state.screen === 'browse' && state.inspPick && state.inspPick.size > 0; }
+function inspTileOf(t){ return t && t.closest ? t.closest('#browseResults .sr-tile[data-name]') : null; }
+function inspTileName(tile){ try{ return decodeURIComponent(tile.dataset.name); }catch(e){ return tile.dataset.name; } }
+function inspPaintSel(){
+  const picks = state.inspPick;
+  document.querySelectorAll('#browseResults .sr-tile[data-name]').forEach(tile=>{
+    const on = !!(picks && picks.has(inspTileName(tile)));
+    if(on && !tile.querySelector(':scope > .sel-check')){ const m = document.createElement('span'); m.className = 'sel-check'; m.textContent = '\u2713'; tile.appendChild(m); }
+    if(tile.classList.contains('selected') !== on) tile.classList.toggle('selected', on);
+  });
+  const n = picks ? picks.size : 0;
+  const fab = document.getElementById('inspSelFab'), gb = document.getElementById('guideBtn');
+  if(fab){ if(fab.hidden !== !n) fab.hidden = !n; const h = selFabLabel(n); if(fab._h !== h){ fab._h = h; fab.innerHTML = h; } }   // only real changes: the page watcher sees every edit
+  if(gb && gb.hidden !== !!n) gb.hidden = !!n;
+}
+function inspToggle(tile){
+  const name = inspTileName(tile);
+  const c = _tileCards.get(name) || (function(){ try{ const bc = _bulkIdx && _bulkIdx.byName && _bulkIdx.byName.get(name.toLowerCase()); return bc ? bulkToCardish(bc) : null; }catch(e){ return null; } })();
+  if(!c) return;
+  if(!state.inspPick) state.inspPick = new Map();
+  if(state.inspPick.has(name)) state.inspPick.delete(name); else state.inspPick.set(name, c);
+  if(!state.inspPick.size) state.inspPick = null;
+  inspPaintSel();
+}
+function inspSelClear(){ state.inspPick = null; inspPaintSel(); }
+{
+  let lpT = null, lpTile = null, lpFired = false;
+  document.addEventListener('pointerdown', (e)=>{
+    const tile = inspTileOf(e.target);
+    lpFired = false; clearTimeout(lpT); lpTile = tile;
+    if(!tile || state.screen !== 'browse' || e.target.closest('button')) return;
+    lpT = setTimeout(()=>{ lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} inspToggle(tile); }, 480);
+  }, true);
+  ['pointerup', 'pointercancel'].forEach(ev=>document.addEventListener(ev, ()=>clearTimeout(lpT), true));
+  document.addEventListener('pointermove', (e)=>{ if(lpTile && (Math.abs(e.movementX) + Math.abs(e.movementY)) > 6) clearTimeout(lpT); }, true);
+  // capture: before the card's own "open" tap and its + button
+  document.addEventListener('click', (e)=>{
+    const tile = inspTileOf(e.target);
+    if(!tile) return;
+    if(lpFired){ lpFired = false; e.stopPropagation(); e.preventDefault(); return; }
+    if(inspSelOn()){ e.stopPropagation(); e.preventDefault(); inspToggle(tile); }
+  }, true);
+  document.addEventListener('contextmenu', (e)=>{ if(inspTileOf(e.target)) e.preventDefault(); }, true);
+  // a redraw keeps the ticks
+  try{ new MutationObserver(()=>{ if(state.inspPick && state.screen === 'browse') inspPaintSel(); }).observe(document.documentElement, { childList: true, subtree: true }); }catch(e){}
+}
+function openInspSelMenu(anchor){
+  const cards = state.inspPick ? Array.from(state.inspPick.values()) : [];
+  if(!cards.length) return;
+  const done = ()=>inspSelClear();
+  openTileMenu(anchor, [
+    { label: '\u2715 ' + trS('Deselect all'), fn: ()=>inspSelClear() },
+    { label: mIco('binder') + trS('Add to collection\u2026'), fn: ()=>openAddManyToCollection(cards, ()=>inspSelClear()) },
+    { label: '\uFF0B ' + trS('Add to deck\u2026'), fn: ()=>openMultiDeckChooser(cards, done) }
+  ]);
+}
 function searchSelClear(){
   state.searchSel = null;
   document.querySelectorAll('#searchResultsBox .sr-tile.selected').forEach(t=>t.classList.remove('selected'));
@@ -15326,6 +15391,7 @@ function clearSelectionOnBack(){
   if(state.screen === 'decklist' && state._dlSel && state._dlSel.size){ dlSelClear(); return true; }
   if(state.screen === 'collection' && state.colSel && state.colSel.size){ colSelClear(); return true; }
   if(state.screen === 'search' && state.searchSel && state.searchSel.size){ searchSelClear(); return true; }
+  if(state.screen === 'browse' && state.inspPick && state.inspPick.size){ inspSelClear(); return true; }   // 1.99
   if(state.screen === 'spoilers' && state.spSel && state.spSel.size){ spSelClear(); return true; }   // 1.19
   return false;
 }
@@ -23308,6 +23374,7 @@ function pagedGrid(box, items, tileHtml, afterChunk, opts){
 
 function wireResultButtons(list, d, refreshFn, opts){
   opts = opts || {};
+  try{ (list || []).forEach(c=>{ if(c && c.name) _tileCards.set(c.name, c); }); if(_tileCards.size > 4000) _tileCards.clear(); }catch(e){}   // 1.99
   // Switch mode (entered via "Switch Commander/Admiral" on the deck page):
   // any way of choosing an eligible leader performs the swap and returns to
   // the deck — nothing gets silently added to the main deck instead.
@@ -27985,11 +28052,15 @@ function renderEdhrecSections(box, key, S, keepScroll){
   // Show-all button — a long page paints in a blink instead of all at once.
   const CAP = 10;
   const pools = [];
+  // 1.99: how far each section was opened with More survives a redraw (adding
+  // a card redraws the page; the sections used to fold back to ten)
+  S._shown = S._shown || {};
   const section = (title, cards, opts, subOf, wire)=>{
     if(!cards || !cards.length) return '';
     const idx = pools.length;
-    pools.push({ title, cards, opts, subOf, wire });
-    return `<div class="edh-sec" data-si="${idx}">${lbl(title)}${cards.length > CAP ? `<button class="ghost-btn edh-more" data-si="${idx}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}${grid(cards.slice(0, CAP), opts, subOf)}</div>`;
+    const n = Math.min(cards.length, Math.max(CAP, S._shown[title] || 0));
+    pools.push({ title, cards, opts, subOf, wire, shown: n });
+    return `<div class="edh-sec" data-si="${idx}">${lbl(title)}${cards.length > n ? `<button class="ghost-btn edh-more" data-si="${idx}" style="width:100%;margin:0 0 6px;">${trS('More')}</button>` : ''}${grid(cards.slice(0, n), opts, subOf)}</div>`;
   };
   // Colour strip: how many decks play this theme per colour combination —
   // tap to jump to that combination.
@@ -28026,7 +28097,7 @@ function renderEdhrecSections(box, key, S, keepScroll){
   if(secs.length){
     const cardsPool = [].concat(...secs.map(cs=>cs.list));
     wireResultButtons(cardsPool, pinned, ()=>renderEdhrecSections(box, key, S, true), {});
-    loadTilePrices([].concat(...secs.map(cs=>cs.list.slice(0, CAP))));
+    loadTilePrices([].concat(...pools.map(p=>p.cards.slice(0, p.shown || CAP))));
   }
   // The ☰ menu lists every rendered section; tapping one glides there. The
   // house dropdown brings the gatekeeper, back-button close, and flip-up
@@ -28052,7 +28123,7 @@ function renderEdhrecSections(box, key, S, keepScroll){
     if(!p || !wrap) return;
     const already = Math.min(p.cards.length, p.shown || CAP);
     const next = Math.min(p.cards.length, already + 10);
-    p.shown = next;
+    p.shown = next; S._shown[p.title] = next;
     const g = wrap.querySelector('.sr-grid');
     // Anchor on the grid's DOM-first tile (visual FOOT row): after the swap
     // it must sit exactly where it was, so the new batch and the More button
@@ -28806,7 +28877,7 @@ function browsePageHtml(){
     <div class="browse-hero" id="inspFeed"></div>
 
     <div class="searchbar" style="margin:0 0 10px;">
-      <input id="bsName" enterkeyhint="search" placeholder="${trS('Search by card name')}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${escapeHtml(state.browseNameQ||'')}">${swd ? '' : `<button type="button" class="guide-sb" id="guideBtn" title="${_gT('Welk deck past bij mij?', 'Which deck suits me?')}">✦ ${guideName()}</button>`}
+      <input id="bsName" enterkeyhint="search" placeholder="${trS('Search by card name')}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${escapeHtml(state.browseNameQ||'')}"><button type="button" id="inspSelFab" class="sel-fab" title="${trS('Add to deck…')}"${state.inspPick && state.inspPick.size ? '' : ' hidden'}>${selFabLabel(state.inspPick ? state.inspPick.size : 0)}</button>${swd ? '' : `<button type="button" class="guide-sb" id="guideBtn" title="${_gT('Welk deck past bij mij?', 'Which deck suits me?')}">✦ ${guideName()}</button>`}
     </div>
     <div class="browse-selects">
       <div class="bs-row">${cselectHtml('bsFmt', FMT_ORDER.map(f=>({v:f, l:fmtFolderGlyph(f, 14)+' '+fmtLabelOf(f), art:(FMT_ICON_CARDS[f] ? 'nm|'+FMT_ICON_CARDS[f] : 'sf|'+artFmtParam(f)+'|'+leaderArtClause(f))})), state.browseFormat||'commander', 'Format', {tiles:true})}</div>
@@ -29147,6 +29218,8 @@ function wireBrowsePage(){
     if(q) runLeaderSearch();
   };
   document.getElementById('guideBtn')?.addEventListener('click', ()=>openDeckGuide());
+  document.getElementById('inspSelFab')?.addEventListener('click', (e)=>{ e.stopPropagation(); openInspSelMenu(e.currentTarget); });
+  try{ inspPaintSel(); }catch(e){}
   _csHandlers.bsCount = v=>{
     sfDropQueuedFor('browse');
     state.browseSel.count = v;
