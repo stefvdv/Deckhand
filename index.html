@@ -3825,6 +3825,26 @@ html:not(.desk) .deckpick-scrim:not([style*="align-items: center"]) > .deckpick{
 .lctr-row > .lctr.lctr-m i{width:17px;height:17px;}
 @media (prefers-reduced-motion:reduce){ :where(.menu-pop, #fabMenu, .tile-menu, .otag-pop, .cselect-panel, .name-suggest, #bindersPop, .xt-body, .modal-backdrop, .modal-sheet){animation:none !important;} }
 
+/* ===== 1.100 ===== */
+/* PC card popup: the price steps left of the close cross */
+html.desk .overlay.cs-pop #csPrice{right:52px !important;}
+/* PC: the Deckhand button as tall as its bar, square */
+html.desk .brand-banner .nav-home{padding:0 !important;flex:0 0 auto;align-self:center;}
+html.desk .brand-banner .nav-home img{width:50px;height:50px;border-radius:12px;}
+
+/* phone: the add field in the deck bar, its list opening upward */
+html:not(.desk) .dk-add-m{position:relative;flex:1 1 auto;min-width:0;}
+html:not(.desk) .dk-add-m .dk-add-list{position:absolute;left:0;right:0;bottom:calc(100% + 8px);top:auto;z-index:90;max-height:46vh;overflow-y:auto;display:flex;flex-direction:column-reverse;background:var(--pop-bg);border:1.5px solid var(--pop-line);border-radius:10px;box-shadow:0 -10px 30px rgba(0,0,0,0.5);}
+html:not(.desk) .dk-add-m .dk-add-list[hidden]{display:none;}
+html:not(.desk) .dk-add-m .dk-add-opt{display:block;width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--pop-line);color:var(--ink-text);padding:11px 12px;font-size:15px;cursor:pointer;}
+html:not(.desk) .dk-add-m .dk-add-opt:first-child{border-top:none;}
+html:not(.desk) .dk-add-m .dk-add-opt.on{background:var(--brass-glow);}
+.deck-dock .dk-tool.dk-adv{width:auto !important;min-width:0;padding:0 10px !important;font-size:12.5px;font-weight:700;white-space:nowrap;flex:none;}
+/* Spoilers: under the set bar resting at the foot, the filter strip is solid
+   -- no cards sliding past beneath the bar */
+html:not(.desk) .app > main:has(> #spAdvToggle)::after{content:'';position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));height:calc(var(--stick-b) - var(--nav-h) - env(safe-area-inset-bottom));background:var(--ink);z-index:29;pointer-events:none;}
+html:not(.desk) .app > main > #spAdvToggle{z-index:31;}
+
 /* ===== 1.98 ===== */
 /* a filter sheet already open does not slide in again when a list opens */
 html.sheet-stay .app > main :is(.adv-panel, #colAdvBox, #spAdvBox){animation:none !important;}
@@ -5755,7 +5775,16 @@ function commanderVerdict(card){
      || card.digital === true) return 'not_legal';
   // 1.5: "not legal" (a playtest or promo-only card, never a ban) holds also
   // once the ban list is in -- Myntasha showed up as addable in Search
-  if(card.legalities && card.legalities.commander === 'not_legal') return 'not_legal';
+  if(card.legalities && card.legalities.commander === 'not_legal'){
+    // 1.100: a card added while its set was still a preview kept Scryfall's
+    // "not legal" of that day. The weekly card database is newer: when it
+    // says legal, it is legal (Collective Override).
+    try{
+      const bc = _bulkIdx && _bulkIdx.byName && _bulkIdx.byName.get(String(card.name || '').toLowerCase());
+      if(bc && bc.lg === 'legal') return 'legal';
+    }catch(e){}
+    return 'not_legal';
+  }
   return 'legal';
 }
 /* ================= CONSTRUCTED LEGALITY =================
@@ -8555,15 +8584,25 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.99';
+const APP_VERSION = '1.100';
 const CHANGELOG_NOTES = {
   en: [
-    "Inspiration: pick several cards at once",
-    "More stays open after adding a card"
+    "Lands show as 35/38 with mdfc",
+    "Phone: add cards right in the deck bar",
+    "PC: double click picks like a long press",
+    "PC: type jump lands at the top",
+    "PC: bigger Deckhand button",
+    "Released previews no longer flagged",
+    "Spoilers: set bar rests cleanly"
   ],
   nl: [
-    "Inspiratie: meerdere kaarten kiezen",
-    "Meer blijft open na kaart toevoegen"
+    "Lands als 35/38 met mdfc",
+    "Telefoon: kaarten toevoegen in de balk",
+    "Pc: dubbelklik kiest als lang drukken",
+    "Pc: type-sprong naar de bovenkant",
+    "Pc: grotere Deckhand-knop",
+    "Uitgekomen previews niet meer rood",
+    "Spoilers: setbalk staat netjes onderaan"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8571,8 +8610,11 @@ const CHANGELOG_NOTES = {
    above and set APP_DATE. The start-up note shows every release since the
    player's last visit; Extras -> What's new shows the past month (the
    button appears once there is a history: 1.0 is the starting point). */
-const APP_DATE = '2026-11-22';
+const APP_DATE = '2026-11-24';
 const CHANGELOG_HISTORY = [
+  { v: '1.99', d: '2026-11-22',
+    en: ['Inspiration: pick several cards at once', 'More stays open after adding a card'],
+    nl: ["Inspiratie: meerdere kaarten kiezen", "Meer blijft open na kaart toevoegen"] },
   { v: '1.98', d: '2026-11-21',
     en: ['Search: your last 5 searches back', 'Filters no longer reload on a list', 'Results stay put when filters open'],
     nl: ["Zoeken: laatste 5 zoekopdrachten terug", "Filters laden niet opnieuw bij een lijst", "Resultaten blijven staan bij filters"] },
@@ -10488,6 +10530,7 @@ function render(){
   if(state.screen !== 'decklist' && Object.keys(state.collapsed || {}).length) state.collapsed = {};
   if(state.screen !== 'decklist' && state.legalityOpen) state.legalityOpen = false;
   if(state.screen !== 'browse' && state.inspPick) state.inspPick = null;   // 1.99: picks belong to the page
+  if(state.screen !== 'decklist' && state.dlAddOpen){ state.dlAddOpen = false; state._dkAddQ = ''; }   // 1.100
   // Opening a deck (re)loads the banlist at most once a day — the whole
   // legality check is otherwise offline name comparison, zero per-deck
   // network. ensureCmdrBans throttles itself via its 24h freshness stamp.
@@ -15518,7 +15561,9 @@ function dockTypeCounts(d){
   const all = deckLeaders(d).concat(d.cards);
   return kinds.map(k=>{
     const n = all.filter(c=>((c.type_line||'').split('//')[0]).includes(k)).length;
-    return n ? `<button class="dk-type" data-tt="${k}s">${DOCK_TYPE_ICONS[k]}<span>${n}</span></button>` : '';
+    // 1.100: lands as pure / with the modal double-faced ones, e.g. 35/38
+    const mdfc = k === 'Land' ? d.cards.filter(c=>{ const f = (c.type_line || '').split('//'); return f.length > 1 && !f[0].includes('Land') && f.slice(1).some(x=>x.includes('Land')); }).length : 0;
+    return n ? `<button class="dk-type" data-tt="${k}s">${DOCK_TYPE_ICONS[k]}<span>${mdfc ? n + '/' + (n + mdfc) : n}</span></button>` : '';
   }).filter(Boolean).join('');
 }
 function deckMeterHtml(d){
@@ -15537,7 +15582,13 @@ function deckMeterHtml(d){
         <button class="dk-tool" id="dlSelMaybe" title="${Array.from(state._dlSel).some(k=>k.startsWith('main:')) ? trS('Move to ' + sideName(d)) : trS('Move to main deck')}">${ICONS.maybe}</button>
         <button class="dk-tool" id="dlSelDel" title="Delete" style="color:var(--danger);">${ICONS.trash}</button>
         <button class="dk-tool" id="dlSelX" title="Cancel">✕</button>`;
-    } else     mid = state.dlSearchOpen
+    } else     mid = (!isDesk() && state.dlAddOpen)
+      // 1.100 phone: the + turns the tools into an add field (as on the PC),
+      // with Advanced beside it for the full search page
+      ? `<div class="dock-search-wrap searchbar dk-add dk-add-m"><input id="dkAddQ" class="dock-search" enterkeyhint="search" placeholder="${appLang() === 'nl' ? 'Kaart toevoegen\u2026' : 'Add a card\u2026'}" value="${escapeHtml(state._dkAddQ || '')}" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="dk-add-list" id="dkAddList" hidden></div></div>
+        <button type="button" class="dk-tool dk-adv" id="dkAddAdv">${appLang() === 'nl' ? 'Uitgebreid' : 'Advanced'}</button>
+        <button class="dk-tool active" id="dockAddCards" title="${appLang() === 'nl' ? 'Sluiten' : 'Close'}">${ICONS.plus}</button>`
+      : state.dlSearchOpen
       // The tools left of the loupe step aside for a search bar; its ▾
       // opens the full filter, like the Collection's bar.
       ? `<div class="dock-search-wrap searchbar"><input id="dockSearchInput" class="dock-search" enterkeyhint="search" placeholder="${trS('Find in deck…')}" value="${escapeHtml(state.dlSearchQ||'')}" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="in-chev" id="dockFilterChev" title="${trS('Advanced filter')}">${state.dlPanel==='dsearch'?'▴':'▾'}</button></div>
@@ -18154,7 +18205,7 @@ function categorizedListHtml(d){
       let nLabel = String(idxs.length);
       if(cat === 'Lands' && !_dlq){
         const mdfcN = d.cards.filter(c=>{ const f = (c.type_line||'').split('//'); return f.length > 1 && !f[0].includes('Land') && f.slice(1).some(x=>x.includes('Land')); }).length;
-        if(mdfcN) nLabel = `${idxs.length} (${idxs.length + mdfcN} incl. ${mdfcN} mdfc)`;
+        if(mdfcN) nLabel = `${idxs.length}/${idxs.length + mdfcN}`;   // 1.100: pure lands / with mdfc
       }
       html += `<div class="cat-group">
         <div class="cat-head ${collapsed?'collapsed':''}" data-cat="${cat}"><span class="t">${cat}</span><span class="cat-price">${groupPriceLabel(idxs.map(i=>d.cards[i]))}</span><span class="n">${nLabel}</span><span class="car">▾</span></div>
@@ -19547,7 +19598,10 @@ function dlSelApply(d, mode){
 }
 function updateDeckMeter(d){
   const row = document.getElementById('deckMeterRow');
-  if(row){ row.outerHTML = deckMeterHtml(d); wireMeterRow(d); }
+  // 1.100 phone: while the add field is in use the bar stays as it is -- a
+  // redraw would take the keyboard away between two cards
+  const keep = !isDesk() && state.dlAddOpen && row && document.activeElement && document.activeElement.id === 'dkAddQ';
+  if(row && !keep){ row.outerHTML = deckMeterHtml(d); wireMeterRow(d); }
   refreshLegality(d);
 }
 function refreshLegality(d){
@@ -19617,6 +19671,7 @@ function wireDeskAddField(d){
     const dd = getDeck(state.activeDeckId) || d;
     if(addCardToDeckValidated(dd, c)){
       state._dkAddQ = ''; state._dkAddFocus = true; state._dkAddKeep = Date.now() + 3000;   // a later redraw keeps the cursor too
+      if(!isDesk()){ inp.value = ''; try{ inp.focus(); }catch(e){} }   // 1.100 phone: same field, keyboard stays
       try{ refreshDecklistBox(dd); }catch(e){}
       try{ updateDeckMeter(dd); }catch(e){}
       // keep typing: the cursor returns once the page has settled
@@ -19687,7 +19742,27 @@ function wireMeterRow(d){
     open();
   });
   document.getElementById('dockInspire')?.addEventListener('click', ()=>{ state.inspireDeckId = d.id; switchPage('inspiration'); });
-  document.getElementById('dockAddCards')?.addEventListener('click', ()=>openAddCardsFor(d));
+  document.getElementById('dockAddCards')?.addEventListener('click', ()=>{
+    if(isDesk()){ openAddCardsFor(d); return; }
+    // 1.100 phone: + opens (and closes again) the add field in the bar
+    if(state.dlAddOpen){ state.dlAddOpen = false; state._dkAddQ = ''; updateDeckMeter(d); return; }
+    if(state.dlSearchOpen){
+      closeNameSuggest();
+      state.dlFilter = { ci: [] }; state.dlFilterOn = false;
+      state.dlSearchOpen = false; state.dlSearchQ = '';
+      try{ refreshDecklistBox(d); }catch(e){}
+    }
+    state.dlAddOpen = true; state._dkAddQ = '';
+    updateDeckMeter(d);
+    // still inside the tap: the keyboard comes up with the cursor in the field
+    const f = document.getElementById('dkAddQ'); if(f) try{ f.focus(); }catch(e){}
+  });
+  document.getElementById('dkAddAdv')?.addEventListener('click', ()=>{
+    // the full search page, adding straight to this deck, filters open
+    state.dlAddOpen = false; state._dkAddQ = '';
+    openAddCardsFor(d);
+    state.advOpen = true; render();
+  });
   document.querySelectorAll('.dk-type').forEach(b=>b.addEventListener('click', ()=>{
     // A tap on a type count JUMPS to that category and names it — the map
     // also repairs the old "Sorcerys" toast.
@@ -19695,7 +19770,13 @@ function wireMeterRow(d){
     const want = names[b.dataset.tt] || b.dataset.tt;
     const heads = Array.from(document.querySelectorAll('.cat-group > .cat-head'));
     const hit = heads.find(h=>{ const t = h.querySelector('.t'); return t && t.textContent.trim().toLowerCase().startsWith(want.toLowerCase()); });
-    if(hit) hit.scrollIntoView({ behavior:'smooth', block:'center' });
+    if(hit){
+      if(isDesk()){
+        // 1.100 PC: the category lands at the top, right under the bars
+        const g = hit.closest('.cat-group') || hit;
+        window.scrollTo({ top: Math.max(0, window.scrollY + g.getBoundingClientRect().top - deskTopCover() - 8), behavior: 'smooth' });
+      } else hit.scrollIntoView({ behavior:'smooth', block:'center' });
+    }
     toast(want);
   }));
   // The loupe opens the find bar (cursor in it at once); tapped again it
@@ -36910,6 +36991,42 @@ function ctxCardTarget(t){
   if(!img){ const tile = t.closest('.sr-tile, .sc-tile, .vg-card, .col-tile, .pair-cell'); img = tile ? tile.querySelector('img') : null; }
   return (img && cardImgShape(img)) ? img : null;
 }
+// 1.100: how much of the window's top the PC bars cover (fixed or sticky)
+function deskTopCover(){
+  // every bar pinned at the top, stacked: the title bar, then the tab and
+  // type row under it -- each one that starts where the last one ends
+  const bars = [];
+  document.querySelectorAll('.app *').forEach(el=>{
+    const pos = getComputedStyle(el).position;
+    if(pos !== 'fixed' && pos !== 'sticky') return;
+    const r = el.getBoundingClientRect();
+    if(!r.height || r.width < window.innerWidth / 3 || r.bottom > window.innerHeight / 2 || r.top < -2) return;
+    bars.push(r);
+  });
+  bars.sort((a, b)=>a.top - b.top);
+  let cover = 0;
+  bars.forEach(r=>{ if(r.top <= cover + 4) cover = Math.max(cover, r.bottom); });
+  return cover;
+}
+/* 1.100 PC: a double click on a card does what a long press does (start
+   picking several). The first click's big card closes again; the second
+   click is eaten by it. */
+document.addEventListener('dblclick', (e)=>{
+  if(!isDesk() || !pcFinePointer()) return;
+  const tg = ctxCardTarget(e.target);
+  if(!tg || e.target.closest('button:not(.vg-hit), a, .dfc-flip, .sel-check, .pair-pop-wrap')) return;
+  const scope = tg.closest('.overlay') || document.querySelector('.app > main') || document;
+  if(scope.querySelector('.sr-tile.selected, .sc-tile.selected, .vg-card.dl-msel, .col-tile.csel')) return;   // picking already: a click picks
+  e.preventDefault(); e.stopPropagation();
+  try{ cardZoom.hide(); }catch(err){}
+  state._zoomAt = null;
+  const o = { bubbles: true, cancelable: true, composed: true, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1, clientX: e.clientX, clientY: e.clientY };
+  tg.dispatchEvent(new PointerEvent('pointerdown', o));
+  setTimeout(()=>{
+    tg.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, o, { buttons: 0 })));
+    tg.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY }));   // the long press's own click, eaten by it
+  }, 520);
+}, true);
 function csPopTop(){
   const ovs = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
   const top = ovs[ovs.length - 1];
