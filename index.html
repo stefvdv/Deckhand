@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
 <title>Deckhand — MTG deck builder</title>
 <meta name="description" content="Deck builder, card search, play-data recommendations, and a life tracker for every Magic: The Gathering format — Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern, Legacy and Vintage.">
 <meta name="theme-color" content="#111111">
@@ -4070,6 +4070,16 @@ html.desk #dlPanelBox.dl-popup{left:50%;right:auto;width:min(620px, calc(100vw -
 #toTopBtn{position:fixed;right:24px;bottom:24px;z-index:41;width:52px;height:52px;border-radius:50%;background:var(--brass);color:#0A1A28;border:none;box-shadow:0 8px 22px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:0;}
 #toTopBtn[hidden]{display:none;}
 #toTopBtn svg{width:26px;height:26px;}
+/* ===== 1.104 phone ===== */
+/* Find in deck: the field ends where its filter icon ends -- it no longer
+   runs 8px on under the loupe beside it */
+.dock-search-wrap.searchbar[style*="--nb"] > input:first-of-type{margin-right:calc(var(--nb) * -36px + 8px) !important;}
+/* while finding in the deck, the riding category bar slides in BEHIND the
+   find bar instead of standing in front of it */
+html:not(.desk) body.dl-searching .app > main .cat-group > .cat-head{bottom:calc(var(--stick-b) - var(--dock-h, 56px));}
+/* a keyboard that only covers the page (older or other browsers): the deck
+   bar rides on top of it, so what you type stays in view */
+html:not(.desk).kb-up .deck-dock{bottom:var(--kb) !important;}
 /* the arrow keys walk the live lists; the chosen row is ringed */
 html.desk .kb-on{outline:2px solid var(--brass) !important;outline-offset:-2px;background:var(--hl) !important;}
 </style>
@@ -7526,7 +7536,7 @@ function uiScale(){ try{ const v = parseFloat(localStorage.getItem(LS_PREFIX + '
 function applyUiScale(){ try{
   const v = uiScale(), de = document.documentElement;
   const meta = document.querySelector('meta[name="viewport"]');
-  const tail = 'user-scalable=no, viewport-fit=cover';
+  const tail = 'user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content';   // 1.104: the keyboard pushes the bars up
   const zoomTo = (z)=>{ de.style.zoom = z === 1 ? '' : String(z); de.style.setProperty('--z', String(z)); };
   zoomTo(1);
   if(meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1, ' + tail);
@@ -8689,31 +8699,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.103';
+const APP_VERSION = '1.104';
 const CHANGELOG_NOTES = {
   en: [
-    "PC: mana curve beside the stats",
-    "PC: history folds open in full",
-    "PC: bigger cards, max six per row",
-    "PC: big card sooner, with its price",
-    "PC: right click edits decks and folders",
-    "PC: pages and menus centred",
-    "PC: arrow keys walk live lists",
-    "PC: Bulk edit beside the commander",
-    "PC: back-to-top button",
-    "Card pictures retry by themselves"
+    "Find in deck no longer covers the loupe",
+    "Type bar slides behind the find bar",
+    "Find bar stays above the keyboard"
   ],
   nl: [
-    "Pc: manacurve naast de statistieken",
-    "Pc: geschiedenis klapt helemaal open",
-    "Pc: grotere kaarten, max zes per rij",
-    "Pc: groot plaatje sneller, met prijs",
-    "Pc: rechtsklik past decks en mappen aan",
-    "Pc: pagina's en menu's gecentreerd",
-    "Pc: pijltjes door meefilterende lijsten",
-    "Pc: Bulk edit naast de commander",
-    "Pc: knop terug naar boven",
-    "Kaartplaatjes laden vanzelf opnieuw"
+    "Zoek in deck valt niet meer over loep",
+    "Typebalk schuift achter de zoekbalk",
+    "Zoekbalk blijft boven het toetsenbord"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8723,6 +8719,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-25';
 const CHANGELOG_HISTORY = [
+  { v: '1.103', d: '2026-11-25',
+    en: ["PC: mana curve beside the stats", "PC: history folds open in full", "PC: bigger cards, max six per row", "PC: big card sooner, with its price", "PC: right click edits decks and folders", "PC: pages and menus centred", "PC: arrow keys walk live lists", "PC: Bulk edit beside the commander", "PC: back-to-top button", "Card pictures retry by themselves"],
+    nl: ["Pc: manacurve naast de statistieken", "Pc: geschiedenis klapt helemaal open", "Pc: grotere kaarten, max zes per rij", "Pc: groot plaatje sneller, met prijs", "Pc: rechtsklik past decks en mappen aan", "Pc: pagina's en menu's gecentreerd", "Pc: pijltjes door meefilterende lijsten", "Pc: Bulk edit naast de commander", "Pc: knop terug naar boven", "Kaartplaatjes laden vanzelf opnieuw"] },
   { v: '1.102', d: '2026-11-25',
     en: ["PC: crisp Deckhand cursors everywhere", "PC: big card appears sooner", "PC: one scrollbar on every page", "PC: larger text in bars and headings", "Add list shows only legal cards"],
     nl: ["Pc: scherpe Deckhand-cursors overal", "Pc: groot plaatje verschijnt eerder", "Pc: één schuifbalk op elke pagina", "Pc: grotere tekst in balken en koppen", "Toevoeglijst toont alleen legale kaarten"] },
@@ -37610,6 +37609,28 @@ try{
   new MutationObserver(lock).observe(document.body, { childList: true });
   window.addEventListener('resize', lock);
 }catch(e){}
+/* 1.104 phone: where the keyboard covers the page instead of shrinking it,
+   measure it and lift the deck bar above it; the field you type in, and
+   the matching cards, stay in view */
+(function(){
+  const vv = window.visualViewport;
+  if(!vv) return;
+  const de = document.documentElement;
+  const fit = ()=>{
+    try{
+      const dock = document.querySelector('.deck-dock');
+      if(dock){ const h = Math.round(dock.getBoundingClientRect().height); if(h > 20) de.style.setProperty('--dock-h', h + 'px'); }
+      const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      const on = !de.classList.contains('desk') && kb > 80 && !!(document.activeElement && document.activeElement.closest && document.activeElement.closest('.deck-dock'));
+      de.classList.toggle('kb-up', on);
+      if(on) de.style.setProperty('--kb', kb + 'px'); else de.style.removeProperty('--kb');
+    }catch(e){}
+  };
+  vv.addEventListener('resize', fit);
+  vv.addEventListener('scroll', fit);
+  document.addEventListener('focusin', ()=>setTimeout(fit, 60));
+  document.addEventListener('focusout', ()=>setTimeout(fit, 60));
+})();
 /* 1.103 PC: on a long deck list or inside a collection folder, a gold
    button at the lower right brings you back to the top */
 {
