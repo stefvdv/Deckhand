@@ -1183,8 +1183,8 @@ button.bld-mini{border:none;background:none;cursor:pointer;display:block;}
 .dock-search-wrap{flex:1;min-width:0;display:flex;align-items:center;}
 /* Searching the deck: the commander block, description and game log step
    aside -- only the matching cards remain. */
-body.dl-searching .dl-bridge > :not(#dlPanelBox){display:none !important;}
-body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
+html:not(.desk) body.dl-searching .dl-bridge > :not(#dlPanelBox){display:none !important;}
+html:not(.desk) body.dl-searching .dl-bridge{min-height:0;margin-bottom:0;gap:0;}
 .dock-search-wrap .dock-search{padding-right:36px;}
 /* 1.53: Find in deck wears the Search page's bar (the .searchbar input rules) */
 .dock-search-wrap.searchbar{margin:0;gap:0;}
@@ -3382,7 +3382,7 @@ html.desk .dk-desk #menuBtn{margin-left:auto;}
    history runs in full (two columns of entries), the curve under it */
 html.desk #builderBody:not(:has(#decklistBox)):has(> .panel-card){max-width:none;}
 html.desk .hist-grid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:0 18px;}
-html.desk #builderBody:has(#curveDetail) > .panel-card:nth-child(2){break-after:column;}
+html.desk #builderBody:has(#curveDetail) > .panel-card:nth-child(1){break-after:column;}
 /* (F) picker tiles (Theme, Kindred, colours): squares, as many columns as fit */
 html.desk .cselect-panel.cs-artgrid{max-height:min(640px, 72vh);}
 html.desk .cs-artscroll{grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));grid-auto-rows:auto;}
@@ -4018,6 +4018,60 @@ html.desk .pull-hint{top:auto;bottom:24px;}
 .toast{transform:translateX(-50%) translateY(16px);transition:opacity .2s ease-in, transform .2s ease-in;}
 .toast.show{transform:translateX(-50%) translateY(-4px);transition:opacity .2s ease-out, transform .34s cubic-bezier(.3,1.6,.5,1);}
 @media (prefers-reduced-motion:reduce){ .toast, .toast.show{transition:opacity .2s;} }
+/* ===== 1.103 PC ===== */
+/* the history beside the stats: cut off at the panels' height, fading */
+html.desk .hist-clip{overflow:hidden;}
+html.desk .hist-clip.capped{-webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 46px), transparent);mask-image:linear-gradient(to bottom, #000 calc(100% - 46px), transparent);}
+/* the type chips' hover ring is drawn inside, so the bar never clips it */
+html.desk .dk-desk .dk-type:hover, html.desk .dk-desk .dk-type:focus-visible{outline-offset:-2px !important;}
+/* the deck list: at most six columns, the cards grow to fill the row */
+html.desk #decklistBox:has(.vg-stack) > .cat-group{--dl-n:6;flex:0 0 calc((100% - (var(--dl-n) - 1) * 18px) / var(--dl-n));width:calc((100% - (var(--dl-n) - 1) * 18px) / var(--dl-n));}
+@media (max-width:1457.98px){ html.desk #decklistBox:has(.vg-stack) > .cat-group{--dl-n:5;} }
+@media (max-width:1150px){ html.desk #decklistBox:has(.vg-stack) > .cat-group{--dl-n:4;} }
+html.desk #decklistBox .cat-group .visual-grid:not(.vg-stack):not(.vg-text) > *{flex:0 0 max(200px, calc((100% - 35px) / 6));max-width:max(200px, calc((100% - 35px) / 6));}
+/* the big card shows its price, left of the cross */
+#cardZoomBox .cz-price{position:absolute;top:-12px;right:32px;height:36px;display:flex;align-items:center;padding:0 12px;border-radius:18px;border:2px solid var(--brass);background:var(--panel);color:var(--brass);font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.5);box-sizing:border-box;}
+#cardZoomBox .cz-price[hidden]{display:none;}
+/* pages stand centred: tiles, their headings and the search bars */
+html.desk .deck-grid:not(.as-list){justify-content:center;}
+html.desk .app > main:is(.col-main, :has(> .deck-grid)) > .section-label{text-align:center;}
+html.desk .app > main > .searchbar, html.desk #tradeBarHost .searchbar{justify-content:center;}
+/* Inspiration: narrower menus, centred; a menu opens in place and pushes
+   what is under it down -- everything above it stays where it is */
+html.desk .app > main > .browse-selects{width:100%;max-width:780px;margin-left:auto !important;margin-right:auto !important;box-sizing:border-box;}
+html.desk .browse-selects:has(.cselect-panel) > .bs-row:not(:has(.cselect-panel)){display:flex;}
+html.desk .app > main.cs-open:has(> .browse-selects) > .browse-selects{background:none;}
+html.desk .browse-selects .cselect > .cselect-panel{position:static !important;top:auto !important;bottom:auto !important;margin-top:6px;max-height:min(600px, 66vh) !important;box-shadow:none;}
+html.desk .reco-themes:has(.cselect-panel) > .cselect:has(.cselect-panel){order:0;}
+/* picker tiles: every tile whole, side by side, the search on top */
+html.desk .cs-artscroll{grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)) !important;grid-auto-rows:150px !important;}
+html.desk .cs-artgrid .cselect-opt.art-tile{height:100% !important;aspect-ratio:auto !important;}
+html.desk .cs-artgrid .cselect-search{order:-1;border-top:none;border-bottom:1.5px solid var(--pop-line);box-shadow:0 8px 14px rgba(0,0,0,0.45);}
+html.desk .cs-artscroll > .art-spacer{display:none;}
+/* the filter panel at the side: as tall as its contents (it used to run on
+   to the foot of the window), larger text, a clear ∞ on the price */
+html.desk .app > main > :is(.adv-panel, #colAdvBox, #spAdvBox), html.desk .app > main > #advSlot > .adv-panel{bottom:auto !important;max-height:calc(100vh - var(--top-h)) !important;overflow-y:auto !important;border-radius:0 0 0 18px !important;border-bottom:1px solid var(--hair-2) !important;}
+html.desk :is(.adv-panel, #colAdvBox, #spAdvBox) .adv-row > label{font-size:17px;}
+html.desk :is(.adv-panel, #colAdvBox, #spAdvBox) :is(.adv-row input[type=text], .adv-row select, .cselect-btn, .nsel-btn){font-size:15.5px;}
+html.desk .pr-vals{font-size:16px;align-items:baseline;}
+html.desk .pr-vals .pr-inf{font-size:26px;line-height:0.8;font-weight:700;}
+/* the deck's panels (Bulk edit, the full deck filter) open in the free room
+   beside the commander, as tall as that block -- everything stays in view */
+html.desk .dl-bridge:not(.dl-bridge-60){grid-template-columns:minmax(0,260px) minmax(0,620px) minmax(0,1fr);}
+html.desk .dl-bridge:not(.dl-bridge-60) > #dlPanelBox.dl-cover{grid-column:3;grid-row:1;position:absolute;inset:0;min-height:0;max-height:none;}
+html.desk #dlPanelBox.dl-cover > .panel-card{flex:1 1 auto;min-height:0;}
+html.desk #dlPanelBox.dl-cover > .panel-card:has(#bulkText){display:flex;flex-direction:column;}
+html.desk #dlPanelBox.dl-cover #bulkText{flex:1 1 auto;min-height:80px;max-height:none;}
+/* Move to: the folders read top-down, the first at the top */
+html.desk .fp-grid{flex-wrap:wrap;}
+/* Import / Export: a window as wide as its contents, centred */
+html.desk #dlPanelBox.dl-popup{left:50%;right:auto;width:min(620px, calc(100vw - 32px));transform:translate(-50%, -50%);}
+/* back to the top: a gold button at the lower right that rides along */
+#toTopBtn{position:fixed;right:24px;bottom:24px;z-index:41;width:52px;height:52px;border-radius:50%;background:var(--brass);color:#0A1A28;border:none;box-shadow:0 8px 22px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:0;}
+#toTopBtn[hidden]{display:none;}
+#toTopBtn svg{width:26px;height:26px;}
+/* the arrow keys walk the live lists; the chosen row is ringed */
+html.desk .kb-on{outline:2px solid var(--brass) !important;outline-offset:-2px;background:var(--hl) !important;}
 </style>
 </head>
 <body>
@@ -4519,8 +4573,9 @@ function cselectHtml(id, options, value, placeholder, o){
           if(rd0) artPick[x.art] = tileArtPick(rd0, usedArts);
         });
       }
-      const opts = (o.tiles ? options.slice().reverse() : options).map(x=>{
-        if(x.spacer) return o.tiles ? '<span class="art-spacer" aria-hidden="true"></span>' : '';
+      const tilesUp = o.tiles && !isDesk();   // 1.103 PC: tiles read top-down
+      const opts = (tilesUp ? options.slice().reverse() : options).map(x=>{
+        if(x.spacer) return tilesUp ? '<span class="art-spacer" aria-hidden="true"></span>' : '';
         const selCls = o.multi ? ((x.v === '' ? !o.multi.length : o.multi.includes(String(x.v))) ? 'sel' : '') : (String(x.v)===String(value ?? '')?'sel':'');
         if(o.tiles){
           // Art keys can carry Scryfall clauses with double quotes
@@ -4595,9 +4650,8 @@ function csFitBrowsePanel(){
     const host = p.closest('.cselect');
     if(!host) return;
     if(isDesk()){
-      const hb = host.getBoundingClientRect().bottom;
-      p.style.bottom = 'auto'; p.style.top = 'calc(100% + 4px)';
-      p.style.maxHeight = Math.max(200, Math.floor(window.innerHeight - hb - 20)) + 'px';
+      // 1.103: the panel sits in the page flow under its menu (CSS)
+      p.style.bottom = ''; p.style.top = ''; p.style.maxHeight = '';
       return;
     }
     // De VLOER: de bovenkant van de laagste keuzebalk op de pagina. Elke
@@ -4721,14 +4775,14 @@ function wireCsSearchRows(root){
       });
       const nr = panel.querySelector('.cs-noresults');
       if(nr) nr.style.display = visibleOpts().length ? 'none' : '';
-      if(panel.classList.contains('cs-artgrid')){ const sc = panel.querySelector('.cs-artscroll') || panel; sc.scrollTop = sc.scrollHeight; }
+      if(panel.classList.contains('cs-artgrid')){ const sc = panel.querySelector('.cs-artscroll') || panel; sc.scrollTop = isDesk() ? 0 : sc.scrollHeight; }
     });
     inp.addEventListener('keydown', e=>{
       if(e.key !== 'Enter') return;
       e.preventDefault();
       const vis = visibleOpts().filter(b=>!b.classList.contains('opt-disabled'));
       // Bottom-up tile panels put the most popular option at the FOOT.
-      const first = panel.classList.contains('cs-artgrid') ? vis[vis.length-1] : vis[0];
+      const first = (panel.classList.contains('cs-artgrid') && !isDesk()) ? vis[vis.length-1] : vis[0];
       if(first) first.click();
     });
   });
@@ -5296,6 +5350,14 @@ document.addEventListener('click', (e)=>{
     const cv = document.getElementById('colChev');
     if(cv) cv.textContent = '▾';
   }
+  // 1.103 PC: Search's filter panel closes on a click beside it too
+  if(isDesk() && state.advOpen && state.screen==='search' && e.isTrusted && e.target.isConnected && e.target !== document.documentElement &&
+     !(e.target.closest && e.target.closest('#advSlot, #qChev, .overlay, .menu-pop, .cselect-panel, .otag-pop, .tag-drop, .modal-backdrop, #nselPop, #cardZoomBox, .toast, #fabMenu'))){
+    state.advOpen = false;
+    const slot = document.getElementById('advSlot'); if(slot) slot.innerHTML = '';
+    const chev = document.getElementById('qChev'); if(chev) chev.textContent = '\u25be';
+    const cotd = document.getElementById('cotdBox'); if(cotd) cotd.style.display = state.searchRan ? 'none' : '';
+  }
   if(state.spAdvOpen && state.screen==='spoilers' &&
      !(e.target.closest && (e.target.closest('#spAdvBox') || e.target.closest('#spAdvToggle')))){
     state.spAdvOpen = false;
@@ -5354,7 +5416,7 @@ function priceStopIdx(v){
 }
 function priceStopLabel(i){
   const v = PRICE_STOPS[i];
-  if(v == null) return '\u221E';
+  if(v == null) return '<span class="pr-inf">\u221E</span>';
   return '\u20AC' + (v >= 10 ? String(Math.round(v)) : (Math.round(v*100)/100).toString());
 }
 function priceSliderHtml(pid, minV, maxV){
@@ -5379,8 +5441,8 @@ function wirePriceSlider(pid, onCommit){
   const N = PRICE_STOPS.length - 1;
   const paint = ()=>{
     let a = +lo.value, b = +hi.value;
-    labLo.textContent = priceStopLabel(a);
-    labHi.textContent = priceStopLabel(b);
+    labLo.innerHTML = priceStopLabel(a);
+    labHi.innerHTML = priceStopLabel(b);
     fill.style.left = (a/N*100) + '%';
     fill.style.width = ((b-a)/N*100) + '%';
     // Both thumbs parked on the same edge: put the one that can still move on top.
@@ -8627,21 +8689,31 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.102';
+const APP_VERSION = '1.103';
 const CHANGELOG_NOTES = {
   en: [
-    "PC: crisp Deckhand cursors everywhere",
-    "PC: big card appears sooner",
-    "PC: one scrollbar on every page",
-    "PC: larger text in bars and headings",
-    "Add list shows only legal cards"
+    "PC: mana curve beside the stats",
+    "PC: history folds open in full",
+    "PC: bigger cards, max six per row",
+    "PC: big card sooner, with its price",
+    "PC: right click edits decks and folders",
+    "PC: pages and menus centred",
+    "PC: arrow keys walk live lists",
+    "PC: Bulk edit beside the commander",
+    "PC: back-to-top button",
+    "Card pictures retry by themselves"
   ],
   nl: [
-    "Pc: scherpe Deckhand-cursors overal",
-    "Pc: groot plaatje verschijnt eerder",
-    "Pc: één schuifbalk op elke pagina",
-    "Pc: grotere tekst in balken en koppen",
-    "Toevoeglijst toont alleen legale kaarten"
+    "Pc: manacurve naast de statistieken",
+    "Pc: geschiedenis klapt helemaal open",
+    "Pc: grotere kaarten, max zes per rij",
+    "Pc: groot plaatje sneller, met prijs",
+    "Pc: rechtsklik past decks en mappen aan",
+    "Pc: pagina's en menu's gecentreerd",
+    "Pc: pijltjes door meefilterende lijsten",
+    "Pc: Bulk edit naast de commander",
+    "Pc: knop terug naar boven",
+    "Kaartplaatjes laden vanzelf opnieuw"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8651,6 +8723,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-25';
 const CHANGELOG_HISTORY = [
+  { v: '1.102', d: '2026-11-25',
+    en: ["PC: crisp Deckhand cursors everywhere", "PC: big card appears sooner", "PC: one scrollbar on every page", "PC: larger text in bars and headings", "Add list shows only legal cards"],
+    nl: ["Pc: scherpe Deckhand-cursors overal", "Pc: groot plaatje verschijnt eerder", "Pc: één schuifbalk op elke pagina", "Pc: grotere tekst in balken en koppen", "Toevoeglijst toont alleen legale kaarten"] },
   { v: '1.101', d: '2026-11-25',
     en: ["Big card shows the same art as the tile", "PC: big card on a short mouse rest", "PC: quick double click picks a card", "PC: add list opens under the field", "PC: printing change stays in the deck", "PC: back button beside the logo", "Deck price button opens every time"],
     nl: ["Groot plaatje gelijk aan het kleine", "Pc: groot plaatje na even stilhouden", "Pc: snelle dubbelklik kiest een kaart", "Pc: toevoeglijst opent onder het veld", "Pc: na drukwissel blijf je in het deck", "Pc: terugknop naast het logo", "Deckprijs-knop opent elke keer"] },
@@ -12630,6 +12705,23 @@ function openFabMenu(items){
   menu.id = 'fabMenu';
   menu.innerHTML = items.map(([id, html])=>`<button id="${id}">${menuLabel(html)}</button>`).join('');
   document.body.appendChild(menu);
+  // 1.103 PC: the menu drops down under the + that opened it
+  if(isDesk()){
+    try{
+      const ae = document.activeElement;
+      let fab = ae && ae.closest ? ae.closest('.deck-fab') : null;
+      if(!fab) fab = Array.from(document.querySelectorAll('.deck-fab')).find(b=>b.getClientRects().length && !b.classList.contains('col-sel-fab'));
+      if(fab){
+        const r = fab.getBoundingClientRect();
+        const mh = menu.offsetHeight;
+        let top = r.bottom + 8;
+        if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - 8 - mh);
+        const left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8));
+        menu.style.top = Math.round(top) + 'px'; menu.style.left = Math.round(left) + 'px';
+        menu.style.right = 'auto'; menu.style.bottom = 'auto';
+      }
+    }catch(e){}
+  }
   items.forEach(([id, , fn])=>document.getElementById(id).addEventListener('click', ()=>{ menu.remove(); fn(); }));
   setTimeout(()=>document.addEventListener('click', function once(){ menu.remove(); document.removeEventListener('click', once); }), 0);
 }
@@ -12909,9 +13001,10 @@ function wireHome(){
     let lpT = null, lpFired = false;
     const arm = ()=>{ lpFired = false; clearTimeout(lpT); lpT = setTimeout(()=>{ lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} onOpen(); }, 480); };
     const disarm = ()=>clearTimeout(lpT);
-    t.addEventListener('pointerdown', arm);
+    // 1.103 PC: the right mouse button opens the menu, holding the left does not
+    t.addEventListener('pointerdown', (e)=>{ if(e.pointerType === 'mouse' && pcFinePointer()) return; arm(); });
     ['pointerup','pointercancel','pointerleave'].forEach(ev=>t.addEventListener(ev, disarm));
-    t.addEventListener('contextmenu', e=>e.preventDefault());
+    t.addEventListener('contextmenu', e=>{ e.preventDefault(); if(pcFinePointer()){ e.stopPropagation(); onOpen(); } });
     t.addEventListener('click', (e)=>{
       if(lpFired){ lpFired = false; e.preventDefault(); return; }
       onTap(e);
@@ -13179,7 +13272,7 @@ function renderFolderPicker(){
     </div>
   </div>`;
   // Bottom-up: the grid opens at its foot, where the first tiles are.
-  const sc = el.querySelector('.fp-scroll'); if(sc) sc.scrollTop = sc.scrollHeight;
+  const sc = el.querySelector('.fp-scroll'); if(sc) sc.scrollTop = isDesk() ? 0 : sc.scrollHeight;   // 1.103 PC: opens at the top
   const close=()=>brSheetClose('folderPicker');
   document.getElementById('fpCancel').addEventListener('click', close);
   el.addEventListener('click', e=>{ if(e.target===el) close(); });
@@ -13262,6 +13355,7 @@ function openTileMenu(anchorEl, items){
   // §10a viewport rule: a drop-up that overflows opens showing its FOOT —
   // the entries nearest the thumb are where reading starts.
   if(up) pop.scrollTop = pop.scrollHeight;
+  if(isDesk()) pop.style.right = 'auto';   // 1.103 PC: as wide as its entries, not to the window's edge
   pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth-8-pop.offsetWidth))+'px';
   pop.style.zIndex=200;
   items.forEach((it,i)=>pop.querySelector(`[data-i="${i}"]`).addEventListener('click', ()=>{ pop.remove(); it.fn(); }));
@@ -14510,9 +14604,10 @@ function wireCollectionPage(){
       lpT = setTimeout(()=>{ lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} openBinderLongMenu(binder, px, py); }, 480);
     };
     const disarm = ()=>clearTimeout(lpT);
-    t.addEventListener('pointerdown', arm);
+    // 1.103 PC: the right mouse button opens the menu, holding the left does not
+    t.addEventListener('pointerdown', (e)=>{ if(e.pointerType === 'mouse' && pcFinePointer()) return; arm(e); });
     ['pointerup','pointercancel','pointerleave'].forEach(ev=>t.addEventListener(ev, disarm));
-    t.addEventListener('contextmenu', e=>e.preventDefault());
+    t.addEventListener('contextmenu', e=>{ e.preventDefault(); if(pcFinePointer() && binder){ e.stopPropagation(); openBinderLongMenu(binder, e.clientX, e.clientY); } });
     t.addEventListener('click', (e)=>{
       if(lpFired){ lpFired = false; e.preventDefault(); return; }
       openBinderIn(t.dataset.binderopen);
@@ -18554,9 +18649,9 @@ function statsTabHtml(d){
   const rarityFill={Common:'#9FB0BC',Uncommon:'#8FBD8F',Rare:'#D9B24C',Mythic:'#D9702E',Special:'#B48CD6',Bonus:'#B48CD6',Unknown:'#6C8394'};
 
   return `
-    <div class="panel-card"><div class="panel-h">Recent Changes</div>
+    <div class="panel-card" id="histPanel"><div class="panel-h">Recent Changes</div>
       ${ensureChangelog(d).length
-        ? (isDesk() ? `<div class="hist-grid">${ensureChangelog(d).map(histRowHtml).join('')}</div>`   // 1.78 PC: the whole history, in place
+        ? (isDesk() ? `<div class="hist-clip"><div class="hist-grid">${ensureChangelog(d).map(histRowHtml).join('')}</div></div><button class="hist-more" id="histExpand" type="button" hidden></button>`   // 1.103 PC: as tall as the right column, opens to the whole history
                     : ensureChangelog(d).slice(0,4).map(histRowHtml).join('') + `<button class="hist-more" id="histMoreBtn">View full history →</button>`)
         : `<div class="empty-note" style="padding:8px 0;">No changes logged yet — new edits will appear here.</div>`}
     </div>
@@ -18688,8 +18783,47 @@ async function loadDeckPrice(d){
     renderTopPriced(d);
   });
 }
+/* 1.103 PC: the history column is as tall as the panels beside it; its
+   button opens it to the whole history (and closes it again) */
+function deskHistFit(){
+  const box = document.getElementById('builderBody');
+  const hp = document.getElementById('histPanel');
+  const clip = hp && hp.querySelector('.hist-clip');
+  const btn = document.getElementById('histExpand');
+  if(!box || !clip || !btn || !isDesk()) return;
+  const nl = appLang() === 'nl';
+  if(state.histOpen){
+    clip.style.maxHeight = ''; clip.classList.remove('capped');
+    btn.hidden = false; btn.textContent = (nl ? 'Minder tonen' : 'Show less') + ' \u25b4';
+    return;
+  }
+  let right = 0;
+  Array.from(box.children).forEach(el=>{ if(el !== hp && el.classList.contains('panel-card')) right += el.offsetHeight + 16; });
+  right -= 16;
+  btn.hidden = false; btn.textContent = (nl ? 'Hele geschiedenis tonen' : 'Show full history') + ' \u25be';
+  clip.style.maxHeight = ''; clip.classList.remove('capped');
+  const full = clip.scrollHeight;
+  const chrome = hp.offsetHeight - clip.offsetHeight;
+  const room = Math.max(120, right - chrome);
+  if(full <= room + btn.offsetHeight){ btn.hidden = true; return; }
+  clip.style.maxHeight = room + 'px'; clip.classList.add('capped');
+}
+function wireDeskHist(){
+  const box = document.getElementById('builderBody');
+  const btn = document.getElementById('histExpand');
+  if(!box || !btn) return;
+  btn.addEventListener('click', ()=>{ state.histOpen = !state.histOpen; deskHistFit(); });
+  try{ if(box._histRO) box._histRO.disconnect(); }catch(e){}
+  try{
+    const ro = new ResizeObserver(()=>requestAnimationFrame(deskHistFit));
+    Array.from(box.children).forEach(el=>{ if(el.id !== 'histPanel') ro.observe(el); });
+    box._histRO = ro;
+  }catch(e){}
+  deskHistFit();
+}
 function wireStatsTab(d){
   loadDeckPrice(d);
+  try{ wireDeskHist(); }catch(e){}
   // Castability picker: choose any deck card, see its colour odds by its
   // own turn — hypergeometric P(pips-needed sources among cards seen).
   {
@@ -19139,7 +19273,7 @@ function toggleDlPanel(d, panelKey){
       // The panel ELEMENT anchors the view: scrollIntoView with a
       // scroll-margin that clears the dock stack — immune to whichever
       // scroller the page uses, retried past the keyboard's animation.
-      const snapPanel = ()=>{ try{ const b = document.getElementById('dlPanelBox'); if(b){ b.scrollTop = b.scrollHeight; b.scrollIntoView({ block: 'end' }); } }catch(e){} };
+      const snapPanel = ()=>{ try{ const b = document.getElementById('dlPanelBox'); if(b){ if(isDesk()){ b.scrollTop = 0; return; } b.scrollTop = b.scrollHeight; b.scrollIntoView({ block: 'end' }); } }catch(e){} };   // 1.103 PC: the page stays where it is
       snapPanel(); setTimeout(snapPanel, 160); setTimeout(snapPanel, 480);
 }
 function wireBuilderBody(d){
@@ -19341,7 +19475,8 @@ function wireDlPanel(d){
     return;
   }
   if(state.dlPanel==='bulk'){
-    document.getElementById('applyBulkBtn').addEventListener('click', ()=>applyTextToDeck(d, document.getElementById('bulkText').value, 'bulkReport', false));
+    document.getElementById('applyBulkBtn').addEventListener('click', ()=>{ const bt = document.getElementById('bulkText'); applyTextToDeck(d, bt.value, 'bulkReport', false); bt._orig = bt.value; });
+    { const bt = document.getElementById('bulkText'); if(bt) bt._orig = bt.value; }
   } else if(state.dlPanel==='import'){
     // Load a downloaded deck list (.txt) straight into the paste box — the
     // person reviews it there and presses Replace Deck themselves; the red
@@ -19446,8 +19581,13 @@ function refreshDecklistBox(d){
   // the page doesn't jump a row (the page itself has no scroll anchoring).
   const se = document.scrollingElement || document.documentElement;
   const fromFoot = se.scrollHeight - se.scrollTop;
+  const top0 = se.scrollTop;
   if(box){ box.innerHTML = categorizedListHtml(d); wireDecklistInteractions(d); }
-  if(box && state.screen === 'decklist'){
+  // 1.103 PC: top-down, so the view holds its distance to the TOP -- the
+  // commander block and what you look at stay put (finding, view changes)
+  if(box && state.screen === 'decklist' && isDesk()){
+    if(Math.abs(se.scrollTop - top0) > 1) se.scrollTop = top0;
+  } else if(box && state.screen === 'decklist'){
     const want = Math.max(0, se.scrollHeight - fromFoot);
     if(Math.abs(se.scrollTop - want) > 1) se.scrollTop = want;
   }
@@ -28670,7 +28810,7 @@ function preloadBrowseTileArt(){
 function wireArtTiles(root){
   (root||document).querySelectorAll('.cselect-panel.cs-artgrid').forEach(panel=>{
     const sc = panel.querySelector('.cs-artscroll') || panel;
-    sc.scrollTop = sc.scrollHeight;   // bottom-up: open at the foot
+    sc.scrollTop = isDesk() ? 0 : sc.scrollHeight;   // bottom-up: open at the foot (PC: at the top)
     const io = new IntersectionObserver((entries)=>{
       entries.forEach(en=>{
         if(!en.isIntersecting) return;
@@ -29018,6 +29158,7 @@ async function loadDeckMeta(d){
    'any' right beside it, then upward, left to right. (cselectHtml shows tile
    options last-first from the top, so the list is handed over in that order.) */
 function bsTileOrder(anyOpt, list){
+  if(isDesk()) return (anyOpt ? [anyOpt] : []).concat(list);   // 1.103 PC: reading order, top-down
   const rows = [anyOpt ? [list[0], anyOpt].filter(Boolean) : list.slice(0, 2)];
   for(let i = anyOpt ? 1 : 2; i < list.length; i += 2) rows.push(list.slice(i, i + 2));
   // an odd count leaves the top row half full: an invisible spacer keeps
@@ -37167,6 +37308,7 @@ document.addEventListener('contextmenu', (e)=>{
   // While cards are being multi-selected, a click toggles -- leave it be.
   if(scope.querySelector('.sr-tile.selected, .sc-tile.selected, .vg-card.dl-msel, .col-tile.csel')) return;
   csPopCloseNow();
+  state._deskNoPage = 0;
   state._csPopAt = { x: e.clientX, y: e.clientY, t: Date.now() };
   try{ tg.click(); }catch(err){}
   setTimeout(()=>{ if(state._csPopAt && Date.now() - state._csPopAt.t >= 1100) state._csPopAt = null; }, 1250);
@@ -37363,15 +37505,16 @@ const cardZoom = (function(){
   const ensure = ()=>{
     if(box) return box;
     box = document.createElement('div'); box.id = 'cardZoomBox';
-    box.innerHTML = '<img id="cardZoomImg" alt=""><button type="button" class="cz-x" aria-label="Close" title="Close">✕</button>';
+    box.innerHTML = '<img id="cardZoomImg" alt=""><span class="cz-price" hidden></span><button type="button" class="cz-x" aria-label="Close" title="Close">✕</button>';
     document.body.appendChild(box);
     box.querySelector('.cz-x').addEventListener('click', (e)=>{ e.stopPropagation(); hide(); });
     box.addEventListener('click', (e)=>{ e.stopPropagation(); hide(); });
     return box;
   };
-  const show = (src, x, y, card)=>{
+  const show = (src, x, y, card, name)=>{
     if(!src) return;
     ensure();
+    { const zi = box.querySelector('img'); const nm = name || (card && card.name) || ''; if(zi && zi.getAttribute('alt') !== nm) zi.setAttribute('alt', nm); }
     const vw = window.innerWidth, vh = window.innerHeight, pad = 12, gap = 22;
     let h = Math.min(520, Math.round(vh * 0.72), vh - 2 * pad), w = Math.round(h * 488 / 680);   // 1.78: smaller
     if(w > vw - 2 * pad){ w = vw - 2 * pad; h = Math.round(w * 680 / 488); }
@@ -37382,6 +37525,7 @@ const cardZoom = (function(){
     const im = box.querySelector('img');
     if(im.getAttribute('src') !== src) im.setAttribute('src', src);
     box.style.cssText = `display:block;left:${left}px;top:${top}px;width:${w}px;height:${h}px;`;
+    { const pr = box.querySelector('.cz-price'); if(pr){ pr.hidden = true; pr.textContent = ''; } }
     // 1.78: the same turn (split, aftermath, flip, planes) or flip (two
     // faces) button the card wears everywhere else
     box.querySelectorAll(':scope > .dfc-flip-box').forEach(x=>x.remove());
@@ -37399,8 +37543,27 @@ const cardZoom = (function(){
   window.addEventListener('wheel', ()=>{ if(open) hide(); }, { passive: true, capture: true });
   window.addEventListener('resize', ()=>{ if(open) hide(); });
   document.addEventListener('keydown', (e)=>{ if(open && e.key === 'Escape') hide(); }, true);
-  return { show, hide, isOpen: ()=>open };
+  const price = (txt)=>{ const pr = box && box.querySelector('.cz-price'); if(!pr) return; pr.textContent = txt || ''; pr.hidden = !txt; };
+  return { show, hide, price, isOpen: ()=>open };
 })();
+/* 1.103 PC: the price the big card shows -- the tile's own price when it
+   shows one, else the remembered printing's, else today's cheapest */
+function zoomPriceText(el){
+  try{
+    const tile = el.closest('.sr-tile, .sc-tile, .vg-card, .col-tile, .pair-cell');
+    const shown = tile && tile.querySelector('.st-price, .vr-p');
+    const st = shown ? shown.textContent.trim() : '';
+    if(/\d/.test(st) && /€/.test(st)) return st;
+    const vn = tile && tile.querySelector('.vr-n');
+    const name = el.tagName === 'IMG' ? (el.getAttribute('alt') || '') : (vn ? vn.textContent : '');
+    if(!name) return '';
+    let v = null;
+    try{ const ppr = printPrefFor({ name }); if(ppr && typeof ppr.p === 'number' && !isNaN(ppr.p)) v = ppr.p; }catch(e){}
+    if(v == null){ const hit = state.priceCache && state.priceCache[name]; if(hit && hit.v != null && !isNaN(hit.v)) v = hit.v; }
+    if(v == null){ const b = bulkEurFor(name); if(typeof b === 'number' && isFinite(b)) v = b; }
+    return v == null ? '' : fmtEur(v);
+  }catch(e){ return ''; }
+}
 /* 1.101 PC: one click opens the card, a QUICK double click (both clicks
    within 300 ms) picks it, like a long press. The single click waits that
    long to see whether a second one follows. The big card no longer comes
@@ -37433,8 +37596,12 @@ function deskLongPress(tg, e){
     }
     clearTimeout(wait);
     waitTg = tg; waitAt = Date.now();
-    wait = setTimeout(()=>{ wait = null; waitTg = null; try{ if(tg.isConnected) tg.click(); }catch(err){} }, DESK_DBL_MS);
+    // 1.103: a plain click no longer opens the card's page (the right
+    // mouse button shows everything); other tile actions still run
+    wait = setTimeout(()=>{ wait = null; waitTg = null; state._deskNoPage = Date.now(); try{ if(tg.isConnected) tg.click(); }catch(err){} }, DESK_DBL_MS);
   }, true);
+  // the next press anywhere starts something new: a card page it opens may show
+  window.addEventListener('pointerdown', (e)=>{ if(e.isTrusted) state._deskNoPage = 0; }, true);
 }
 /* 1.102 PC: while a page lies over another, only that page scrolls -- the
    one behind holds still, so there is one scrollbar, at the window's edge */
@@ -37443,10 +37610,125 @@ try{
   new MutationObserver(lock).observe(document.body, { childList: true });
   window.addEventListener('resize', lock);
 }catch(e){}
+/* 1.103 PC: on a long deck list or inside a collection folder, a gold
+   button at the lower right brings you back to the top */
+{
+  let btn = null, t = 0;
+  const want = ()=>isDesk() && window.scrollY > 600 &&
+    (state.screen === 'decklist' || (state.screen === 'collection' && !!(state.colFilter && state.colFilter.binder))) &&
+    !document.querySelector('body > .overlay:not(.cs-pop):not(.swipe-leaving)');
+  const sync = ()=>{
+    t = 0;
+    const on = want();
+    if(on && !btn){
+      btn = document.createElement('button');
+      btn.id = 'toTopBtn'; btn.type = 'button';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+      btn.addEventListener('click', ()=>{ try{ window.scrollTo({ top: 0, behavior: 'smooth' }); }catch(e){ window.scrollTo(0, 0); } });
+      document.body.appendChild(btn);
+    }
+    if(btn){
+      btn.hidden = !on;
+      const lbl = appLang() === 'nl' ? 'Terug naar boven' : 'Back to top';
+      if(btn.title !== lbl){ btn.title = lbl; btn.setAttribute('aria-label', lbl); }
+    }
+  };
+  const soon = ()=>{ if(!t) t = requestAnimationFrame(sync); };
+  window.addEventListener('scroll', soon, { passive: true });
+  window.addEventListener('resize', soon);
+  setInterval(soon, 1000);   // page changes without a scroll
+}
+/* 1.103 PC: a click beside Bulk edit or Import / Export closes it. Bulk
+   edit with changes not yet saved asks first: save them, or let them go. */
+document.addEventListener('pointerdown', (e)=>{
+  if(!isDesk() || !e.isTrusted || e.button !== 0) return;
+  const p = state.dlPanel;
+  if(state.screen !== 'decklist' || !(p === 'bulk' || p === 'impexp' || p === 'import' || p === 'export')) return;
+  const t = e.target;
+  if(!t || !t.closest || t === document.documentElement) return;
+  if(t.closest('#dlPanelBox, [data-panel], #menuPop, #menuBtn, .overlay, .menu-pop, .deckpick-scrim, .modal-backdrop, .cselect-panel, .otag-pop, #nameSuggest, #cardZoomBox, .toast')) return;
+  const close = ()=>{ try{ history.back(); }catch(err){ state.dlPanel = null; render(); } };
+  const bt = document.getElementById('bulkText');
+  if(p === 'bulk' && bt && bt._orig != null && bt.value !== bt._orig){
+    const d = getDeck(state.activeDeckId);
+    const nl = appLang() === 'nl';
+    e.preventDefault();
+    openInAppConfirm(nl ? 'Wijzigingen in Bulk edit opslaan?' : 'Save your Bulk edit changes?', async (ok)=>{
+      if(ok && d){ try{ await applyTextToDeck(d, bt.value, 'bulkReport', false); }catch(err){} }
+      close();
+    }, { ok: nl ? 'Opslaan' : 'Save', cancel: nl ? 'Niet opslaan' : "Don't save", must: true });
+    return;
+  }
+  close();
+}, true);
+/* 1.103 PC: in every list that filters as you type, the up and down arrow
+   keys walk the rows (in the order you see them) and Enter picks the ringed
+   one. The deck's own add field has had this since 1.101. */
+function kbListOf(inp){
+  const vis = (el)=>el && el.getClientRects().length > 0;
+  const opts = (root, sel)=>Array.from(root.querySelectorAll(sel)).filter(b=>vis(b) && !b.disabled && b.style.display !== 'none');
+  const cp = inp.closest('.cselect-panel');
+  if(cp) return opts(cp, '.cselect-opt');
+  const td = inp.closest('.tag-drop');
+  if(td) return opts(td, '[data-picktag]');
+  let a = inp.parentElement;
+  for(let i = 0; a && i < 5; i++, a = a.parentElement){
+    const pop = Array.from(a.querySelectorAll('.otag-pop:not([hidden])')).find(vis);
+    if(pop) return opts(pop, 'button');
+  }
+  const ns = document.getElementById('nameSuggest');
+  if(vis(ns)) return opts(ns, '.ns-opt, button');
+  const ov = inp.closest('.overlay');
+  if(ov){ const l = ov.querySelector('.col-addlist'); if(vis(l)) return opts(l, '.col-addrow'); }
+  return [];
+}
+document.addEventListener('keydown', (e)=>{
+  if(!isDesk()) return;
+  const inp = e.target;
+  if(!inp || inp.tagName !== 'INPUT' || inp.id === 'dkAddQ') return;
+  if(e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
+  const list = kbListOf(inp);
+  const cur = list.find(b=>b.classList.contains('kb-on'));
+  if(e.key === 'Enter'){
+    if(!cur) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    cur.classList.remove('kb-on');
+    cur.click();
+    return;
+  }
+  if(!list.length) return;
+  e.preventDefault();
+  // the order on screen (some lists are drawn bottom-up)
+  const pos = list.map(b=>{ const r = b.getBoundingClientRect(); return { b, t: Math.round(r.top), l: Math.round(r.left) }; })
+    .sort((x, y)=>(x.t - y.t) || (x.l - y.l)).map(x=>x.b);
+  let i = cur ? pos.indexOf(cur) : -1;
+  if(e.key === 'ArrowDown') i = i < 0 ? 0 : Math.min(pos.length - 1, i + 1);
+  else i = i < 0 ? pos.length - 1 : Math.max(0, i - 1);
+  list.forEach(b=>b.classList.remove('kb-on'));
+  pos[i].classList.add('kb-on');
+  try{ pos[i].scrollIntoView({ block: 'nearest' }); }catch(err){}
+}, true);
+/* 1.103 PC: the search bars stand centred; their loupe follows the field */
+{
+  let t = 0;
+  const fit = ()=>{
+    t = 0;
+    document.querySelectorAll('.app > main > .searchbar, #tradeBarHost .searchbar').forEach(sb=>{
+      const inp = sb.querySelector(':scope > input');
+      if(!inp) return;
+      if(!isDesk()){ if(sb.style.getPropertyValue('--sb-pl')) sb.style.removeProperty('--sb-pl'); return; }
+      const v = inp.offsetLeft + 'px';
+      if(sb.style.getPropertyValue('--sb-pl') !== v) sb.style.setProperty('--sb-pl', v);
+    });
+  };
+  const soon = ()=>{ if(!t) t = requestAnimationFrame(fit); };
+  try{ new MutationObserver(soon).observe(document.body, { childList: true, subtree: true }); }catch(e){}
+  window.addEventListener('resize', soon);
+}
 /* 1.101 PC: resting the mouse on a card for a moment shows it big, beside
    the pointer. It stays put while the mouse moves over that card and goes
    the moment the mouse leaves it; brushing over many cards shows nothing. */
-const HOVER_ZOOM_MS = 500;
+const HOVER_ZOOM_MS = 350;
 {
   let t = null, tg = null, mx = 0, my = 0;
   const srcOf = (el)=>{
@@ -37470,8 +37752,9 @@ const HOVER_ZOOM_MS = 500;
       if(tg !== el || !el.isConnected || document.querySelector('.overlay.cs-pop')) return;
       const src = srcOf(el);
       if(!src) return;
-      cardZoom.show(src, mx, my, null);
+      cardZoom.show(src, mx, my, null, el.tagName === 'IMG' ? (el.getAttribute('alt') || '') : (el.closest('.vg-card')?.querySelector('.vr-n')?.textContent || ''));
       document.getElementById('cardZoomBox')?.classList.add('hover');
+      try{ cardZoom.price(zoomPriceText(el)); }catch(e){}
     }, HOVER_ZOOM_MS);
   }, true);
   document.addEventListener('mouseout', (e)=>{
@@ -37483,6 +37766,12 @@ const HOVER_ZOOM_MS = 500;
   document.addEventListener('mousedown', ()=>{ clearTimeout(t); t = null; }, true);
 }
 function zoomTake(card){
+  const np = state._deskNoPage;
+  if(np){
+    state._deskNoPage = 0;
+    const cp = state._csPopAt;
+    if(Date.now() - np < 2500 && !(cp && Date.now() - cp.t < 1200)) return true;
+  }
   const z = state._zoomAt;
   if(!z || Date.now() - z.t > 800) return false;
   state._zoomAt = null;
@@ -38647,7 +38936,14 @@ try{
     for(const m of muts){
       if(m.type === 'attributes'){
         const im = m.target;
-        if(im.tagName === 'IMG' && !im.classList.contains('art-slow')){ im.classList.remove('art-pending'); artPendingOne(im); }
+        if(im.tagName === 'IMG' && !im.classList.contains('art-slow')){
+          // 1.103: a picture that failed once keeps no plain card when it is
+          // given ANOTHER picture (the big card, a reused tile)
+          if(im.classList.contains('art-missing') && (im.getAttribute('src') || '') !== (im.dataset.artsrc || '')){
+            im.classList.remove('art-missing'); im.style.removeProperty('--sk'); im._artTry = 0; im._artRetrying = false;
+          }
+          im.classList.remove('art-pending'); artPendingOne(im);
+        }
         continue;
       }
       m.addedNodes.forEach(nd=>{ if(nd.nodeType === 1) paintPendingArt(nd); });
@@ -38688,10 +38984,27 @@ function artSlowSweep(){
     im.classList.add('art-slow', 'art-pending');
     im.src = BLANK_CARD_URI;
     try{ if(_artIO) _artIO.unobserve(im); }catch(e){}
-    const probe = new Image();
-    probe.onload = ()=>{ if(im.isConnected && im.classList.contains('art-slow')){ im.classList.remove('art-slow', 'art-pending'); im._artIO = false; im.src = src; } };
-    probe.src = src;
+    artProbe(im, src, ()=>{ if(im.isConnected && im.classList.contains('art-slow')){ im.classList.remove('art-slow', 'art-pending'); im._artIO = false; im.src = src; } });
   }
+}
+/* 1.103: a picture that did not come is asked again by itself -- after a
+   moment, then longer and longer (2, 6, 15, 40 s, then every 2 minutes
+   while it is on the page). Loaded out of sight; the tile only changes
+   once the picture is complete. Before, only "the line is back" retried,
+   and on a good line that never happens. */
+const ART_RETRY_MS = [2000, 6000, 15000, 40000, 120000];
+function artProbe(im, src, onOk){
+  if(!im || !src) return;
+  const n = im._artTry || 0;
+  const go = ()=>{
+    if(!im.isConnected || (im.dataset.artsrc || '') !== src){ im._artRetrying = false; return; }   // gone, or showing another card now
+    if(document.hidden){ setTimeout(go, 3000); return; }
+    const probe = new Image();
+    probe.onload = ()=>{ im._artTry = 0; try{ onOk(); }catch(e){} };
+    probe.onerror = ()=>{ im._artTry = (im._artTry || 0) + 1; artProbe(im, src, onOk); };
+    probe.src = src;
+  };
+  setTimeout(go, ART_RETRY_MS[Math.min(n, ART_RETRY_MS.length - 1)]);
 }
 setInterval(()=>{ try{ if(!document.hidden) artSlowSweep(); }catch(e){} }, 1000);
 /* Redraw every skeleton on screen — used once the card database finishes
@@ -38784,7 +39097,20 @@ document.addEventListener('error', (e)=>{
     const holder = im.parentElement;
     if(holder && /^inline/.test(getComputedStyle(holder).display)) holder.classList.add('art-missing-holder');
   }catch(err){}
+  // 1.103: and asked again, by itself
+  if(!im._artRetrying){
+    im._artRetrying = true;
+    artProbe(im, src, ()=>{
+      im._artRetrying = false;
+      if(!im.isConnected || !im.classList.contains('art-missing') || (im.dataset.artsrc || '') !== src) return;
+      im.classList.remove('art-missing');
+      im.style.removeProperty('--sk');
+      if(im.src !== src) im.src = src; else { im.removeAttribute('src'); im.src = src; }
+    });
+  }
 }, true);
+// back in front: every picture still missing gets a fresh chance
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ try{ retryMissingArt(); }catch(e){} } });
 setTimeout(()=>{ try{ preloadCotd(); }catch(e){} }, 4000);
 /* 1.92: the app keeps itself current. The page may come from the cache (a
    slow line, or Android keeping the app alive for days), so a newer deploy
