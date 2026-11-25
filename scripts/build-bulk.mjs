@@ -193,6 +193,14 @@ function printLooks(c){
   if(c.highres_image) p += 1;
   return p;
 }
+// an ordinary printing: what counts towards "printed most often" -- promos,
+// list stamps, special series and showcase / borderless frames do not
+function regularPrint(c){
+  if(c.promo || c.set_type === 'promo' || c.full_art || c.border_color === 'borderless') return false;
+  if(c.set === 'plst' || /^(sld|slp|slc|sch)$/.test(String(c.set || ''))) return false;
+  if(Array.isArray(c.frame_effects) && c.frame_effects.some(x=>/showcase|extendedart|etched|inverted|shatteredglass|textless/.test(x))) return false;
+  return true;
+}
 export async function pickIconicArt(prints, wanted){
   // wanted: optional Set of oracle_ids; prints: iterable of printing objects
   const by = new Map();   // oracle_id -> Map(art -> { n, first, best })
@@ -206,17 +214,20 @@ export async function pickIconicArt(prints, wanted){
     if(!arts){ arts = new Map(); by.set(c.oracle_id, arts); }
     const rel = String(c.released_at || '9999');
     const look = printLooks(c);
+    const reg = regularPrint(c) ? 1 : 0;
     const a = arts.get(art);
-    if(!a){ arts.set(art, { n: 1, first: rel, best: c.id, look, rel }); continue; }
-    a.n++;
+    if(!a){ arts.set(art, { n: reg, first: rel, best: c.id, look, rel }); continue; }
+    a.n += reg;
     if(rel < a.first) a.first = rel;
     if(look > a.look || (look === a.look && rel > a.rel)){ a.best = c.id; a.look = look; a.rel = rel; }
   }
   const out = new Map();   // oracle_id -> printing id
   for(const [oid, arts] of by){
     let top = null;
+    // most ordinary printings first; a tie goes to the best-looking card
+    // (a regular frame over a showcase), then to the art that came first
     for(const a of arts.values()){
-      if(!top || a.n > top.n || (a.n === top.n && a.first < top.first)) top = a;
+      if(!top || a.n > top.n || (a.n === top.n && (a.look > top.look || (a.look === top.look && a.first < top.first)))) top = a;
     }
     if(top) out.set(oid, top.best);
   }
