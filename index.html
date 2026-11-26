@@ -4086,6 +4086,35 @@ html:not(.desk) #dlPanelBox.dl-cover{z-index:35;}
 /* while you type in one of its fields, the panel scrolls (so that field can
    be shown above the keyboard); otherwise its lists may stick out as before */
 html:not(.desk) #dlPanelBox.dl-cover:has(:is(input:not([type]), input[type=text], input[type=search], textarea):focus){overflow-y:auto !important;}
+/* 1.106: and then its gold search button rests at the panel's own foot (its
+   usual distance is measured from the window's foot, which threw it up) */
+html:not(.desk) #dlPanelBox.dl-cover:has(:is(input:not([type]), input[type=text], input[type=search], textarea):focus) .df-compact > .adv-go-row{bottom:0 !important;}
+/* a window in the middle of the screen has its rim all the way round --
+   the sheets it was built from stand on the foot, without a lower edge */
+.deckpick-scrim[style*="align-items: center"] > .deckpick, html.desk .deckpick-scrim > .deckpick{border-bottom:2px solid transparent !important;}
+/* New Game: the chosen format is marked like the chosen table layout */
+.life-fmt-row .chip.active{border:2px solid var(--gold) !important;background:color-mix(in srgb, var(--gold) 22%, transparent) !important;color:var(--gold) !important;box-shadow:0 0 0 2px color-mix(in srgb, var(--gold) 35%, transparent);}
+.life-fmt-row .chip.active small{opacity:1;}
+/* phone filter panels (Search, Collection, Spoilers): no empty strip at the
+   right or the foot -- the gold buttons stand in a narrow column at the
+   left, beside the last rows: the loupe at the bottom, history above it,
+   both the size of the history button */
+html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox){padding-right:4px !important;padding-bottom:6px !important;}
+html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > .panel-card:has(> .adv-go-row){padding-left:52px !important;padding-right:10px !important;padding-bottom:10px !important;}
+html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > .panel-card > .adv-go-row{height:0 !important;width:36px !important;margin:0 0 0 -44px !important;padding:0 !important;flex-direction:column-reverse !important;align-items:center !important;justify-content:flex-start !important;gap:10px;overflow:visible;}
+html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > .panel-card > .adv-go-row > .adv-go{width:36px !important;height:36px !important;margin:0 !important;flex:none;align-self:center;}
+html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > .panel-card > .adv-go-row > .adv-go svg{width:19px !important;height:19px !important;}
+/* an (i) stays with the last word of its label */
+.lbl-glue{white-space:nowrap;}
+/* Admiral legal sets: one row per set, its symbol and its name */
+.ls-box .ls-row{display:flex;align-items:center;gap:10px;padding:6px 2px;font-size:14.5px;color:var(--ink-text);}
+.ls-box .ls-row + .ls-row{border-top:1px solid color-mix(in srgb, var(--line) 55%, transparent);}
+.ls-box .ls-row img.set-ico{height:18px !important;max-width:30px !important;}
+.ls-box .ls-noico{display:inline-block;width:18px;flex:none;}
+.ls-box .ls-name{flex:1 1 auto;min-width:0;}
+.ls-box .ls-ub{flex:none;font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--sub-text);border:1px solid var(--line);border-radius:6px;padding:1px 6px;}
+/* example cards in the format rules: tap one to see it big */
+.rule-card{display:inline;background:none;border:none;padding:0;margin:0;font:inherit;color:var(--brass);text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;}
 /* the arrow keys walk the live lists; the chosen row is ringed */
 html.desk .kb-on{outline:2px solid var(--brass) !important;outline-offset:-2px;background:var(--hl) !important;}
 </style>
@@ -4168,7 +4197,8 @@ const BANNED_NAMES = [
 "Temporal Manipulation","Tergrid, God of Fright","The Gitrog Monster","Time Vault","Time Walk",
 "Time Warp","Tinker","Thassa's Oracle","Trade Secrets","Upheaval","Vampiric Tutor",
 "Walk-In Closet // Forgotten Cellar","Winter Orb","Worldly Tutor","Yawgmoth's Agenda",
-"Yawgmoth's Bargain","Choco, Seeker of Paradise","Sin, Spira's Punishment","Traveling Chocobo","Vivi Ornitier"
+"Yawgmoth's Bargain","Choco, Seeker of Paradise","Sin, Spira's Punishment","Traveling Chocobo","Vivi Ornitier",
+"Captain Kathryn Janeway","Captain Pike, Fullness of Time","Mole Man, Moloid Master"
 ];
 const DECK_TOTAL = 60;
 /* ---------- Formats ----------
@@ -5089,7 +5119,7 @@ document.addEventListener('click', (e)=>{
   const ubt = e.target.closest && e.target.closest('[data-ubtoggle]');
   if(ubt){
     const ubox = ubt.parentElement.querySelector('.ub-switches');
-    if(ubox) _up(ubt, ()=>{ foldToggle(ubox, (open)=>{ ubt.innerHTML = foldIcoHtml(open) + ' ' + ubToggleLabel(); }, ubt); });
+    if(ubox) _up(ubt, ()=>{ foldToggle(ubox, (open)=>{ ubt.innerHTML = foldIcoHtml(open) + ' ' + ubToggleLabel(ubt.dataset.ubtoggle); }, ubt); });
     return;
   }
   const bi = e.target.closest && e.target.closest('.ban-item');
@@ -5485,7 +5515,7 @@ let bannedSet = new Set(BANNED_NAMES.map(norm));
    (a banned card is banned, and while the all-sets switch is off those cards
    aren't legal anyway) — but the in-app banned list only SHOWS them when the
    switch is on, keeping the everyday view purely in-universe. */
-const UB_BAN_DEFAULTS = ["Choco, Seeker of Paradise","Sin, Spira's Punishment","Traveling Chocobo","Vivi Ornitier"];
+const UB_BAN_DEFAULTS = ["Choco, Seeker of Paradise","Sin, Spira's Punishment","Traveling Chocobo","Vivi Ornitier","Captain Kathryn Janeway","Captain Pike, Fullness of Time","Mole Man, Moloid Master"];
 let EFFECTIVE_UB_BANS = new Set(UB_BAN_DEFAULTS.map(norm));
 /* The Commander banned list comes live from Scryfall itself (banned:commander),
    cached for a day — always the official, current list, zero maintenance. */
@@ -8705,15 +8735,27 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.105';
+const APP_VERSION = '1.106';
 const CHANGELOG_NOTES = {
   en: [
-    "Deck filter lies in front of type bar",
-    "Deck filter: typed field stays in view"
+    "Deck filter: gold button stays in place",
+    "Format rules: tap an example card",
+    "Admiral: list of every legal set",
+    "Universes Beyond sets get own heading",
+    "Admiral bans Pike, Mole Man, Janeway",
+    "Life: chosen format is highlighted",
+    "Popups have their full gold edge",
+    "Filter: buttons beside the last rows"
   ],
   nl: [
-    "Deckfilter ligt voor de typebalk",
-    "Deckfilter: typveld blijft in beeld"
+    "Deckfilter: gouden knop blijft staan",
+    "Formatregels: tik op een voorbeeldkaart",
+    "Admiral: lijst van alle legale sets",
+    "Universes Beyond-sets onder eigen kopje",
+    "Admiral bant Pike, Mole Man, Janeway",
+    "Life: gekozen format licht op",
+    "Popups hebben hun volle gouden rand",
+    "Filter: knoppen naast de laatste rijen"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8723,6 +8765,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-26';
 const CHANGELOG_HISTORY = [
+  { v: '1.105', d: '2026-11-26',
+    en: ["Deck filter lies in front of type bar", "Deck filter: typed field stays in view"],
+    nl: ["Deckfilter ligt voor de typebalk", "Deckfilter: typveld blijft in beeld"] },
   { v: '1.104', d: '2026-11-25',
     en: ["Find in deck no longer covers the loupe", "Type bar slides behind the find bar", "Find bar stays above the keyboard"],
     nl: ["Zoek in deck valt niet meer over loep", "Typebalk schuift achter de zoekbalk", "Zoekbalk blijft boven het toetsenbord"] },
@@ -25163,7 +25208,40 @@ const FMT_FULL_NL = {
   duel: "<div class=\"rules-text\"><h4>Deckbouw</h4><p>Een singleton-deck van 100 kaarten onder leiding van een legendary commander, gebouwd binnen zijn color identity — het Commander-skelet, afgestemd op één tegen één.</p><h4>Spelen</h4><p>Twee spelers, elk 20 life; wie begint, slaat zijn eerste draw over. Commander damage bestaat niet: je wint op life, poison en de gewone manieren. Er wordt zonder sideboard gespeeld.</p><h4>Bans</h4><p>Een onafhankelijk regelcomité houdt een eigen, strengere banlijst bij, met ook kaarten die alleen <em>als commander</em> gebannen zijn — zie Banlijsten hierboven.</p></div>",
   predh: "<div class=\"rules-text\"><h4>Het idee</h4><p>Commander zoals het er in het voorjaar van 2011 uitzag: alleen kaarten van vóór New Phyrexia zijn legaal, en niets wat later kwam — geen planeswalker-commanders, geen partners, geen kaarten die voor Commander-producten zijn ontworpen.</p><h4>Deckbouw</h4><p>Een singleton-deck van 100 kaarten onder leiding van een legendary creature, gebouwd binnen zijn color identity, alleen met prints van vóór 2011.</p><h4>Spelen</h4><p>Multiplayer, 40 life; 21 commander damage van dezelfde commander schakelt een speler uit — de klassieke regels van toen.</p><h4>Bans</h4><p>De banlijst staat stil op de Commander-lijst van 2011 en wordt bewaard door de PreDH-community — zie Banlijsten hierboven.</p></div>"
 };
-function fmtFullRulesHtml(id){
+/* 1.106: the example cards named in the format rules can be tapped -- the
+   card opens big (like on the ban lists) and closes back to the text */
+const RULES_EXAMPLE_CARDS = ['Courser of Kruphix', 'Perennial Behemoth', 'Splendid Reclamation', 'Borborygmos Enraged', 'Destroy the Evidence', 'Satyr Wayfinder', 'Relentless Rats', 'Cultivate'];
+function linkRuleCards(html){
+  let out = String(html || '');
+  RULES_EXAMPLE_CARDS.forEach(n=>{
+    const re = new RegExp('(^|[^A-Za-z])(' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![A-Za-z])', 'g');
+    out = out.replace(re, (m, pre, name)=>pre + '<button type="button" class="rule-card" data-name="' + encodeURIComponent(name) + '">' + name + '</button>');
+  });
+  return out;
+}
+async function openRuleCardPreview(btn){
+  const name = decodeURIComponent(btn.dataset.name || '');
+  try{
+    const ix = await bulkIndexReady();
+    const e = ix && ix.byName && ix.byName.get(name.toLowerCase());
+    const c = e ? bulkToCardish(e) : null;
+    const src = c ? cardImageLarge(c) : '';
+    if(src){ showPreview(src, c.border_color === 'white'); return; }
+  }catch(err){}
+  try{
+    const res = await sfFetch(SF_BASE + '/cards/named?fuzzy=' + encodeURIComponent(name));
+    if(res.ok){ const card = await res.json(); showPreview(cardImageLarge(card), card.border_color === 'white'); }
+    else toast("Couldn't find that card on Scryfall.");
+  }catch(err){ toast("Couldn't reach Scryfall."); }
+}
+document.addEventListener('click', (e)=>{
+  const rc = e.target && e.target.closest && e.target.closest('.rule-card');
+  if(!rc) return;
+  e.preventDefault(); e.stopPropagation();
+  openRuleCardPreview(rc);
+}, true);
+function fmtFullRulesHtml(id){ return linkRuleCards(_fmtFullRulesHtml(id)); }
+function _fmtFullRulesHtml(id){
   if(id === 'admiral') return admiralFullRulesHtml();
   if(id === 'commander') return commanderFullRulesHtml();
   if(appLang() === 'nl' && FMT_FULL_NL[id]) return FMT_FULL_NL[id];
@@ -25315,13 +25393,37 @@ async function loadMtgNews(box){
 }
 /* Admiral only: which Universes Beyond sets the table plays (Rule Zero).
    Lives with Admiral's ban list, since it is part of that format's law. */
-function ubToggleLabel(){ return appLang() === 'nl' ? 'Admiral legale sets' : 'Admiral legal sets'; }
+function ubToggleLabel(which){
+  if(which === 'ub') return 'Universes Beyond sets';
+  return appLang() === 'nl' ? 'Admiral legale sets' : 'Admiral legal sets';
+}
+/* 1.106: every set an Admiral deck may draw from -- each set that was ever
+   in Standard (or Type 2), newest first, with its symbol -- plus the
+   Universes Beyond sets your table switched on. */
+function admiralLegalSets(){
+  const byName = new Map();
+  Object.entries(state.legalSetsMeta || {}).forEach(([c, n])=>byName.set(norm(n), c));
+  const dates = {};
+  (state.allSetsRaw || []).forEach(x=>{ dates[x.code] = x.released_at || ''; if(!byName.has(norm(x.name))) byName.set(norm(x.name), x.code); });
+  const rows = LEGAL_SET_NAMES.map((n, i)=>({ name: n, code: byName.get(norm(n)) || '', i }));
+  (autoSets.codes || []).forEach((c, k)=>{ if(!rows.some(r=>r.code === c)) rows.push({ name: (autoSets.names || {})[c] || c.toUpperCase(), code: c, i: 1000 + k }); });
+  ubCatalog().filter(x=>state.ubOn[norm(x.name)]).forEach((x, k)=>rows.push({ name: x.name, code: x.code || '', i: 2000 + k, ub: true }));
+  rows.forEach(r=>{ r.d = dates[r.code] || ''; });
+  // newest first: by release date where known, else by the list's own order
+  return rows.sort((a, b)=>(a.d && b.d && a.d !== b.d) ? (a.d < b.d ? 1 : -1) : (b.i - a.i));
+}
+function admiralLegalSetsListHtml(){
+  const rows = admiralLegalSets();
+  return rows.map(r=>`<div class="ls-row">${r.code ? setIcoHtml(r.code, 'common') : '<span class="ls-noico"></span>'}<span class="ls-name">${escapeHtml(r.name)}</span>${r.ub ? '<span class="ls-ub">UB</span>' : ''}</div>`).join('');
+}
 function ubSwitchesHtml(){
   const nl = appLang() === 'nl';
   const cat = ubCatalog();
-  if(!cat.length) return '';
-  // Bottom-up: the button sits at the foot, the switches unfold above it.
-  return `<div class="ub-wrap"><button type="button" class="ghost-btn" data-ubtoggle style="display:block;width:100%;margin:2px 0;">${foldIcoHtml(false)} ${ubToggleLabel()}</button>`
+  // Bottom-up: each button sits at the foot, its list unfolds above it.
+  const legal = `<div class="ub-wrap"><button type="button" class="ghost-btn" data-ubtoggle="legal" style="display:block;width:100%;margin:2px 0;">${foldIcoHtml(false)} ${ubToggleLabel('legal')}</button>`
+    + `<div class="ub-switches ls-box" data-ublegal hidden>${admiralLegalSetsListHtml()}</div></div>`;
+  if(!cat.length) return legal;
+  return legal + `<div class="ub-wrap"><button type="button" class="ghost-btn" data-ubtoggle="ub" style="display:block;width:100%;margin:2px 0;">${foldIcoHtml(false)} ${ubToggleLabel('ub')}</button>`
     + `<div class="ub-switches" hidden><div class="ban-sub">Universes Beyond — ${nl ? 'Rule Zero: kies wat jullie tafel speelt' : 'Rule Zero: pick what your table plays'}</div>`
     + cat.map(x=>`<div class="settings-row" style="border:none;padding:7px 0;"><div class="l1" style="font-size:14.5px;font-weight:600;">${escapeHtml(x.name)}${x.preview?' <span style="font-size:11.5px;font-weight:500;color:var(--sub-text-2);font-style:italic;">· spoilers</span>':''}</div><label class="toggle-switch"><input type="checkbox" data-ubset="${escapeHtml(norm(x.name))}" ${state.ubOn[norm(x.name)]?'checked':''}><span class="track"></span><span class="knob"></span></label></div>`).join('')
     + `</div></div>`;
@@ -25334,6 +25436,7 @@ document.addEventListener('change', (e)=>{
   else delete state.ubOn[key];
   state.inspireCache = {}; state.browseCache = {};
   persistSettings();
+  try{ document.querySelectorAll('[data-ublegal]').forEach(b=>{ b.innerHTML = admiralLegalSetsListHtml(); }); }catch(err){}
   const entry = ubCatalog().find(x=>norm(x.name)===key);
   const nm = entry ? entry.name : 'Set';
   if(t.checked){
@@ -37652,7 +37755,8 @@ try{
       const br = box.getBoundingClientRect(), ar = a.getBoundingClientRect();
       const dock = document.querySelector('.deck-dock');
       const lo = Math.max(br.top, 0) + 8;
-      const hi = Math.min(br.bottom, dock ? dock.getBoundingClientRect().top : window.innerHeight) - 8;
+      const go = box.querySelector('.adv-go-row');
+      const hi = Math.min(br.bottom, dock ? dock.getBoundingClientRect().top : window.innerHeight) - 8 - (go ? go.offsetHeight + 6 : 0);
       if(ar.bottom > hi) box.scrollTop += ar.bottom - hi;
       else if(ar.top < lo) box.scrollTop -= lo - ar.top;
     }catch(e){}
@@ -37760,6 +37864,27 @@ document.addEventListener('keydown', (e)=>{
   pos[i].classList.add('kb-on');
   try{ pos[i].scrollIntoView({ block: 'nearest' }); }catch(err){}
 }, true);
+/* 1.106: an (i) after a label is glued to the label's last word, so it
+   never drops onto a line of its own ("Oracle text (i)") */
+{
+  let t = 0;
+  const glue = ()=>{
+    t = 0;
+    document.querySelectorAll('.adv-row > label > .info-i').forEach(ic=>{
+      const lbl = ic.parentElement, prev = ic.previousSibling;
+      if(!prev || prev.nodeType !== 3) return;
+      const txt = prev.nodeValue, m = /(\S+)\s*$/.exec(txt);
+      if(!m) return;
+      prev.nodeValue = txt.slice(0, m.index);
+      const sp = document.createElement('span');
+      sp.className = 'lbl-glue';
+      sp.textContent = m[1];
+      lbl.insertBefore(sp, ic);
+      sp.appendChild(ic);
+    });
+  };
+  try{ new MutationObserver(()=>{ if(!t) t = requestAnimationFrame(glue); }).observe(document.body, { childList: true, subtree: true }); }catch(e){}
+}
 /* 1.103 PC: the search bars stand centred; their loupe follows the field */
 {
   let t = 0;
