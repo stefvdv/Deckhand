@@ -4106,6 +4106,8 @@ html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > 
 html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > .panel-card > .adv-go-row > .adv-go svg{width:19px !important;height:19px !important;}
 /* an (i) stays with the last word of its label */
 .lbl-glue{white-space:nowrap;}
+/* the phone deck bar: a button that steps aside takes no room */
+.deck-dock > button[hidden]{display:none !important;}
 /* Admiral legal sets: one row per set, its symbol and its name */
 .ls-box .ls-row{display:flex;align-items:center;gap:10px;padding:6px 2px;font-size:14.5px;color:var(--ink-text);}
 .ls-box .ls-row + .ls-row{border-top:1px solid color-mix(in srgb, var(--line) 55%, transparent);}
@@ -8735,27 +8737,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.106';
+const APP_VERSION = '1.107';
 const CHANGELOG_NOTES = {
   en: [
-    "Deck filter: gold button stays in place",
-    "Format rules: tap an example card",
-    "Admiral: list of every legal set",
-    "Universes Beyond sets get own heading",
-    "Admiral bans Pike, Mole Man, Janeway",
-    "Life: chosen format is highlighted",
-    "Popups have their full gold edge",
-    "Filter: buttons beside the last rows"
+    "Find/add bar: more room for the field"
   ],
   nl: [
-    "Deckfilter: gouden knop blijft staan",
-    "Formatregels: tik op een voorbeeldkaart",
-    "Admiral: lijst van alle legale sets",
-    "Universes Beyond-sets onder eigen kopje",
-    "Admiral bant Pike, Mole Man, Janeway",
-    "Life: gekozen format licht op",
-    "Popups hebben hun volle gouden rand",
-    "Filter: knoppen naast de laatste rijen"
+    "Zoek-/toevoegbalk: meer ruimte voor veld"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8765,6 +8753,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-26';
 const CHANGELOG_HISTORY = [
+  { v: '1.106', d: '2026-11-26',
+    en: ["Deck filter: gold button stays in place", "Format rules: tap an example card", "Admiral: list of every legal set", "Universes Beyond sets get own heading", "Admiral bans Pike, Mole Man, Janeway", "Life: chosen format is highlighted", "Popups have their full gold edge", "Filter: buttons beside the last rows"],
+    nl: ["Deckfilter: gouden knop blijft staan", "Formatregels: tik op een voorbeeldkaart", "Admiral: lijst van alle legale sets", "Universes Beyond-sets onder eigen kopje", "Admiral bant Pike, Mole Man, Janeway", "Life: gekozen format licht op", "Popups hebben hun volle gouden rand", "Filter: knoppen naast de laatste rijen"] },
   { v: '1.105', d: '2026-11-26',
     en: ["Deck filter lies in front of type bar", "Deck filter: typed field stays in view"],
     nl: ["Deckfilter ligt voor de typebalk", "Deckfilter: typveld blijft in beeld"] },
@@ -15813,10 +15804,13 @@ function deckMeterHtml(d){
   </div>`;
   }
   // \u22EF at the far left, the tools after it, the \u203A chevron at the far right.
+  // 1.107 phone: while the bar is a find or add field, the ⋯ and the › step
+  // aside -- the field gets the room; the loupe / + closes it again
+  const dkField = state.dlAddOpen || state.dlSearchOpen;
   return `<div class="deck-dock" id="deckMeterRow">
-    <button class="icon-btn" id="menuBtn" title="${trS('Menu')}">${ICONS.dots}</button>
+    <button class="icon-btn" id="menuBtn" title="${trS('Menu')}"${dkField ? ' hidden' : ''}>${ICONS.dots}</button>
     <div class="dk-mid">${mid}</div>
-    <button class="dk-arr" id="dockNext"${state._dlSel && state._dlSel.size ? ' hidden' : ''}>${ICONS.chevRight}</button>
+    <button class="dk-arr" id="dockNext"${(dkField || (state._dlSel && state._dlSel.size)) ? ' hidden' : ''}>${ICONS.chevRight}</button>
     ${state.menuOpen ? menuPopHtml() : ''}
   </div>`;
 }
