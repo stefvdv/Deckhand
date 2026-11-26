@@ -8741,15 +8741,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.108';
+const APP_VERSION = '1.109';
 const CHANGELOG_NOTES = {
   en: [
-    "Filters only as tall as needed",
-    "Scrolling with deck filter: no jumps"
+    "Add bar: back closes it, deck stays",
+    "Add bar: + before Advanced"
   ],
   nl: [
-    "Filters alleen zo hoog als nodig",
-    "Scrollen bij deckfilter: geen sprongen"
+    "Toevoegbalk: terug sluit balk, niet deck",
+    "Toevoegbalk: + vóór Uitgebreid"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8759,6 +8759,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-26';
 const CHANGELOG_HISTORY = [
+  { v: '1.108', d: '2026-11-26',
+    en: ["Filters only as tall as needed", "Scrolling with deck filter: no jumps"],
+    nl: ["Filters alleen zo hoog als nodig", "Scrollen bij deckfilter: geen sprongen"] },
   { v: '1.107', d: '2026-11-26',
     en: ["Find/add bar: more room for the field"],
     nl: ["Zoek-/toevoegbalk: meer ruimte voor veld"] },
@@ -15786,8 +15789,8 @@ function deckMeterHtml(d){
       // 1.100 phone: the + turns the tools into an add field (as on the PC),
       // with Advanced beside it for the full search page
       ? `<div class="dock-search-wrap searchbar dk-add dk-add-m"><input id="dkAddQ" class="dock-search" enterkeyhint="search" placeholder="${appLang() === 'nl' ? 'Kaart toevoegen\u2026' : 'Add a card\u2026'}" value="${escapeHtml(state._dkAddQ || '')}" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="dk-add-list" id="dkAddList" hidden></div></div>
-        <button type="button" class="dk-tool dk-adv" id="dkAddAdv">${appLang() === 'nl' ? 'Uitgebreid' : 'Advanced'}</button>
-        <button class="dk-tool active" id="dockAddCards" title="${appLang() === 'nl' ? 'Sluiten' : 'Close'}">${ICONS.plus}</button>`
+        <button class="dk-tool active" id="dockAddCards" title="${appLang() === 'nl' ? 'Sluiten' : 'Close'}">${ICONS.plus}</button>
+        <button type="button" class="dk-tool dk-adv" id="dkAddAdv">${appLang() === 'nl' ? 'Uitgebreid' : 'Advanced'}</button>`
       : state.dlSearchOpen
       // The tools left of the loupe step aside for a search bar; its ▾
       // opens the full filter, like the Collection's bar.
@@ -38212,6 +38215,17 @@ function appBackStep(viaHistory){
     state.colFilter.binder = null;
     render();
     if(!viaHistory) { /* the binder's own entry stays inert */ }
+    return true;
+  }
+  // 1.109: the phone's add-a-card bar consumes the back press too: it closes
+  // and the bar is the usual one again -- the deck stays open
+  if(state.screen === 'decklist' && state.dlAddOpen && !isDesk()){
+    state.dlAddOpen = false; state._dkAddQ = '';
+    try{ document.querySelectorAll('.dk-add-float').forEach(x=>x.remove()); }catch(err){}
+    try{ if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); }catch(err){}
+    const dd = getDeck(state.activeDeckId);
+    try{ if(dd) updateDeckMeter(dd); }catch(err){}
+    rearm({screen: state.screen}, '#'+state.screen);
     return true;
   }
   // The find-in-deck bar consumes the back press: close it, restore the list.
