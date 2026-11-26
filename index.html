@@ -4104,6 +4104,10 @@ html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > 
 html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > .panel-card > .adv-go-row{height:0 !important;width:36px !important;margin:0 0 0 -44px !important;padding:0 !important;flex-direction:column-reverse !important;align-items:center !important;justify-content:flex-start !important;gap:10px;overflow:visible;}
 html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > .panel-card > .adv-go-row > .adv-go{width:36px !important;height:36px !important;margin:0 !important;flex:none;align-self:center;}
 html:not(.desk) .app > main :is(#advSlot > .adv-panel, #colAdvBox, #spAdvBox) > .panel-card > .adv-go-row > .adv-go svg{width:19px !important;height:19px !important;}
+/* 1.108: the panel is only as tall as its contents (it stood from the top
+   bar to the foot, a large empty block above short filters); a long one
+   still stops under the top bar and scrolls */
+html:not(.desk) .app > main > :is(.adv-panel, #colAdvBox, #spAdvBox), html:not(.desk) .app > main > #advSlot > .adv-panel{top:auto !important;max-height:calc(100dvh - 54px - env(safe-area-inset-top) - var(--stick-b, calc(var(--nav-h) + 60px)) - 12px) !important;overflow-y:auto !important;}
 /* an (i) stays with the last word of its label */
 .lbl-glue{white-space:nowrap;}
 /* the phone deck bar: a button that steps aside takes no room */
@@ -8737,13 +8741,15 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.107';
+const APP_VERSION = '1.108';
 const CHANGELOG_NOTES = {
   en: [
-    "Find/add bar: more room for the field"
+    "Filters only as tall as needed",
+    "Scrolling with deck filter: no jumps"
   ],
   nl: [
-    "Zoek-/toevoegbalk: meer ruimte voor veld"
+    "Filters alleen zo hoog als nodig",
+    "Scrollen bij deckfilter: geen sprongen"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8753,6 +8759,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-26';
 const CHANGELOG_HISTORY = [
+  { v: '1.107', d: '2026-11-26',
+    en: ["Find/add bar: more room for the field"],
+    nl: ["Zoek-/toevoegbalk: meer ruimte voor veld"] },
   { v: '1.106', d: '2026-11-26',
     en: ["Deck filter: gold button stays in place", "Format rules: tap an example card", "Admiral: list of every legal set", "Universes Beyond sets get own heading", "Admiral bans Pike, Mole Man, Janeway", "Life: chosen format is highlighted", "Popups have their full gold edge", "Filter: buttons beside the last rows"],
     nl: ["Deckfilter: gouden knop blijft staan", "Formatregels: tik op een voorbeeldkaart", "Admiral: lijst van alle legale sets", "Universes Beyond-sets onder eigen kopje", "Admiral bant Pike, Mole Man, Janeway", "Life: gekozen format licht op", "Popups hebben hun volle gouden rand", "Filter: knoppen naast de laatste rijen"] },
@@ -10570,13 +10579,18 @@ function closeDeckFilterPanel(d, keepFilter){
   try{ refreshDecklistBox(d); }catch(e){}
   scrollToPageFoot();
 }
-document.addEventListener('pointerdown', (e)=>{
+// 1.108: a TAP beside the deck filter closes it (that tap does nothing
+// else). Putting a finger down to scroll no longer closes it -- that redrew
+// the list under the finger, so it jumped and the hold picked a card.
+document.addEventListener('click', (e)=>{
   if(state.screen !== 'decklist' || !state.dlSearchOpen || state.dlPanel !== 'dsearch') return;
   const t = e.target;
-  if(!t || !t.closest) return;
-  if(t.closest('#dlPanelBox') || t.closest('#dockFilterChev') || t.closest('#nameSuggest') || t.closest('.cselect-panel') || t.closest('.otag-pop') || t.closest('#inAppConfirm')) return;
+  if(!t || !t.closest || !t.isConnected) return;
+  if(t.closest('#dlPanelBox') || t.closest('#dockFilterChev') || t.closest('#nameSuggest') || t.closest('.cselect-panel') || t.closest('.otag-pop') || t.closest('#inAppConfirm') || t.closest('.deck-dock') || t.closest('.overlay')) return;
   const d = getDeck(state.activeDeckId);
-  if(d) closeDeckFilterPanel(d, true);
+  if(!d) return;
+  e.preventDefault(); e.stopPropagation();
+  closeDeckFilterPanel(d, true);
 }, true);
 /* An open dropdown or context menu claims the next tap: touching anything
    outside it closes the menu and NOTHING else happens — the element under the
@@ -19777,7 +19791,9 @@ function wireDecklistInteractions(d){
     let lpT = null, lpFired = false;
     const selectable = (loc === 'main' || loc === 'maybe');
     if(selectable){
-      const arm = ()=>{ lpFired = false; clearTimeout(lpT); lpT = setTimeout(()=>{ lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} dlSelToggle(d, key, parent); }, 480); };
+      // 1.108: a hold only picks when the card is still there and the page
+      // held still -- a list that redraws or scrolls under the finger picks nothing
+      const arm = ()=>{ lpFired = false; clearTimeout(lpT); const sy = window.scrollY; lpT = setTimeout(()=>{ if(!parent.isConnected || Math.abs(window.scrollY - sy) > 8) return; lpFired = true; try{ navigator.vibrate && navigator.vibrate(8); }catch(err){} dlSelToggle(d, key, parent); }, 480); };
       const disarm = ()=>clearTimeout(lpT);
       parent.addEventListener('pointerdown', arm);
       ['pointerup','pointercancel','pointerleave'].forEach(ev=>parent.addEventListener(ev, disarm));
