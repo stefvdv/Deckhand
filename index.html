@@ -8741,15 +8741,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.109';
+const APP_VERSION = '1.110';
 const CHANGELOG_NOTES = {
   en: [
-    "Add bar: back closes it, deck stays",
-    "Add bar: + before Advanced"
+    "Search: a note shows how many cards"
   ],
   nl: [
-    "Toevoegbalk: terug sluit balk, niet deck",
-    "Toevoegbalk: + vóór Uitgebreid"
+    "Zoeken: melding met aantal kaarten"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8759,6 +8757,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-26';
 const CHANGELOG_HISTORY = [
+  { v: '1.109', d: '2026-11-26',
+    en: ["Add bar: back closes it, deck stays", "Add bar: + before Advanced"],
+    nl: ["Toevoegbalk: terug sluit balk, niet deck", "Toevoegbalk: + vóór Uitgebreid"] },
   { v: '1.108', d: '2026-11-26',
     en: ["Filters only as tall as needed", "Scrolling with deck filter: no jumps"],
     nl: ["Filters alleen zo hoog als nodig", "Scrollen bij deckfilter: geen sprongen"] },
@@ -22179,6 +22180,21 @@ async function runAdvancedSearch(){
     state.searchResults = searchSortList((list || []).filter(isRealCard)); state.searchError = !!err; state.searching = false;
     renderSearchResultsBox();
     if(state.searchSort === 'salt') loadSearchSalt();
+    // 1.110: a short note says how many cards the search found -- once per
+    // search, again only if a later top-up changes the number
+    if(!err){
+      try{
+        const dp = state.searchPinnedDeckId ? getDeck(state.searchPinnedDeckId) : null;
+        const n = searchVisiblePool(dp).length;
+        const T = state._srToast || {};
+        if(T.seq !== mySeq || T.n !== n){
+          state._srToast = { seq: mySeq, n };
+          const nl = appLang() === 'nl', more = (state.searchResults || []).length >= 300 ? '+' : '';
+          toast(!n ? (nl ? 'Geen kaarten' : 'No cards')
+            : n + more + ' ' + (n === 1 && !more ? (nl ? 'kaart' : 'card') : (nl ? 'kaarten' : 'cards')));
+        }
+      }catch(e){}
+    }
   };
   // 1. The device answers first — instantly, and without touching the queue.
   //    An EMPTY array is a real answer ("nothing matches"); only null means
