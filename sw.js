@@ -8,7 +8,7 @@
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v1.110';
+const VERSION = 'admiral-v1.111';
 // Card images and fonts survive app updates: this cache is deliberately
 // NOT version-named, so activating a new version never wipes it.
 const ASSETS = 'admiral-assets-v1';
@@ -69,6 +69,47 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+/* 1.111: card pictures and fonts are really KEPT now. A picture on the page
+   asks "no-cors", and such an answer is sealed: it reads as status 0, never
+   "ok" -- so the old check never stored a single card picture, and only the
+   browser's own small cache held them. Now the worker asks for the same file
+   openly (Scryfall and Google Fonts allow that), so the answer can be checked
+   and stored, and the next visit -- on any line or none -- takes it from the
+   phone. The store keeps the newest ASSET_MAX files; the oldest go first. */
+const ASSET_MAX = 4000;
+let _corsOk = true, _corsMiss = 0, _puts = 0;
+async function assetFirst(e) {
+  const cache = await caches.open(ASSETS);
+  const key = e.request.url;
+  const hit = await cache.match(key, { ignoreVary: true }) || await cache.match(e.request, { ignoreVary: true });
+  if (hit) return hit;
+  if (_corsOk) {
+    try {
+      const res = await fetch(key, { mode: 'cors', credentials: 'omit' });
+      if (res.ok) {
+        e.waitUntil(cache.put(key, res.clone()).then(() => { if (++_puts % 50 === 0) return trimAssets(cache); }).catch(() => {}));
+      }
+      _corsMiss = 0;
+      return res;
+    } catch (err) {
+      // the open request failed: try the sealed way (not stored). Only when
+      // that works while the open one keeps failing is the host refusing
+      // open requests -- then stop asking openly for this session.
+      const res = await fetch(e.request);
+      if (res && res.type === 'opaque' && ++_corsMiss >= 3) _corsOk = false;
+      return res;
+    }
+  }
+  return fetch(e.request);
+}
+async function trimAssets(cache) {
+  try {
+    const keys = await cache.keys();
+    const over = keys.length - ASSET_MAX;
+    for (let i = 0; i < over; i++) await cache.delete(keys[i]);
+  } catch (e) {}
+}
+
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
@@ -87,14 +128,7 @@ self.addEventListener('fetch', (e) => {
   const isFont = url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com');
   const isCardImage = url.hostname === 'cards.scryfall.io' || url.hostname.endsWith('.scryfall.io');
   if (isFont || isCardImage) {
-    e.respondWith(
-      caches.open(ASSETS).then(cache =>
-        cache.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-          if (res.ok) cache.put(e.request, res.clone());
-          return res;
-        }))
-      )
-    );
+    e.respondWith(assetFirst(e));
     return;
   }
 
