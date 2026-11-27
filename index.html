@@ -8741,17 +8741,13 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.112';
+const APP_VERSION = '1.113';
 const CHANGELOG_NOTES = {
   en: [
-    "Deck pictures fetched ahead on wifi",
-    "Inspiration for your decks ready sooner",
-    "News photos kept for offline reading"
+    "Find in deck also narrows the maybeboard"
   ],
   nl: [
-    "Deckplaatjes vooraf geladen op wifi",
-    "Inspiratie voor je decks sneller klaar",
-    "Nieuwsfoto's ook zonder internet"
+    "Zoeken in deck filtert ook maybeboard"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8761,6 +8757,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-27';
 const CHANGELOG_HISTORY = [
+  { v: '1.112', d: '2026-11-27',
+    en: ["Deck pictures fetched ahead on wifi", "Inspiration for your decks ready sooner", "News photos kept for offline reading"],
+    nl: ["Deckplaatjes vooraf geladen op wifi", "Inspiratie voor je decks sneller klaar", "Nieuwsfoto's ook zonder internet"] },
   { v: '1.111', d: '2026-11-27',
     en: ["Card pictures are kept for offline use"],
     nl: ["Kaartplaatjes blijven op je toestel"] },
@@ -18444,10 +18443,13 @@ function categorizedListHtml(d){
   if(d.maybeboard.length){
     let mIdxs = d.maybeboard.map((_,i)=>i).sort((a,b)=>d.maybeboard[a].name.localeCompare(d.maybeboard[b].name));
     if(_dlq) mIdxs = mIdxs.filter(i=>dlFindMatch(d.maybeboard[i], _dlq));
+    if(_fPred) mIdxs = mIdxs.filter(i=>{ const c = d.maybeboard[i]; return !!c && _fPred(c); });   // 1.113: the deck filter narrows it too
     if(mIdxs.length){
       if(!('Maybeboard' in state.collapsed)) state.collapsed['Maybeboard'] = true;   // closed until opened
       // A sideboard is part of the deck, not a pile of maybes: it starts open.
-      const collapsed = _dlq ? false : (deckIsConstructed(d) ? !!state.collapsed['Sideboard'] : !!state.collapsed['Maybeboard']);
+      // 1.113: a search no longer folds it open -- it stays as it was, and
+      // shows only the matches once you open it
+      const collapsed = deckIsConstructed(d) ? !!state.collapsed['Sideboard'] : !!state.collapsed['Maybeboard'];
       html += `<div class="cat-group">
         <div class="cat-head ${collapsed?'collapsed':''}" data-cat="${deckIsConstructed(d) ? 'Sideboard' : 'Maybeboard'}"><span class="t">${trS(sideName(d))}</span><span class="cat-price">${groupPriceLabel(mIdxs.map(i=>d.maybeboard[i]))}</span><span class="n">${mIdxs.length}</span><span class="car">▾</span></div>
         <div class="cat-body ${collapsed?'collapsed':''}">${dlGroupGridHtml(dedupeIdxs(mIdxs, d.maybeboard), d.maybeboard, 'maybe')}</div>
