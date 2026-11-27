@@ -8741,13 +8741,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.111';
+const APP_VERSION = '1.112';
 const CHANGELOG_NOTES = {
   en: [
-    "Card pictures are kept for offline use"
+    "Deck pictures fetched ahead on wifi",
+    "Inspiration for your decks ready sooner",
+    "News photos kept for offline reading"
   ],
   nl: [
-    "Kaartplaatjes blijven op je toestel"
+    "Deckplaatjes vooraf geladen op wifi",
+    "Inspiratie voor je decks sneller klaar",
+    "Nieuwsfoto's ook zonder internet"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8757,6 +8761,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-27';
 const CHANGELOG_HISTORY = [
+  { v: '1.111', d: '2026-11-27',
+    en: ["Card pictures are kept for offline use"],
+    nl: ["Kaartplaatjes blijven op je toestel"] },
   { v: '1.110', d: '2026-11-26',
     en: ["Search: a note shows how many cards"],
     nl: ["Zoeken: melding met aantal kaarten"] },
@@ -38770,22 +38777,106 @@ function _noteInputListeners(){
     try{ window.addEventListener(ev, note, {passive:true, capture:true}); }catch(e){}
   });
 }
+/* 1.112: the deck pictures are no longer warmed here -- warmDeckImages
+   keeps them for good (below). What is left: the open deck's big pictures,
+   on the PC, where the big card appears on a mouse rest. The collection is
+   not fetched ahead any more: its pictures are kept once seen (1.111). */
 function buildWarmQueue(){
   const seen = new Set(), urls = [];
   const push = (u)=>{ if(u && typeof u === 'string' && !u.startsWith('data:') && !seen.has(u)){ seen.add(u); urls.push(u); } };
   const act = getDeck(state.activeDeckId);
-  const decks = [];
-  if(act) decks.push(act);
-  (state.decksIndex||[]).forEach(d=>{ if(!act || d.id !== act.id) decks.push(d); });
-  decks.forEach(d=>{ try{ deckLeaders(d).concat(d.cards||[], d.maybeboard||[]).forEach(c=>push(cardImage(c))); }catch(e){} });
-  ((state.collection||{}).items||[]).forEach(it=>{ if(it) push(it.img); });
-  if(act){ try{ deckLeaders(act).concat(act.cards||[]).forEach(c=>push(cardImageLarge(c))); }catch(e){} }
+  if(act && isDesk()){ try{ deckLeaders(act).concat(act.cards||[]).forEach(c=>push(cardImageLarge(c))); }catch(e){} }
   return urls;
 }
+/* 1.112: background fetching only on wifi (or a cable) -- never on mobile
+   data. A browser that does not say which line it is on counts as wifi on
+   the PC only. */
+function warmLineOk(){
+  const c = navigator.connection;
+  if(c && c.saveData) return false;
+  if(c && c.type) return c.type === 'wifi' || c.type === 'ethernet';
+  try{ return pcFinePointer(); }catch(e){ return false; }
+}
+/* 1.112: every card in every deck has its picture on the phone. On wifi,
+   while nobody touches the app, the pictures (the size the deck list shows)
+   are fetched one at a time into their own store, which is never trimmed
+   while a deck holds the card -- a deck opens complete anywhere, also one
+   never opened on this phone, and without a line. A picture already kept
+   from browsing moves over; one whose card left every deck is let go. */
+const DECK_IMG_CACHE = 'admiral-decks-v1', ASSET_IMG_CACHE = 'admiral-assets-v1';
+let _deckWarmBusy = false, _deckWarmAt = 0;
+function _sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+async function _warmWait(){
+  // the person always wins; false = stop for now (no wifi, app gone)
+  for(;;){
+    if(!warmLineOk() || navigator.onLine === false) return false;
+    if(!_warmGateClosed()) return true;
+    await _sleep(1500);
+  }
+}
+async function warmDeckImages(){
+  if(_deckWarmBusy || !('caches' in window)) return;
+  if(Date.now() - _deckWarmAt < 20 * 60 * 1000) return;
+  if(!warmLineOk()) return;
+  _deckWarmBusy = true; _deckWarmAt = Date.now();
+  try{
+    const want = new Set();
+    (state.decksIndex || []).forEach(d=>{
+      try{ deckLeaders(d).concat(d.cards || [], d.maybeboard || []).forEach(c=>{ const u = cardImageMed(c); if(u && /^https:\/\/cards\.scryfall\.io\//.test(u)) want.add(u); }); }catch(e){}
+    });
+    const dc = await caches.open(DECK_IMG_CACHE);
+    const have = new Set((await dc.keys()).map(r=>r.url));
+    for(const u of have) if(!want.has(u)) await dc.delete(u);
+    const todo = Array.from(want).filter(u=>!have.has(u));
+    if(!todo.length) return;
+    const ac = await caches.open(ASSET_IMG_CACHE);
+    let n = 0;
+    for(const u of todo){
+      if(!(await _warmWait())) return;
+      const kept = await ac.match(u, { ignoreVary: true });
+      if(kept){ await dc.put(u, kept); await ac.delete(u); continue; }
+      try{
+        const r = await fetch(u, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
+        if(r.ok){ await dc.put(u, r); n++; }
+      }catch(e){}
+      await _sleep(250);
+    }
+    if(n) try{ sfJournal('deck pictures kept: +' + n); }catch(e){}
+  }catch(e){}
+  finally{ _deckWarmBusy = false; }
+}
+/* 1.112: Inspiration for your own commanders opens at once, the first time
+   too: on wifi, while the app is idle, the EDHREC page of each deck's
+   commander (or pair) is fetched ahead into the 30-day EDHREC store. Pages
+   already there cost nothing. */
+let _edhWarmBusy = false, _edhWarmAt = 0;
+async function warmDeckEdhrec(){
+  if(_edhWarmBusy || Date.now() - _edhWarmAt < 6 * 3600 * 1000 || !warmLineOk()) return;
+  _edhWarmBusy = true; _edhWarmAt = Date.now();
+  try{
+    const seen = new Set();
+    for(const d of (state.decksIndex || [])){
+      let L = [];
+      try{ if(deckKind(d) !== 'cmdr') continue; L = deckLeaders(d).filter(Boolean); }catch(e){ continue; }
+      if(!L.length) continue;
+      const sig = L.map(c=>c.name).join('|');
+      if(seen.has(sig)) continue;
+      seen.add(sig);
+      if(!(await _warmWait())) return;
+      try{ if(L.length > 1) await edhrecPairPage(L[0], L[1]); else await edhrecCommanderPage(L[0]); }catch(e){}
+      await _sleep(1500);
+    }
+  }catch(e){}
+  finally{ _edhWarmBusy = false; }
+}
+async function warmAhead(){ await warmDeckImages(); await warmDeckEdhrec(); }
+window.addEventListener('load', ()=>{ setTimeout(()=>{ try{ _noteInputListeners(); warmAhead(); }catch(e){} }, 12000); });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) setTimeout(()=>{ try{ warmAhead(); }catch(e){} }, 5000); });
+try{ navigator.connection && navigator.connection.addEventListener('change', ()=>{ try{ warmAhead(); }catch(e){} }); }catch(e){}
 function _warmGateClosed(){
   const conn = navigator.connection;
   const apiBusy = !!(typeof _sfQ === 'object' && _sfQ && _sfQ.hi && _sfQ.hi.length) || _searchBusy > 0;   // 1.84
-  return _bulkSyncing || document.hidden || navigator.onLine === false || !!(conn && conn.saveData) ||
+  return _bulkSyncing || document.hidden || navigator.onLine === false || !!(conn && conn.saveData) || !warmLineOk() ||
          apiBusy || (Date.now() - _warmLastInput) < 2500;
 }
 function startImageWarmer(){

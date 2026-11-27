@@ -8,10 +8,16 @@
    - Fonts + Scryfall card images: cache-first (they never change for a given
      URL), keeping repeat browsing fast and cheap.
    - Scryfall API responses are NOT cached — searches and prices stay live. */
-const VERSION = 'admiral-v1.111';
+const VERSION = 'admiral-v1.112';
 // Card images and fonts survive app updates: this cache is deliberately
 // NOT version-named, so activating a new version never wipes it.
 const ASSETS = 'admiral-assets-v1';
+// 1.112: the pictures of every card in your decks live in their own store,
+// filled by the app on wifi and never trimmed while a deck holds the card;
+// the latest news photos have a small store of their own.
+const DECKS = 'admiral-decks-v1';
+const NEWS = 'admiral-news-v1';
+const NEWS_MAX = 40;
 // How long the page may wait for a fresh copy before the cached one wins.
 // Long enough that a quick connection still serves the newest deploy at once,
 // short enough that a slow one never holds the launcher's icon hostage.
@@ -64,7 +70,7 @@ self.addEventListener('message', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== ASSETS).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== ASSETS && k !== DECKS && k !== NEWS).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -79,9 +85,11 @@ self.addEventListener('activate', (e) => {
 const ASSET_MAX = 4000;
 let _corsOk = true, _corsMiss = 0, _puts = 0;
 async function assetFirst(e) {
+  // the app's own deck-picture fetch: straight through, the app stores it
+  if (e.request.cache === 'no-store') return fetch(e.request);
   const cache = await caches.open(ASSETS);
   const key = e.request.url;
-  const hit = await cache.match(key, { ignoreVary: true }) || await cache.match(e.request, { ignoreVary: true });
+  const hit = await caches.match(key, { ignoreVary: true }) || await cache.match(e.request, { ignoreVary: true });   // every store: the deck pictures too
   if (hit) return hit;
   if (_corsOk) {
     try {
@@ -101,6 +109,22 @@ async function assetFirst(e) {
     }
   }
   return fetch(e.request);
+}
+async function newsImage(e) {
+  const cache = await caches.open(NEWS);
+  const key = e.request.url;
+  const hit = await cache.match(key, { ignoreVary: true });
+  if (hit) return hit;
+  let res = null;
+  try { res = await fetch(key, { mode: 'cors', credentials: 'omit' }); if (!res.ok) res = null; } catch (err) { res = null; }
+  if (!res) res = await fetch(e.request);   // most news sites only answer sealed -- kept all the same
+  if (res && (res.ok || res.type === 'opaque')) {
+    e.waitUntil(cache.put(key, res.clone()).then(async () => {
+      const keys = await cache.keys();
+      for (let i = 0; i < keys.length - NEWS_MAX; i++) await cache.delete(keys[i]);
+    }).catch(() => {}));
+  }
+  return res;
 }
 async function trimAssets(cache) {
   try {
@@ -129,6 +153,12 @@ self.addEventListener('fetch', (e) => {
   const isCardImage = url.hostname === 'cards.scryfall.io' || url.hostname.endsWith('.scryfall.io');
   if (isFont || isCardImage) {
     e.respondWith(assetFirst(e));
+    return;
+  }
+  // 1.112: pictures from other sites (the news photos): the newest NEWS_MAX
+  // are kept, so the home page is whole without a line as well
+  if (e.request.destination === 'image' && url.origin !== location.origin) {
+    e.respondWith(newsImage(e));
     return;
   }
 
