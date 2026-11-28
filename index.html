@@ -8858,21 +8858,19 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.123';
+const APP_VERSION = '1.124';
 const CHANGELOG_NOTES = {
   en: [
-    "Legality: only Legal/Not legal changes",
-    "The word Tags no longer flickers",
-    "Flip button works in the card row",
-    "Tag field: keyboard opens calmly",
-    "Softer change of text"
+    "Salt: the pot stays, only the number",
+    "Legality: no flash to Not legal",
+    "Format names no longer flicker",
+    "Tag field rises with the keyboard"
   ],
   nl: [
-    "Legaliteit: alleen Legal/Not legal",
-    "Het woord Tags knippert niet meer",
-    "Flipknop werkt in de kaartrij",
-    "Tagveld: toetsenbord rustig open",
-    "Zachtere tekstwissel"
+    "Salt: potje blijft, alleen het getal",
+    "Legaliteit: geen flits naar Not legal",
+    "Formatnamen knipperen niet meer",
+    "Tagveld gaat mee met het toetsenbord"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8882,6 +8880,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.123', d: '2026-11-28',
+    en: ["Legality: only Legal/Not legal changes", "The word Tags no longer flickers", "Flip button works in the card row", "Tag field: keyboard opens calmly", "Softer change of text"],
+    nl: ["Legaliteit: alleen Legal/Not legal", "Het woord Tags knippert niet meer", "Flipknop werkt in de kaartrij", "Tagveld: toetsenbord rustig open", "Zachtere tekstwissel"] },
   { v: '1.122', d: '2026-11-28',
     en: ["Card page: title bar stays put", "Card page: legality, oracle, rulings", "Commander first in the card row", "Tags open smoothly", "Combo box as wide as Tags", "No more runaway swipes", "Card picture no longer reloads"],
     nl: ["Kaartpagina: titelbalk blijft staan", "Kaartpagina: legaliteit, oracle, rulings", "Commander als eerste in de kaartrij", "Tags openen soepel", "Combovak even breed als Tags", "Geen doorschietende veeg meer", "Kaartplaatje laadt niet opnieuw"] },
@@ -20784,9 +20785,10 @@ async function loadCardPrice(card){
   // 1.122: the pill keeps the salt it shows until the new card's arrives
   const saltRow = document.getElementById('csSaltRow');
   if(saltRow){
-    const prevSalt = saltRow.style.display !== 'none' ? saltRow.textContent.trim() : '';
-    saltRow.innerHTML = '<span class="cp-val" data-saltseat>' + escapeHtml(prevSalt) + '</span>';
-    if(!prevSalt) saltRow.style.display = 'none';
+    const prevSeat = saltRow.style.display !== 'none' ? saltRow.querySelector('[data-saltseat]') : null;
+    const prevHtml = prevSeat && prevSeat.textContent.trim() ? prevSeat.innerHTML.replace(/ class="cc-txt"/g, '') : '';
+    saltRow.innerHTML = '<span class="cp-val" data-saltseat>' + prevHtml + '</span>';
+    if(!prevHtml) saltRow.style.display = 'none';
   }
   // The old subtitle lives on as a toast behind the price itself…
   live.querySelector('[data-priceinfo]')?.addEventListener('click', ()=>toast(specific ? 'This printing · Cardmarket trend' : 'Cheapest printing · Cardmarket trend'));
@@ -20797,9 +20799,11 @@ async function loadCardPrice(card){
     if(gen !== _cardSheetGen) return;
     if(!(sv != null && sv > 0)){ saltGone(); return; }
     if(sv != null && sv > 0 && seat.isConnected){
-      const st = '🧂 ' + sv.toFixed(2);
-      if(seat.textContent && seat.textContent !== st){ seat.classList.remove('cc-txt'); void seat.offsetWidth; seat.classList.add('cc-txt'); }
-      seat.textContent = st;
+      // 1.124: the pot stays put, only the number changes (and fades)
+      const num = sv.toFixed(2);
+      let n = seat.querySelector('.salt-n');
+      if(!n){ seat.innerHTML = '🧂 <span class="salt-n">' + num + '</span>'; }
+      else if(n.textContent !== num){ n.textContent = num; n.classList.remove('cc-txt'); void n.offsetWidth; n.classList.add('cc-txt'); }
       const pill = seat.closest('#csSaltRow'); if(pill) pill.style.display = '';
       seat.style.cursor = 'pointer';
       seat.title = 'The 50 saltiest cards';
@@ -21147,7 +21151,11 @@ function tagFieldToKeyboard(){
   // field, the field is put back at the keyboard's edge before that frame is
   // drawn -- no drop first and rise after
   let ro = null, roSc = null, until = 0;
-  const fix = ()=>{ if(document.documentElement.classList.contains('tag-typing')) tagFieldToKeyboard(); };
+  const fix = ()=>{
+    if(!document.documentElement.classList.contains('tag-typing')) return;
+    if(lift){ if(window.innerHeight >= baseH - 100) return; dropLift(); }   // still waiting for the keyboard
+    tagFieldToKeyboard();
+  };
   const onScroll = ()=>{ if(Date.now() < until) fix(); };
   const watch = ()=>{
     const input = document.getElementById('tagInput'); if(!input) return;
@@ -21156,9 +21164,47 @@ function tagFieldToKeyboard(){
     if(!sc || sc === document.body || sc === roSc) return;
     try{ if(ro) ro.disconnect(); ro = new ResizeObserver(fix); ro.observe(sc); roSc = sc; }catch(e){}
   };
-  const unwatch = ()=>{ try{ if(ro) ro.disconnect(); }catch(e){} ro = null; roSc = null; };
+  const unwatch = ()=>{ try{ if(ro) ro.disconnect(); }catch(e){} ro = null; roSc = null; try{ dropLift(); }catch(e){} };
   document.addEventListener('scroll', onScroll, true);
-  const on = ()=>{ document.documentElement.classList.add('tag-typing'); until = Date.now() + 1500; watch(); fix(); [0, 120, 350, 700].forEach(ms=>setTimeout(tagFieldToKeyboard, ms)); };
+  // 1.124: the keyboard's height is learned the first time it opens; from
+  // then on a tap on the field lifts the page together with the keyboard
+  // (room is made below it), so nothing slides behind the keyboard first --
+  // when the screen then shrinks, the room goes and nothing moves
+  let kbH = 0, baseH = window.innerHeight, lift = null;
+  try{ kbH = +(localStorage.getItem(LS_PREFIX + 'kbH') || 0) || 0; }catch(e){}
+  window.addEventListener('resize', ()=>{
+    const a = document.activeElement;
+    if(!(a && /^(INPUT|TEXTAREA)$/.test(a.tagName))){ baseH = window.innerHeight; return; }
+    const dh = baseH - window.innerHeight;
+    if(dh > 150 && Math.abs(dh - kbH) > 4){ kbH = dh; try{ localStorage.setItem(LS_PREFIX + 'kbH', String(dh)); }catch(e){} }
+  });
+  const dropLift = ()=>{
+    if(!lift) return;
+    const L = lift; lift = null;
+    clearTimeout(L.t); if(L.raf) cancelAnimationFrame(L.raf);
+    L.sc.style.paddingBottom = L.pad0;
+  };
+  const preLift = ()=>{
+    if(!kbH || window.innerHeight < baseH - 100 || lift) return;   // unknown yet, or already up
+    const input = document.getElementById('tagInput'); if(!input) return;
+    const row = input.closest('.tag-add-row') || input;
+    const sc = roSc; if(!sc) return;
+    const pad0 = sc.style.paddingBottom;
+    sc.style.paddingBottom = ((parseFloat(getComputedStyle(sc).paddingBottom) || 0) + kbH) + 'px';
+    const z = (sc.getBoundingClientRect().height / (sc.offsetHeight || 1)) || 1;
+    const want = (Math.min(sc.getBoundingClientRect().bottom, window.innerHeight) - kbH - 6);
+    const from = sc.scrollTop, to = from + (row.getBoundingClientRect().bottom - want) / z;
+    lift = { sc, pad0, t: setTimeout(()=>{ dropLift(); fix(); }, 1500), raf: 0 };
+    const t0 = performance.now(), dur = 240;
+    const step = (now)=>{
+      if(!lift) return;
+      const p = Math.min(1, Math.max(0, (now - t0) / dur)), e = 1 - Math.pow(1 - p, 3);
+      sc.scrollTop = from + (to - from) * e;
+      if(p < 1) lift.raf = requestAnimationFrame(step);
+    };
+    lift.raf = requestAnimationFrame(step);
+  };
+  const on = ()=>{ document.documentElement.classList.add('tag-typing'); until = Date.now() + 1500; watch(); preLift(); if(!lift) fix(); [0, 120, 350, 700].forEach(ms=>setTimeout(()=>{ if(!lift) tagFieldToKeyboard(); }, ms)); };
   const off = ()=>{ setTimeout(()=>{ const a = document.activeElement; if(!(a && a.id === 'tagInput')){ document.documentElement.classList.remove('tag-typing'); unwatch(); } }, 200); };
   document.addEventListener('focusin', (e)=>{ if(e.target && e.target.id === 'tagInput' && !isDesk()) on(); });
   document.addEventListener('focusout', (e)=>{ if(e.target && e.target.id === 'tagInput') off(); });
@@ -23594,7 +23640,7 @@ function ccTextMap(root, skip){
       let p;
       // only names that stay the same between pages count (csPrice, csTags);
       // a made-up one (leg + random letters and digits) is no name at all
-      const sid = c.id && /^[A-Za-z_-]+$/.test(c.id) ? c.id : '';
+      const sid = c.id && /^[A-Za-z_-]+$/.test(c.id) && !/^leg[a-z0-9]{7}$/.test(c.id) ? c.id : '';   // (the legality grid's id is random)
       if(sid){
         p = '#' + sid;
         map.set(p, { el: c, t: norm(c.textContent), whole: true });
@@ -26117,7 +26163,17 @@ const _legLiveCache = new Map();
 function legalityBlockHtml(card){
   const L = (card && card.legalities) || {};
   const cached = card && _legLiveCache.get(card.name);
-  const use = cached || L;
+  // 1.124: a slim stored copy knows only Commander -- the other rows read
+  // "Not legal" until the live check, the flash from Not legal to Legal.
+  // The weekly database knows every format; it fills what the copy lacks.
+  let use = cached || L;
+  if(!cached){
+    try{
+      const nm = String((card && card.name) || '').toLowerCase();
+      const bc = _bulkIdx && _bulkIdx.byName && (_bulkIdx.byName.get(nm) || _bulkIdx.byName.get(nm.split(' // ')[0]));
+      if(bc){ const bl = bulkToCardish(bc).legalities || {}; use = Object.assign({}, L, bl); }
+    }catch(e){}
+  }
   const gid = 'leg' + Math.random().toString(36).slice(2, 9);
   if(card && !cached) queueMicrotask(()=>_legBlockRefresh(gid, card));
   return `<div class="leg-grid" id="${gid}">${_legRowsHtml(use, !Object.keys(use).length)}</div>`;
@@ -26131,7 +26187,18 @@ async function _legBlockRefresh(gid, card){
     _legLiveCache.set(card.name, f.legalities);
     card.legalities = f.legalities;   // in-memory heal for this session
     const el = document.getElementById(gid);
-    if(el) el.innerHTML = _legRowsHtml(f.legalities, false);
+    if(!el) return;
+    // 1.124: only a value that differs changes (and fades); names stay
+    const tmp = document.createElement('div');
+    tmp.innerHTML = _legRowsHtml(f.legalities, false);
+    const rows = el.querySelectorAll('.leg-row'), nrows = tmp.querySelectorAll('.leg-row');
+    if(rows.length !== nrows.length){ el.innerHTML = tmp.innerHTML; return; }
+    nrows.forEach((nr, k)=>{
+      const oc = rows[k].querySelector('.leg-chip'), nc = nr.querySelector('.leg-chip');
+      if(!oc || !nc || oc.textContent.trim() === nc.textContent.trim()) return;
+      oc.className = nc.className;
+      oc.innerHTML = '<span class="cc-txt">' + escapeHtml(nc.textContent) + '</span>';
+    });
   }catch(err){}
 }
 /* ── Format reference ─ rules digests for the accordion in Extras. ── */
