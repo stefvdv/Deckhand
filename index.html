@@ -4163,13 +4163,24 @@ html:not(.desk) #decklistBox > .cat-group > .cat-head.stuck, html:not(.desk) .ap
    the edges, and one panel under it */
 html:not(.desk) .cd-hero{max-width:none !important;width:84% !important;}
 html:not(.desk) .ci-nav-arrow{display:none !important;}
+/* 1.119 phone: the news runs the full width of the screen -- no box */
+html:not(.desk) .home-news{max-width:none;width:calc(100% + 24px);margin:10px -12px 0;border:none;border-top:1px solid var(--line);border-radius:0;background:none;padding:0 4px;}
 /* 1.118 phone: the pictures are one native, snapping row (cardCarousel) --
    every card the same size, the neighbours peeking in at the screen edges */
-.cc-strip{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;box-sizing:border-box;touch-action:pan-x pan-y;}
+.cc-strip{display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;box-sizing:border-box;touch-action:pan-x pan-y;}
 .cc-strip::-webkit-scrollbar{display:none;}
 .cc-slide{flex:0 0 auto;scroll-snap-align:center;scroll-snap-stop:always;position:relative;}
 .cc-slide > img{display:block;width:100% !important;height:auto;aspect-ratio:488/680;border-radius:4.75% / 3.5%;box-shadow:none !important;}
 .cc-slide.empty{aspect-ratio:488/680;border-radius:4.75% / 3.5%;background:var(--ink-2);}
+/* 1.119: the cards beside the middle one are a touch smaller and grow as
+   they slide to the middle -- driven by the row's own scroll, on the GPU */
+@keyframes ccGrow{0%{transform:scale(.912);}50%{transform:scale(1);}100%{transform:scale(.912);}}
+@supports (animation-timeline: view()){
+  .cc-slide{animation:ccGrow linear both;animation-timeline:view(inline);}
+}
+/* 1.119: after a swipe the new card's info fades in instead of popping */
+@keyframes ccFade{from{opacity:.2;}to{opacity:1;}}
+#cardSheetOverlay.cc-fresh main.card-detail > :not(:has(.cc-strip)), #cardSheetOverlay.cc-fresh .topbar > *{animation:ccFade .24s ease-out both;}
 .cs-info{width:100%;box-sizing:border-box;border:1px solid var(--hair-2);border-radius:16px;background:var(--ink-2);padding:10px 12px;margin:0 0 8px;position:relative;display:flex;flex-direction:column;gap:10px;}
 .cs-info .csi-row{display:flex;align-items:center;gap:10px;min-width:0;}
 .cs-info .csi-name{flex:1 1 auto;min-width:0;font-weight:700;font-size:16px;color:var(--ink-text);text-align:center;line-height:1.25;}
@@ -4178,14 +4189,14 @@ html:not(.desk) .ci-nav-arrow{display:none !important;}
 .cs-info .csi-step{flex:none;display:flex;align-items:center;gap:4px;}
 .cs-info .csi-step button{width:40px;height:40px;border-radius:12px;border:1px solid var(--hair-2);background:none;color:var(--ink-text);font-size:22px;line-height:1;padding:0;}
 .cs-info .csi-step .csi-n{min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--ink-text);}
-.cs-info .csi-chips{flex-wrap:wrap;justify-content:space-between;}
+.cs-info .csi-chips{flex:1 1 auto;min-width:0;gap:8px;justify-content:center;}
 .cs-info .csi-price{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--brass);flex:1 1 auto;}
-.cs-info .csi-chip{width:auto !important;flex:none;margin:0 !important;padding:6px 12px !important;font-size:13.5px !important;border-radius:999px !important;}
+.cs-info .csi-chip{width:auto !important;flex:0 1 auto;min-width:0;height:40px;margin:0 !important;padding:0 12px !important;white-space:nowrap;font-size:13.5px !important;border-radius:999px !important;}
 .cs-info .csi-menu{position:absolute;left:0;bottom:calc(100% + 6px);top:auto;right:auto;min-width:220px;z-index:30;display:flex;flex-direction:column;}
 .cs-info .csi-menu[hidden]{display:none;}
 .cs-info .csi-menu .csi-item{width:100% !important;border:none !important;border-radius:0 !important;background:none !important;text-align:left;justify-content:flex-start;padding:12px 14px !important;font-size:14.5px !important;margin:0 !important;box-shadow:none !important;}
 .cs-info .csi-menu .csi-item + .csi-item{border-top:1px solid var(--hair-2) !important;}
-.csi-minus-pop{position:fixed;z-index:1400;min-width:200px;}
+.csi-minus-pop{position:fixed;z-index:1400;min-width:0;right:auto;width:max-content;max-width:calc(100vw - 16px);}
 .csi-minus-pop button{display:block;width:100%;text-align:left;padding:12px 14px;}
 /* the phone deck bar: a button that steps aside takes no room */
 .deck-dock > button[hidden]{display:none !important;}
@@ -8832,17 +8843,21 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.118';
+const APP_VERSION = '1.119';
 const CHANGELOG_NOTES = {
   en: [
-    "Card page: smooth gallery-style swiping",
-    "Card page: cards stay the same size",
-    "Card page: neighbours always loaded"
+    "Card page: side cards grow to the middle",
+    "Card page: info changes without a jump",
+    "Card page: one bar, no name or price",
+    "Smaller maybeboard/remove menu",
+    "News page: full width"
   ],
   nl: [
-    "Kaartpagina: soepele kaartrij",
-    "Kaartpagina: kaarten blijven even groot",
-    "Kaartpagina: buren altijd geladen"
+    "Kaartpagina: buren groeien naar midden",
+    "Kaartpagina: info wisselt zonder sprong",
+    "Kaartpagina: één balk, geen naam/prijs",
+    "Kleiner maybeboard/verwijder-menu",
+    "Nieuwspagina: volle breedte"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8852,6 +8867,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.118', d: '2026-11-28',
+    en: ["Card page: smooth gallery-style swiping", "Card page: cards stay the same size", "Card page: neighbours always loaded"],
+    nl: ["Kaartpagina: soepele kaartrij", "Kaartpagina: kaarten blijven even groot", "Kaartpagina: buren altijd geladen"] },
   { v: '1.117', d: '2026-11-28',
     en: ["Card page: only the cards slide", "Card page: no flash after a swipe", "Tags open without flicker", "Type bar: flat bottom while scrolling", "Spoilers: a frame per set", "Spoilers: latest set stays visible", "No un-set or illegal cards in results"],
     nl: ["Kaartpagina: alleen de kaarten schuiven", "Kaartpagina: geen flits na het vegen", "Tags openen zonder flikkeren", "Typebalk: plat aan de onderkant", "Spoilers: een kader per set", "Spoilers: nieuwste set blijft staan", "Geen Unhinged/illegale kaarten meer"] },
@@ -20489,7 +20507,7 @@ function renderCardSheet(d, card, loc, idx){
   pinSheetToFoot(el);
   requestAnimationFrame(()=>fitSheetTitle(el.querySelector('.topbar .sheet-title')));
   document.getElementById('dcImg')?.addEventListener('click', ()=>showCardPreview(card, cardImageLarge(card)));
-  setTimeout(()=>{ try{ csInfoPanel(el, { card, d, loc }); }catch(e){} }, 0);   // 1.117 phone: the info panel
+  try{ csInfoPanel(el, { card, d, loc }); }catch(e){}   // 1.117 phone: the info panel (1.119: at once, never a frame of the old grid)
   wireCombosButton(el, card);
   { const pr = el.querySelector('#csPrice'); if(pr){ pr.style.cursor = 'pointer'; pr.title = 'Price history'; pr.addEventListener('click', ()=>openPriceHistory(card)); } }
   applyLocalizedSheetImage(card, 'dcImg');
@@ -21094,15 +21112,11 @@ function csInfoPanel(el, cfg){
   panel.className = 'cs-info';
   panel.innerHTML = `<div class="csi-row">
       <button type="button" class="csi-more" aria-label="${nl ? 'Meer' : 'More'}" title="${nl ? 'Meer' : 'More'}"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
-      <div class="csi-name">${escapeHtml(card.name || '')}</div>
+      <div class="csi-row csi-chips"></div>
       ${(plus || minus) ? `<div class="csi-step">${minus ? `<button type="button" class="csi-minus" aria-label="${nl ? 'Minder' : 'Fewer'}">\u2212</button>` : ''}${count ? `<b class="csi-n">${count()}</b>` : ''}${plus ? `<button type="button" class="csi-plus" aria-label="${nl ? 'Meer toevoegen' : 'Add'}">+</button>` : ''}</div>` : ''}
     </div>
-    <div class="csi-row csi-chips"></div>
     <div class="csi-menu menu-pop" hidden></div>`;
   const chips = panel.querySelector('.csi-chips'), menu = panel.querySelector('.csi-menu');
-  const price = el.querySelector('#csPrice');
-  if(price){ const pc = document.createElement('span'); pc.className = 'csi-price'; pc.textContent = price.textContent; chips.appendChild(pc);
-    try{ new MutationObserver(()=>{ pc.textContent = price.textContent; }).observe(price, { childList: true, characterData: true, subtree: true }); }catch(e){} }
   // a button that was only an icon gets its name written beside it
   const named = (b)=>{ if(b && !b.textContent.trim() && (b.title || b.getAttribute('aria-label'))){ const t = document.createElement('span'); t.textContent = b.title || b.getAttribute('aria-label'); b.appendChild(t); } return b; };
   [tags, combo].forEach(b=>{ if(b){ named(b); b.classList.add('csi-chip'); b.style.width = ''; chips.appendChild(b); } });
@@ -21135,8 +21149,9 @@ function csInfoPanel(el, cfg){
     const lbl = (b)=>b.textContent.trim();
     pop.innerHTML = minusAsk.map((b, k)=>`<button type="button" data-k="${k}"${b === minus ? ' class="danger"' : ''}>${escapeHtml(lbl(b))}</button>`).join('');
     document.body.appendChild(pop);
-    const r = e.currentTarget.getBoundingClientRect();
-    pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, r.right - pop.offsetWidth)) + 'px';
+    const st = e.currentTarget.closest('.csi-step') || e.currentTarget;
+    const r = e.currentTarget.getBoundingClientRect(), rs = st.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, rs.right - pop.offsetWidth)) + 'px';
     pop.style.top = Math.max(8, r.top - pop.offsetHeight - 8) + 'px';
     pop.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ pop.remove(); minusAsk[+b.dataset.k].click(); }));
     setTimeout(()=>document.addEventListener('pointerdown', function off(ev){ if(!pop.contains(ev.target)){ pop.remove(); document.removeEventListener('pointerdown', off, true); } }, true), 0);
@@ -23290,7 +23305,22 @@ function pinSheetToFoot(root){
   const release = ()=>{ userMoved = true; };
   m.addEventListener('touchstart', release, {passive:true, once:true});
   m.addEventListener('wheel', release, {passive:true, once:true});
-  const pin = ()=>{ if(!userMoved && !done) m.scrollTop = m.scrollHeight; };
+  let pin = ()=>{ if(!userMoved && !done) m.scrollTop = m.scrollHeight; };
+  root._ccPin = null;
+  if(root._ccAnchor != null){
+    // 1.119: a swipe on the card row: hold the card where it stood, not the foot
+    const A = root._ccAnchor; root._ccAnchor = null;
+    pin = ()=>{
+      if(userMoved || done) return;
+      const h = root.querySelector('main.card-detail .cd-hero'); if(!h) return;
+      const r = h.getBoundingClientRect();
+      const z = (h.offsetHeight ? r.height / h.offsetHeight : 1) || 1;
+      const dl = (r.top - A) / z;
+      if(Math.abs(dl) > 0.5) m.scrollTop += dl;
+    };
+    root._ccPin = pin;
+    pin();
+  }
   requestAnimationFrame(pin);
   let ro = null;
   if(window.ResizeObserver){
@@ -23439,10 +23469,14 @@ function cardCarousel(el, meta, can, onNext, onPrev){
     if(!k){ const f = el._ccDeferred; el._ccDeferred = null; if(f) try{ f(); }catch(e){} return; }
     done = true;
     el._ccDeferred = null;   // a late upgrade of the card we left is no longer wanted
-    const m = el.querySelector('main.card-detail'), st = m ? m.scrollTop : 0;
+    // 1.119: the new page is built with the card row exactly where it stood
+    // (pinSheetToFoot keeps it there while the page below fills in), and its
+    // info fades in
+    el._ccAnchor = hero.getBoundingClientRect().top;
+    el.classList.add('cc-fresh');
+    clearTimeout(el._ccFreshT); el._ccFreshT = setTimeout(()=>el.classList.remove('cc-fresh'), 400);
     (k > 0 ? onNext : onPrev)();
-    const nm = el.querySelector('main.card-detail');
-    if(nm && nm !== m && st) nm.scrollTop = st;   // the page keeps its place
+    try{ if(el._ccPin) el._ccPin(); }catch(e){}
   };
   strip.addEventListener('touchstart', ()=>{ touching = true; }, {passive:true});
   const up = ()=>{ touching = false; clearTimeout(tmr); tmr = setTimeout(()=>{ if(!moving) settle(); }, 80); };
@@ -23454,6 +23488,18 @@ function cardCarousel(el, meta, can, onNext, onPrev){
     if(!hasEnd){ clearTimeout(tmr); tmr = setTimeout(settle, 140); }
   }, {passive:true});
   if(hasEnd) strip.addEventListener('scrollend', settle);
+  // 1.119: no scroll-driven animation in this browser: the same growth by hand
+  let sraf = 0;
+  const scaleByHand = ()=>{
+    sraf = 0;
+    const mid = strip.scrollLeft + strip.clientWidth / 2;
+    strip.querySelectorAll('.cc-slide').forEach(x=>{
+      const dd = Math.min(1, Math.abs(x.offsetLeft + x.offsetWidth / 2 - mid) / (pitch || 1));
+      x.style.transform = dd > 0.001 ? `scale(${(1 - 0.08 * dd).toFixed(4)})` : '';
+    });
+  };
+  let sdOk = false; try{ sdOk = CSS.supports('animation-timeline: view()'); }catch(e){}
+  if(!sdOk){ strip.addEventListener('scroll', ()=>{ if(!sraf) sraf = requestAnimationFrame(scaleByHand); }, {passive:true}); scaleByHand(); }
   el._cc = { busy: ()=>!done && (touching || moving), strip, go: goTo };
 }
 function attachSwipeNav(el, onNext, onPrev, meta){
@@ -24010,7 +24056,7 @@ function openCardInfo(card, opts){
   try{ paintPendingArt(); }catch(e){}
   // 1.9: outside a deck, recommendations are about the card itself -- no
   // "which deck?" question first
-  setTimeout(()=>{ try{ csInfoPanel(el, { card, d: pinned, colIdx, want: !!opts.wantName }); }catch(e){} }, 0);   // 1.117 phone: the info panel
+  try{ csInfoPanel(el, { card, d: pinned, colIdx, want: !!opts.wantName }); }catch(e){}   // 1.117 phone: the info panel (1.119: at once)
   document.getElementById('ciReco')?.addEventListener('click', ()=>openCardReco(card, null));
   document.getElementById('ciAddOne')?.addEventListener('click', ()=>{
     const it = state.collection.items[colIdx]; if(!it) return;
