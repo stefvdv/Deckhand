@@ -4163,10 +4163,13 @@ html:not(.desk) #decklistBox > .cat-group > .cat-head.stuck, html:not(.desk) .ap
    the edges, and one panel under it */
 html:not(.desk) .cd-hero{max-width:none !important;width:84% !important;}
 html:not(.desk) .ci-nav-arrow{display:none !important;}
-html:not(.desk) .ci-peek{position:absolute;top:50%;width:62%;transform:translateY(-50%) scale(.9);border-radius:4.75% / 3.5%;opacity:.5;z-index:0;pointer-events:auto;}
-html:not(.desk) .ci-peek.left{right:calc(100% + 10px);}
-html:not(.desk) .ci-peek.right{left:calc(100% + 10px);}
-html:not(.desk) .ci-nav-wrap > img:not(.ci-peek){position:relative;z-index:1;}
+/* 1.118 phone: the pictures are one native, snapping row (cardCarousel) --
+   every card the same size, the neighbours peeking in at the screen edges */
+.cc-strip{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;box-sizing:border-box;touch-action:pan-x pan-y;}
+.cc-strip::-webkit-scrollbar{display:none;}
+.cc-slide{flex:0 0 auto;scroll-snap-align:center;scroll-snap-stop:always;position:relative;}
+.cc-slide > img{display:block;width:100% !important;height:auto;aspect-ratio:488/680;border-radius:4.75% / 3.5%;box-shadow:none !important;}
+.cc-slide.empty{aspect-ratio:488/680;border-radius:4.75% / 3.5%;background:var(--ink-2);}
 .cs-info{width:100%;box-sizing:border-box;border:1px solid var(--hair-2);border-radius:16px;background:var(--ink-2);padding:10px 12px;margin:0 0 8px;position:relative;display:flex;flex-direction:column;gap:10px;}
 .cs-info .csi-row{display:flex;align-items:center;gap:10px;min-width:0;}
 .cs-info .csi-name{flex:1 1 auto;min-width:0;font-weight:700;font-size:16px;color:var(--ink-text);text-align:center;line-height:1.25;}
@@ -8829,25 +8832,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.117';
+const APP_VERSION = '1.118';
 const CHANGELOG_NOTES = {
   en: [
-    "Card page: only the cards slide",
-    "Card page: no flash after a swipe",
-    "Tags open without flicker",
-    "Type bar: flat bottom while scrolling",
-    "Spoilers: a frame per set",
-    "Spoilers: latest set stays visible",
-    "No un-set or illegal cards in results"
+    "Card page: smooth gallery-style swiping",
+    "Card page: cards stay the same size",
+    "Card page: neighbours always loaded"
   ],
   nl: [
-    "Kaartpagina: alleen de kaarten schuiven",
-    "Kaartpagina: geen flits na het vegen",
-    "Tags openen zonder flikkeren",
-    "Typebalk: plat aan de onderkant",
-    "Spoilers: een kader per set",
-    "Spoilers: nieuwste set blijft staan",
-    "Geen Unhinged/illegale kaarten meer"
+    "Kaartpagina: soepele kaartrij",
+    "Kaartpagina: kaarten blijven even groot",
+    "Kaartpagina: buren altijd geladen"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8857,6 +8852,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.117', d: '2026-11-28',
+    en: ["Card page: only the cards slide", "Card page: no flash after a swipe", "Tags open without flicker", "Type bar: flat bottom while scrolling", "Spoilers: a frame per set", "Spoilers: latest set stays visible", "No un-set or illegal cards in results"],
+    nl: ["Kaartpagina: alleen de kaarten schuiven", "Kaartpagina: geen flits na het vegen", "Tags openen zonder flikkeren", "Typebalk: plat aan de onderkant", "Spoilers: een kader per set", "Spoilers: nieuwste set blijft staan", "Geen Unhinged/illegale kaarten meer"] },
   { v: '1.116', d: '2026-11-28',
     en: ["Inspiration: filters behind the funnel", "Deck finder is now called Inspire me", "Life counter back on the bar, far right", "Life menu: AI judge in the middle", "Experience counter shows XP", "Life: counters ride over the name", "New card page: big card, one panel", "Each card type in its own frame", "Deck and binder tiles show at once", "Price alert for any card (⋯ menu)"],
     nl: ["Inspiratie: filters achter de trechter", "Deckwijzer heet nu Inspireer mij", "Life counter terug in de balk, rechts", "Tafelmenu: AI-judge in het midden", "Experience-teller toont XP", "Life: tellers over de naam", "Nieuwe kaartpagina: groot, één vak", "Elk kaarttype in een eigen kader", "Deck- en maptegels staan er meteen", "Prijsalert voor elke kaart (⋯-menu)"] },
@@ -20415,6 +20413,7 @@ function openCardActionSheet(d, card, loc, idx){
   renderCardSheet(d, card, loc, idx);
 }
 function renderCardSheet(d, card, loc, idx){
+  if(ccDefer(()=>renderCardSheet(d, card, loc, idx))) return;   // 1.118
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   let el = document.getElementById('cardSheetOverlay');
   if(!el){ el = document.createElement('div'); el.className='overlay'; el.id='cardSheetOverlay'; }
@@ -20669,7 +20668,9 @@ function renderCardSheet(d, card, loc, idx){
     attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
       canNext: ()=>peekPos(1) >= 0, canPrev: ()=>peekPos(-1) >= 0,
       peekNext: ()=>{ const n = peekPos(1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; },
-      peekPrev: ()=>{ const n = peekPos(-1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; }
+      peekPrev: ()=>{ const n = peekPos(-1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; },
+      hasAt: (k)=>peekPos(k) >= 0,
+      peekAt: (k)=>{ const n = peekPos(k); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; }
     });
   }
 }
@@ -23358,76 +23359,102 @@ function fitSheetTitle(box){
   window.addEventListener('resize', kick);
   try{ new MutationObserver(kick).observe(document.documentElement, {childList:true, subtree:true}); }catch(e){}
 })();
-/* 1.117 phone: the card page swipes like a card strip -- only the pictures
-   move (the card and its two neighbours, as one row under the finger); the
-   text and the panel stay put and simply show the new card once it lands. */
-function cardStripSwipe(el, can, onNext, onPrev){
-  const wrap = ()=>el.querySelector('main.card-detail .ci-nav-wrap');
-  const step = ()=>{ const w = wrap(); const im = w && w.querySelector('img:not(.ci-peek)'); return im ? im.offsetWidth + 10 : 300; };
-  const zoom = ()=>{ const w = wrap(); if(!w || !w.offsetWidth) return 1; const r = w.getBoundingClientRect().width; return r / w.offsetWidth || 1; };
-  const set = (x, ms)=>{
-    const w = wrap(); if(!w) return;
-    const tr = ms ? `${ms}ms cubic-bezier(.2,.75,.25,1)` : '';
-    w.style.willChange = 'transform'; w.style.transition = ms ? `transform ${tr}` : 'none';
-    w.style.transform = x ? `translate3d(${x}px,0,0)` : 'translate3d(0,0,0)';
-    // the card coming in grows to full size, the one leaving draws back
-    const S = step(), p = Math.min(1, Math.abs(x) / S);
-    const hero = w.querySelector('img:not(.ci-peek)'), inc = w.querySelector('.ci-peek.' + (x < 0 ? 'right' : 'left')), other = w.querySelector('.ci-peek.' + (x < 0 ? 'left' : 'right'));
-    [hero, inc, other].forEach(im=>{ if(im) im.style.transition = ms ? `transform ${tr}, opacity ${tr}` : 'none'; });
-    if(hero){ hero.style.transform = p ? `scale(${1 - 0.1 * p})` : ''; hero.style.opacity = p ? String(1 - 0.5 * p) : ''; }
-    if(inc){ inc.style.transform = `translateY(-50%) scale(${0.9 + 0.1 * p})`; inc.style.opacity = String(0.5 + 0.5 * p); }
-    if(other){ other.style.transform = ''; other.style.opacity = ''; }
+/* 1.118 phone: the card page's pictures are ONE native row that the phone
+   itself scrolls and snaps -- smooth as a photo gallery. Every card has the
+   same size, two neighbours wait ready (loaded) on each side, and only when
+   the row comes to rest does the page under it switch to the new card. The
+   new page is built with the row already standing on that card, from
+   pictures that are in memory, so nothing jumps or blanks. A late re-render
+   (a printing or price upgrade) never lands under a moving finger: it waits
+   until the row is still (ccDefer). */
+function ccDefer(fn){
+  const el = document.getElementById('cardSheetOverlay');
+  if(el && el._cc && el._cc.busy()){ el._ccDeferred = fn; return true; }
+  return false;
+}
+function cardCarousel(el, meta, can, onNext, onPrev){
+  el._cc = null;
+  const hero = el.querySelector('main.card-detail .cd-hero');
+  const img = hero && (hero.querySelector('#dcImg, #ciImg') || hero.querySelector('img'));
+  if(!hero || !img) return;
+  const hasAt = (k)=>{
+    if(k === 1) return can('next');
+    if(k === -1) return can('prev');
+    try{ return meta.hasAt ? !!meta.hasAt(k) : false; }catch(e){ return false; }
   };
-  const go = (which)=>{
-    if(el._stripBusy) return;
-    if(!can(which)){ set(0, 200); return; }
-    el._stripBusy = true;
-    const S = step(), dur = 230;
-    set(which === 'next' ? -S : S, dur);
-    try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
-    setTimeout(()=>{ el._stripBusy = false; which === 'next' ? onNext() : onPrev(); }, dur);
+  const srcAt = (k)=>{
+    try{
+      if(meta.peekAt) return meta.peekAt(k) || '';
+      if(k === 1) return (meta.peekNext && meta.peekNext()) || '';
+      if(k === -1) return (meta.peekPrev && meta.peekPrev()) || '';
+    }catch(e){}
+    return '';
   };
-  el._stripGo = go;
-  let G = null;
-  const ts = (e)=>{
-    if(el._stripBusy || e.touches.length !== 1) { G = null; return; }
-    const t = e.target;
-    if(t && t.closest && t.closest('.cs-info, .tag-editor, .menu-pop, input, textarea, .pd, .cselect-panel')){ G = null; return; }
-    const p = e.touches[0];
-    G = { sx: p.clientX, sy: p.clientY, eng: false, dx: 0, z: zoom(), S: step(), vs: [[performance.now(), p.clientX]] };
-  };
-  const tm = (e)=>{
-    if(!G) return;
-    const p = e.touches[0]; if(!p) return;
-    const dx = p.clientX - G.sx, dy = p.clientY - G.sy;
-    if(!G.eng){
-      if(Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)){ G = null; return; }   // a scroll
-      if(Math.abs(dx) < 10 || Math.abs(dx) < 1.4 * Math.abs(dy)) return;
-      G.eng = true;
+  const ks = [-2, -1, 0, 1, 2].filter(k=>k === 0 || (hasAt(k) && (Math.abs(k) < 2 || hasAt(k > 0 ? 1 : -1))));
+  const c = ks.indexOf(0);
+  const strip = document.createElement('div');
+  strip.className = 'cc-strip';
+  let pitch = 1;
+  const goTo = (k)=>{ const i = ks.indexOf(k); if(i >= 0) strip.scrollTo({ left: i * pitch, behavior: 'smooth' }); };
+  ks.forEach(k=>{
+    const sl = document.createElement('div');
+    sl.className = 'cc-slide' + (k === 0 ? ' cur' : '');
+    if(k !== 0){
+      const u = srcAt(k);
+      if(u){ const im = document.createElement('img'); im.alt = ''; im.draggable = false; im.decoding = 'async'; im.src = u; sl.appendChild(im); }
+      else sl.classList.add('empty');
+      sl.addEventListener('click', (e)=>{ e.stopPropagation(); goTo(k); });
     }
-    e.preventDefault();
-    G.vs.push([performance.now(), p.clientX]); if(G.vs.length > 6) G.vs.shift();
-    let x = dx / G.z;
-    const dir = x < 0 ? 'next' : 'prev';
-    if(!can(dir)) x *= 0.3;                       // the end of the row pushes back
-    G.dx = x;
-    set(x, 0);
+    strip.appendChild(sl);
+  });
+  hero.insertBefore(strip, img);
+  strip.querySelector('.cur').appendChild(img);
+  // the third neighbour on each side loads ahead too
+  [-3, 3].forEach(k=>{ if(hasAt(k)){ const u = srcAt(k); if(u){ const im = new Image(); im.decoding = 'async'; im.src = u; } } });
+  const lay = ()=>{
+    if(!strip.isConnected) return;
+    const W = hero.offsetWidth; if(!W) return;
+    const m = hero.closest('main') || el;
+    const hr = hero.getBoundingClientRect(), mr = m.getBoundingClientRect();
+    const z = (hr.width / W) || 1;
+    const SW = m.clientWidth || W;
+    const left = (mr.left + m.clientLeft * z - hr.left) / z;   // the row runs from edge to edge
+    const pad = Math.max(0, (SW - W) / 2);
+    strip.style.width = SW + 'px';
+    strip.style.marginLeft = left + 'px';
+    strip.style.paddingLeft = strip.style.paddingRight = pad + 'px';
+    strip.querySelectorAll('.cc-slide').forEach(x=>{ x.style.width = W + 'px'; });
+    pitch = W + (parseFloat(getComputedStyle(strip).columnGap) || 10);
+    strip.scrollLeft = c * pitch;
   };
-  const te = ()=>{
-    if(!G) return;
-    const g = G; G = null;
-    if(!g.eng) return;
-    const v = (()=>{ const a = g.vs[0], b = g.vs[g.vs.length - 1]; const dt = b[0] - a[0]; return dt > 0 ? (b[1] - a[1]) / dt : 0; })();
-    const thr = g.S * 0.22;
-    const which = (g.dx < -thr || (v < -0.45 && g.dx < -20)) ? 'next' : (g.dx > thr || (v > 0.45 && g.dx > 20)) ? 'prev' : null;
-    if(which && can(which)) go(which); else set(0, 200);
+  lay();
+  el._ccLay = lay;
+  if(!el._ccResizeOn){ el._ccResizeOn = true; window.addEventListener('resize', ()=>{ try{ el._ccLay && el._ccLay(); }catch(e){} }); }
+  let touching = false, moving = false, done = false, tmr = 0;
+  const settle = ()=>{
+    clearTimeout(tmr);
+    if(done || touching) return;
+    moving = false;
+    const k = ks[Math.max(0, Math.min(ks.length - 1, Math.round(strip.scrollLeft / pitch)))] || 0;
+    if(!k){ const f = el._ccDeferred; el._ccDeferred = null; if(f) try{ f(); }catch(e){} return; }
+    done = true;
+    el._ccDeferred = null;   // a late upgrade of the card we left is no longer wanted
+    const m = el.querySelector('main.card-detail'), st = m ? m.scrollTop : 0;
+    (k > 0 ? onNext : onPrev)();
+    const nm = el.querySelector('main.card-detail');
+    if(nm && nm !== m && st) nm.scrollTop = st;   // the page keeps its place
   };
-  const tc = ()=>{ if(G && G.eng) set(0, 200); G = null; };
-  el.addEventListener('touchstart', ts, {passive:true});
-  el.addEventListener('touchmove', tm, {passive:false});
-  el.addEventListener('touchend', te, {passive:true});
-  el.addEventListener('touchcancel', tc, {passive:true});
-  return { ts, tm, te, tc };
+  strip.addEventListener('touchstart', ()=>{ touching = true; }, {passive:true});
+  const up = ()=>{ touching = false; clearTimeout(tmr); tmr = setTimeout(()=>{ if(!moving) settle(); }, 80); };
+  strip.addEventListener('touchend', up, {passive:true});
+  strip.addEventListener('touchcancel', up, {passive:true});
+  const hasEnd = 'onscrollend' in window;
+  strip.addEventListener('scroll', ()=>{
+    moving = true;
+    if(!hasEnd){ clearTimeout(tmr); tmr = setTimeout(settle, 140); }
+  }, {passive:true});
+  if(hasEnd) strip.addEventListener('scrollend', settle);
+  el._cc = { busy: ()=>!done && (touching || moving), strip, go: goTo };
 }
 function attachSwipeNav(el, onNext, onPrev, meta){
   meta = meta || {};
@@ -23562,8 +23589,9 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     }, dur + 30);
   }
   // Chevrons flank the hero image at its vertical middle — same glide.
+  const phoneRow = !isDesk() && !el.classList.contains('cs-pop');   // 1.118
   const img = el.querySelector('.card-detail img');
-  if(img && !img.closest('.ci-nav-wrap')){
+  if(!phoneRow && img && !img.closest('.ci-nav-wrap')){
     const wrap = document.createElement('div');
     wrap.className = 'ci-nav-wrap';
     img.parentNode.insertBefore(wrap, img);
@@ -23587,21 +23615,6 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     };
     mk('prev', '‹', 'left');
     mk('next', '›', 'right');
-  }
-  // 1.117 phone: the neighbouring cards peek in at the edges
-  {
-    const wrap2 = el.querySelector('.card-detail .ci-nav-wrap');
-    if(wrap2){
-      wrap2.querySelectorAll('.ci-peek').forEach(x=>x.remove());
-      [['prev', 'left'], ['next', 'right']].forEach(([which, side])=>{
-        if(!can(which)) return;
-        const src = peek(which); if(!src) return;
-        const im = document.createElement('img');
-        im.className = 'ci-peek ' + side; im.alt = ''; im.src = src; im.draggable = false;
-        im.addEventListener('click', (e)=>{ e.stopPropagation(); if(el._stripGo) el._stripGo(which); else wrap2.querySelector('.ci-nav-arrow.' + side)?.click(); });
-        wrap2.insertBefore(im, wrap2.firstChild);
-      });
-    }
   }
   // The overlay element persists across _replace renders, so the previous
   // render's touch listeners must come off before new ones go on — otherwise
@@ -23842,8 +23855,10 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     else if(P && P.wrap) finishLive(P, false);   // 1.70: built early, then the system took the touch
     G.armed = false; G.engaged = false; G.prep = null;
   };
-  if(!isDesk() && !el.classList.contains('cs-pop')){
-    el._swipeNavHandlers = cardStripSwipe(el, can, onNext, onPrev);   // 1.117 phone: only the cards slide
+  if(phoneRow){
+    const no = ()=>{};
+    el._swipeNavHandlers = { ts: no, tm: no, te: no, tc: no };
+    cardCarousel(el, meta, can, onNext, onPrev);   // 1.118 phone: the native card row
   } else {
   el.addEventListener('touchstart', ts, {passive:true});
   el.addEventListener('touchmove', tm, {passive:false});
@@ -23875,6 +23890,7 @@ function sweepSwipeClips(){
 }
 setInterval(()=>{ try{ if(document.querySelector('body > .swipe-clip')) sweepSwipeClips(); }catch(e){} }, 1000);
 function openCardInfo(card, opts){
+  if(opts && opts._replace && ccDefer(()=>openCardInfo(card, opts))) return;   // 1.118
   if(!(opts && opts._replace) && zoomTake(card)) return;   // 1.28 desk: a click shows the card big
   _cardSheetGen++;   // this render owns csPrice/csRulings from here on
   opts = opts || {};
@@ -24114,10 +24130,23 @@ function openCardInfo(card, opts){
       while(n >= 0 && n < pool.length && pool[n].name === card.name) n += dir;
       return (n < 0 || n >= pool.length) ? -1 : n;
     };
+    // 1.118: k cards away, duplicate copies skipped the same way
+    const idxAt = (k)=>{
+      let n = pi; const s1 = k > 0 ? 1 : -1;
+      for(let j = 0; j < Math.abs(k); j++){
+        const nm = j === 0 ? card.name : pool[n].name;
+        n += s1;
+        while(n >= 0 && n < pool.length && pool[n].name === nm) n += s1;
+        if(n < 0 || n >= pool.length) return -1;
+      }
+      return n;
+    };
     attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
       canNext: ()=>peekIdx(1) >= 0, canPrev: ()=>peekIdx(-1) >= 0,
       peekNext: ()=>{ const n = peekIdx(1); return n >= 0 ? cardImageMed(pool[n]) : null; },
-      peekPrev: ()=>{ const n = peekIdx(-1); return n >= 0 ? cardImageMed(pool[n]) : null; }
+      peekPrev: ()=>{ const n = peekIdx(-1); return n >= 0 ? cardImageMed(pool[n]) : null; },
+      hasAt: (k)=>idxAt(k) >= 0,
+      peekAt: (k)=>{ const n = idxAt(k); return n >= 0 ? cardImageMed(pool[n]) : null; }
     });
     // 1.25: the neighbours' big pictures load ahead -- stepping on shows the
     // next card at once instead of an empty frame that fills in late.
@@ -24141,7 +24170,9 @@ function openCardInfo(card, opts){
     attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
       canNext: ()=>ci0 + 1 < cpool.length, canPrev: ()=>ci0 - 1 >= 0,
       peekNext: ()=>{ const it = state.collection.items[cpool[ci0 + 1]]; return it ? it.img : null; },
-      peekPrev: ()=>{ const it = state.collection.items[cpool[ci0 - 1]]; return it ? it.img : null; }
+      peekPrev: ()=>{ const it = state.collection.items[cpool[ci0 - 1]]; return it ? it.img : null; },
+      hasAt: (k)=>ci0 + k >= 0 && ci0 + k < cpool.length,
+      peekAt: (k)=>{ const it = state.collection.items[cpool[ci0 + k]]; return it ? it.img : null; }
     });
   }
   const wpool = (!pool && !cpool && Array.isArray(opts.wantPool)) ? opts.wantPool : null;
@@ -24162,7 +24193,9 @@ function openCardInfo(card, opts){
     const peekW = (k)=>{ const c = state._wantsSrc && state._wantsSrc.get(wpool[k]); return c ? cardImageMed(c) : null; };
     attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
       canNext: ()=>wi + 1 < wpool.length, canPrev: ()=>wi - 1 >= 0,
-      peekNext: ()=>peekW(wi + 1), peekPrev: ()=>peekW(wi - 1)
+      peekNext: ()=>peekW(wi + 1), peekPrev: ()=>peekW(wi - 1),
+      hasAt: (k)=>wi + k >= 0 && wi + k < wpool.length,
+      peekAt: (k)=>peekW(wi + k)
     });
   }
 }
