@@ -4169,14 +4169,16 @@ html:not(.desk) .home-news{max-width:none;width:calc(100% + 24px);margin:10px -1
    every card the same size, the neighbours peeking in at the screen edges */
 .cc-strip{display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;box-sizing:border-box;touch-action:pan-x pan-y;}
 .cc-strip::-webkit-scrollbar{display:none;}
-.cc-slide{flex:0 0 auto;scroll-snap-align:center;scroll-snap-stop:always;position:relative;}
-.cc-slide > img{display:block;width:100% !important;height:auto;aspect-ratio:488/680;border-radius:4.75% / 3.5%;box-shadow:none !important;}
+.cc-slide{flex:0 0 var(--ccw, 300px);width:var(--ccw, 300px);scroll-snap-align:center;scroll-snap-stop:always;position:relative;aspect-ratio:488/680;transform:scale(.912);}
+.cc-slide.cur, .cc-slide.near{transform:none;}
+.cc-slide > img{display:block;position:relative;z-index:1;width:100% !important;height:auto;aspect-ratio:488/680;border-radius:4.75% / 3.5%;box-shadow:none !important;}
+.cc-slide > img.cc-under{position:absolute;left:0;top:0;z-index:0;}
 .cc-slide.empty{aspect-ratio:488/680;border-radius:4.75% / 3.5%;background:var(--ink-2);}
 /* 1.119: the cards beside the middle one are a touch smaller and grow as
    they slide to the middle -- driven by the row's own scroll, on the GPU */
 @keyframes ccGrow{0%{transform:scale(.912);}50%{transform:scale(1);}100%{transform:scale(.912);}}
 @supports (animation-timeline: view()){
-  .cc-slide{animation:ccGrow linear both;animation-timeline:view(inline);}
+  .cc-slide.near{animation:ccGrow linear both;animation-timeline:view(inline);}
 }
 /* 1.119: after a swipe the new card's info fades in instead of popping */
 @keyframes ccFade{from{opacity:.2;}to{opacity:1;}}
@@ -8843,21 +8845,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.119';
+const APP_VERSION = '1.120';
 const CHANGELOG_NOTES = {
   en: [
-    "Card page: side cards grow to the middle",
-    "Card page: info changes without a jump",
-    "Card page: one bar, no name or price",
-    "Smaller maybeboard/remove menu",
-    "News page: full width"
+    "Card page: swipe on as far as you like",
+    "Card page: card lands faster",
+    "Card page: 8 cards each side preloaded"
   ],
   nl: [
-    "Kaartpagina: buren groeien naar midden",
-    "Kaartpagina: info wisselt zonder sprong",
-    "Kaartpagina: één balk, geen naam/prijs",
-    "Kleiner maybeboard/verwijder-menu",
-    "Nieuwspagina: volle breedte"
+    "Kaartpagina: onbeperkt doorvegen",
+    "Kaartpagina: kaart landt sneller",
+    "Kaartpagina: 8 kaarten per kant geladen"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8867,6 +8865,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.119', d: '2026-11-28',
+    en: ["Card page: side cards grow to the middle", "Card page: info changes without a jump", "Card page: one bar, no name or price", "Smaller maybeboard/remove menu", "News page: full width"],
+    nl: ["Kaartpagina: buren groeien naar midden", "Kaartpagina: info wisselt zonder sprong", "Kaartpagina: één balk, geen naam/prijs", "Kleiner maybeboard/verwijder-menu", "Nieuwspagina: volle breedte"] },
   { v: '1.118', d: '2026-11-28',
     en: ["Card page: smooth gallery-style swiping", "Card page: cards stay the same size", "Card page: neighbours always loaded"],
     nl: ["Kaartpagina: soepele kaartrij", "Kaartpagina: kaarten blijven even groot", "Kaartpagina: buren altijd geladen"] },
@@ -20441,7 +20442,9 @@ function renderCardSheet(d, card, loc, idx){
   // (the Similar page vanished behind exactly that on its first open).
   {
     const _ovs = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
-    if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el)) document.body.appendChild(el);
+    // 1.120: a sheet that is already the top overlay with its card row stays put --
+    // moving it in the page would reset the row's place under the finger
+    if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el && !(el._cc && el._cc.strip && el._cc.strip.isConnected))) document.body.appendChild(el);
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay:not(.swipe-leaving)')).some(o=>o !== el));
   }
@@ -20489,7 +20492,7 @@ function renderCardSheet(d, card, loc, idx){
     }
   }
 
-  el.innerHTML = `<div class="overlay-inner">
+  sheetPaint(el, `<div class="overlay-inner">
     <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><div class="card-price" id="csSaltRow" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;display:none;"></div><div class="card-price" id="csPrice" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;">Checking price…</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
@@ -20502,7 +20505,7 @@ function renderCardSheet(d, card, loc, idx){
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
       <div class="sheet-foot-spacer" aria-hidden="true"></div>
     </main>
-  </div>`;
+  </div>`);
 
   pinSheetToFoot(el);
   requestAnimationFrame(()=>fitSheetTitle(el.querySelector('.topbar .sheet-title')));
@@ -20687,8 +20690,7 @@ function renderCardSheet(d, card, loc, idx){
       canNext: ()=>peekPos(1) >= 0, canPrev: ()=>peekPos(-1) >= 0,
       peekNext: ()=>{ const n = peekPos(1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; },
       peekPrev: ()=>{ const n = peekPos(-1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; },
-      hasAt: (k)=>peekPos(k) >= 0,
-      peekAt: (k)=>{ const n = peekPos(k); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; }
+      seq: { n: order.length, cur: pos, src: (i)=>cardImageMed(swPool[order[i]]), open: (i)=>renderCardSheet(d, swPool[order[i]], loc, order[i]) }   // 1.120
     });
   }
 }
@@ -23389,58 +23391,136 @@ function fitSheetTitle(box){
   window.addEventListener('resize', kick);
   try{ new MutationObserver(kick).observe(document.documentElement, {childList:true, subtree:true}); }catch(e){}
 })();
-/* 1.118 phone: the card page's pictures are ONE native row that the phone
-   itself scrolls and snaps -- smooth as a photo gallery. Every card has the
-   same size, two neighbours wait ready (loaded) on each side, and only when
-   the row comes to rest does the page under it switch to the new card. The
-   new page is built with the row already standing on that card, from
-   pictures that are in memory, so nothing jumps or blanks. A late re-render
-   (a printing or price upgrade) never lands under a moving finger: it waits
-   until the row is still (ccDefer). */
+/* 1.120 phone: the card page's pictures are ONE native row holding every
+   card of the list, that the phone itself scrolls and snaps -- smooth as a
+   photo gallery, and you can keep swiping as far and as fast as you like.
+   The pictures of 8 cards on each side of the one in view are loaded ahead.
+   The row is never rebuilt while you browse: when a card lands in the middle
+   only the page around it is renewed (sheetPaint), and that happens the
+   moment the card is nearly home, not after the row has fully come to rest.
+   A late re-render of a card (a printing or price upgrade) never lands under
+   a moving finger: it waits until the row is still (ccDefer). */
+const CC_LOAD = 8;
 function ccDefer(fn){
   const el = document.getElementById('cardSheetOverlay');
-  if(el && el._cc && el._cc.busy()){ el._ccDeferred = fn; return true; }
+  if(el && el._cc && !el._ccNav && el._cc.busy()){ el._ccDeferred = fn; return true; }
   return false;
 }
-function cardCarousel(el, meta, can, onNext, onPrev){
-  el._cc = null;
+/* The card sheets paint through here. While the card row is on screen, a
+   new card from the row (or a fresh paint of the same card) keeps the row:
+   the new page's other parts take the old ones' places around it, and the
+   card's own picture (with its zoom tap) moves into its slide. */
+function sheetPaint(el, html){
+  const S = el._cc, keep = el._ccKeep;
+  el._ccKeep = null;
+  const oInner = el.querySelector(':scope > .overlay-inner');
+  const strip = S && S.strip;
+  if(!strip || !strip.isConnected || !oInner || !oInner.contains(strip) || isDesk()){ el.innerHTML = html; return; }
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  const nInner = tpl.content.querySelector('.overlay-inner');
+  const nMain = nInner && nInner.querySelector(':scope > main.card-detail');
+  const oMain = oInner.querySelector(':scope > main.card-detail');
+  const nHero = nMain && nMain.querySelector('.cd-hero');
+  const oHero = strip.closest('.cd-hero');
+  const nImg = nHero && nHero.querySelector('img');
+  const oImg = oHero && oHero.querySelector('#dcImg, #ciImg');
+  const i = keep ? keep.i : S.cur;
+  const slide = S.slides[i];
+  // only a card from this row, or the same card painted again
+  const same = !keep && oImg && nImg && oImg.alt === nImg.alt;
+  if(!(keep || same) || !slide || !nMain || !oMain || !nHero || !oHero || !nImg || !oMain.contains(oHero)){ el.innerHTML = html; return; }
+  const boxOf = (m, h)=>{ let x = h; while(x && x.parentElement !== m) x = x.parentElement; return x; };
+  const oBox = boxOf(oMain, oHero), nBox = boxOf(nMain, nHero);
+  if(!oBox || !nBox){ el.innerHTML = html; return; }
+  // the old card's picture stays in its slide as a plain picture
+  if(oImg){
+    const pl = document.createElement('img');
+    pl.className = 'cc-pic'; pl.alt = ''; pl.draggable = false; pl.src = oImg.currentSrc || oImg.src;
+    oImg.replaceWith(pl);
+  }
+  // the new card's own picture goes into its slide, over the plain one
+  // until it has its pixels
+  const under = Array.from(slide.querySelectorAll('img'));
+  under.forEach(u=>u.classList.add('cc-under'));
+  slide.appendChild(nImg);
+  slide.classList.remove('empty');
+  const drop = ()=>under.forEach(u=>u.remove());
+  if(nImg.complete && nImg.naturalWidth) drop();
+  else { nImg.addEventListener('load', drop, {once:true}); nImg.addEventListener('error', drop, {once:true}); setTimeout(drop, 4000); }
+  S.slides.forEach((x, k)=>{ if(k !== i && x.classList.contains('cur')) x.classList.remove('cur'); });
+  slide.classList.add('cur');
+  // the hero's other parts (the flip button)
+  Array.from(oHero.childNodes).forEach(c=>{ if(c !== strip) c.remove(); });
+  Array.from(nHero.childNodes).forEach(c=>{ if(c !== nImg) oHero.appendChild(c); });
+  // the page: everything but the card row is new
+  Array.from(oMain.childNodes).forEach(c=>{ if(c !== oBox) c.remove(); });
+  let before = true;
+  Array.from(nMain.childNodes).forEach(c=>{ if(c === nBox){ before = false; return; } if(before) oMain.insertBefore(c, oBox); else oMain.appendChild(c); });
+  oMain.className = nMain.className;
+  // ...and the sheet's frame (title bar, nav)
+  Array.from(oInner.childNodes).forEach(c=>{ if(c !== oMain) c.remove(); });
+  before = true;
+  Array.from(nInner.childNodes).forEach(c=>{ if(c === nMain){ before = false; return; } if(before) oInner.insertBefore(c, oMain); else oInner.appendChild(c); });
+}
+/* meta.seq = { n, cur, src(i), open(i) }: the whole list, where we are in
+   it, a picture for any card in it, and how to show card i. */
+function cardCarousel(el, meta){
+  const seq = meta && meta.seq;
   const hero = el.querySelector('main.card-detail .cd-hero');
-  const img = hero && (hero.querySelector('#dcImg, #ciImg') || hero.querySelector('img'));
-  if(!hero || !img) return;
-  const hasAt = (k)=>{
-    if(k === 1) return can('next');
-    if(k === -1) return can('prev');
-    try{ return meta.hasAt ? !!meta.hasAt(k) : false; }catch(e){ return false; }
-  };
-  const srcAt = (k)=>{
-    try{
-      if(meta.peekAt) return meta.peekAt(k) || '';
-      if(k === 1) return (meta.peekNext && meta.peekNext()) || '';
-      if(k === -1) return (meta.peekPrev && meta.peekPrev()) || '';
-    }catch(e){}
-    return '';
-  };
-  const ks = [-2, -1, 0, 1, 2].filter(k=>k === 0 || (hasAt(k) && (Math.abs(k) < 2 || hasAt(k > 0 ? 1 : -1))));
-  const c = ks.indexOf(0);
+  const img = hero && (hero.querySelector('#dcImg, #ciImg') || hero.querySelector('img:not(.cc-pic)'));
+  const old = el._cc;
+  if(!seq || !hero || !img || !(seq.n > 1) || !(seq.cur >= 0) || seq.cur >= seq.n){ el._cc = null; return; }
+  // the row is still here (the page was renewed around it): carry on
+  if(old && old.strip.isConnected && hero.contains(old.strip) && old.n === seq.n){
+    old.seq = seq; old.cur = seq.cur;
+    old.fill(seq.cur);
+    return;
+  }
+  if(old && old.strip.isConnected && hero.contains(old.strip)){
+    // the list changed (a card left the deck): a fresh row
+    hero.insertBefore(img, old.strip);
+    old.strip.remove();
+  }
+  const S = { n: seq.n, seq, cur: seq.cur, pitch: 1, touching: false, moving: false, near: new Set() };
   const strip = document.createElement('div');
   strip.className = 'cc-strip';
-  let pitch = 1;
-  const goTo = (k)=>{ const i = ks.indexOf(k); if(i >= 0) strip.scrollTo({ left: i * pitch, behavior: 'smooth' }); };
-  ks.forEach(k=>{
+  S.strip = strip;
+  S.slides = new Array(S.n);
+  const frag = document.createDocumentFragment();
+  for(let i = 0; i < S.n; i++){
     const sl = document.createElement('div');
-    sl.className = 'cc-slide' + (k === 0 ? ' cur' : '');
-    if(k !== 0){
-      const u = srcAt(k);
-      if(u){ const im = document.createElement('img'); im.alt = ''; im.draggable = false; im.decoding = 'async'; im.src = u; sl.appendChild(im); }
-      else sl.classList.add('empty');
-      sl.addEventListener('click', (e)=>{ e.stopPropagation(); goTo(k); });
-    }
-    strip.appendChild(sl);
-  });
+    sl.className = 'cc-slide';
+    sl.dataset.i = i;
+    frag.appendChild(sl);
+    S.slides[i] = sl;
+  }
+  strip.appendChild(frag);
   hero.insertBefore(strip, img);
-  strip.querySelector('.cur').appendChild(img);
-  // the third neighbour on each side loads ahead too
-  [-3, 3].forEach(k=>{ if(hasAt(k)){ const u = srcAt(k); if(u){ const im = new Image(); im.decoding = 'async'; im.src = u; } } });
+  S.slides[S.cur].appendChild(img);
+  S.slides[S.cur].classList.add('cur');
+  // pictures for 8 cards each side of where the row stands; the grow
+  // animation only for the slides around it
+  S.fill = (c)=>{
+    const a = Math.max(0, c - CC_LOAD), b = Math.min(S.n - 1, c + CC_LOAD);
+    for(let i = a; i <= b; i++){
+      const sl = S.slides[i];
+      if(sl.querySelector('img')) continue;
+      let u = '';
+      try{ u = S.seq.src(i) || ''; }catch(e){}
+      if(u){
+        const im = document.createElement('img');
+        im.className = 'cc-pic'; im.alt = ''; im.draggable = false; im.decoding = 'async'; im.src = u;
+        sl.appendChild(im); sl.classList.remove('empty');
+      } else sl.classList.add('empty');
+    }
+    const want = new Set();
+    for(let i = Math.max(0, c - 3); i <= Math.min(S.n - 1, c + 3); i++) want.add(i);
+    S.near.forEach(i=>{ if(!want.has(i)){ S.slides[i].classList.remove('near'); S.near.delete(i); } });
+    want.forEach(i=>{ if(!S.near.has(i)){ S.slides[i].classList.add('near'); S.near.add(i); } });
+    S.filledAt = c;
+  };
+  S.fill(S.cur);
   const lay = ()=>{
     if(!strip.isConnected) return;
     const W = hero.offsetWidth; if(!W) return;
@@ -23453,54 +23533,87 @@ function cardCarousel(el, meta, can, onNext, onPrev){
     strip.style.width = SW + 'px';
     strip.style.marginLeft = left + 'px';
     strip.style.paddingLeft = strip.style.paddingRight = pad + 'px';
-    strip.querySelectorAll('.cc-slide').forEach(x=>{ x.style.width = W + 'px'; });
-    pitch = W + (parseFloat(getComputedStyle(strip).columnGap) || 10);
-    strip.scrollLeft = c * pitch;
+    strip.style.setProperty('--ccw', W + 'px');
+    S.pitch = W + (parseFloat(getComputedStyle(strip).columnGap) || 4);
+    strip.scrollLeft = S.cur * S.pitch;
   };
   lay();
   el._ccLay = lay;
   if(!el._ccResizeOn){ el._ccResizeOn = true; window.addEventListener('resize', ()=>{ try{ el._ccLay && el._ccLay(); }catch(e){} }); }
-  let touching = false, moving = false, done = false, tmr = 0;
-  const settle = ()=>{
-    clearTimeout(tmr);
-    if(done || touching) return;
-    moving = false;
-    const k = ks[Math.max(0, Math.min(ks.length - 1, Math.round(strip.scrollLeft / pitch)))] || 0;
-    if(!k){ const f = el._ccDeferred; el._ccDeferred = null; if(f) try{ f(); }catch(e){} return; }
-    done = true;
+  const nearest = ()=>Math.max(0, Math.min(S.n - 1, Math.round(strip.scrollLeft / S.pitch)));
+  const runDeferred = ()=>{ const f = el._ccDeferred; el._ccDeferred = null; if(f) try{ f(); }catch(e){} };
+  // card i lands: the page around the row becomes card i's page
+  const show = (i)=>{
+    clearTimeout(S.tmr);
+    if(i === S.cur) return;
     el._ccDeferred = null;   // a late upgrade of the card we left is no longer wanted
-    // 1.119: the new page is built with the card row exactly where it stood
-    // (pinSheetToFoot keeps it there while the page below fills in), and its
-    // info fades in
-    el._ccAnchor = hero.getBoundingClientRect().top;
+    el._ccAnchor = hero.getBoundingClientRect().top;   // pinSheetToFoot keeps the row right here
+    el._ccKeep = { i };
     el.classList.add('cc-fresh');
-    clearTimeout(el._ccFreshT); el._ccFreshT = setTimeout(()=>el.classList.remove('cc-fresh'), 400);
-    (k > 0 ? onNext : onPrev)();
+    clearTimeout(el._ccFreshT); el._ccFreshT = setTimeout(()=>el.classList.remove('cc-fresh'), 350);
+    S.cur = i;
+    S.fill(i);
+    el._ccNav = true;
+    try{ S.seq.open(i); }catch(e){}
+    finally{ el._ccNav = false; }
     try{ if(el._ccPin) el._ccPin(); }catch(e){}
   };
-  strip.addEventListener('touchstart', ()=>{ touching = true; }, {passive:true});
-  const up = ()=>{ touching = false; clearTimeout(tmr); tmr = setTimeout(()=>{ if(!moving) settle(); }, 80); };
+  const atRest = ()=>{
+    S.moving = false;
+    if(S.touching) return;
+    const i = nearest();
+    if(i !== S.cur) show(i); else runDeferred();
+  };
+  const hasEnd = 'onscrollend' in window;
+  let lastX = strip.scrollLeft;
+  strip.addEventListener('scroll', ()=>{
+    S.moving = true;
+    const x = strip.scrollLeft, dx = x - lastX; lastX = x;
+    const i = nearest();
+    if(Math.abs(i - (S.filledAt == null ? S.cur : S.filledAt)) >= 2) S.fill(i);
+    // no finger on it, past the halfway mark and gliding home: the card is
+    // as good as there -- show its page now, the rest of the glide finishes
+    // under it
+    const rest = i * S.pitch - x;
+    if(!S.touching && i !== S.cur && (Math.abs(rest) < S.pitch * 0.06 || (Math.abs(rest) < S.pitch * 0.45 && dx * rest > 0))){
+      clearTimeout(S.tmr);
+      S.tmr = setTimeout(()=>{ if(!S.touching && nearest() === i) show(i); }, 16);
+    }
+    if(!hasEnd){ clearTimeout(S.endT); S.endT = setTimeout(atRest, 140); }
+  }, {passive:true});
+  if(hasEnd) strip.addEventListener('scrollend', atRest);
+  strip.addEventListener('touchstart', ()=>{ S.touching = true; clearTimeout(S.tmr); }, {passive:true});
+  const up = ()=>{ S.touching = false; setTimeout(()=>{ if(!S.moving && !S.touching) atRest(); }, 80); };
   strip.addEventListener('touchend', up, {passive:true});
   strip.addEventListener('touchcancel', up, {passive:true});
-  const hasEnd = 'onscrollend' in window;
-  strip.addEventListener('scroll', ()=>{
-    moving = true;
-    if(!hasEnd){ clearTimeout(tmr); tmr = setTimeout(settle, 140); }
-  }, {passive:true});
-  if(hasEnd) strip.addEventListener('scrollend', settle);
-  // 1.119: no scroll-driven animation in this browser: the same growth by hand
-  let sraf = 0;
-  const scaleByHand = ()=>{
-    sraf = 0;
-    const mid = strip.scrollLeft + strip.clientWidth / 2;
-    strip.querySelectorAll('.cc-slide').forEach(x=>{
-      const dd = Math.min(1, Math.abs(x.offsetLeft + x.offsetWidth / 2 - mid) / (pitch || 1));
-      x.style.transform = dd > 0.001 ? `scale(${(1 - 0.08 * dd).toFixed(4)})` : '';
-    });
-  };
+  // a tap on a neighbour glides it to the middle
+  strip.addEventListener('click', (e)=>{
+    const sl = e.target.closest && e.target.closest('.cc-slide');
+    if(!sl) return;
+    const i = +sl.dataset.i;
+    if(i === S.cur) return;
+    e.stopPropagation();
+    strip.scrollTo({ left: i * S.pitch, behavior: 'smooth' });
+  });
+  // no scroll-driven animation in this browser: the same growth by hand
   let sdOk = false; try{ sdOk = CSS.supports('animation-timeline: view()'); }catch(e){}
-  if(!sdOk){ strip.addEventListener('scroll', ()=>{ if(!sraf) sraf = requestAnimationFrame(scaleByHand); }, {passive:true}); scaleByHand(); }
-  el._cc = { busy: ()=>!done && (touching || moving), strip, go: goTo };
+  if(!sdOk){
+    let sraf = 0;
+    const byHand = ()=>{
+      sraf = 0;
+      const mid = strip.scrollLeft + strip.clientWidth / 2;
+      S.near.forEach(i=>{
+        const x = S.slides[i];
+        const dd = Math.min(1, Math.abs(x.offsetLeft + x.offsetWidth / 2 - mid) / (S.pitch || 1));
+        x.style.transform = dd > 0.001 ? `scale(${(1 - 0.08 * dd).toFixed(4)})` : '';
+      });
+    };
+    strip.addEventListener('scroll', ()=>{ if(!sraf) sraf = requestAnimationFrame(byHand); }, {passive:true});
+    byHand();
+  }
+  S.busy = ()=>S.touching || S.moving;
+  S.go = (i)=>strip.scrollTo({ left: i * S.pitch, behavior: 'smooth' });
+  el._cc = S;
 }
 function attachSwipeNav(el, onNext, onPrev, meta){
   meta = meta || {};
@@ -23904,7 +24017,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
   if(phoneRow){
     const no = ()=>{};
     el._swipeNavHandlers = { ts: no, tm: no, te: no, tc: no };
-    cardCarousel(el, meta, can, onNext, onPrev);   // 1.118 phone: the native card row
+    cardCarousel(el, meta);   // 1.120 phone: the native card row
   } else {
   el.addEventListener('touchstart', ts, {passive:true});
   el.addEventListener('touchmove', tm, {passive:false});
@@ -23997,7 +24110,9 @@ function openCardInfo(card, opts){
   // (the Similar page vanished behind exactly that on its first open).
   {
     const _ovs = document.querySelectorAll('body > .overlay:not(.swipe-leaving)');
-    if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el)) document.body.appendChild(el);
+    // 1.120: a sheet that is already the top overlay with its card row stays put --
+    // moving it in the page would reset the row's place under the finger
+    if(!el.isConnected || (_ovs.length && _ovs[_ovs.length - 1] === el && !(el._cc && el._cc.strip && el._cc.strip.isConnected))) document.body.appendChild(el);
     el.classList.toggle('sheet-over-overlay',
       Array.from(document.querySelectorAll('body > .overlay:not(.swipe-leaving)')).some(o=>o !== el));
   }
@@ -24006,7 +24121,7 @@ function openCardInfo(card, opts){
   // cards (basics etc.) stay on the Add side — only a removable main-deck
   // copy flips the button to Remove.
   const pinnedHasCard = ()=> !!(pinned && (deckIsConstructed(pinned) ? atCopyLimit(pinned, card) : (pinned.cards.some(x=>x.name===card.name) && !allowsDuplicates(card))));
-  el.innerHTML = `<div class="overlay-inner">
+  sheetPaint(el, `<div class="overlay-inner">
     <div class="topbar" style="position:relative;"><div class="brand-txt sheet-title two-line">${escapeHtml(card.name)}</div><div class="card-price" id="csSaltRow" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;display:none;"></div><div class="card-price" id="csPrice" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;margin:0;white-space:nowrap;">Checking price…</div></div>
     <main class="card-detail">
       <div style="text-align:center;">
@@ -24046,7 +24161,7 @@ function openCardInfo(card, opts){
       <div class="detail-sec sel-text"><div class="detail-h">Rulings</div><div id="csRulings"><div class="status"><div class="spinner"></div>Loading rulings…</div></div></div>
       <div class="sheet-foot-spacer" aria-hidden="true"></div>
     </main>
-  </div>`;
+  </div>`);
   pinSheetToFoot(el);
   requestAnimationFrame(()=>fitSheetTitle(el.querySelector('.topbar .sheet-title')));
   document.getElementById('ciImg').addEventListener('click', ()=>showCardPreview(card, colIdx!=null ? cardImageLargeRaw(card) : cardImageLarge(card)));
@@ -24176,23 +24291,15 @@ function openCardInfo(card, opts){
       while(n >= 0 && n < pool.length && pool[n].name === card.name) n += dir;
       return (n < 0 || n >= pool.length) ? -1 : n;
     };
-    // 1.118: k cards away, duplicate copies skipped the same way
-    const idxAt = (k)=>{
-      let n = pi; const s1 = k > 0 ? 1 : -1;
-      for(let j = 0; j < Math.abs(k); j++){
-        const nm = j === 0 ? card.name : pool[n].name;
-        n += s1;
-        while(n >= 0 && n < pool.length && pool[n].name === nm) n += s1;
-        if(n < 0 || n >= pool.length) return -1;
-      }
-      return n;
-    };
     attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
       canNext: ()=>peekIdx(1) >= 0, canPrev: ()=>peekIdx(-1) >= 0,
       peekNext: ()=>{ const n = peekIdx(1); return n >= 0 ? cardImageMed(pool[n]) : null; },
       peekPrev: ()=>{ const n = peekIdx(-1); return n >= 0 ? cardImageMed(pool[n]) : null; },
-      hasAt: (k)=>idxAt(k) >= 0,
-      peekAt: (k)=>{ const n = idxAt(k); return n >= 0 ? cardImageMed(pool[n]) : null; }
+      seq: (()=>{   // 1.120: the list without repeated copies
+        const sq = []; pool.forEach((c, i)=>{ if(c && (!sq.length || pool[sq[sq.length - 1]].name !== c.name)) sq.push(i); });
+        let sc = sq.indexOf(pi); if(sc < 0) sc = sq.findIndex(k=>pool[k].name === card.name);
+        return { n: sq.length, cur: sc, src: (i)=>cardImageMed(pool[sq[i]]), open: (i)=>openCardInfo(pool[sq[i]], Object.assign({}, opts, { poolIdx: sq[i], _replace: true })) };
+      })()
     });
     // 1.25: the neighbours' big pictures load ahead -- stepping on shows the
     // next card at once instead of an empty frame that fills in late.
@@ -24217,8 +24324,7 @@ function openCardInfo(card, opts){
       canNext: ()=>ci0 + 1 < cpool.length, canPrev: ()=>ci0 - 1 >= 0,
       peekNext: ()=>{ const it = state.collection.items[cpool[ci0 + 1]]; return it ? it.img : null; },
       peekPrev: ()=>{ const it = state.collection.items[cpool[ci0 - 1]]; return it ? it.img : null; },
-      hasAt: (k)=>ci0 + k >= 0 && ci0 + k < cpool.length,
-      peekAt: (k)=>{ const it = state.collection.items[cpool[ci0 + k]]; return it ? it.img : null; }
+      seq: { n: cpool.length, cur: ci0, src: (i)=>{ const it = state.collection.items[cpool[i]]; return it ? it.img : ''; }, open: (i)=>openCollectionCard(cpool[i], cpool) }   // 1.120
     });
   }
   const wpool = (!pool && !cpool && Array.isArray(opts.wantPool)) ? opts.wantPool : null;
@@ -24240,8 +24346,17 @@ function openCardInfo(card, opts){
     attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
       canNext: ()=>wi + 1 < wpool.length, canPrev: ()=>wi - 1 >= 0,
       peekNext: ()=>peekW(wi + 1), peekPrev: ()=>peekW(wi - 1),
-      hasAt: (k)=>wi + k >= 0 && wi + k < wpool.length,
-      peekAt: (k)=>peekW(wi + k)
+      seq: { n: wpool.length, cur: wi, src: (i)=>peekW(i), open: (i)=>{   // 1.120
+        const tok = el._ccWTok = (el._ccWTok || 0) + 1;
+        (async ()=>{
+          try{
+            const c = await wantCardFor(wpool[i]);
+            if(!c || el._ccWTok !== tok) return;
+            el._ccKeep = { i }; el._ccNav = true;
+            try{ openCardInfo(c, Object.assign({}, opts, { wantName: wpool[i], wantIdx: i, _replace: true })); } finally { el._ccNav = false; }
+          }catch(e){}
+        })();
+      } }
     });
   }
 }
