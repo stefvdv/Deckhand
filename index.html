@@ -4182,12 +4182,12 @@ html:not(.desk) .home-news{max-width:none;width:calc(100% + 24px);margin:10px -1
   .cc-slide.near{animation:ccGrow linear both;animation-timeline:view(inline);}
 }
 /* 1.119: after a swipe the new card's info fades in instead of popping */
-@keyframes ccFade{from{opacity:.2;}to{opacity:1;}}
+@keyframes ccFade{from{opacity:.45;}to{opacity:1;}}   /* 1.123: a soft change, not a blink */
 /* 1.122 phone: the card page's title bar keeps one height, one line of
    name or two -- it never grows or shrinks while browsing */
 html:not(.desk) #cardSheetOverlay > .overlay-inner > .topbar{height:56px;min-height:56px;max-height:56px;box-sizing:border-box;overflow:hidden;}
 /* 1.121: only text that really changed fades in -- frames and buttons stay */
-#cardSheetOverlay .cc-txt{animation:ccFade .24s ease-out both;}
+#cardSheetOverlay .cc-txt{animation:ccFade .18s ease-out both;}
 /* buttons riding on the card (the flip button) step aside while the row moves */
 .cd-hero.cc-moving > :not(.cc-strip){opacity:0 !important;animation:none !important;pointer-events:none;}
 .cs-info{width:100%;box-sizing:border-box;border:1px solid var(--hair-2);border-radius:16px;background:var(--ink-2);padding:10px 12px;margin:0 0 8px;position:relative;display:flex;flex-direction:column;gap:10px;}
@@ -4985,7 +4985,7 @@ document.addEventListener('click', async (e)=>{
   if(!btn) return;
   e.preventDefault(); e.stopPropagation();
   const host = btn.closest('.dfc-flip-box') && btn.closest('.dfc-flip-box').parentElement;
-  const img = host && host.querySelector('img');
+  const img = dfcImgOf(host);
   if(!img) return;
   if(btn.classList.contains('card-rot')){ cardRotToggle(btn, img); return; }   // 1.66
   // Meld halves fetch their COMPLETE meld result on first flip.
@@ -5021,10 +5021,16 @@ function cardRotToggle(btn, img){
 }
 /* Which two-faced cards are turned over right now (by card id). */
 const _dfcBack = new Set();
+/* 1.123: the picture a flip button belongs to -- in the card row that is the
+   card in the middle (the card's own picture), never a neighbour */
+function dfcImgOf(host){
+  if(!host) return null;
+  return host.querySelector('#dcImg, #ciImg, .cc-slide.cur > img:not(.cc-under)') || host.querySelector('img');
+}
 function dfcKey(u){ const m = String(u || '').match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i); return m ? m[1].toLowerCase() : String(u || '').split('?')[0]; }
 function dfcPaint(btn, toBack){
   const host = btn.closest('.dfc-flip-box') && btn.closest('.dfc-flip-box').parentElement;
-  const img = host && host.querySelector('img');
+  const img = dfcImgOf(host);
   if(!img || (toBack && !btn.dataset.back)) return;
   img.src = toBack ? btn.dataset.back : btn.dataset.front;
   img.dataset.dfcBack = toBack ? '1' : '';
@@ -8852,25 +8858,21 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.122';
+const APP_VERSION = '1.123';
 const CHANGELOG_NOTES = {
   en: [
-    "Card page: title bar stays put",
-    "Card page: legality, oracle, rulings",
-    "Commander first in the card row",
-    "Tags open smoothly",
-    "Combo box as wide as Tags",
-    "No more runaway swipes",
-    "Card picture no longer reloads"
+    "Legality: only Legal/Not legal changes",
+    "The word Tags no longer flickers",
+    "Flip button works in the card row",
+    "Tag field: keyboard opens calmly",
+    "Softer change of text"
   ],
   nl: [
-    "Kaartpagina: titelbalk blijft staan",
-    "Kaartpagina: legaliteit, oracle, rulings",
-    "Commander als eerste in de kaartrij",
-    "Tags openen soepel",
-    "Combovak even breed als Tags",
-    "Geen doorschietende veeg meer",
-    "Kaartplaatje laadt niet opnieuw"
+    "Legaliteit: alleen Legal/Not legal",
+    "Het woord Tags knippert niet meer",
+    "Flipknop werkt in de kaartrij",
+    "Tagveld: toetsenbord rustig open",
+    "Zachtere tekstwissel"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8880,6 +8882,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.122', d: '2026-11-28',
+    en: ["Card page: title bar stays put", "Card page: legality, oracle, rulings", "Commander first in the card row", "Tags open smoothly", "Combo box as wide as Tags", "No more runaway swipes", "Card picture no longer reloads"],
+    nl: ["Kaartpagina: titelbalk blijft staan", "Kaartpagina: legaliteit, oracle, rulings", "Commander als eerste in de kaartrij", "Tags openen soepel", "Combovak even breed als Tags", "Geen doorschietende veeg meer", "Kaartplaatje laadt niet opnieuw"] },
   { v: '1.121', d: '2026-11-28',
     en: ["Card page: only changed text fades in", "Card page: buttons appear after landing", "Card page: card lands faster", "Short swipe: one card, hard: many"],
     nl: ["Kaartpagina: alleen nieuwe tekst faadt", "Kaartpagina: knoppen na het landen", "Kaartpagina: kaart landt sneller", "Korte veeg: 1 kaart, harde: vele"] },
@@ -21137,12 +21142,28 @@ function tagFieldToKeyboard(){
   }catch(e){}
 }
 {
-  const on = ()=>{ document.documentElement.classList.add('tag-typing'); [0, 120, 350, 700].forEach(ms=>setTimeout(tagFieldToKeyboard, ms)); };
-  const off = ()=>{ setTimeout(()=>{ const a = document.activeElement; if(!(a && a.id === 'tagInput')) document.documentElement.classList.remove('tag-typing'); }, 200); };
+  // 1.123: the page's scroller is watched while the tag field is in use: when
+  // the keyboard shrinks it, or the browser scrolls on its own to show the
+  // field, the field is put back at the keyboard's edge before that frame is
+  // drawn -- no drop first and rise after
+  let ro = null, roSc = null, until = 0;
+  const fix = ()=>{ if(document.documentElement.classList.contains('tag-typing')) tagFieldToKeyboard(); };
+  const onScroll = ()=>{ if(Date.now() < until) fix(); };
+  const watch = ()=>{
+    const input = document.getElementById('tagInput'); if(!input) return;
+    let sc = input.parentElement;
+    while(sc && sc !== document.body){ const cs = getComputedStyle(sc); if(/(auto|scroll)/.test(cs.overflowY)) break; sc = sc.parentElement; }
+    if(!sc || sc === document.body || sc === roSc) return;
+    try{ if(ro) ro.disconnect(); ro = new ResizeObserver(fix); ro.observe(sc); roSc = sc; }catch(e){}
+  };
+  const unwatch = ()=>{ try{ if(ro) ro.disconnect(); }catch(e){} ro = null; roSc = null; };
+  document.addEventListener('scroll', onScroll, true);
+  const on = ()=>{ document.documentElement.classList.add('tag-typing'); until = Date.now() + 1500; watch(); fix(); [0, 120, 350, 700].forEach(ms=>setTimeout(tagFieldToKeyboard, ms)); };
+  const off = ()=>{ setTimeout(()=>{ const a = document.activeElement; if(!(a && a.id === 'tagInput')){ document.documentElement.classList.remove('tag-typing'); unwatch(); } }, 200); };
   document.addEventListener('focusin', (e)=>{ if(e.target && e.target.id === 'tagInput' && !isDesk()) on(); });
   document.addEventListener('focusout', (e)=>{ if(e.target && e.target.id === 'tagInput') off(); });
-  try{ window.visualViewport && window.visualViewport.addEventListener('resize', ()=>{ if(document.documentElement.classList.contains('tag-typing')) requestAnimationFrame(tagFieldToKeyboard); }); }catch(e){}
-  window.addEventListener('resize', ()=>{ if(document.documentElement.classList.contains('tag-typing')) requestAnimationFrame(tagFieldToKeyboard); });
+  try{ window.visualViewport && window.visualViewport.addEventListener('resize', ()=>{ if(document.documentElement.classList.contains('tag-typing')){ until = Date.now() + 800; fix(); requestAnimationFrame(tagFieldToKeyboard); } }); }catch(e){}
+  window.addEventListener('resize', ()=>{ if(document.documentElement.classList.contains('tag-typing')){ until = Date.now() + 800; fix(); requestAnimationFrame(tagFieldToKeyboard); } });
 }
 /* 1.117 phone: the card page's controls become one panel under the card:
    [⋯] the card's name [− count +], and under it the price, Tags and the
@@ -23492,6 +23513,7 @@ function sheetPaint(el, html){
   if(!strip || !strip.isConnected || !oInner || !oInner.contains(strip) || isDesk()){ el.innerHTML = html; return; }
   const tpl = document.createElement('template');
   tpl.innerHTML = html;
+  try{ if(appLang() !== 'en') translateTree(tpl.content); }catch(e){}   // 1.123
   const nInner = tpl.content.querySelector('.overlay-inner');
   const nMain = nInner && nInner.querySelector(':scope > main.card-detail');
   const oMain = oInner.querySelector(':scope > main.card-detail');
@@ -23559,23 +23581,51 @@ function sheetPaint(el, html){
 /* Every element that carries text of its own, keyed by its place in the
    sheet (tag, class and position), with that text -- to tell what changed. */
 function ccTextMap(root, skip){
+  // 1.123: every element's OWN words (not its children's), keyed by its
+  // place; an element with an id (a button, the price, the oracle box) is
+  // also weighed as a whole -- when its whole text is the same, nothing in
+  // it fades, however differently it was built this time
   const map = new Map();
+  const norm = (t)=>t.replace(/\s+/g, ' ').trim();
   const walk = (node, path)=>{
     const counts = {};
     for(const c of node.children){
       if(c === skip) continue;
-      const cl = Array.from(c.classList).find(x=>x !== 'cc-txt') || '';
-      const k0 = c.tagName + '.' + cl + (c.id ? '#' + c.id : '');
-      counts[k0] = (counts[k0] || 0) + 1;
-      const p = path + '/' + k0 + ':' + counts[k0];
+      let p;
+      // only names that stay the same between pages count (csPrice, csTags);
+      // a made-up one (leg + random letters and digits) is no name at all
+      const sid = c.id && /^[A-Za-z_-]+$/.test(c.id) ? c.id : '';
+      if(sid){
+        p = '#' + sid;
+        map.set(p, { el: c, t: norm(c.textContent), whole: true });
+      } else {
+        const cl = Array.from(c.classList).find(x=>x !== 'cc-txt') || '';
+        const k0 = c.tagName + '.' + cl;
+        counts[k0] = (counts[k0] || 0) + 1;
+        p = path + '/' + k0 + ':' + counts[k0];
+      }
       let own = '';
       for(const t of c.childNodes) if(t.nodeType === 3) own += t.nodeValue;
-      if(own.trim()) map.set(p, { el: c, t: c.textContent.replace(/\s+/g, ' ').trim() });
+      own = norm(own);
+      if(own) map.set(sid ? p + '/=' : p, { el: c, t: own });
       walk(c, p);
     }
   };
   walk(root, '');
   return map;
+}
+/* Mark what differs between the page before (was) and now (map). */
+function ccMarkChanged(was, now){
+  const same = [];
+  now.forEach((v, k)=>{ if(v.whole){ const o = was.get(k); if(o && o.t === v.t) same.push(k); } });
+  now.forEach((v, k)=>{
+    if(v.whole) return;
+    if(same.some(p=>k === p + '/=' || k.startsWith(p + '/'))) return;
+    const o = was.get(k);
+    if(o && o.t === v.t) return;
+    if(v.el.parentElement && v.el.parentElement.closest('.cc-txt')) return;
+    ccFadeText(v.el);
+  });
 }
 /* Fade in changed text. A framed element (a button, a chip, a box) keeps
    its frame: only its own words fade; anything else fades as a whole. */
@@ -23605,12 +23655,7 @@ function cardCarousel(el, meta){
     if(el._ccWas){
       const was = el._ccWas, box = el._ccWasBox; el._ccWas = null; el._ccWasBox = null;
       try{
-        ccTextMap(el.querySelector(':scope > .overlay-inner'), box).forEach((v, k)=>{
-          const o = was.get(k);
-          if(o && o.t === v.t) return;
-          if(v.el.parentElement && v.el.parentElement.closest('.cc-txt')) return;
-          ccFadeText(v.el);
-        });
+        ccMarkChanged(was, ccTextMap(el.querySelector(':scope > .overlay-inner'), box));
       }catch(e){}
     }
     return;
