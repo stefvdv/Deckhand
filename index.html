@@ -4148,6 +4148,17 @@ html:not(.desk) #decklistBox > .cat-group > .cat-head{background:var(--ink-2);bo
 html:not(.desk) #decklistBox > .cat-group > .cat-head.collapsed{border-top-color:transparent;margin-top:-10px;border-radius:16px;}
 html:not(.desk) #decklistBox > .cat-group > .cat-head .t{font-family:inherit;font-weight:700;text-transform:none;letter-spacing:0;font-size:16px;color:var(--ink-text);}
 html:not(.desk) .dl-bridge:not(.dl-bridge-60){border:1px solid var(--hair-2);border-radius:16px;background:var(--ink-2);padding:10px;margin-bottom:12px;}
+/* 1.117 phone: spoilers -- one frame per set, the decklist's look; the set
+   bar at the frame's foot */
+html:not(.desk) #spMainPage .sp-group{border:1px solid var(--hair-2);border-radius:16px;background:var(--ink-2);padding:10px 8px 0;margin:0 0 12px;}
+html:not(.desk) .app > main#spMainPage .sp-group > .sp-shelf{display:flex;align-items:center;gap:8px;background:var(--ink-2);border:none;border-top:1px solid var(--hair-2);margin:10px -8px 0 !important;padding:12px 14px;border-radius:0 0 16px 16px;font-family:inherit;font-weight:700;text-transform:none;letter-spacing:0;font-size:16px;}
+#spMainPage .sp-shelf .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-text);}
+#spMainPage .sp-shelf .sp-when{font-size:12px;font-weight:500;color:var(--sub-text);white-space:nowrap;}
+#spMainPage .sp-shelf .n{font-size:12px;font-weight:500;color:var(--sub-text);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+html:not(.desk) #spMainPage .sp-shelf .sp-shelf-ico{margin-right:0;}
+/* 1.117 phone: a type or set bar riding along at the foot of the screen is
+   flat underneath (no card shines through) and rounded on top */
+html:not(.desk) #decklistBox > .cat-group > .cat-head.stuck, html:not(.desk) .app > main#spMainPage .sp-group > .sp-shelf.stuck{border-radius:16px 16px 0 0;border:1px solid var(--hair-2);border-bottom:none;}
 /* 1.117 phone: the card page -- a big card with its neighbours peeking at
    the edges, and one panel under it */
 html:not(.desk) .cd-hero{max-width:none !important;width:84% !important;}
@@ -8518,8 +8529,9 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
   // deck, the recommendation, Inspiration; the Search page passes its filter.
   const fmtWanted = opts.format === undefined ? ctxFmt() : (opts.format || 'any');
   const qcKey = ['f:'+fmtWanted, baseClause||'', sortOrder||'', limit, (opts.dir||''), (opts.restrictSet||''), 's'+setsSig].join('|');
+  const _noUnset = (a)=>fmtWanted === 'any' ? a : a.filter(c=>!c || c.set_type !== 'funny');   // 1.117
   if(!opts._revalidate){
-    if(_queryCache.has(qcKey)) return { results: _queryCache.get(qcKey).slice(), error: false };
+    if(_queryCache.has(qcKey)) return { results: _noUnset(_queryCache.get(qcKey).slice()), error: false };
     const disk = await qdbGet(qcKey);
     if(disk && (Date.now() - (disk.t||0)) < SWR_SERVE && Array.isArray(disk.v)){
       if((Date.now() - (disk.t||0)) > QCACHE_TTL && !_qRevalidating.has(qcKey)){
@@ -8530,7 +8542,7 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
           .catch(()=>{}).finally(()=>_qRevalidating.delete(qcKey));
       }
       _queryCache.set(qcKey, disk.v);
-      return { results: disk.v.slice(), error: false };
+      return { results: _noUnset(disk.v.slice()), error: false };
     }
   }
   _searchBusy++;
@@ -8549,8 +8561,8 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
     // release day — demanding legal:commander would hide the very spoilers
     // being searched for. The format flag returns the moment it releases.
     let rsPreview = false;
-    try{ rsPreview = rsList.length > 0 && (currentPreviewSets()||[]).some(x=>rsList.includes(x.code)); }catch(e){}
-    const q = `${base} ${(rsPreview || fmtWanted === 'any') ? '' : sfLegalClause(fmtWanted) + ' '}game:paper -is:digital -st:memorabilia -st:token -st:minigame`.trim();
+    try{ rsPreview = rsList.length > 0 && (currentPreviewSets()||[]).some(x=>!x.released && rsList.includes(x.code)); }catch(e){}
+    const q = `${base} ${(rsPreview || fmtWanted === 'any') ? '' : sfLegalClause(fmtWanted) + ' '}game:paper -is:digital -st:memorabilia -st:token -st:minigame${fmtWanted === 'any' ? '' : ' -st:funny'}`.trim();
     const url = `${SF_BASE}/cards/search?unique=cards&order=${orderParam}&dir=${dir}&q=${encodeURIComponent(q)}`;
     const out = [];
     let next = url, guard = 0;
@@ -8568,7 +8580,7 @@ async function searchAndVerifyLegal(baseClause, sortOrder, limit, opts){
       let dd = null;
       try{ dd = await res.json(); }
       catch(e){ return { results: out.slice(), error: true }; }
-      (dd.data||[]).forEach(c=>{ if(out.length < limit && isRealCard(c)) out.push(c); });
+      (dd.data||[]).forEach(c=>{ if(out.length < limit && isRealCard(c) && !(fmtWanted !== 'any' && c.set_type === 'funny')) out.push(c); });
       next = dd.has_more ? dd.next_page : null;
     }
     _queryCache.set(qcKey, out);
@@ -8817,31 +8829,25 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.116';
+const APP_VERSION = '1.117';
 const CHANGELOG_NOTES = {
   en: [
-    "Inspiration: filters behind the funnel",
-    "Deck finder is now called Inspire me",
-    "Life counter back on the bar, far right",
-    "Life menu: AI judge in the middle",
-    "Experience counter shows XP",
-    "Life: counters ride over the name",
-    "New card page: big card, one panel",
-    "Each card type in its own frame",
-    "Deck and binder tiles show at once",
-    "Price alert for any card (⋯ menu)"
+    "Card page: only the cards slide",
+    "Card page: no flash after a swipe",
+    "Tags open without flicker",
+    "Type bar: flat bottom while scrolling",
+    "Spoilers: a frame per set",
+    "Spoilers: latest set stays visible",
+    "No un-set or illegal cards in results"
   ],
   nl: [
-    "Inspiratie: filters achter de trechter",
-    "Deckwijzer heet nu Inspireer mij",
-    "Life counter terug in de balk, rechts",
-    "Tafelmenu: AI-judge in het midden",
-    "Experience-teller toont XP",
-    "Life: tellers over de naam",
-    "Nieuwe kaartpagina: groot, één vak",
-    "Elk kaarttype in een eigen kader",
-    "Deck- en maptegels staan er meteen",
-    "Prijsalert voor elke kaart (⋯-menu)"
+    "Kaartpagina: alleen de kaarten schuiven",
+    "Kaartpagina: geen flits na het vegen",
+    "Tags openen zonder flikkeren",
+    "Typebalk: plat aan de onderkant",
+    "Spoilers: een kader per set",
+    "Spoilers: nieuwste set blijft staan",
+    "Geen Unhinged/illegale kaarten meer"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8851,6 +8857,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.116', d: '2026-11-28',
+    en: ["Inspiration: filters behind the funnel", "Deck finder is now called Inspire me", "Life counter back on the bar, far right", "Life menu: AI judge in the middle", "Experience counter shows XP", "Life: counters ride over the name", "New card page: big card, one panel", "Each card type in its own frame", "Deck and binder tiles show at once", "Price alert for any card (⋯ menu)"],
+    nl: ["Inspiratie: filters achter de trechter", "Deckwijzer heet nu Inspireer mij", "Life counter terug in de balk, rechts", "Tafelmenu: AI-judge in het midden", "Experience-teller toont XP", "Life: tellers over de naam", "Nieuwe kaartpagina: groot, één vak", "Elk kaarttype in een eigen kader", "Deck- en maptegels staan er meteen", "Prijsalert voor elke kaart (⋯-menu)"] },
   { v: '1.115', d: '2026-11-28',
     en: ["Random card fills the room, keyboard too", "Tags: field rides on the keyboard"],
     nl: ["Willekeurige kaart vult de vrije ruimte", "Tags: veld direct boven het toetsenbord"] },
@@ -17231,6 +17240,19 @@ function currentPreviewSets(){
     if(SKIP_TYPES.has(x.set_type)) return;
     map.set(x.code, { code:x.code, name:x.name, date:x.released_at, ub:(autoSets.ubCodes||[]).includes(x.code) || (state.legalSetCodesUB||[]).includes(x.code) });
   });
+  // 1.117: the newest RELEASED set -- with its commander decks and mini
+  // sets -- stays on the page until the next one comes out
+  try{
+    const MAIN = new Set(['expansion', 'core']);
+    const NOT_KIN = new Set(['promo', 'alchemy', 'memorabilia', 'funny', 'token', 'minigame']);
+    const raw = state.allSetsRaw || [];
+    const rel = raw.filter(x=>!x.digital && MAIN.has(x.set_type) && x.released_at && x.released_at <= today)
+      .sort((a,b)=>b.released_at.localeCompare(a.released_at))[0];
+    if(rel){
+      raw.filter(x=>x.code === rel.code || (x.parent === rel.code && !x.digital && !SKIP_TYPES.has(x.set_type) && !NOT_KIN.has(x.set_type) && x.released_at && x.released_at <= today))
+        .forEach(x=>{ if(!map.has(x.code)) map.set(x.code, { code:x.code, name:x.name, date:x.released_at, released:true, ub:(autoSets.ubCodes||[]).includes(x.code) || (state.legalSetCodesUB||[]).includes(x.code) }); });
+    }
+  }catch(e){}
   return Array.from(map.values()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0, 24);
 }
 async function fetchWholeSet(code, fresh){
@@ -17419,7 +17441,7 @@ function _renderSpoilerBodyCore(loaded, failed){
   const fmtDate = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined, {month:'short', day:'numeric'}); }catch(e){ return d; } };
   const active = state.spoilerSetFilter && sets.some(x=>x.code===state.spoilerSetFilter) ? state.spoilerSetFilter : null;
   const tile = c => `<div class="sc-tile" role="button" tabindex="0" data-spn="${escapeHtml(c.name)}" data-spset="${escapeHtml(c.set||'')}"><img loading="lazy" class="${wbClass(c)}" src="${cardImageMed(c)}" alt="${escapeHtml(c.name)}">${cardBadgesHtml(c)}</div>`;
-  let cards = [], headHtml = '', footHtml = '', feedGroups = null;
+  let cards = [], headHtml = '', footHtml = '', feedGroups = null, activeCount = '';
   if(active){
     const x = sets.find(s=>s.code===active);
     const got = loaded[active];
@@ -17454,6 +17476,7 @@ function _renderSpoilerBodyCore(loaded, failed){
       })();
     }
     const setTotal = Math.max(rawSet.printed_size || 0, (liveInfo && liveInfo.printed_size) || 0, maxCN);
+    activeCount = gotN ? (setTotal > 0 ? gotN + '/' + setTotal : String(gotN)) : '';
     headHtml = `<div class="chip-label" style="margin:10px 0 4px;">${escapeHtml(x.name)} <span style="float:right;color:var(--sub-text-2);text-transform:none;font-weight:500;">releases ${fmtDate(x.date)}</span></div>`
       + (gotN ? `<p class="hint" style="margin:0 0 6px;">${
           setTotal > 0 && gotN >= setTotal
@@ -17496,11 +17519,15 @@ function _renderSpoilerBodyCore(loaded, failed){
     cards = withKeys.map(w=>w.c);
     // Shelves are per SET per day now: The Hobbit and Star Trek both
     // spoiling on the 5th get their own dividers, each named and dated.
+    // 1.117: one frame per SET (the decklist's look); the set with the
+    // freshest reveal sits at the foot, inside it the newest card first
     feedGroups = [];
+    const _gBySet = new Map();
     withKeys.forEach(w=>{
-      const gk = (w.k||'') + '|' + (w.c.set||'');
-      if(!feedGroups.length || feedGroups[feedGroups.length-1].gk !== gk) feedGroups.push({ gk, k: w.k, set: w.c.set, cs: [] });
-      feedGroups[feedGroups.length-1].cs.push(w.c);
+      const gk = String(w.c.set || '');
+      let g = _gBySet.get(gk);
+      if(!g){ g = { gk, k: w.k, set: w.c.set, cs: [] }; _gBySet.set(gk, g); feedGroups.push(g); }
+      g.cs.push(w.c);
     });
     const pending = sets.filter(x=>loaded[x.code]===undefined && !failed.has(x.code)).length;
     // Housekeep the registry only once EVERYTHING is loaded — pruning
@@ -17518,12 +17545,18 @@ function _renderSpoilerBodyCore(loaded, failed){
   if(active && !cards.length){ box.innerHTML = headHtml + '<p class="hint">' + (spFilterActive() ? 'Nothing matches these filters.' : 'Nothing spoiled yet — check back soon.') + '</p>'; return; }
   const fmtDayHead = d => { try{ return new Date(d+'T00:00:00').toLocaleDateString(appLang()==='nl'?'nl-NL':'en-US', {weekday:'long', month:'long', day:'numeric'}); }catch(e){ return d; } };
   const setNameOf = (code)=>{ const x = sets.find(s=>s.code===code); return x ? x.name : String(code||'').toUpperCase(); };
+  // 1.117: every set in its own frame, the set bar at its foot: symbol,
+  // name, release date and how many cards it shows
+  const shelfHtml = (code, cnt)=>{
+    const x = sets.find(s=>s.code===code);
+    return `<div class="chip-label sp-shelf" style="margin:6px 0 12px;">${code ? `<span class="sp-shelf-ico">${setIcoHtml(code, 'rare')}</span>` : ''}<span class="t">${escapeHtml(setNameOf(code))}</span>${x && x.date ? `<span class="sp-when">${escapeHtml(fmtDate(x.date))}</span>` : ''}<span class="n">${cnt}</span></div>`;
+  };
   const gridHtml = feedGroups
-    ? `<div class="sp-feed">${feedGroups.map(g=>`<div class="sp-group"><div class="chip-label sp-shelf" style="margin:6px 0 12px;">${g.set ? `<span class="sp-shelf-ico">${setIcoHtml(g.set, 'rare')}</span>${escapeHtml(setNameOf(g.set))} — ` : ''}${g.k ? fmtDayHead(g.k) : trS('Date to be announced')}</div><div class="sc-grid">${g.cs.map(tile).join('')}</div></div>`).join('')}${footHtml}</div>`
-    : `<div class="sc-grid">${cards.map(tile).join('')}</div>`;
-  // Set view: the shelf (set name, release date, preview count) sits at the
-  // FOOT, under the cards — release dates live at the bottom everywhere now.
-  box.innerHTML = active ? (gridHtml + headHtml) : (headHtml + gridHtml);
+    ? `<div class="sp-feed">${feedGroups.map(g=>`<div class="sp-group">${shelfHtml(g.set, g.cs.length)}<div class="sc-grid">${g.cs.map(tile).join('')}</div></div>`).join('')}${footHtml}</div>`
+    : `<div class="sp-feed"><div class="sp-group">${shelfHtml(active, activeCount || cards.length)}<div class="sc-grid">${cards.map(tile).join('')}</div></div></div>`;
+  // Set view: the set's bar (name, release date, preview count) sits at the
+  // FOOT of its frame — release dates live at the bottom everywhere now.
+  box.innerHTML = gridHtml;
   // Pin the foot once per visit - streamed repaints rely on the scroll
   // compensation instead of re-jumping, which was the residual flicker.
   if(state.screen === 'spoilers' && !box.dataset.footPinned){ box.dataset.footPinned = '1'; scrollToPageFoot(); }
@@ -20074,7 +20107,9 @@ function dkAddAllowed(name, d){
     if(!d) return true;
     const bc = _bulkIdx && _bulkIdx.byName && _bulkIdx.byName.get(String(name).toLowerCase());
     if(!bc) return true;                              // unknown here: let the add itself decide
+    if(bulkUnplayable(bc)) return false;              // 1.117: no un-set or never-legal cards
     const c = bulkToCardish(bc);
+    if(deckFormat(d) === 'admiral' && !isNonlandFront(c)) return false;   // Admiral plays no lands
     if(deckBlockReason(c, d)) return false;
     if(!deckIsConstructed(d) && !colorIdentityOkDeck(c, d)) return false;
     return true;
@@ -21050,6 +21085,8 @@ function csInfoPanel(el, cfg){
     if(add && !add.disabled){ plus = take(add); }
   }
   const tags = take(all.find(b=>/^(cs|ci)Tags$/.test(b.id)));
+  // the card's Scryfall tags are looked up now, so opening Tags is instant
+  try{ if(card.name && !loadOtagCache()[card.name]) setTimeout(()=>{ try{ detectOtagsForCards([card]); }catch(e){} }, 300); }catch(e){}
   const combo = take(all.find(b=>b.hasAttribute('data-cmbbtn')));
   const rest = all.filter(b=>b.isConnected);
   const panel = document.createElement('div');
@@ -22237,6 +22274,29 @@ function _lsCostFits(cardCost, wanted){
    everyday search: name, type, text, colours, cost, stats, rarity, keyword,
    function tag, price, with Commander legality judged against the local ban
    list. Mode isolation is untouched: Admiral never takes this lane. */
+/* 1.117: un-set cards (Unhinged, Unstable, Unfinity, playtest cards) and
+   cards that are legal nowhere stay out of a format's results. A real card
+   reprinted in an un-set (the Unfinity shocklands) is Modern-legal and
+   stays; a collector reprint (30th Anniversary) as the stored printing is
+   no reason either -- that card itself is fine. */
+const UNSET_CODES = new Set(['ugl', 'unh', 'ust', 'und', 'unf', 'sunf', 'cmb1', 'cmb2', 'ulst', 'punh', 'pust', 'punf']);
+let _setTypeSrc = null, _setTypeMap = null;
+function setTypeOfCode(code){
+  const raw = state.allSetsRaw;
+  if(raw && raw.length && raw !== _setTypeSrc){ _setTypeSrc = raw; _setTypeMap = new Map(raw.map(x=>[x.code, x.set_type])); }
+  return _setTypeMap ? _setTypeMap.get(String(code || '').toLowerCase()) : undefined;
+}
+function bulkUnplayable(c){
+  if(!c) return true;
+  const st = String(c.st || '').toLowerCase();
+  const t = setTypeOfCode(st);
+  const lx = String(c.lx || '');
+  if((t === 'funny' || (!t && UNSET_CODES.has(st))) && !/\bBasic\b/.test(String(c.tl || ''))){
+    if(!(lx[2] === 'l' || lx[2] === 'b')) return true;
+  }
+  if(c.lg === 'not_legal' && lx.indexOf('l') < 0 && t !== 'memorabilia' && st !== '30a') return true;
+  return false;
+}
 function localSearchable(){
   const st = state;
   if((st.searchFlavorText || '').trim()) return false;
@@ -22327,6 +22387,7 @@ async function localSearch(limit){
       if(fmtBans && fmtBans.banned.has(nm)) continue;
       if(!(L === 'l' || L === 'r' || (L === 'b' && fmtBans && fmtBans.live))) continue;
     }
+    if(fmt !== 'any' && bulkUnplayable(c)) continue;   // 1.117
     out.push(c);
     if(out.length > 4000) break;               // a runaway query cannot hog the frame
   }
@@ -23272,6 +23333,102 @@ function fitSheetTitle(box){
   }
   box.style.fontSize = size + 'px';
 }
+/* 1.117 phone: the type bar that rides along at the page foot wears its own
+   shape -- flat underneath, rounded on top (class .stuck). A bar is riding
+   when its frame still runs on below it. */
+(function(){
+  let raf = 0;
+  const SEL = '#decklistBox > .cat-group > .cat-head, #spMainPage .sp-group > .sp-shelf';
+  const tick = ()=>{
+    raf = 0;
+    let heads = [];
+    try{ if(isDesk()) return; heads = document.querySelectorAll(SEL); }catch(e){ return; }
+    const vh = window.innerHeight;
+    heads.forEach(h=>{
+      let on = false;
+      const r = h.getBoundingClientRect();
+      if(r.height && r.bottom > 0 && r.top < vh && !h.classList.contains('collapsed')){
+        on = h.parentElement.getBoundingClientRect().bottom - r.bottom > 2;
+      }
+      if(h.classList.contains('stuck') !== on) h.classList.toggle('stuck', on);
+    });
+  };
+  const kick = ()=>{ if(!raf) raf = requestAnimationFrame(tick); };
+  window.addEventListener('scroll', kick, {passive:true, capture:true});
+  window.addEventListener('resize', kick);
+  try{ new MutationObserver(kick).observe(document.documentElement, {childList:true, subtree:true}); }catch(e){}
+})();
+/* 1.117 phone: the card page swipes like a card strip -- only the pictures
+   move (the card and its two neighbours, as one row under the finger); the
+   text and the panel stay put and simply show the new card once it lands. */
+function cardStripSwipe(el, can, onNext, onPrev){
+  const wrap = ()=>el.querySelector('main.card-detail .ci-nav-wrap');
+  const step = ()=>{ const w = wrap(); const im = w && w.querySelector('img:not(.ci-peek)'); return im ? im.offsetWidth + 10 : 300; };
+  const zoom = ()=>{ const w = wrap(); if(!w || !w.offsetWidth) return 1; const r = w.getBoundingClientRect().width; return r / w.offsetWidth || 1; };
+  const set = (x, ms)=>{
+    const w = wrap(); if(!w) return;
+    const tr = ms ? `${ms}ms cubic-bezier(.2,.75,.25,1)` : '';
+    w.style.willChange = 'transform'; w.style.transition = ms ? `transform ${tr}` : 'none';
+    w.style.transform = x ? `translate3d(${x}px,0,0)` : 'translate3d(0,0,0)';
+    // the card coming in grows to full size, the one leaving draws back
+    const S = step(), p = Math.min(1, Math.abs(x) / S);
+    const hero = w.querySelector('img:not(.ci-peek)'), inc = w.querySelector('.ci-peek.' + (x < 0 ? 'right' : 'left')), other = w.querySelector('.ci-peek.' + (x < 0 ? 'left' : 'right'));
+    [hero, inc, other].forEach(im=>{ if(im) im.style.transition = ms ? `transform ${tr}, opacity ${tr}` : 'none'; });
+    if(hero){ hero.style.transform = p ? `scale(${1 - 0.1 * p})` : ''; hero.style.opacity = p ? String(1 - 0.5 * p) : ''; }
+    if(inc){ inc.style.transform = `translateY(-50%) scale(${0.9 + 0.1 * p})`; inc.style.opacity = String(0.5 + 0.5 * p); }
+    if(other){ other.style.transform = ''; other.style.opacity = ''; }
+  };
+  const go = (which)=>{
+    if(el._stripBusy) return;
+    if(!can(which)){ set(0, 200); return; }
+    el._stripBusy = true;
+    const S = step(), dur = 230;
+    set(which === 'next' ? -S : S, dur);
+    try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
+    setTimeout(()=>{ el._stripBusy = false; which === 'next' ? onNext() : onPrev(); }, dur);
+  };
+  el._stripGo = go;
+  let G = null;
+  const ts = (e)=>{
+    if(el._stripBusy || e.touches.length !== 1) { G = null; return; }
+    const t = e.target;
+    if(t && t.closest && t.closest('.cs-info, .tag-editor, .menu-pop, input, textarea, .pd, .cselect-panel')){ G = null; return; }
+    const p = e.touches[0];
+    G = { sx: p.clientX, sy: p.clientY, eng: false, dx: 0, z: zoom(), S: step(), vs: [[performance.now(), p.clientX]] };
+  };
+  const tm = (e)=>{
+    if(!G) return;
+    const p = e.touches[0]; if(!p) return;
+    const dx = p.clientX - G.sx, dy = p.clientY - G.sy;
+    if(!G.eng){
+      if(Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)){ G = null; return; }   // a scroll
+      if(Math.abs(dx) < 10 || Math.abs(dx) < 1.4 * Math.abs(dy)) return;
+      G.eng = true;
+    }
+    e.preventDefault();
+    G.vs.push([performance.now(), p.clientX]); if(G.vs.length > 6) G.vs.shift();
+    let x = dx / G.z;
+    const dir = x < 0 ? 'next' : 'prev';
+    if(!can(dir)) x *= 0.3;                       // the end of the row pushes back
+    G.dx = x;
+    set(x, 0);
+  };
+  const te = ()=>{
+    if(!G) return;
+    const g = G; G = null;
+    if(!g.eng) return;
+    const v = (()=>{ const a = g.vs[0], b = g.vs[g.vs.length - 1]; const dt = b[0] - a[0]; return dt > 0 ? (b[1] - a[1]) / dt : 0; })();
+    const thr = g.S * 0.22;
+    const which = (g.dx < -thr || (v < -0.45 && g.dx < -20)) ? 'next' : (g.dx > thr || (v > 0.45 && g.dx > 20)) ? 'prev' : null;
+    if(which && can(which)) go(which); else set(0, 200);
+  };
+  const tc = ()=>{ if(G && G.eng) set(0, 200); G = null; };
+  el.addEventListener('touchstart', ts, {passive:true});
+  el.addEventListener('touchmove', tm, {passive:false});
+  el.addEventListener('touchend', te, {passive:true});
+  el.addEventListener('touchcancel', tc, {passive:true});
+  return { ts, tm, te, tc };
+}
 function attachSwipeNav(el, onNext, onPrev, meta){
   meta = meta || {};
   const can = (dir)=> dir === 'next' ? (meta.canNext ? !!meta.canNext() : true) : (meta.canPrev ? !!meta.canPrev() : true);
@@ -23441,7 +23598,7 @@ function attachSwipeNav(el, onNext, onPrev, meta){
         const src = peek(which); if(!src) return;
         const im = document.createElement('img');
         im.className = 'ci-peek ' + side; im.alt = ''; im.src = src; im.draggable = false;
-        im.addEventListener('click', (e)=>{ e.stopPropagation(); wrap2.querySelector('.ci-nav-arrow.' + side)?.click(); });
+        im.addEventListener('click', (e)=>{ e.stopPropagation(); if(el._stripGo) el._stripGo(which); else wrap2.querySelector('.ci-nav-arrow.' + side)?.click(); });
         wrap2.insertBefore(im, wrap2.firstChild);
       });
     }
@@ -23685,11 +23842,15 @@ function attachSwipeNav(el, onNext, onPrev, meta){
     else if(P && P.wrap) finishLive(P, false);   // 1.70: built early, then the system took the touch
     G.armed = false; G.engaged = false; G.prep = null;
   };
+  if(!isDesk() && !el.classList.contains('cs-pop')){
+    el._swipeNavHandlers = cardStripSwipe(el, can, onNext, onPrev);   // 1.117 phone: only the cards slide
+  } else {
   el.addEventListener('touchstart', ts, {passive:true});
   el.addEventListener('touchmove', tm, {passive:false});
   el.addEventListener('touchend', te, {passive:true});
   el.addEventListener('touchcancel', tc, {passive:true});
   el._swipeNavHandlers = { ts, tm, te, tc };
+  }
   // Warm both neighbors' art in the browser cache so the ghost has pixels on
   // the very FIRST drag — without this the image only starts loading mid-
   // gesture and the preview shows as an empty dark slab.
@@ -39579,10 +39740,12 @@ function _artNameOf(im){
   return nm;
 }
 function _isCardArt(src){ return /scryfall\.io/.test(src) && !/\/art_crop\//.test(src); }
+const _artSeenOk = new Set();   // 1.117: pictures already loaded this session paint at once
 function artPendingOne(im){
   if(im.classList.contains('art-missing') || im.classList.contains('art-pending')) return false;
   const src = im.getAttribute('src') || '';
   if(!_isCardArt(src)) return false;
+  if(_artSeenOk.has(src)) return false;
   if(im.complete && im.naturalWidth > 0) return false;   // already there
   const nm = _artNameOf(im);
   if(!nm) return false;
@@ -39614,7 +39777,10 @@ function paintPendingArt(root){
 // The picture is complete: it takes over, the plain card goes.
 document.addEventListener('load', (e)=>{
   const im = e.target;
-  if(!im || im.tagName !== 'IMG' || !im.classList.contains('art-pending')) return;
+  if(!im || im.tagName !== 'IMG') return;
+  // 1.117: every card picture that loaded is remembered for this session
+  try{ if(im.naturalWidth > 0 && !im.classList.contains('art-slow') && _isCardArt(im.getAttribute('src') || '')){ _artSeenOk.add(im.getAttribute('src')); if(_artSeenOk.size > 3000) _artSeenOk.clear(); } }catch(e){}
+  if(!im.classList.contains('art-pending')) return;
   if(im.classList.contains('art-slow') || !(im.naturalWidth > 0) || !_isCardArt(im.getAttribute('src') || '')) return;
   im.classList.remove('art-pending');
   im.style.removeProperty('--sk');
