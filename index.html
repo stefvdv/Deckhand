@@ -500,6 +500,7 @@ main{flex:1;padding:16px 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bot
 .overlay-inner > main.card-detail{display:flex;flex-direction:column;}
 main.card-detail > .detail-sec:has(#csRulings){order:0;}
 main.card-detail > .detail-sec:has(#sheetOracle){order:1;}
+main.card-detail > .detail-sec:not(:has(#sheetOracle)):not(:has(#csRulings)){order:2;}   /* 1.122: legality right above the card */
 main.card-detail > div[style*="text-align:center"]{order:8;}
 main.card-detail > #csTagBox, main.card-detail > #ciTagBox{order:9;}
 /* Bottom-anchored, properly. This eats whatever room is left over, so a short
@@ -4182,6 +4183,9 @@ html:not(.desk) .home-news{max-width:none;width:calc(100% + 24px);margin:10px -1
 }
 /* 1.119: after a swipe the new card's info fades in instead of popping */
 @keyframes ccFade{from{opacity:.2;}to{opacity:1;}}
+/* 1.122 phone: the card page's title bar keeps one height, one line of
+   name or two -- it never grows or shrinks while browsing */
+html:not(.desk) #cardSheetOverlay > .overlay-inner > .topbar{height:56px;min-height:56px;max-height:56px;box-sizing:border-box;overflow:hidden;}
 /* 1.121: only text that really changed fades in -- frames and buttons stay */
 #cardSheetOverlay .cc-txt{animation:ccFade .24s ease-out both;}
 /* buttons riding on the card (the flip button) step aside while the row moves */
@@ -4196,7 +4200,7 @@ html:not(.desk) .home-news{max-width:none;width:calc(100% + 24px);margin:10px -1
 .cs-info .csi-step .csi-n{min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--ink-text);}
 .cs-info .csi-chips{flex:1 1 auto;min-width:0;gap:8px;justify-content:center;}
 .cs-info .csi-price{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--brass);flex:1 1 auto;}
-.cs-info .csi-chip{width:auto !important;flex:0 1 auto;min-width:0;height:40px;margin:0 !important;padding:0 12px !important;white-space:nowrap;font-size:13.5px !important;border-radius:999px !important;}
+.cs-info .csi-chip{width:92px !important;flex:0 0 92px;justify-content:center;min-width:0;height:40px;margin:0 !important;padding:0 12px !important;white-space:nowrap;font-size:13.5px !important;border-radius:999px !important;}
 .cs-info .csi-menu{position:absolute;left:0;bottom:calc(100% + 6px);top:auto;right:auto;min-width:220px;z-index:30;display:flex;flex-direction:column;}
 .cs-info .csi-menu[hidden]{display:none;}
 .cs-info .csi-menu .csi-item{width:100% !important;border:none !important;border-radius:0 !important;background:none !important;text-align:left;justify-content:flex-start;padding:12px 14px !important;font-size:14.5px !important;margin:0 !important;box-shadow:none !important;}
@@ -8848,19 +8852,25 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.121';
+const APP_VERSION = '1.122';
 const CHANGELOG_NOTES = {
   en: [
-    "Card page: only changed text fades in",
-    "Card page: buttons appear after landing",
-    "Card page: card lands faster",
-    "Short swipe: one card, hard: many"
+    "Card page: title bar stays put",
+    "Card page: legality, oracle, rulings",
+    "Commander first in the card row",
+    "Tags open smoothly",
+    "Combo box as wide as Tags",
+    "No more runaway swipes",
+    "Card picture no longer reloads"
   ],
   nl: [
-    "Kaartpagina: alleen nieuwe tekst faadt",
-    "Kaartpagina: knoppen na het landen",
-    "Kaartpagina: kaart landt sneller",
-    "Korte veeg: 1 kaart, harde: vele"
+    "Kaartpagina: titelbalk blijft staan",
+    "Kaartpagina: legaliteit, oracle, rulings",
+    "Commander als eerste in de kaartrij",
+    "Tags openen soepel",
+    "Combovak even breed als Tags",
+    "Geen doorschietende veeg meer",
+    "Kaartplaatje laadt niet opnieuw"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8870,6 +8880,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.121', d: '2026-11-28',
+    en: ["Card page: only changed text fades in", "Card page: buttons appear after landing", "Card page: card lands faster", "Short swipe: one card, hard: many"],
+    nl: ["Kaartpagina: alleen nieuwe tekst faadt", "Kaartpagina: knoppen na het landen", "Kaartpagina: kaart landt sneller", "Korte veeg: 1 kaart, harde: vele"] },
   { v: '1.120', d: '2026-11-28',
     en: ["Card page: swipe on as far as you like", "Card page: card lands faster", "Card page: 8 cards each side preloaded"],
     nl: ["Kaartpagina: onbeperkt doorvegen", "Kaartpagina: kaart landt sneller", "Kaartpagina: 8 kaarten per kant geladen"] },
@@ -20556,7 +20569,7 @@ function renderCardSheet(d, card, loc, idx){
       }, true);
     }
     renderTagEditor(d, card, box);
-    keepSheetFoot(box);
+    keepSheetFoot(box, true);
   });
   document.getElementById('csToMaybe')?.addEventListener('click', ()=>{
     // 1.54: a singleton maybeboard holds one of each
@@ -20681,24 +20694,35 @@ function renderCardSheet(d, card, loc, idx){
   });
   loadRulings(card);
   loadCardPrice(card);
-  const swPool = (loc === 'maybe') ? d.maybeboard : (loc === 'main' ? d.cards : null);
-  if(swPool && swPool.length > 1){
-    const order = displayOrderIdxs(d, loc);
-    let pos = order.indexOf(idx);
-    if(pos < 0) pos = order.findIndex(i=>swPool[i] && swPool[i].name === card.name);
+  // 1.122: the main deck's row starts with the commander (and partner); the
+  // maybeboard keeps its own row
+  const rowEntries = (()=>{
+    if(loc === 'maybe') return displayOrderIdxs(d, 'maybe').map(i=>({ card: d.maybeboard[i], loc: 'maybe', idx: i }));
+    if(loc !== 'main' && loc !== 'admiral' && loc !== 'partner') return null;
+    const lead = [];
+    if(d.admiral) lead.push({ card: d.admiral, loc: 'admiral', idx: -1 });
+    if(d.partner) lead.push({ card: d.partner, loc: 'partner', idx: -1 });
+    return lead.concat(displayOrderIdxs(d, 'main').map(i=>({ card: d.cards[i], loc: 'main', idx: i })));
+  })();
+  if(rowEntries && rowEntries.length > 1){
+    let pos = loc === 'admiral' || loc === 'partner'
+      ? rowEntries.findIndex(e=>e.loc === loc)
+      : rowEntries.findIndex(e=>e.loc === loc && e.idx === idx);
+    if(pos < 0) pos = rowEntries.findIndex(e=>e.card && e.card.name === card.name);
+    const openAt = (n)=>{ const e = rowEntries[n]; if(e && e.card) renderCardSheet(d, e.card, e.loc, e.idx); };
     const go = (dir)=>{
-      if(pos < 0 || !order.length) return;
+      if(pos < 0) return;
       const n = pos + dir;
-      if(n < 0 || n >= order.length) return;
+      if(n < 0 || n >= rowEntries.length) return;
       try{ navigator.vibrate && navigator.vibrate(6); }catch(e){}
-      renderCardSheet(d, swPool[order[n]], loc, order[n]);
+      openAt(n);
     };
-    const peekPos = (dir)=>{ const n = pos + dir; return (pos < 0 || n < 0 || n >= order.length) ? -1 : n; };
+    const peekPos = (dir)=>{ const n = pos + dir; return (pos < 0 || n < 0 || n >= rowEntries.length) ? -1 : n; };
     attachSwipeNav(el, ()=>go(1), ()=>go(-1), {
       canNext: ()=>peekPos(1) >= 0, canPrev: ()=>peekPos(-1) >= 0,
-      peekNext: ()=>{ const n = peekPos(1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; },
-      peekPrev: ()=>{ const n = peekPos(-1); return n >= 0 ? cardImageMed(swPool[order[n]]) : null; },
-      seq: { n: order.length, cur: pos, src: (i)=>cardImageMed(swPool[order[i]]), open: (i)=>renderCardSheet(d, swPool[order[i]], loc, order[i]) }   // 1.120
+      peekNext: ()=>{ const n = peekPos(1); return n >= 0 ? cardImageMed(rowEntries[n].card) : null; },
+      peekPrev: ()=>{ const n = peekPos(-1); return n >= 0 ? cardImageMed(rowEntries[n].card) : null; },
+      seq: { n: rowEntries.length, cur: pos, src: (i)=>cardImageMed(rowEntries[i].card), open: openAt }   // 1.120
     });
   }
 }
@@ -20745,25 +20769,45 @@ async function loadCardPrice(card){
   if(gen !== _cardSheetGen) return;   // a different card owns the sheet now
   const live = document.getElementById('csPrice');
   if(!live) return;   // sheet closed while fetching
+  const _prevPrice = live.textContent.trim();
   live.innerHTML = (v===null)
     ? `<span class="cp-none nopr" role="button">€✕</span>`
     : `<span class="cp-val" data-priceinfo style="cursor:pointer;">${fmtEur(v)}</span>`;
+  // 1.122: a price that changed fades in (the pill itself stays)
+  if(_prevPrice && !/^Checking/.test(_prevPrice) && _prevPrice !== live.textContent.trim()) live.firstElementChild?.classList.add('cc-txt');
   // The salt seat: a pill in the name bar, top left -- shown once known.
+  // 1.122: the pill keeps the salt it shows until the new card's arrives
   const saltRow = document.getElementById('csSaltRow');
-  if(saltRow){ saltRow.innerHTML = '<span class="cp-val" data-saltseat></span>'; saltRow.style.display = 'none'; }
+  if(saltRow){
+    const prevSalt = saltRow.style.display !== 'none' ? saltRow.textContent.trim() : '';
+    saltRow.innerHTML = '<span class="cp-val" data-saltseat>' + escapeHtml(prevSalt) + '</span>';
+    if(!prevSalt) saltRow.style.display = 'none';
+  }
   // The old subtitle lives on as a toast behind the price itself…
   live.querySelector('[data-priceinfo]')?.addEventListener('click', ()=>toast(specific ? 'This printing · Cardmarket trend' : 'Cheapest printing · Cardmarket trend'));
   // …and its seat belongs to the salt score now.
   const seat = (document.getElementById('csSaltRow') || live).querySelector('[data-saltseat]');
+  const saltGone = ()=>{ if(gen !== _cardSheetGen) return; const pill = seat && seat.closest('#csSaltRow'); if(pill && seat.isConnected) pill.style.display = 'none'; };
   if(seat) edhrecSaltFor(card).then(sv=>{
+    if(gen !== _cardSheetGen) return;
+    if(!(sv != null && sv > 0)){ saltGone(); return; }
     if(sv != null && sv > 0 && seat.isConnected){
-      seat.textContent = '🧂 ' + sv.toFixed(2);
+      const st = '🧂 ' + sv.toFixed(2);
+      if(seat.textContent && seat.textContent !== st){ seat.classList.remove('cc-txt'); void seat.offsetWidth; seat.classList.add('cc-txt'); }
+      seat.textContent = st;
       const pill = seat.closest('#csSaltRow'); if(pill) pill.style.display = '';
       seat.style.cursor = 'pointer';
       seat.title = 'The 50 saltiest cards';
       seat.addEventListener('click', openSaltiestOverlay);
     }
-  }).catch(()=>{});
+  }).catch(saltGone);
+}
+/* 1.122: rulings arriving for a new card replace the ones shown, fading in
+   only when the words actually changed */
+function ccSetHtml(box, html){
+  const was = box.textContent.replace(/\s+/g, ' ').trim();
+  box.innerHTML = html;
+  if(was && !/^Loading/i.test(was) && box.textContent.replace(/\s+/g, ' ').trim() !== was) Array.from(box.children).forEach(c=>c.classList.add('cc-txt'));
 }
 const _rulingsCache = new Map();   // rulings_uri → rendered HTML, capped small
 function rulingsHtmlFrom(rulings){
@@ -20796,7 +20840,7 @@ async function loadRulings(card){
     if(Array.isArray(loc)){
       if(gen !== _cardSheetGen) return;
       const live = document.getElementById('csRulings');
-      if(live) live.innerHTML = rulingsHtmlFrom(loc.map(x=>({ published_at: x.d, comment: x.c })));
+      if(live) ccSetHtml(live, rulingsHtmlFrom(loc.map(x=>({ published_at: x.d, comment: x.c }))));
       return;
     }
   }catch(e){}
@@ -20806,16 +20850,16 @@ async function loadRulings(card){
   let uri = card.rulings_uri || (card.id ? `${SF_BASE}/cards/${card.id}/rulings` : null);
   if(!uri && card.name){
     const hitN = _rulingsCache.get('name:'+card.name);
-    if(hitN != null){ box.innerHTML = hitN; return; }
+    if(hitN != null){ ccSetHtml(box, hitN); return; }
     try{
       const rn = await sfFetch(`${SF_BASE}/cards/named?exact=${encodeURIComponent(card.name)}`, 0, false, false, true);
       if(rn.ok){ uri = (await rn.json()).rulings_uri || null; }
     }catch(e){}
     if(gen !== _cardSheetGen) return;
   }
-  if(!uri){ box.innerHTML = `<div class="empty-note" style="padding:10px 0;">No rulings available for this printing.</div>`; return; }
+  if(!uri){ ccSetHtml(box, `<div class="empty-note" style="padding:10px 0;">No rulings available for this printing.</div>`); return; }
   const hit = _rulingsCache.get(uri);
-  if(hit != null){ const live = document.getElementById('csRulings'); if(live) live.innerHTML = hit; return; }
+  if(hit != null){ const live = document.getElementById('csRulings'); if(live) ccSetHtml(live, hit); return; }
   try{
     const res = await sfFetch(uri, 0, false, false, true);
     if(!res.ok) throw new Error('status '+res.status);
@@ -20827,12 +20871,12 @@ async function loadRulings(card){
     if(gen !== _cardSheetGen) return;   // a different card owns the sheet now
     const live = document.getElementById('csRulings');
     if(!live) return; // sheet was closed while we were fetching
-    live.innerHTML = html;
+    ccSetHtml(live, html);
   }catch(e){
     console.error('rulings failed', e);
     if(gen !== _cardSheetGen) return;
     const live = document.getElementById('csRulings');
-    if(live) live.innerHTML = `<div class="empty-note" style="padding:10px 0;">Couldn't load rulings — check your connection.</div>`;
+    if(live) ccSetHtml(live, `<div class="empty-note" style="padding:10px 0;">Couldn't load rulings — check your connection.</div>`);
   }
 }
 /* The picker's option list, Stef's order: this card's own Scryfall tags
@@ -20856,13 +20900,31 @@ function _tagNorm(t){ return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '');
    and leaves the buttons where your thumb already was, with the new box in the
    space that opens between them. Same rule as every other panel: opening one
    shows the foot again. */
-function keepSheetFoot(el){
+function keepSheetFoot(el, grow){
   if(isDesk()) return;
   const m = el && el.closest && el.closest('main');
   if(!m) return;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    try{ m.scrollTop = m.scrollHeight; }catch(e){}
-  }));
+  // 1.122: held at once (no frame with the box hanging below the buttons),
+  // and a box that just opened grows from nothing, pushing the card up
+  const H = el.offsetHeight;
+  const fb = grow ? Math.max(0, m.scrollHeight - m.scrollTop - m.clientHeight - H) : 0;
+  const pinFoot = ()=>{ try{ m.scrollTop = m.scrollHeight - m.clientHeight - fb; }catch(e){} };
+  if(!grow || !H || el._growing){ pinFoot(); requestAnimationFrame(pinFoot); return; }
+  el._growing = true;
+  try{ const ov = el.closest('.overlay'); if(ov && ov._sheetPinRelease) ov._sheetPinRelease(); }catch(e){}
+  // flex:none -- a box that clips in a scrolling column may otherwise be
+  // squeezed to nothing by the column itself
+  el.style.flex = '0 0 auto'; el.style.overflow = 'hidden'; el.style.height = '0px';
+  pinFoot();
+  const t0 = performance.now(), dur = 200;
+  const step = (now)=>{
+    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    el.style.height = (H * e) + 'px';
+    pinFoot();
+    if(p < 1) requestAnimationFrame(step);
+    else { el.style.height = ''; el.style.overflow = ''; el.style.flex = ''; el._growing = false; pinFoot(); }
+  };
+  requestAnimationFrame(step);
 }
 function buildTagPickerSections(applied, autoTags, userTags, catalog){
   const appliedN = new Set((applied || []).map(_tagNorm));
@@ -23314,6 +23376,7 @@ function pinSheetToFoot(root){
   let userMoved = false, done = false;
   const release = ()=>{ userMoved = true; };
   m.addEventListener('touchstart', release, {passive:true, once:true});
+  root._sheetPinRelease = release;   // 1.122: a box opening on the page takes over
   m.addEventListener('wheel', release, {passive:true, once:true});
   let pin = ()=>{ if(!userMoved && !done) m.scrollTop = m.scrollHeight; };
   root._ccPin = null;
@@ -23454,17 +23517,32 @@ function sheetPaint(el, html){
     pl.className = 'cc-pic'; pl.alt = ''; pl.draggable = false; pl.src = oImg.currentSrc || oImg.src;
     oImg.replaceWith(pl);
   }
-  // the new card's own picture goes into its slide, over the plain one
-  // until it has its pixels
-  const under = Array.from(slide.querySelectorAll('img'));
-  under.forEach(u=>u.classList.add('cc-under'));
-  slide.appendChild(nImg);
+  // 1.122: the picture already standing in the slide BECOMES the card's own
+  // picture (its id, classes and zoom tap) -- nothing is fetched or painted
+  // again. Only a different picture (another printing) is loaded, over it.
+  const have = Array.from(slide.querySelectorAll('img')).filter(x=>!x.classList.contains('cc-under'));
+  const keepImg = have.find(x=>x.src === nImg.src) || null;
+  if(keepImg){
+    have.forEach(x=>{ if(x !== keepImg) x.remove(); });
+    Array.from(nImg.attributes).forEach(a=>{ if(a.name !== 'src') keepImg.setAttribute(a.name, a.value); });
+    keepImg.classList.remove('cc-pic');
+    nImg.remove();
+  } else {
+    have.forEach(u=>u.classList.add('cc-under'));
+    slide.appendChild(nImg);
+    const drop = ()=>have.forEach(u=>u.remove());
+    if(nImg.complete && nImg.naturalWidth) drop();
+    else { nImg.addEventListener('load', drop, {once:true}); nImg.addEventListener('error', drop, {once:true}); setTimeout(drop, 4000); }
+  }
   slide.classList.remove('empty');
-  const drop = ()=>under.forEach(u=>u.remove());
-  if(nImg.complete && nImg.naturalWidth) drop();
-  else { nImg.addEventListener('load', drop, {once:true}); nImg.addEventListener('error', drop, {once:true}); setTimeout(drop, 4000); }
   S.slides.forEach((x, k)=>{ if(k !== i && x.classList.contains('cur')) x.classList.remove('cur'); });
   slide.classList.add('cur');
+  // 1.122: the title bar keeps showing the salt and price it has until the
+  // new card's own arrive (loadCardPrice), instead of blanking them
+  [['#csSaltRow', true], ['#csPrice', false], ['#csRulings', false]].forEach(([sel, disp])=>{
+    const o = oInner.querySelector(sel), n = nInner.querySelector(sel);
+    if(o && n){ n.innerHTML = o.innerHTML; if(disp) n.style.display = o.style.display; }
+  });
   // the hero's other parts (the flip button)
   Array.from(oHero.childNodes).forEach(c=>{ if(c !== strip) c.remove(); });
   Array.from(nHero.childNodes).forEach(c=>{ if(c !== nImg){ if(c.nodeType === 1) c.classList.add('cc-txt'); oHero.appendChild(c); } });
@@ -23502,12 +23580,9 @@ function ccTextMap(root, skip){
 /* Fade in changed text. A framed element (a button, a chip, a box) keeps
    its frame: only its own words fade; anything else fades as a whole. */
 function ccFadeText(x){
-  let framed = false;
-  try{
-    const cs = getComputedStyle(x);
-    framed = parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderBottomWidth) > 0
-      || (cs.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor));
-  }catch(e){}
+  // framed: a button, a pill, a chip or a box (known by its kind, no style
+  // lookups -- those cost a full layout each, on every swipe)
+  const framed = x.tagName === 'BUTTON' || (x.matches && x.matches('.card-price, .ghost-btn, .csi-chip, .tag-chip, .chip, .cs-info, .detail-sec, .ruling, .panel-card, .lg-chip, .leg-chip'));
   if(!framed){ x.classList.add('cc-txt'); return; }
   Array.from(x.childNodes).forEach(t=>{
     if(t.nodeType !== 3 || !t.nodeValue.trim()) return;
@@ -23658,7 +23733,9 @@ function cardCarousel(el, meta){
     if(e.touches.length !== 1){ G = null; return; }
     const t = e.touches[0];
     stopAnim();
-    const now = performance.now();
+    // 1.122: times come from the touch events themselves -- moves that queued
+    // up while the page was busy carry their real moments, not "all at once"
+    const now = e.timeStamp || performance.now();
     G = { x0: t.clientX, y0: t.clientY, sl0: strip.scrollLeft, eng: false, dead: false, z: zoomOf(), pts: [[now, t.clientX]] };
     S.touching = true;
   }, {passive:true});
@@ -23672,29 +23749,38 @@ function cardCarousel(el, meta){
       G.eng = true; S.moving = true; hero.classList.add('cc-moving');
     }
     if(e.cancelable) e.preventDefault();
-    const now = performance.now();
-    G.pts.push([now, t.clientX]); if(G.pts.length > 8) G.pts.shift();
+    const now = e.timeStamp || performance.now();
+    G.pts.push([now, t.clientX]); if(G.pts.length > 12) G.pts.shift();
     const max = (S.n - 1) * S.pitch;
     strip.scrollLeft = Math.max(0, Math.min(max, G.sl0 - dx / G.z));
   }, {passive:false});
-  const release = ()=>{
+  const release = (ev)=>{
     S.touching = false;
     const g = G; G = null;
     if(!g || !g.eng){
       if(!anim){ const i = nearest(); if(Math.abs(strip.scrollLeft - i * S.pitch) > 0.5) glide(i, 160); else land(i); }
       return;
     }
-    // the finger's speed over its last ~100 ms, in row pixels per ms
-    const now = performance.now();
-    const pts = g.pts.filter(p=>now - p[0] < 110);
+    // the finger's speed over its last ~100 ms, in row pixels per ms -- over
+    // at least 30 ms (two moves a hair apart are no measure), none at all
+    // when the finger had come to rest, and never beyond a real flick
+    const now = (ev && ev.timeStamp) || performance.now();
+    const last = g.pts[g.pts.length - 1];
     let v = 0;
-    if(pts.length >= 2){ const a = pts[0], b = pts[pts.length - 1]; if(b[0] > a[0]) v = -(b[1] - a[1]) / (b[0] - a[0]) / g.z; }
+    if(last && now - last[0] < 90){
+      const pts = g.pts.filter(p=>last[0] - p[0] < 110);
+      const a = pts[0];
+      const dt = last[0] - a[0];
+      if(dt >= 30) v = -(last[1] - a[1]) / dt / g.z;
+    }
+    v = Math.max(-3.5, Math.min(3.5, v));
     const x = strip.scrollLeft, start = Math.round(g.sl0 / S.pitch), drag = x - g.sl0;
     let target, dur;
     if(Math.abs(v) > 1.1){
       // a hard swipe: fly on, as far as that speed carries (friction 0.0022 px/ms²)
       const far = v * Math.abs(v) / (2 * 0.0022);
       target = Math.round((x + far) / S.pitch);
+      target = Math.max(start - 12, Math.min(start + 12, target));   // a flick, not a launch
       if(target === start) target = start + Math.sign(v);
       target = clampI(target);
       dur = Math.max(220, Math.min(900, 3 * Math.abs(target * S.pitch - x) / Math.abs(v)));
@@ -24400,7 +24486,7 @@ function openCardInfo(card, opts){
     box.dataset.open='1';
     pushOverlay('tagBox', ()=>{ const b = document.getElementById('ciTagBox'); if(b){ b.dataset.open='0'; b.innerHTML=''; } });
     renderTagEditor(null, card, box);   // deckless: the global registry directly
-    keepSheetFoot(box);
+    keepSheetFoot(box, true);
   });
   loadRulings(card);
   loadCardPrice(card);
