@@ -2506,6 +2506,7 @@ html:has(#crOverlay){overflow:hidden;}
 .trade-row .nm{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .trade-row .tl{font-size:12px;color:var(--sub-text);}
 .tr-eur{color:var(--brass);font-family:'JetBrains Mono',monospace;}
+.tr-cm{display:inline-block;margin-left:8px;font-size:12px;color:var(--sub-text);text-decoration:none;border-bottom:1px solid var(--hair-2);white-space:nowrap;}   /* 1.126 */
 .tr-qty{display:flex;align-items:center;gap:5px;flex:none;}
 .tr-qty button{width:26px;height:26px;border-radius:6px;background:var(--field);border:1.5px solid var(--field-line);color:var(--ink-text);font-size:15px;cursor:pointer;line-height:1;}
 .tr-qty span{font-size:13px;min-width:26px;text-align:center;font-family:'JetBrains Mono',monospace;}
@@ -7203,7 +7204,60 @@ function _sfNoteRefusal(ms, status){
     }
   }
 }
-function _sfNoteOk(){ _sfFastFails = 0; }
+function _sfNoteOk(){ _sfFastFails = 0; _sfPauseStep = 0; }
+/* 1.126: when Scryfall refuses -- 429 "too many requests", or a blocking
+   page instead of an answer -- EVERY request pauses: as long as Scryfall
+   asks (Retry-After), otherwise one minute, doubling on refusals that follow
+   up to fifteen. The pause is remembered across a reload or a restart
+   (admiral_app:sfPause), so reopening the app never knocks again too soon --
+   knocking on during a block only makes it last longer. Meanwhile everything
+   already in the app stays, and name lookups answer from the card database. */
+const SF_PAUSE_KEY = 'admiral_app:sfPause';   // (written out: LS_PREFIX is declared further down)
+let _sfPauseUntil = 0, _sfPauseStep = 0, _sfPauseToastAt = 0;
+function sfPausedUntil(){
+  try{ const v = +(localStorage.getItem(SF_PAUSE_KEY) || 0) || 0; if(v > _sfPauseUntil) _sfPauseUntil = v; }catch(e){}
+  return _sfPauseUntil;
+}
+function sfPaused(){ return Date.now() < sfPausedUntil(); }
+function sfPausedResponse(){
+  const left = Math.max(1, Math.ceil((sfPausedUntil() - Date.now()) / 1000));
+  return new Response(JSON.stringify({ object: 'error', code: 'rate_limited', status: 429, details: 'Scryfall requests are paused for a moment.' }),
+    { status: 429, headers: { 'content-type': 'application/json', 'retry-after': String(left) } });
+}
+function sfShouldPause(res){
+  if(!res) return false;
+  if(res.status === 429) return true;
+  let ct = ''; try{ ct = (res.headers && res.headers.get('content-type')) || ''; }catch(e){}
+  return res.status === 403 && /text\/html/i.test(ct);   // a blocking page, not an answer
+}
+function _sfAnswerPaused(job){
+  if(/\/cards\/named\?/.test(String(job.url))){
+    _bulkNamedServe(job.url).then(r=>job.resolve(r || sfPausedResponse()), ()=>job.resolve(sfPausedResponse()));
+  } else job.resolve(sfPausedResponse());
+}
+function sfStartPause(res){
+  let ms = 0;
+  try{
+    const ra = res && res.headers && res.headers.get('retry-after');
+    if(ra) ms = /^\d+(\.\d+)?$/.test(ra.trim()) ? +ra * 1000 : (Date.parse(ra) - Date.now());
+  }catch(e){}
+  if(!(ms > 0)){ _sfPauseStep = Math.min(_sfPauseStep + 1, 5); ms = Math.min(15 * 60000, 60000 * Math.pow(2, _sfPauseStep - 1)); }
+  ms = Math.max(30000, Math.min(60 * 60000, ms));
+  _sfPauseUntil = Math.max(sfPausedUntil(), Date.now() + ms);
+  try{ localStorage.setItem(SF_PAUSE_KEY, String(_sfPauseUntil)); }catch(e){}
+  try{ sfJournal('queue: Scryfall refused (' + (res && res.status) + ') — all requests pause ' + Math.round(ms / 1000) + 's'); }catch(e){}
+  // whatever was waiting gets its answer now, instead of knocking later
+  try{ [_sfQ.hi, _sfQ.lo].forEach(lane=>{ while(lane.length) _sfAnswerPaused(lane.shift()); }); }catch(e){}
+  sfPauseToast();
+}
+function sfPauseToast(){
+  if(Date.now() - _sfPauseToastAt < 60000) return;
+  _sfPauseToastAt = Date.now();
+  const min = Math.max(1, Math.round((sfPausedUntil() - Date.now()) / 60000));
+  try{ toast(appLang() === 'nl'
+    ? `Scryfall vraagt om even rust — nieuwe kaartgegevens over ~${min} min weer.`
+    : `Scryfall asked for a short break — fresh card data again in ~${min} min.`); }catch(e){}
+}
 /* Black box: the last network outcomes and JS errors, readable via
    Extras -> Copy diagnostics. When "nothing loads", this says why. */
 const _sfLog = [];
@@ -7347,6 +7401,11 @@ async function _bulkNamedServe(url){
   }catch(e){ return null; }
 }
 function sfFetch(url, attempt, bg, fresh, front){
+  // 1.126: paused by Scryfall -- answer at once, never knock
+  if(sfPaused()){
+    if(/\/cards\/named\?/.test(String(url))) return _bulkNamedServe(url).then(r=>r || sfPausedResponse(), ()=>sfPausedResponse());
+    return Promise.resolve(sfPausedResponse());
+  }
   // OFFLINE FAST PATH: while the banner is up, name lookups answer straight
   // from the local database -- no queueing behind a dead network.
   if(_netDown && /\/cards\/named\?/.test(String(url))){
@@ -7411,6 +7470,7 @@ async function _sfPump(){
         if(myGen !== _sfGen) return;
       }
       const job = _sfQ.hi.length ? _sfQ.hi.shift() : _sfQ.lo.shift();
+      if(sfPaused()){ _sfAnswerPaused(job); continue; }   // 1.126 (a retry queued before the pause)
       if(Date.now() - job.born > 90000){
         const served = /\/cards\/named\?/.test(String(job.url)) ? await _bulkNamedServe(job.url) : null;
         if(served) job.resolve(served); else job.reject(new Error('request expired in queue'));
@@ -7441,6 +7501,8 @@ async function _sfPump(){
       if(res && res.status === 429) _sfNoteRefusal(null, 429);
       else if(_verdict === 'dead') _sfNoteRefusal(Date.now() - t0, null);
       else if(res && res.ok) _sfNoteOk();
+      // 1.126: a refusal pauses everything -- no retries into a block
+      if(res && sfShouldPause(res)){ sfStartPause(res); job.resolve(res); continue; }
       const retryable = err || (res && (res.status === 429 || res.status >= 500));
       if(res && res.status === 429){ await new Promise(r=>setTimeout(r, 1600)); }   // let the limit breathe
       const _maxTries = _netDown ? 0 : (_sfCooling() ? 2 : 6);
@@ -8858,17 +8920,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.125';
+const APP_VERSION = '1.126';
 const CHANGELOG_NOTES = {
   en: [
-    "Tags close smoothly",
-    "Vintage removed as a format",
-    "Card page: Admiral legality"
+    "Trade: Cardmarket link per card",
+    "Scryfall says stop: the app pauses",
+    "Swipe: only a hard swipe skips cards"
   ],
   nl: [
-    "Tags sluiten soepel",
-    "Vintage weg als format",
-    "Kaartpagina: legaliteit voor Admiral"
+    "Trade: Cardmarket-link per kaart",
+    "Scryfall zegt stop: de app pauzeert",
+    "Vegen: alleen hard vegen slaat over"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8878,6 +8940,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.125', d: '2026-11-28',
+    en: ["Tags close smoothly", "Vintage removed as a format", "Card page: Admiral legality"],
+    nl: ["Tags sluiten soepel", "Vintage weg als format", "Kaartpagina: legaliteit voor Admiral"] },
   { v: '1.124', d: '2026-11-28',
     en: ["Salt: the pot stays, only the number", "Legality: no flash to Not legal", "Format names no longer flicker", "Tag field rises with the keyboard"],
     nl: ["Salt: potje blijft, alleen het getal", "Legaliteit: geen flits naar Not legal", "Formatnamen knipperen niet meer", "Tagveld gaat mee met het toetsenbord"] },
@@ -23907,11 +23972,14 @@ function cardCarousel(el, meta){
     v = Math.max(-3.5, Math.min(3.5, v));
     const x = strip.scrollLeft, start = Math.round(g.sl0 / S.pitch), drag = x - g.sl0;
     let target, dur;
-    if(Math.abs(v) > 1.1){
-      // a hard swipe: fly on, as far as that speed carries (friction 0.0022 px/ms²)
-      const far = v * Math.abs(v) / (2 * 0.0022);
+    // 1.126: the line between "one card" and "fly" moved up -- only a really
+    // hard swipe flies (1.8 px/ms, was 1.1), it brakes harder and never
+    // passes more than 8 cards
+    if(Math.abs(v) > 1.8){
+      // a hard swipe: fly on, as far as that speed carries (friction 0.006 px/ms²)
+      const far = v * Math.abs(v) / (2 * 0.006);
       target = Math.round((x + far) / S.pitch);
-      target = Math.max(start - 12, Math.min(start + 12, target));   // a flick, not a launch
+      target = Math.max(start - 8, Math.min(start + 8, target));   // a flick, not a launch
       if(target === start) target = start + Math.sign(v);
       target = clampI(target);
       dur = Math.max(220, Math.min(900, 3 * Math.abs(target * S.pitch - x) / Math.abs(v)));
@@ -24948,11 +25016,22 @@ function openTradeHistory(){
    a line -- or when Scryfall does not answer -- the stored price stays: that
    is the fallback, never the first choice. */
 let _tradeFailAt = 0;
+/* 1.126: the Cardmarket page of exactly this printing -- the link Scryfall
+   gives with every card; without one, Cardmarket's own search by name */
+function tradeCardmarketUrl(it){
+  try{
+    const u = new URL(it.cm || (it.purchase_uris && it.purchase_uris.cardmarket) || '');
+    if(u.protocol === 'https:' && /^(www\.)?cardmarket\.com$/.test(u.hostname)) return u.href;
+  }catch(e){}
+  const u = new URL('https://www.cardmarket.com/' + (appLang() === 'nl' ? 'nl' : 'en') + '/Magic/Products/Search');
+  u.searchParams.set('searchString', String(it.name || '').split(' // ')[0]);
+  return u.href;
+}
 async function refreshTradePrices(){
   try{
     loadTrade();
     const all = state.trade.a.concat(state.trade.b);
-    const stale = all.filter(it=>!(it.pt && Date.now() - it.pt < 10 * 60 * 1000));
+    const stale = all.filter(it=>!(it.pt && Date.now() - it.pt < 10 * 60 * 1000) || (!it.cm && !it.cmTried));
     if(!stale.length) return;
     if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
     if(Date.now() - _tradeFailAt < 30 * 1000) return;           // just failed: no retry storm
@@ -24973,6 +25052,9 @@ async function refreshTradePrices(){
             ? (String(f.set) === String(it.set).toLowerCase() && String(f.collector_number) === String(it.cn))
             : (f.name === it.name || String(f.name).split(' // ')[0] === it.name) && (!it.set || String(f.set) === String(it.set).toLowerCase());
           if(!hit) return;
+          const cmU = f.purchase_uris && f.purchase_uris.cardmarket;   // 1.126: this printing's Cardmarket page
+          if(cmU && it.cm !== cmU){ it.cm = cmU; changed = true; }
+          it.cmTried = 1;
           const p = f.prices || {};
           const raw = it.foil ? (p.eur_foil || p.eur) : (p.eur || p.eur_foil);
           const e = raw ? parseFloat(raw) : NaN;
@@ -24992,7 +25074,7 @@ function tradeRowsHtml(key){
   if(!rows.length) return `<p class="hint" style="margin:4px 0 2px;">${trS('No cards on this side yet.')}</p>`;
   return rows.map((it,i)=>`<div class="trade-row">
     <img src="${it.img||''}" alt="" data-tprev="${key}:${i}">
-    <div class="tr-body"><div class="nm">${escapeHtml(it.name)}</div><div class="tl">${escapeHtml((it.set||'').toUpperCase())}${it.cn?' #'+escapeHtml(it.cn):''} · ${it.eur!=null?`<span class="tr-eur">€${it.eur.toFixed(2)}</span>`:'—'}</div></div>
+    <div class="tr-body"><div class="nm">${escapeHtml(it.name)}</div><div class="tl">${escapeHtml((it.set||'').toUpperCase())}${it.cn?' #'+escapeHtml(it.cn):''} · ${it.eur!=null?`<span class="tr-eur">€${it.eur.toFixed(2)}</span>`:'—'}<a class="tr-cm" href="${escapeHtml(tradeCardmarketUrl(it))}" target="_blank" rel="noopener noreferrer">Cardmarket ↗</a></div></div>
     <div class="tr-qty"><button data-tq="${key}:${i}:-1">−</button><span>×${it.qty}</span><button data-tq="${key}:${i}:1">＋</button></div>
     <button class="icon-btn tr-del" data-tdel="${key}:${i}">✕</button>
   </div>`).join('');
@@ -27497,7 +27579,7 @@ function openTradeAdd(side){
 function openTradePrints(side, card){
   openPrintingGrid(card, (chosen)=>{
     loadTrade();
-    state.trade[side].push({ name: chosen.name, set: chosen.set, set_name: chosen.set_name||'', cn: chosen.collector_number||'', img: (cardImageMedRaw(chosen) || cardImage(chosen)).replace('/normal/', '/small/'), wb: chosen.border_color==='white'?1:0, eur: printEur(chosen), foil: !!chosen._foilPick, pt: Date.now(), qty: 1, type_line: chosen.type_line||'', colors: chosen.colors || chosen.color_identity || [], rarity: chosen.rarity||'' });
+    state.trade[side].push({ name: chosen.name, set: chosen.set, set_name: chosen.set_name||'', cn: chosen.collector_number||'', img: (cardImageMedRaw(chosen) || cardImage(chosen)).replace('/normal/', '/small/'), wb: chosen.border_color==='white'?1:0, eur: printEur(chosen), foil: !!chosen._foilPick, pt: Date.now(), qty: 1, type_line: chosen.type_line||'', colors: chosen.colors || chosen.color_identity || [], rarity: chosen.rarity||'' , cm: (chosen.purchase_uris && chosen.purchase_uris.cardmarket) || '' });
     saveTrade(); tradeLogStep(`${chosen.name} \u2192 ${side === 'a' ? (appLang() === 'nl' ? 'Ik' : 'Me') : (appLang() === 'nl' ? 'Jij' : 'You')}`);   // 1.58
     toast(trS('Added to trade.'));
     // The chooser already closed itself; closing the search overlay beneath
@@ -31549,10 +31631,14 @@ function addPairToDeckValidated(d, pr, refreshFn){
    attempt. Every batch POST goes through this instead: answer within the
    window or be aborted, so the fallback paths get their turn immediately. */
 async function postWithTimeout(url, body, ms){
+  const toSf = /scryfall\.com/.test(String(url));
+  if(toSf && sfPaused()) return sfPausedResponse();   // 1.126
   const ctl = new AbortController();
   const timer = setTimeout(()=>ctl.abort(), ms || 10000);
   try{
-    return await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal: ctl.signal });
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal: ctl.signal });
+    if(toSf && sfShouldPause(r)) sfStartPause(r);
+    return r;
   } finally {
     clearTimeout(timer);
   }
