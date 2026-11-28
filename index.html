@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
 <title>Deckhand — MTG deck builder</title>
-<meta name="description" content="Deck builder, card search, play-data recommendations, and a life tracker for every Magic: The Gathering format — Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern, Legacy and Vintage.">
+<meta name="description" content="Deck builder, card search, play-data recommendations, and a life tracker for every Magic: The Gathering format — Commander, Admiral, Pauper Commander, PreDH, Duel Commander, Standard, Pauper, Modern and Legacy.">
 <meta name="theme-color" content="#111111">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Deckhand">
@@ -4394,7 +4394,7 @@ function currentGuild(){ return GUILDS.find(g=>g.k===state.guild) || GUILDS.find
 /* Format catalog — the buildable formats, in the order their auto folders
    appear on My Decks. Labels live here (not in FORMAT_RULES, declared much
    later) so early renders never trip a temporal dead zone. */
-const FMT_ORDER = ['commander', 'admiral', 'paupercommander', 'predh', 'duel', 'standard', 'pauper', 'modern', 'legacy', 'vintage'];
+const FMT_ORDER = ['commander', 'admiral', 'paupercommander', 'predh', 'duel', 'standard', 'pauper', 'modern', 'legacy'];   // 1.125: no Vintage
 const FMT_LABELS = { commander:'Commander', admiral:'Admiral', paupercommander:'Pauper Commander', predh:'PreDH', duel:'Duel Commander',
   standard:'Standard', pauper:'Pauper', modern:'Modern', legacy:'Legacy', vintage:'Vintage' };
 /* The 60-card formats: no leader, up to four copies of a card (Vintage's
@@ -4409,7 +4409,7 @@ function deckIsConstructed(d){ return !!d && isConstructedFmt(deckFormat(d)); }
 function sideName(d){ return deckIsConstructed(d) ? 'Sideboard' : 'Maybeboard'; }
 /* Every format the search filter knows: the five buildable ones, then the
    reference formats Scryfall can judge with legal:<id>. */
-const SEARCH_FORMATS = [['commander','Commander'],['admiral','Admiral'],['paupercommander','Pauper Commander'],['predh','PreDH'],['duel','Duel Commander'],['standard','Standard'],['pauper','Pauper'],['modern','Modern'],['legacy','Legacy'],['vintage','Vintage'],['premodern','Premodern']];
+const SEARCH_FORMATS = [['commander','Commander'],['admiral','Admiral'],['paupercommander','Pauper Commander'],['predh','PreDH'],['duel','Duel Commander'],['standard','Standard'],['pauper','Pauper'],['modern','Modern'],['legacy','Legacy'],['premodern','Premodern']];
 function fmtLabelOf(id){ return FMT_LABELS[id] || (id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Commander'); }
 /* Welke formats een aanvoerder kennen, en met welk woord die daar heet.
    Staat een format hier niet in (Standard, mocht het ooit komen), dan
@@ -8858,19 +8858,17 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.124';
+const APP_VERSION = '1.125';
 const CHANGELOG_NOTES = {
   en: [
-    "Salt: the pot stays, only the number",
-    "Legality: no flash to Not legal",
-    "Format names no longer flicker",
-    "Tag field rises with the keyboard"
+    "Tags close smoothly",
+    "Vintage removed as a format",
+    "Card page: Admiral legality"
   ],
   nl: [
-    "Salt: potje blijft, alleen het getal",
-    "Legaliteit: geen flits naar Not legal",
-    "Formatnamen knipperen niet meer",
-    "Tagveld gaat mee met het toetsenbord"
+    "Tags sluiten soepel",
+    "Vintage weg als format",
+    "Kaartpagina: legaliteit voor Admiral"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8880,6 +8878,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.124', d: '2026-11-28',
+    en: ["Salt: the pot stays, only the number", "Legality: no flash to Not legal", "Format names no longer flicker", "Tag field rises with the keyboard"],
+    nl: ["Salt: potje blijft, alleen het getal", "Legaliteit: geen flits naar Not legal", "Formatnamen knipperen niet meer", "Tagveld gaat mee met het toetsenbord"] },
   { v: '1.123', d: '2026-11-28',
     en: ["Legality: only Legal/Not legal changes", "The word Tags no longer flickers", "Flip button works in the card row", "Tag field: keyboard opens calmly", "Softer change of text"],
     nl: ["Legaliteit: alleen Legal/Not legal", "Het woord Tags knippert niet meer", "Flipknop werkt in de kaartrij", "Tagveld: toetsenbord rustig open", "Zachtere tekstwissel"] },
@@ -13152,7 +13153,7 @@ function homeHtml(){
                    : fmtNav ? fmtFolderDecks(fmtNav).filter(d=>!d.fav)
                    : nav ? decksInFolder(nav).filter(d=>!d.fav && !d.collected)
                          : [];                 // root: unfiled decks live in their format folders
-  const fmtFolders = (searching || nav) ? [] : FMT_ORDER.filter(f=>fmtFolderDecks(f).length || childFolders(fmtFolderId(f)).length);
+  const fmtFolders = (searching || nav) ? [] : FMT_ORDER.concat(['vintage']).filter(f=>fmtFolderDecks(f).length || childFolders(fmtFolderId(f)).length);   // an old Vintage deck keeps its folder
   const fmtTiles = fmtFolders.map(fmtFolderTileHtml).join('');
   // ♥ Collected: decks saved from other players' shared pages — shown on the
   // top level as their own shelf (they can be organised into folders too).
@@ -20558,11 +20559,11 @@ function renderCardSheet(d, card, loc, idx){
     if(box.dataset.open==='1'){
       const top = state.overlayStack[state.overlayStack.length-1];
       if(top && top.id === 'tagBox') closeTopOverlay();
-      else { box.dataset.open='0'; box.innerHTML=''; }
+      else { box.dataset.open='0'; shrinkSheetBox(box); }
       return;
     }
     box.dataset.open='1';
-    pushOverlay('tagBox', ()=>{ const b = document.getElementById('csTagBox'); if(b){ b.dataset.open='0'; b.innerHTML=''; } });
+    pushOverlay('tagBox', ()=>{ const b = document.getElementById('csTagBox'); if(b){ b.dataset.open='0'; shrinkSheetBox(b); } });
     if(!window._tagBoxOutside){
       window._tagBoxOutside = true;
       document.addEventListener('pointerdown', (ev)=>{
@@ -20571,7 +20572,7 @@ function renderCardSheet(d, card, loc, idx){
         if(ev.target.closest && (ev.target.closest('#csTagBox') || ev.target.closest('#csTags'))) return;
         const st = state.overlayStack;
         if(st.length && st[st.length-1].id === 'tagBox') st.pop();   // inert-history retire
-        b.dataset.open = '0'; b.innerHTML = '';
+        b.dataset.open = '0'; shrinkSheetBox(b);
       }, true);
     }
     renderTagEditor(d, card, box);
@@ -20909,6 +20910,31 @@ function _tagNorm(t){ return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '');
    and leaves the buttons where your thumb already was, with the new box in the
    space that opens between them. Same rule as every other panel: opening one
    shows the foot again. */
+/* 1.125: a box on the card page (the tags) folds away smoothly when it
+   closes -- the page's foot held, the card sinking back -- instead of
+   vanishing at once and leaving the foot hanging below the screen */
+function shrinkSheetBox(el){
+  if(!el) return;
+  const H = el.offsetHeight;
+  if(isDesk() || !H){ el.innerHTML = ''; return; }
+  const m = el.closest('main');
+  const fb = m ? Math.max(0, m.scrollHeight - m.scrollTop - m.clientHeight) : 0;
+  const pinFoot = ()=>{ try{ if(m) m.scrollTop = m.scrollHeight - m.clientHeight - fb; }catch(e){} };
+  try{ const ov = el.closest('.overlay'); if(ov && ov._sheetPinRelease) ov._sheetPinRelease(); }catch(e){}
+  el._growing = true;
+  el.style.flex = '0 0 auto'; el.style.overflow = 'hidden'; el.style.height = H + 'px';
+  const done = ()=>{ el.style.height = ''; el.style.overflow = ''; el.style.flex = ''; el._growing = false; };
+  const t0 = performance.now(), dur = 200;
+  const step = (now)=>{
+    if(el.dataset.open === '1'){ done(); return; }   // opened again meanwhile
+    const p = Math.min(1, Math.max(0, (now - t0) / dur)), e = 1 - Math.pow(1 - p, 3);
+    el.style.height = (H * (1 - e)) + 'px';
+    pinFoot();
+    if(p < 1) requestAnimationFrame(step);
+    else { el.innerHTML = ''; done(); pinFoot(); }
+  };
+  requestAnimationFrame(step);
+}
 function keepSheetFoot(el, grow){
   if(isDesk()) return;
   const m = el && el.closest && el.closest('main');
@@ -21205,7 +21231,21 @@ function tagFieldToKeyboard(){
     lift.raf = requestAnimationFrame(step);
   };
   const on = ()=>{ document.documentElement.classList.add('tag-typing'); until = Date.now() + 1500; watch(); preLift(); if(!lift) fix(); [0, 120, 350, 700].forEach(ms=>setTimeout(()=>{ if(!lift) tagFieldToKeyboard(); }, ms)); };
-  const off = ()=>{ setTimeout(()=>{ const a = document.activeElement; if(!(a && a.id === 'tagInput')){ document.documentElement.classList.remove('tag-typing'); unwatch(); } }, 200); };
+  // 1.125: when the keyboard goes, the page glides back to its foot (the
+  // field had been lifted to the keyboard's edge) instead of hanging there
+  const footGlide = (sc)=>{
+    if(!sc || !sc.isConnected) return;
+    const t0 = performance.now(), dur = 260, from = sc.scrollTop;
+    const step = (now)=>{
+      if(!sc.isConnected || document.documentElement.classList.contains('tag-typing')) return;
+      const p = Math.min(1, Math.max(0, (now - t0) / dur)), e = 1 - Math.pow(1 - p, 3);
+      const to = sc.scrollHeight - sc.clientHeight;   // read every frame: the screen grows meanwhile
+      sc.scrollTop = from + (to - from) * e;
+      if(p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+  const off = ()=>{ const sc = roSc; setTimeout(()=>{ const a = document.activeElement; if(!(a && a.id === 'tagInput')){ document.documentElement.classList.remove('tag-typing'); unwatch(); if(!isDesk()) footGlide(sc); } }, 200); };
   document.addEventListener('focusin', (e)=>{ if(e.target && e.target.id === 'tagInput' && !isDesk()) on(); });
   document.addEventListener('focusout', (e)=>{ if(e.target && e.target.id === 'tagInput') off(); });
   try{ window.visualViewport && window.visualViewport.addEventListener('resize', ()=>{ if(document.documentElement.classList.contains('tag-typing')){ until = Date.now() + 800; fix(); requestAnimationFrame(tagFieldToKeyboard); } }); }catch(e){}
@@ -24571,11 +24611,11 @@ function openCardInfo(card, opts){
     if(box.dataset.open==='1'){
       const top = state.overlayStack[state.overlayStack.length-1];
       if(top && top.id === 'tagBox') closeTopOverlay();
-      else { box.dataset.open='0'; box.innerHTML=''; }
+      else { box.dataset.open='0'; shrinkSheetBox(box); }
       return;
     }
     box.dataset.open='1';
-    pushOverlay('tagBox', ()=>{ const b = document.getElementById('ciTagBox'); if(b){ b.dataset.open='0'; b.innerHTML=''; } });
+    pushOverlay('tagBox', ()=>{ const b = document.getElementById('ciTagBox'); if(b){ b.dataset.open='0'; shrinkSheetBox(b); } });
     renderTagEditor(null, card, box);   // deckless: the global registry directly
     keepSheetFoot(box, true);
   });
@@ -26142,8 +26182,8 @@ async function budgetCheckBatch(d, items){
    Moxfield way: green = legal, red = banned, amber = restricted, grey =
    not legal. Sits between Oracle text and Rulings on every card view. ── */
 const LEG_GRID_ROWS = [
-  ['standard', 'Standard'], ['modern', 'Modern'], ['legacy', 'Legacy'],
-  ['vintage', 'Vintage'], ['pauper', 'Pauper'], ['premodern', 'Premodern'],
+  ['admiral', 'Admiral'], ['standard', 'Standard'], ['modern', 'Modern'], ['legacy', 'Legacy'],
+  ['pauper', 'Pauper'], ['premodern', 'Premodern'],
   ['commander', 'Commander'], ['paupercommander', 'Pauper Cmdr'],
   ['duel', 'Duel Cmdr'], ['predh', 'PreDH']
 ];
@@ -26176,7 +26216,64 @@ function legalityBlockHtml(card){
   }
   const gid = 'leg' + Math.random().toString(36).slice(2, 9);
   if(card && !cached) queueMicrotask(()=>_legBlockRefresh(gid, card));
-  return `<div class="leg-grid" id="${gid}">${_legRowsHtml(use, !Object.keys(use).length)}</div>`;
+  // 1.125: Admiral -- the app's own format: known at once when the card is
+  // banned, a land, or shown in a printing from the Admiral sets; otherwise
+  // its printings are looked up once (admiralLegality) and the row fills in
+  const pend = !Object.keys(use).length;
+  use = Object.assign({}, use, { admiral: admiralLegalityNow(card) });
+  if(card && use.admiral === 'pending') queueMicrotask(()=>_legAdmFill(gid, card));
+  return `<div class="leg-grid" id="${gid}">${_legRowsHtml(use, pend)}</div>`;
+}
+const _admLegCache = new Map();
+function _admPool(){ return new Set((activeLegalSetCodes() || []).map(c=>String(c).toLowerCase())); }
+function admiralLegalityNow(card){
+  try{
+    if(!card || !card.name) return 'pending';
+    if(isBanned(card, 'admiral')) return 'banned';
+    if(!isNonlandFront(card)) return 'not_legal';
+    const pool = _admPool();
+    if(card.set && pool.has(String(card.set).toLowerCase())) return 'legal';
+    const hit = _admLegCache.get(String(card.name).toLowerCase() + '|' + pool.size);
+    return hit || 'pending';
+  }catch(e){ return 'pending'; }
+}
+async function admiralLegality(card){
+  const now = admiralLegalityNow(card);
+  if(now !== 'pending') return now;
+  // the Admiral set list -- only waited for when not known yet, and never long
+  if(!_admPool().size){ try{ await Promise.race([resolveLegalSets(), new Promise(r=>setTimeout(r, 4000))]); }catch(e){} }
+  const again = admiralLegalityNow(card);
+  if(again !== 'pending') return again;
+  const pool = _admPool();
+  const key = String(card.name).toLowerCase() + '|' + pool.size;
+  if(!pool.size) return null;
+  // every printing of the card, in one go: one in an Admiral set is enough
+  let url = `${SF_BASE}/cards/search?unique=prints&q=${encodeURIComponent('!"' + String(card.name).split(' // ')[0] + '" game:paper')}`;
+  let v = 'not_legal';
+  for(let i = 0; i < 3 && url; i++){
+    let r = null;
+    try{ r = await sfFetch(url, 0, false, false, true); }catch(e){ return null; }   // in view: front of the line, like the price
+    if(!r || !r.ok){ if(r && r.status === 404) break; return null; }
+    const j = await r.json();
+    if((j.data || []).some(p=>pool.has(String(p.set).toLowerCase()))){ v = 'legal'; break; }
+    url = j.has_more ? j.next_page : null;
+  }
+  _admLegCache.set(key, v);
+  return v;
+}
+async function _legAdmFill(gid, card){
+  const v = await admiralLegality(card);
+  if(!v) return;
+  const el = document.getElementById(gid);
+  if(!el) return;
+  const row = Array.from(el.querySelectorAll('.leg-row')).find(r=>(r.querySelector('.leg-name') || {}).textContent === 'Admiral');
+  const chip = row && row.querySelector('.leg-chip');
+  if(!chip) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = _legRowsHtml({ admiral: v }, false);
+  const nc = Array.from(tmp.querySelectorAll('.leg-row')).find(r=>(r.querySelector('.leg-name') || {}).textContent === 'Admiral').querySelector('.leg-chip');
+  if(chip.textContent.trim() === nc.textContent.trim()) return;
+  chip.className = nc.className;
+  chip.innerHTML = '<span class="cc-txt">' + escapeHtml(nc.textContent) + '</span>';
 }
 async function _legBlockRefresh(gid, card){
   try{
@@ -26190,7 +26287,7 @@ async function _legBlockRefresh(gid, card){
     if(!el) return;
     // 1.124: only a value that differs changes (and fades); names stay
     const tmp = document.createElement('div');
-    tmp.innerHTML = _legRowsHtml(f.legalities, false);
+    tmp.innerHTML = _legRowsHtml(Object.assign({}, f.legalities, { admiral: admiralLegalityNow(card) }), false);
     const rows = el.querySelectorAll('.leg-row'), nrows = tmp.querySelectorAll('.leg-row');
     if(rows.length !== nrows.length){ el.innerHTML = tmp.innerHTML; return; }
     nrows.forEach((nr, k)=>{
@@ -26336,7 +26433,7 @@ function banInfoHtml(fmt){
 let _newsItems = [];
 /* The format a news item belongs to, in words. EDHREC pieces are Commander
    by definition; MTGGoldfish pieces carry whatever its slug/title revealed. */
-const NEWS_FMT_LABELS = { commander:'Commander', brawl:'Brawl', premodern:'Premodern', pauper:'Pauper', legacy:'Legacy', vintage:'Vintage', modern:'Modern', pioneer:'Pioneer', standard:'Standard', historic:'Arena', limited:'Limited' };
+const NEWS_FMT_LABELS = { commander:'Commander', brawl:'Brawl', premodern:'Premodern', pauper:'Pauper', legacy:'Legacy', modern:'Modern', pioneer:'Pioneer', standard:'Standard', historic:'Arena', limited:'Limited' };
 function newsFmtLabel(a){ return (a && a.fmt && NEWS_FMT_LABELS[a.fmt]) || ''; }
 /* Preview sheet: image, title, excerpt — reading happens on the source's
    own site via the single outbound button (their work, their page). */
@@ -33957,7 +34054,7 @@ function dropReveal(row){
 }
 /* Admiral first (the app's own format), then the commander family, then
    the 60-card formats. */
-const EXTRAS_FMT_ORDER = ['admiral', 'commander', 'paupercommander', 'duel', 'predh', 'standard', 'pauper', 'modern', 'legacy', 'vintage', 'premodern'];
+const EXTRAS_FMT_ORDER = ['admiral', 'commander', 'paupercommander', 'duel', 'predh', 'standard', 'pauper', 'modern', 'legacy', 'premodern'];
 function settingsPageHtml(){
   const NL = appLang() === 'nl', T = (a, b)=>NL ? a : b;
   // A tile: icon + title, nothing else -- the title says what it does.
