@@ -4167,7 +4167,7 @@ html:not(.desk) .ci-nav-arrow{display:none !important;}
 html:not(.desk) .home-news{max-width:none;width:calc(100% + 24px);margin:10px -12px 0;border:none;border-top:1px solid var(--line);border-radius:0;background:none;padding:0 4px;}
 /* 1.118 phone: the pictures are one native, snapping row (cardCarousel) --
    every card the same size, the neighbours peeking in at the screen edges */
-.cc-strip{display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;box-sizing:border-box;touch-action:pan-x pan-y;}
+.cc-strip{display:flex;gap:4px;overflow:hidden;scrollbar-width:none;box-sizing:border-box;touch-action:pan-y;}
 .cc-strip::-webkit-scrollbar{display:none;}
 .cc-slide{flex:0 0 var(--ccw, 300px);width:var(--ccw, 300px);scroll-snap-align:center;scroll-snap-stop:always;position:relative;aspect-ratio:488/680;transform:scale(.912);}
 .cc-slide.cur, .cc-slide.near{transform:none;}
@@ -4182,7 +4182,10 @@ html:not(.desk) .home-news{max-width:none;width:calc(100% + 24px);margin:10px -1
 }
 /* 1.119: after a swipe the new card's info fades in instead of popping */
 @keyframes ccFade{from{opacity:.2;}to{opacity:1;}}
-#cardSheetOverlay.cc-fresh main.card-detail > :not(:has(.cc-strip)), #cardSheetOverlay.cc-fresh .topbar > *{animation:ccFade .24s ease-out both;}
+/* 1.121: only text that really changed fades in -- frames and buttons stay */
+#cardSheetOverlay .cc-txt{animation:ccFade .24s ease-out both;}
+/* buttons riding on the card (the flip button) step aside while the row moves */
+.cd-hero.cc-moving > :not(.cc-strip){opacity:0 !important;animation:none !important;pointer-events:none;}
 .cs-info{width:100%;box-sizing:border-box;border:1px solid var(--hair-2);border-radius:16px;background:var(--ink-2);padding:10px 12px;margin:0 0 8px;position:relative;display:flex;flex-direction:column;gap:10px;}
 .cs-info .csi-row{display:flex;align-items:center;gap:10px;min-width:0;}
 .cs-info .csi-name{flex:1 1 auto;min-width:0;font-weight:700;font-size:16px;color:var(--ink-text);text-align:center;line-height:1.25;}
@@ -8845,17 +8848,19 @@ const LS_PREFIX = 'admiral_app:';
    FRESH START (Stef, 9 Oct 2026): the line that ran to 1.41 starts over at
    1.0, the version shared with friends. A device that last saw a higher
    number simply adopts 1.0 (see maybeShowChangelog). */
-const APP_VERSION = '1.120';
+const APP_VERSION = '1.121';
 const CHANGELOG_NOTES = {
   en: [
-    "Card page: swipe on as far as you like",
+    "Card page: only changed text fades in",
+    "Card page: buttons appear after landing",
     "Card page: card lands faster",
-    "Card page: 8 cards each side preloaded"
+    "Short swipe: one card, hard: many"
   ],
   nl: [
-    "Kaartpagina: onbeperkt doorvegen",
+    "Kaartpagina: alleen nieuwe tekst faadt",
+    "Kaartpagina: knoppen na het landen",
     "Kaartpagina: kaart landt sneller",
-    "Kaartpagina: 8 kaarten per kant geladen"
+    "Korte veeg: 1 kaart, harde: vele"
   ]
 };
 /* The history. PUBLISHER, every release: move the previous CHANGELOG_NOTES
@@ -8865,6 +8870,9 @@ const CHANGELOG_NOTES = {
    button appears once there is a history: 1.0 is the starting point). */
 const APP_DATE = '2026-11-28';
 const CHANGELOG_HISTORY = [
+  { v: '1.120', d: '2026-11-28',
+    en: ["Card page: swipe on as far as you like", "Card page: card lands faster", "Card page: 8 cards each side preloaded"],
+    nl: ["Kaartpagina: onbeperkt doorvegen", "Kaartpagina: kaart landt sneller", "Kaartpagina: 8 kaarten per kant geladen"] },
   { v: '1.119', d: '2026-11-28',
     en: ["Card page: side cards grow to the middle", "Card page: info changes without a jump", "Card page: one bar, no name or price", "Smaller maybeboard/remove menu", "News page: full width"],
     nl: ["Kaartpagina: buren groeien naar midden", "Kaartpagina: info wisselt zonder sprong", "Kaartpagina: één balk, geen naam/prijs", "Kleiner maybeboard/verwijder-menu", "Nieuwspagina: volle breedte"] },
@@ -23329,6 +23337,9 @@ function pinSheetToFoot(root){
     try{
       ro = new ResizeObserver(pin);
       Array.from(m.children).forEach(c=>ro.observe(c));
+      // 1.121: after a swipe the title bar can still change height (the
+      // price arriving) -- the card is held through that too
+      if(root._ccPin){ const tb = root.querySelector('.overlay-inner > .topbar'); if(tb) ro.observe(tb); }
     }catch(e){ ro = null; }
   }
   m.querySelectorAll('img').forEach(im=>{ if(!im.complete) im.addEventListener('load', pin, {once:true}); });
@@ -23433,6 +23444,10 @@ function sheetPaint(el, html){
   const boxOf = (m, h)=>{ let x = h; while(x && x.parentElement !== m) x = x.parentElement; return x; };
   const oBox = boxOf(oMain, oHero), nBox = boxOf(nMain, nHero);
   if(!oBox || !nBox){ el.innerHTML = html; return; }
+  // 1.121: text that differs from the card before fades in; the rest
+  // (frames, buttons, headings) simply stays as it was. Compared once the
+  // new page is complete (cardCarousel), the info panel built and all.
+  try{ el._ccWas = ccTextMap(oInner, oBox); el._ccWasBox = oBox; }catch(e){ el._ccWas = null; }
   // the old card's picture stays in its slide as a plain picture
   if(oImg){
     const pl = document.createElement('img');
@@ -23452,7 +23467,7 @@ function sheetPaint(el, html){
   slide.classList.add('cur');
   // the hero's other parts (the flip button)
   Array.from(oHero.childNodes).forEach(c=>{ if(c !== strip) c.remove(); });
-  Array.from(nHero.childNodes).forEach(c=>{ if(c !== nImg) oHero.appendChild(c); });
+  Array.from(nHero.childNodes).forEach(c=>{ if(c !== nImg){ if(c.nodeType === 1) c.classList.add('cc-txt'); oHero.appendChild(c); } });
   // the page: everything but the card row is new
   Array.from(oMain.childNodes).forEach(c=>{ if(c !== oBox) c.remove(); });
   let before = true;
@@ -23462,6 +23477,43 @@ function sheetPaint(el, html){
   Array.from(oInner.childNodes).forEach(c=>{ if(c !== oMain) c.remove(); });
   before = true;
   Array.from(nInner.childNodes).forEach(c=>{ if(c === nMain){ before = false; return; } if(before) oInner.insertBefore(c, oMain); else oInner.appendChild(c); });
+}
+/* Every element that carries text of its own, keyed by its place in the
+   sheet (tag, class and position), with that text -- to tell what changed. */
+function ccTextMap(root, skip){
+  const map = new Map();
+  const walk = (node, path)=>{
+    const counts = {};
+    for(const c of node.children){
+      if(c === skip) continue;
+      const cl = Array.from(c.classList).find(x=>x !== 'cc-txt') || '';
+      const k0 = c.tagName + '.' + cl + (c.id ? '#' + c.id : '');
+      counts[k0] = (counts[k0] || 0) + 1;
+      const p = path + '/' + k0 + ':' + counts[k0];
+      let own = '';
+      for(const t of c.childNodes) if(t.nodeType === 3) own += t.nodeValue;
+      if(own.trim()) map.set(p, { el: c, t: c.textContent.replace(/\s+/g, ' ').trim() });
+      walk(c, p);
+    }
+  };
+  walk(root, '');
+  return map;
+}
+/* Fade in changed text. A framed element (a button, a chip, a box) keeps
+   its frame: only its own words fade; anything else fades as a whole. */
+function ccFadeText(x){
+  let framed = false;
+  try{
+    const cs = getComputedStyle(x);
+    framed = parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderBottomWidth) > 0
+      || (cs.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor));
+  }catch(e){}
+  if(!framed){ x.classList.add('cc-txt'); return; }
+  Array.from(x.childNodes).forEach(t=>{
+    if(t.nodeType !== 3 || !t.nodeValue.trim()) return;
+    const sp = document.createElement('span'); sp.className = 'cc-txt';
+    t.replaceWith(sp); sp.appendChild(t);
+  });
 }
 /* meta.seq = { n, cur, src(i), open(i) }: the whole list, where we are in
    it, a picture for any card in it, and how to show card i. */
@@ -23475,6 +23527,17 @@ function cardCarousel(el, meta){
   if(old && old.strip.isConnected && hero.contains(old.strip) && old.n === seq.n){
     old.seq = seq; old.cur = seq.cur;
     old.fill(seq.cur);
+    if(el._ccWas){
+      const was = el._ccWas, box = el._ccWasBox; el._ccWas = null; el._ccWasBox = null;
+      try{
+        ccTextMap(el.querySelector(':scope > .overlay-inner'), box).forEach((v, k)=>{
+          const o = was.get(k);
+          if(o && o.t === v.t) return;
+          if(v.el.parentElement && v.el.parentElement.closest('.cc-txt')) return;
+          ccFadeText(v.el);
+        });
+      }catch(e){}
+    }
     return;
   }
   if(old && old.strip.isConnected && hero.contains(old.strip)){
@@ -23542,59 +23605,125 @@ function cardCarousel(el, meta){
   if(!el._ccResizeOn){ el._ccResizeOn = true; window.addEventListener('resize', ()=>{ try{ el._ccLay && el._ccLay(); }catch(e){} }); }
   const nearest = ()=>Math.max(0, Math.min(S.n - 1, Math.round(strip.scrollLeft / S.pitch)));
   const runDeferred = ()=>{ const f = el._ccDeferred; el._ccDeferred = null; if(f) try{ f(); }catch(e){} };
-  // card i lands: the page around the row becomes card i's page
+  // card i has landed: the page around the row becomes card i's page
   const show = (i)=>{
-    clearTimeout(S.tmr);
     if(i === S.cur) return;
     el._ccDeferred = null;   // a late upgrade of the card we left is no longer wanted
     el._ccAnchor = hero.getBoundingClientRect().top;   // pinSheetToFoot keeps the row right here
     el._ccKeep = { i };
-    el.classList.add('cc-fresh');
-    clearTimeout(el._ccFreshT); el._ccFreshT = setTimeout(()=>el.classList.remove('cc-fresh'), 350);
     S.cur = i;
     S.fill(i);
     el._ccNav = true;
     try{ S.seq.open(i); }catch(e){}
     finally{ el._ccNav = false; }
+    // the title is fitted now, not a frame later -- its bar height would
+    // otherwise nudge the card after it landed
+    try{ fitSheetTitle(el.querySelector('.topbar .sheet-title')); }catch(e){}
     try{ if(el._ccPin) el._ccPin(); }catch(e){}
   };
-  const atRest = ()=>{
+  /* 1.121: the row moves by the app's own hand -- the finger drags it, and
+     on letting go it glides to a card on one curve:
+       a short or slow swipe  -> exactly one card on
+       a hard, fast swipe     -> flies through the cards, further the harder
+     The glide is short (about 0.2 s for one card) and the card's page is
+     shown the moment it lands. */
+  const zoomOf = ()=>{ const w = strip.offsetWidth; return w ? (strip.getBoundingClientRect().width / w || 1) : 1; };
+  const clampI = (i)=>Math.max(0, Math.min(S.n - 1, i));
+  let anim = 0;
+  const stopAnim = ()=>{ if(anim){ cancelAnimationFrame(anim); anim = 0; } };
+  const land = (i)=>{
     S.moving = false;
-    if(S.touching) return;
-    const i = nearest();
     if(i !== S.cur) show(i); else runDeferred();
+    hero.classList.remove('cc-moving');
   };
-  const hasEnd = 'onscrollend' in window;
-  let lastX = strip.scrollLeft;
+  const glide = (i, dur)=>{
+    stopAnim();
+    i = clampI(i);
+    const from = strip.scrollLeft, to = i * S.pitch, dist = to - from;
+    if(Math.abs(dist) < 0.5){ strip.scrollLeft = to; land(i); return; }
+    S.moving = true; hero.classList.add('cc-moving');
+    const t0 = performance.now();
+    const step = (now)=>{
+      const p = Math.min(1, (now - t0) / dur);
+      const e = 1 - Math.pow(1 - p, 3);   // ease-out: starts at the finger's speed, settles softly
+      strip.scrollLeft = from + dist * e;
+      if(p < 1) anim = requestAnimationFrame(step);
+      else { anim = 0; strip.scrollLeft = to; land(i); }
+    };
+    anim = requestAnimationFrame(step);
+  };
+  S.glide = glide;
+  let G = null;
+  strip.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1){ G = null; return; }
+    const t = e.touches[0];
+    stopAnim();
+    const now = performance.now();
+    G = { x0: t.clientX, y0: t.clientY, sl0: strip.scrollLeft, eng: false, dead: false, z: zoomOf(), pts: [[now, t.clientX]] };
+    S.touching = true;
+  }, {passive:true});
+  strip.addEventListener('touchmove', (e)=>{
+    if(!G || G.dead) return;
+    const t = e.touches[0]; if(!t) return;
+    const dx = t.clientX - G.x0, dy = t.clientY - G.y0;
+    if(!G.eng){
+      if(Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)){ G.dead = true; return; }   // the page scrolls
+      if(Math.abs(dx) < 8) return;
+      G.eng = true; S.moving = true; hero.classList.add('cc-moving');
+    }
+    if(e.cancelable) e.preventDefault();
+    const now = performance.now();
+    G.pts.push([now, t.clientX]); if(G.pts.length > 8) G.pts.shift();
+    const max = (S.n - 1) * S.pitch;
+    strip.scrollLeft = Math.max(0, Math.min(max, G.sl0 - dx / G.z));
+  }, {passive:false});
+  const release = ()=>{
+    S.touching = false;
+    const g = G; G = null;
+    if(!g || !g.eng){
+      if(!anim){ const i = nearest(); if(Math.abs(strip.scrollLeft - i * S.pitch) > 0.5) glide(i, 160); else land(i); }
+      return;
+    }
+    // the finger's speed over its last ~100 ms, in row pixels per ms
+    const now = performance.now();
+    const pts = g.pts.filter(p=>now - p[0] < 110);
+    let v = 0;
+    if(pts.length >= 2){ const a = pts[0], b = pts[pts.length - 1]; if(b[0] > a[0]) v = -(b[1] - a[1]) / (b[0] - a[0]) / g.z; }
+    const x = strip.scrollLeft, start = Math.round(g.sl0 / S.pitch), drag = x - g.sl0;
+    let target, dur;
+    if(Math.abs(v) > 1.1){
+      // a hard swipe: fly on, as far as that speed carries (friction 0.0022 px/ms²)
+      const far = v * Math.abs(v) / (2 * 0.0022);
+      target = Math.round((x + far) / S.pitch);
+      if(target === start) target = start + Math.sign(v);
+      target = clampI(target);
+      dur = Math.max(220, Math.min(900, 3 * Math.abs(target * S.pitch - x) / Math.abs(v)));
+    } else {
+      // a short or slow swipe: one card on (or back when it barely moved)
+      const dir = Math.abs(drag) > S.pitch * 0.06 ? Math.sign(drag) : (Math.abs(v) > 0.25 ? Math.sign(v) : 0);
+      target = clampI(start + dir);
+      const restPx = Math.abs(target * S.pitch - x);
+      dur = Math.max(140, Math.min(240, restPx / Math.max(Math.abs(v), 1) * 3));
+    }
+    strip._noClickUntil = Date.now() + 250;
+    glide(target, dur);
+  };
+  strip.addEventListener('touchend', release, {passive:true});
+  strip.addEventListener('touchcancel', release, {passive:true});
   strip.addEventListener('scroll', ()=>{
-    S.moving = true;
-    const x = strip.scrollLeft, dx = x - lastX; lastX = x;
     const i = nearest();
     if(Math.abs(i - (S.filledAt == null ? S.cur : S.filledAt)) >= 2) S.fill(i);
-    // no finger on it, past the halfway mark and gliding home: the card is
-    // as good as there -- show its page now, the rest of the glide finishes
-    // under it
-    const rest = i * S.pitch - x;
-    if(!S.touching && i !== S.cur && (Math.abs(rest) < S.pitch * 0.06 || (Math.abs(rest) < S.pitch * 0.45 && dx * rest > 0))){
-      clearTimeout(S.tmr);
-      S.tmr = setTimeout(()=>{ if(!S.touching && nearest() === i) show(i); }, 16);
-    }
-    if(!hasEnd){ clearTimeout(S.endT); S.endT = setTimeout(atRest, 140); }
   }, {passive:true});
-  if(hasEnd) strip.addEventListener('scrollend', atRest);
-  strip.addEventListener('touchstart', ()=>{ S.touching = true; clearTimeout(S.tmr); }, {passive:true});
-  const up = ()=>{ S.touching = false; setTimeout(()=>{ if(!S.moving && !S.touching) atRest(); }, 80); };
-  strip.addEventListener('touchend', up, {passive:true});
-  strip.addEventListener('touchcancel', up, {passive:true});
   // a tap on a neighbour glides it to the middle
   strip.addEventListener('click', (e)=>{
+    if(Date.now() < (strip._noClickUntil || 0)){ e.stopPropagation(); e.preventDefault(); return; }
     const sl = e.target.closest && e.target.closest('.cc-slide');
     if(!sl) return;
     const i = +sl.dataset.i;
     if(i === S.cur) return;
     e.stopPropagation();
-    strip.scrollTo({ left: i * S.pitch, behavior: 'smooth' });
-  });
+    glide(i, 240);
+  }, true);
   // no scroll-driven animation in this browser: the same growth by hand
   let sdOk = false; try{ sdOk = CSS.supports('animation-timeline: view()'); }catch(e){}
   if(!sdOk){
@@ -23612,7 +23741,7 @@ function cardCarousel(el, meta){
     byHand();
   }
   S.busy = ()=>S.touching || S.moving;
-  S.go = (i)=>strip.scrollTo({ left: i * S.pitch, behavior: 'smooth' });
+  S.go = (i)=>glide(i, 260);
   el._cc = S;
 }
 function attachSwipeNav(el, onNext, onPrev, meta){
